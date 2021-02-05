@@ -1,0 +1,6 @@
+---
+exclude_paths:
+  - 'tests/**'
+  - 'docs/conf.py'
+  - 'docs/sync.py'
+  - 'ci/travis_pypi_setup.py'

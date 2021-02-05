@@ -1,0 +1,58 @@
+## Docker
+Dockerfile
+.dockerignore
+
+## Git
+.git
+.github
+
+## Environment
+.env
+**/*.env
+venv
+env/
+
+## Makefile
+downloads
+
+## Unit test / Coverage reports
+**/.cache
+**/.coverage
+**/.pytest_cache
+.coverage
+reports
+share
+
+## IDEs
+.idea
+.vscode
+
+## Build artifacts
+**/__pycache__
+**/*.py[cod]
+*.egg-info
+*.egg[s]
+build
+dist
+pip-selfcheck.json
+
+## CI/Test/Deploy
+ci
+hooks
+tests
+
+## Project
+**/custom.ini
+**/config.yml
+**/config.yaml
+**/cowbird.ini
+docs
+cowbirdenv
+cowbird/bin
+cowbird/include
+cowbird/lib
+cowbird/local
+cowbird/share
+src
+error_log.txt
+gunicorn.app.wsgiapp

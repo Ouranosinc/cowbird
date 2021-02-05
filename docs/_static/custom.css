@@ -1,0 +1,26 @@
+div.body p, div.body dd, div.body li, div.body blockquote {
+    -moz-hyphens: none;
+    -ms-hyphens: none;
+    -webkit-hyphens: none;
+    hyphens: none;
+}
+
+/* avoid enforced max width of page display area */
+.wy-nav-content {
+   max-width: none;
+}
+
+/* imitate the automatically generated container by directive code-block */
+div.bordered-caption {
+    background-color: #DDD;
+    border: 1px solid #C6C9CB;
+    padding: 0 1em 1em 0;
+    font-size: small;
+}
+div.bordered-caption > p {
+    margin: 0 0 0 0.25em;
+}
+div.bordered-content {
+    border: 1px solid #C6C9CB;
+    padding: 0 1em 1em 0;
+}

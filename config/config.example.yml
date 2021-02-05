@@ -1,0 +1,7 @@
+components:
+  geoserver:
+    url: http://${HOSTNAME}:4002
+    proxy: https://${HOSTNAME}/twitcher/ows/proxy/geoserver
+  thredds:
+    url: http://${HOSTNAME}:8083/thredds
+    proxy: https://${HOSTNAME}/twitcher/ows/proxy/thredds
