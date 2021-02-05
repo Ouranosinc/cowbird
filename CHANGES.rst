@@ -9,7 +9,14 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* First structured release.
+* First structured release which includes:
+
+  - CI/CD utilities
+  - Minimal testing of *utils*
+  - Documentation of generic details (WebApp, CLI, OpenAPI, configs, etc.)
+  - Metadata of the package
+  - Minimal ``/services`` API route with dummy ``Service``
+  - Corresponding ``cowbird services list`` CLI command
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
