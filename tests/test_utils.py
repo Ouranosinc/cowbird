@@ -9,7 +9,6 @@ Tests for the various utility operations.
 """
 
 import unittest
-from distutils.version import LooseVersion
 
 import mock
 import pytest

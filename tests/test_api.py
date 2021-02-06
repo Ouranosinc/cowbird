@@ -8,6 +8,7 @@ test_api
 Tests for :mod:`cowbird.api` module.
 """
 
+import contextlib
 import unittest
 
 import mock
@@ -48,30 +49,33 @@ def test_response_metadata():
     note: test only locally to avoid remote server side-effects and because mock cannot be done remotely
     """
 
-    def raise_request(*_, **__):
-        raise TypeError()
+    class MockService(object):
+        def name(self):
+            raise TypeError()
 
     app = utils.get_test_app()
     # all paths below must be publicly accessible
-    for code, method, path, kwargs in [
+    for i, (code, method, path, kwargs) in enumerate([
         (200, "GET", "", {}),
-        # FIXME: sort out 400 vs 422 everywhere (https://github.com/Ouranosinc/cowbird/issues/359)
-        # (400, "POST", "/signin", {"body": {}}),  # missing credentials
+        (400, "GET", "/services/!!!!", {}),  # invalid format
         # (401, "GET", "/services", {}),  # anonymous unauthorized
         (404, "GET", "/random", {}),
-        (405, "POST", "/api", {"body": {}}),
+        (405, "POST", "/json", {"body": {}}),
         (406, "GET", "/api", {"headers": {"Accept": "application/pdf"}}),
         # 409: need connection to test conflict, no route available without so (other tests validates them though)
-        (422, "POST", "/signin", {"body": {"user_name": "!!!!"}}),  # invalid format
+        # (422, "POST", "/services", {"body": {"name": 1}}),  # invalid field type  # FIXME: route impl required
         (500, "GET", "/services", {}),  # see mock
-    ]:
-        with mock.patch("cowbird.api.services.utils.get_services", side_effect=raise_request):
+    ], start=1):
+        with contextlib.ExitStack() as stack:
+            if code == 500:
+                stack.enter_context(mock.patch("cowbird.api.services.utils.Service", side_effect=MockService))
             headers = {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON}
             headers.update(kwargs.get("headers", {}))
             kwargs.pop("headers", None)
             resp = utils.test_request(app, method, path, expect_errors=True, headers=headers, **kwargs)
             # following util check validates all expected request metadata in response body
-            utils.check_response_basic_info(resp, expected_code=code, expected_method=method)
+            msg = "\n[Test: #{}, Code: {}]".format(i, code)
+            utils.check_response_basic_info(resp, expected_code=code, expected_method=method, extra_message=msg)
 
 
 if __name__ == "__main__":

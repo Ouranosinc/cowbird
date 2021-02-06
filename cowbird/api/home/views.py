@@ -8,7 +8,7 @@ from cowbird import __meta__
 from cowbird.api import exception as ax
 from cowbird.api import schemas as s
 from cowbird.constants import get_constant
-from cowbird.utils import CONTENT_TYPE_JSON, get_logger, print_log
+from cowbird.utils import CONTENT_TYPE_JSON, get_logger
 
 LOGGER = get_logger(__name__)
 
@@ -31,9 +31,9 @@ def get_homepage(request):  # noqa: W0212
 
 @s.VersionAPI.get(tags=[s.APITag], api_security=s.SecurityEveryoneAPI, response_schemas=s.Version_GET_responses)
 @view_config(route_name=s.VersionAPI.name, request_method="GET", permission=NO_PERMISSION_REQUIRED)
-def get_version(request):
+def get_version(request):  # noqa: W0212
     """
-    Version information of the API.
+    Version of the API.
     """
     version = {
         "version": __meta__.__version__,

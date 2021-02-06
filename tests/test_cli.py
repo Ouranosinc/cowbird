@@ -9,10 +9,8 @@ Tests for :mod:`cowbird.cli` module.
 """
 import subprocess
 
-import mock
 import pytest
 
-from cowbird.api.services.utils import Service
 from cowbird.cli import main as cowbird_cli
 
 KNOWN_HELPERS = [
@@ -37,7 +35,12 @@ def run_and_get_output(command, trim=True):
 def test_cowbird_helper_help():
     out_lines = run_and_get_output("cowbird --help", trim=False)
     assert "usage: cowbird" in out_lines[0]
-    assert all([helper in out_lines[1] for helper in KNOWN_HELPERS])
+    idx = 0
+    for idx, line in enumerate(out_lines):
+        if "Helper:" in line:
+            break
+    cmd_lines = out_lines[idx:]
+    assert all(any(helper in line for line in cmd_lines) for helper in KNOWN_HELPERS)
 
 
 @pytest.mark.cli
@@ -55,11 +58,13 @@ def test_cowbird_helper_as_python():
 
 
 @pytest.mark.cli
-def test_cowbird_services_list():
-    def mocked_services(*_, **__):
-        return [Service("unittest")]
-
-    with mock.patch("cowbird.api.services.utils.get_services", side_effect=mocked_services):
-        out_lines = run_and_get_output("cowbird services -f yaml list")
+def test_cowbird_services_list_with_formats():
+    out_lines = run_and_get_output("cowbird services list -f yaml")
     assert out_lines[0] == "services:"
-    assert out_lines[1] == "  unittest"
+    out_lines = run_and_get_output("cowbird services list -f json", trim=False)
+    assert out_lines[0] == "{"
+    assert '"services": [' in out_lines[1]
+    out_lines = run_and_get_output("cowbird services list -f table")
+    assert "+---" in out_lines[0]
+    assert "| services" in out_lines[1]
+    assert "+===" in out_lines[2]
