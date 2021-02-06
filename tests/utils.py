@@ -19,7 +19,8 @@ from webtest.app import AppError, TestApp  # noqa
 from webtest.forms import Form
 from webtest.response import TestResponse
 
-from cowbird import __meta__, app
+from cowbird import __meta__
+from cowbird.app import main
 from cowbird.constants import get_constant
 from cowbird.utils import (
     CONTENT_TYPE_HTML,
@@ -29,6 +30,13 @@ from cowbird.utils import (
     is_null,
     null
 )
+
+
+class TestAppContainer(object):
+    test_app = None  # type: Optional[TestApp]
+    app = None       # type: Optional[TestApp]
+    url = None       # type: Optional[str]
+
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
@@ -49,7 +57,7 @@ if TYPE_CHECKING:
 
     # pylint: disable=C0103,invalid-name
     TestAppOrUrlType = Union[str, TestApp]
-
+    AnyTestItemType = Union[TestAppOrUrlType, TestAppContainer]
 
 
 class TestVersion(LooseVersion):
@@ -83,26 +91,15 @@ class TestVersion(LooseVersion):
         return super(TestVersion, self)._cmp(other)
 
 
-def config_setup_from_ini(config_ini_file_path):
-    settings = get_settings_from_config_ini(config_ini_file_path)
-    config = PyramidSetUp(settings=settings)
-    return config
-
-
 def get_test_app(settings=None):
     # type: (Optional[SettingsType]) -> TestApp
     """
     Instantiate a local test application.
     """
-    # parse settings from ini file to pass them to the application
-    config = config_setup_from_ini(get_constant("COWBIRD_INI_FILE_PATH"))
-    config.include("ziggurat_foundations.ext.pyramid.sign_in")
-    config.include("ziggurat_foundations.ext.pyramid.get_user")
-    config.registry.settings["cowbird.url"] = "http://localhost:80"
-    if settings:
-        config.registry.settings.update(settings)
-    # create the test application
-    test_app = TestApp(app.main({}, **config.registry.settings))
+    if not settings:
+        settings = {}
+    settings["cowbird.url"] = "http://localhost:80"
+    test_app = TestApp(main({}, **settings))
     return test_app
 
 
@@ -139,7 +136,7 @@ def get_headers(app_or_url, header_dict):
     Obtains stored headers in the class implementation.
     """
     if isinstance(app_or_url, TestApp):
-        return dict(header_dict.items())
+        return dict(header_dict.items())  # noqa
     return header_dict
 
 

@@ -4,53 +4,53 @@ Cowbird CLI helper to execute service operations.
 """
 import argparse
 import logging
-import json
-import yaml
 from typing import TYPE_CHECKING
 
 from cowbird.api.services.utils import get_services
-from cowbird.constants import get_constant
-from cowbird.utils import get_app_config, get_logger
+from cowbird.cli import LOGGER
+from cowbird.cli.utils import get_config_parser, get_format_parser, print_format, set_log_level, subparser_help
+from cowbird.utils import get_app_config
 
 if TYPE_CHECKING:
     from typing import Any, Optional, Sequence
 
-LOGGER = get_logger(__name__,
-                    message_format="%(asctime)s - %(levelname)s - %(message)s",
-                    datetime_format="%d-%b-%y %H:%M:%S", force_stdout=False)
+    from cowbird.cli.utils import CommandPrefixes, HelperParser, ParsedArgs, ParserArgs, ParseResult, SharedParsers
 
 
-def print_format(data, fmt):
-    if fmt == "yaml":
-        print(yaml.safe_dump(data, allow_unicode=True, indent=2, sort_keys=False))
-    else:
-        print(json.dumps(data, indent=4, ensure_ascii=False))
-
-
-def make_parser():
-    # type: () -> argparse.ArgumentParser
-    parser = argparse.ArgumentParser(description="Service commands.")
-    parser.add_argument("-c", "--config", help="INI configuration file to employ.",
-                        default=get_constant("COWBIRD_INI_FILE_PATH", raise_missing=False, raise_not_set=False))
-    parser.add_argument("-f", "--format", choices=["json", "yaml"], help="Output format of the command.")
-    parser.add_argument("-q", "--quiet", help="Suppress informative logging.")
-    mode = parser.add_subparsers(title="Commands", dest="command", description="Command to run on services.")
-    mode.add_parser("list")
+def make_parser(shared_parsers=None, prefixes=None):
+    # type: (SharedParsers, CommandPrefixes) -> argparse.ArgumentParser
+    cfg = get_config_parser()
+    fmt = get_format_parser()
+    parents = list(shared_parsers or []) + [cfg, fmt]
+    prog = " ".join(prefix for prefix in list(prefixes or []) + ["services"] if prefix)
+    parser = argparse.ArgumentParser(description="Service commands.", prog=prog, parents=parents)
+    parents += []
+    cmd = parser.add_subparsers(title="Commands", dest="command", description="Command to run on services.")
+    cmd.add_parser("list", parents=parents, **subparser_help("List known services.", parser))
+    info = cmd.add_parser("info", parents=parents, **subparser_help("Obtains information about a service.", parser))
+    info.add_argument("name", help="Name of the service to retrieve.")
     return parser
 
 
 def main(args=None, parser=None, namespace=None):
-    # type: (Optional[Sequence[str]], Optional[argparse.ArgumentParser], Optional[argparse.Namespace]) -> Any
+    # type: (ParserArgs, HelperParser, ParsedArgs) -> ParseResult
     if not parser:
         parser = make_parser()
     args = parser.parse_args(args=args, namespace=namespace)
-    LOGGER.setLevel(logging.WARNING if args.quiet else logging.DEBUG)
+    set_log_level(args)
     LOGGER.debug("Getting configuration")
     config = get_app_config({"cowbird.ini_file_path": args.config})
     if args.command == "list":
         services = get_services(config)
-        svc_json = {"services": [svc.json() for svc in services]}
-        print_format(svc_json, args.format)
+        svc_json = [svc.name for svc in services]
+        print_format(svc_json, args.format, section="services")
+    elif args.command == "info":
+        services = get_services(config)
+        svc_json = [svc.json() for svc in services if svc.name == args.name]
+        if not len(svc_json) == 1:
+            LOGGER.error("Cannot find service named: %s", args.name)
+            return -1
+        print_format(svc_json[0], args.format, section="service")
     return 0
 
 

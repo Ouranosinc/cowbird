@@ -35,8 +35,8 @@ def run_and_get_output(command, trim=True):
 
 @pytest.mark.cli
 def test_cowbird_helper_help():
-    out_lines = run_and_get_output("cowbird_helper --help", trim=False)
-    assert "usage: cowbird_helper" in out_lines[0]
+    out_lines = run_and_get_output("cowbird --help", trim=False)
+    assert "usage: cowbird" in out_lines[0]
     assert all([helper in out_lines[1] for helper in KNOWN_HELPERS])
 
 
@@ -60,6 +60,6 @@ def test_cowbird_services_list():
         return [Service("unittest")]
 
     with mock.patch("cowbird.api.services.utils.get_services", side_effect=mocked_services):
-        out_lines = run_and_get_output("cowbird services list --yaml")
+        out_lines = run_and_get_output("cowbird services -f yaml list")
     assert out_lines[0] == "services:"
     assert out_lines[1] == "  unittest"

@@ -91,9 +91,14 @@ To validate linting of the code, simply call::
     make check
 
 
-To run tests locally, simply execute the following command::
+To run all tests locally, simply execute the following command::
 
     make test
+
+
+Coverage analysis with the same set of tests is also available using::
+
+    make coverage
 
 
 You can also run subsets of tests according to markers and/or specific test function ``pytest`` specification using::
