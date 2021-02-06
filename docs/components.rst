@@ -1,4 +1,6 @@
-.. _components:
+.. include:: references.rst
+
+.. _components_page:
 
 Components Diagram
 ====================

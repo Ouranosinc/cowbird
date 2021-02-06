@@ -1,17 +1,13 @@
 from typing import TYPE_CHECKING
 
 import colander
-import uuid
 from cornice import Service
 from cornice.service import get_services
 from cornice_swagger.swagger import CorniceSwagger
 from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPConflict,
-    HTTPCreated,
     HTTPForbidden,
-    HTTPFound,
-    HTTPGone,
     HTTPInternalServerError,
     HTTPMethodNotAllowed,
     HTTPNotAcceptable,
@@ -49,7 +45,7 @@ InfoAPI = {
 
 
 # Security
-SecurityCookieAuthAPI = {}  # {"cookieAuth": {"type": "apiKey", "in": "cookie", "name": get_constant("COWBIRD_COOKIE_NAME")}}
+SecurityCookieAuthAPI = {}  # {"cookieAuth": {"type": "apiKey", "in": "cookie", "name": "token"}}
 SecurityDefinitionsAPI = {"securityDefinitions": SecurityCookieAuthAPI}
 SecurityAuthenticatedAPI = [{"cookieAuth": []}]
 SecurityAdministratorAPI = [{"cookieAuth": []}]
@@ -105,7 +101,6 @@ def generate_api_schema(swagger_base_spec):
     for tag in json_api_spec["tags"]:
         tag["description"] = TAG_DESCRIPTIONS[tag["name"]]
     return json_api_spec
-
 
 
 # Service Routes

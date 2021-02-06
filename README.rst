@@ -133,7 +133,9 @@ Following most recent variants are available:
 .. _changes: CHANGES.rst
 .. _Components Diagram: ./docs/components.rst
 .. _configuration: ./docs/configuration.rst
+.. _installation: ./docs/installation.rst
 .. _usage: ./docs/usage.rst
+.. _utilities: ./docs/utilities.rst
 .. _readthedocs: https://pavics-cowbird.readthedocs.io
 .. _docs: https://github.com/Ouranosinc/cowbird/tree/master/docs
 .. _bird-house: https://github.com/bird-house/birdhouse-deploy

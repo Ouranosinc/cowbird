@@ -1,5 +1,6 @@
 .. include:: references.rst
-.. _configuration_link:
+
+.. _configuration_page:
 
 Configuration
 =============

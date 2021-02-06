@@ -3,13 +3,11 @@ from typing import TYPE_CHECKING
 from pyramid.exceptions import PredicateMismatch
 from pyramid.httpexceptions import (
     HTTPException,
-    HTTPForbidden,
     HTTPInternalServerError,
     HTTPMethodNotAllowed,
     HTTPNotAcceptable,
     HTTPNotFound,
-    HTTPServerError,
-    HTTPUnauthorized
+    HTTPServerError
 )
 from pyramid.request import Request
 from simplejson import JSONDecodeError
@@ -18,7 +16,6 @@ from cowbird.api import exception as ax
 from cowbird.api import schemas as s
 from cowbird.utils import (
     CONTENT_TYPE_ANY,
-    CONTENT_TYPE_HTML,
     CONTENT_TYPE_JSON,
     FORMAT_TYPE_MAPPING,
     SUPPORTED_ACCEPT_TYPES,

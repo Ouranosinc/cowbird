@@ -63,7 +63,7 @@ def test_cowbird_services_list_with_formats():
     assert out_lines[0] == "services:"
     out_lines = run_and_get_output("cowbird services list -f json", trim=False)
     assert out_lines[0] == "{"
-    assert '"services": [' in out_lines[1]
+    assert '"services": [' in out_lines[1]  # pylint: disable=C4001
     out_lines = run_and_get_output("cowbird services list -f table")
     assert "+---" in out_lines[0]
     assert "| services" in out_lines[1]

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from cowbird.constants import get_constant
 
 if TYPE_CHECKING:
-    from typing import Callable, Iterable, Optional, Sequence
+    from typing import Callable, Dict, Iterable, Optional, Sequence
 
     CommandPrefixes = Optional[Iterable[str]]
     SharedParsers = Optional[Iterable[argparse.ArgumentParser]]
@@ -97,7 +97,6 @@ def print_format(data, fmt, section=None):
                 widths[0] = max(widths[0], len(field))
                 widths[1] = max(widths[1], len(value))
             separator = "+" + "-" * (widths[0] + 2) + "+" + "-" * (widths[1] + 2) + "+"
-            header = separator.replace("-", "=")
             print(separator)
             print("| {} | {} |".format("Fields".ljust(widths[0]), "Values".ljust(widths[1])))
             print(separator.replace("-", "="))
@@ -118,4 +117,3 @@ def print_format(data, fmt, section=None):
             print(separator)
     else:
         raise ValueError("unknown format [{}]".format(fmt))
-

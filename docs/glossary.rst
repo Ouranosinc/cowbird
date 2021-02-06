@@ -1,5 +1,6 @@
-.. _glossary:
 .. include:: references.rst
+
+.. _glossary_page:
 
 ************
 Glossary

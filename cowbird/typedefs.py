@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from pyramid.request import Request
     from pyramid.response import Response as PyramidResponse
     from requests.cookies import RequestsCookieJar
-    from requests.models import RequestsResponse
+    from requests.models import Response as RequestsResponse
     from requests.structures import CaseInsensitiveDict
     from webob.headers import EnvironHeaders, ResponseHeaders
     from webob.response import Response as WebobResponse

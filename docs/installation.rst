@@ -1,5 +1,6 @@
-.. _installation:
 .. include:: references.rst
+
+.. _installation_page:
 
 Installation
 =============

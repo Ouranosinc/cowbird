@@ -1,5 +1,6 @@
-.. _usage:
 .. include:: references.rst
+
+.. _usage_page:
 
 ========
 Usage

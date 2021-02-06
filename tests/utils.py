@@ -1,35 +1,20 @@
 import functools
-import itertools
 import json as json_pkg  # avoid conflict name with json argument employed for some function
-import unittest
-import uuid
-import warnings
 from distutils.version import LooseVersion
 from typing import TYPE_CHECKING
 
 import mock
-import pytest
 import requests
 import requests.exceptions
 from pyramid.httpexceptions import HTTPException
-from pyramid.settings import asbool
-from pyramid.testing import DummyRequest, setUp as PyramidSetUp
+from pyramid.testing import DummyRequest
 from urllib.parse import urlparse
 from webtest.app import AppError, TestApp  # noqa
-from webtest.forms import Form
 from webtest.response import TestResponse
 
-from cowbird import __meta__
 from cowbird.app import main
 from cowbird.constants import get_constant
-from cowbird.utils import (
-    CONTENT_TYPE_HTML,
-    CONTENT_TYPE_JSON,
-    get_header,
-    get_settings_from_config_ini,
-    is_null,
-    null
-)
+from cowbird.utils import CONTENT_TYPE_JSON, get_header, is_null, null
 
 
 class TestAppContainer(object):
@@ -40,7 +25,7 @@ class TestAppContainer(object):
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Any, Callable, Collection, Dict, Iterable, List, Optional, Tuple, Type, Union
+    from typing import Any, Callable, Collection, Dict, Iterable, List, Optional, Type, Union
 
     from pyramid.request import Request
 
@@ -49,11 +34,11 @@ if TYPE_CHECKING:
         AnyCookiesType,
         AnyHeadersType,
         AnyResponseType,
-        AnyValue,
         CookiesType,
         HeadersType,
         SettingsType
     )
+    from cowbird.utils import NullType
 
     # pylint: disable=C0103,invalid-name
     TestAppOrUrlType = Union[str, TestApp]
@@ -441,7 +426,7 @@ def check_val_not_in(val, ref, msg=None):
 
 
 def check_val_type(val, ref, msg=None):
-    # type: (Any, Union[Type[Any], NullType, Iterable[Type[Any]], Optional[str]) -> None
+    # type: (Any, Union[Type[Any], NullType, Iterable[Type[Any]]], Optional[str]) -> None
     """:raises AssertionError: if :paramref:`val` is not an instanced of :paramref:`ref`."""
     assert isinstance(val, ref), format_test_val_ref(val, repr(ref), pre="Type Fail", msg=msg)
 
@@ -575,4 +560,3 @@ def check_error_param_structure(body,                                   # type: 
         check_val_is_in("compare", body["param"])
         if param_compare is not null:
             check_val_equal(body["param"]["compare"], param_compare)
-

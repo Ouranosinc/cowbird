@@ -5,7 +5,7 @@
 .. _Waitress: https://github.com/Pylons/waitress
 .. _issue: https://github.com/Ouranosinc/cowbird/issues/new
 .. _Cowbird REST API: https://pavics-cowbird.readthedocs.io/en/latest/api.html
-.. _Docker Images: https://hub.docker.com/r/pavics/cowbird/tags
+.. _Cowbird Docker Images: https://hub.docker.com/r/pavics/cowbird/tags
 .. _Pyramid: https://docs.pylonsproject.org/projects/pyramid/
 .. _ReadTheDocs: https://pavics-cowbird.readthedocs.io/
 
@@ -22,10 +22,11 @@
 .. _Weaver: https://github.com/crim-ca/weaver
 
 .. file/source references
-.. _configuration: configuration.rst
-.. _installation: installation.rst
-.. _utilities: utilities.rst
-.. _usage: usage.rst
+.. _Components Diagram: ./docs/components.rst
+.. _configuration: ./docs/configuration.rst
+.. _installation: ./docs/installation.rst
+.. _usage: ./docs/usage.rst
+.. _utilities: ./docs/utilities.rst
 .. _config.yml: https://github.com/Ouranosinc/cowbird/tree/master/config/cowbird.example.yml
 .. _config.example.yml: https://github.com/Ouranosinc/cowbird/tree/master/config/cowbird.example.yml
 .. _cowbird.ini: https://github.com/Ouranosinc/cowbird/tree/master/config/cowbird.example.ini
