@@ -41,7 +41,7 @@ the resources under those services such that the complete ecosystem can seamless
       - | |version| |commits-since|
 
 .. |py_ver| image:: https://img.shields.io/badge/python-2.7%2C%203.5%2B-blue.svg
-    :alt: Requires Python 2.7, 3.5+
+    :alt: Requires Python 3.6+
     :target: https://www.python.org/getit
 
 .. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/cowbird/0.0.0.svg
@@ -56,11 +56,11 @@ the resources under those services such that the complete ecosystem can seamless
     :alt: Dependencies Status
     :target: https://pyup.io/account/repos/github/Ouranosinc/cowbird/
 
-.. |github_latest| image:: https://github.com/Ouranosinc/cowbird/workflows/Tests/badge.svg?branch=master
+.. |github_latest| image:: https://img.shields.io/github/workflow/status/Ouranosinc/cowbird/Tests/master?label=master
     :alt: Github Actions CI Build Status (master branch)
     :target: https://travis-ci.com/Ouranosinc/cowbird
 
-.. |github_tagged| image:: https://github.com/Ouranosinc/cowbird/workflows/Tests/badge.svg?branch=0.0.0
+.. |github_tagged| image:: https://img.shields.io/github/workflow/status/Ouranosinc/cowbird/Tests/0.0.0?label=0.0.0
     :alt: Github Actions CI Build Status (latest tag)
     :target: https://github.com/Ouranosinc/cowbird/tree/0.0.0
 
