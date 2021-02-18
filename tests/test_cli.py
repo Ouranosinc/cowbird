@@ -12,6 +12,7 @@ import subprocess
 import pytest
 
 from cowbird.cli import main as cowbird_cli
+from tests.utils import TEST_INI_FILE
 
 KNOWN_HELPERS = [
     "services",
@@ -59,12 +60,12 @@ def test_cowbird_helper_as_python():
 
 @pytest.mark.cli
 def test_cowbird_services_list_with_formats():
-    out_lines = run_and_get_output("cowbird services list -f yaml")
+    out_lines = run_and_get_output("cowbird services list -f yaml -c '{}'".format(TEST_INI_FILE))
     assert out_lines[0] == "services:"
-    out_lines = run_and_get_output("cowbird services list -f json", trim=False)
+    out_lines = run_and_get_output("cowbird services list -f json -c '{}'".format(TEST_INI_FILE), trim=False)
     assert out_lines[0] == "{"
     assert '"services": [' in out_lines[1]  # pylint: disable=C4001
-    out_lines = run_and_get_output("cowbird services list -f table")
+    out_lines = run_and_get_output("cowbird services list -f table -c '{}'".format(TEST_INI_FILE))
     assert "+---" in out_lines[0]
     assert "| services" in out_lines[1]
     assert "+===" in out_lines[2]

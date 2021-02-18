@@ -18,6 +18,10 @@ from cowbird.constants import COWBIRD_ROOT, get_constant
 from cowbird.utils import CONTENT_TYPE_JSON, get_header, is_null, null
 
 
+# employ example INI config for tests where needed to ensure that configurations are valid
+TEST_INI_FILE = os.path.join(COWBIRD_ROOT, "config/cowbird.example.ini")
+
+
 class TestAppContainer(object):
     test_app = None  # type: Optional[TestApp]
     app = None       # type: Optional[TestApp]
@@ -85,7 +89,7 @@ def get_test_app(settings=None):
     if not settings:
         settings = {}
     settings["cowbird.url"] = "http://localhost:80"
-    settings["cowbird.ini_file_path"] = os.path.join(COWBIRD_ROOT, "config/cowbird.example.ini")
+    settings["cowbird.ini_file_path"] = TEST_INI_FILE
     test_app = TestApp(main({}, **settings))
     return test_app
 
