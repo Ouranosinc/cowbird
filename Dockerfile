@@ -24,7 +24,6 @@ RUN apk update \
     && apk --purge del .build-deps
 
 # install app package source, avoid copying the rest
-COPY ./bin ${COWBIRD_DIR}/bin/
 COPY ./config/cowbird.example.ini ${COWBIRD_CONFIG_DIR}/cowbird.ini
 COPY ./cowbird ${COWBIRD_DIR}/cowbird/
 # equivalent of `make install` without conda env and pre-installed packages
