@@ -49,7 +49,7 @@ jobs:
         os: [ubuntu-latest]
         python-version: ["3.6", "3.7", "3.8"]
         allow-failure: [false]
-        test-case: [check, test-local, test-docker, coverage]
+        test-case: [check, test, test-docker, coverage]
     steps:
       - uses: actions/checkout@v2
         with:
