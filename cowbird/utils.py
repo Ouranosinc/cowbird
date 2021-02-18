@@ -214,8 +214,11 @@ def get_settings_from_config_ini(config_ini_path, section=None):
     result = parser.read([config_ini_path])
     # raise silently ignored missing file
     if len(result) != 1 or not os.path.isfile(result[0]):
-        result = result[0] or os.path.abspath(str(config_ini_path))  # in case not found, use expected location
-        message = "Cannot find INI configuration file [{}] resolved as [{}]".format(config_ini_path, result)
+        if result:
+            result = result[0] or os.path.abspath(str(config_ini_path))  # in case not found, use expected location
+            message = "Cannot find INI configuration file [{}] resolved as [{}]".format(config_ini_path, result)
+        else:
+            message = "Cannot find INI configuration file [{}]".format(config_ini_path)
         raise ValueError(message)
     if section is None:
         section = "app:{}_app".format(__meta__.__package__)
