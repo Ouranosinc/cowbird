@@ -8,6 +8,12 @@ services:
     container_name: "cowbird-smoke-test"
     image: pavics/cowbird:latest
     restart: "no"
+    environment:
+      FORWARDED_ALLOW_IPS: "*"
     env_file:
       - test.env
-    # FIXME: other details?
+    # make directly available to host for testing purpose only
+    # production instance should normally employ protected network
+    ports:
+      - "7000:7000"
+    network_mode: host
