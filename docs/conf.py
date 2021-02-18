@@ -81,13 +81,15 @@ doc_redirect_ignores = [
 doc_redirect_extensions = [
     ".rst",
 ]
+# references to RST files in 'docs' dir redirect to corresponding HTML
 doc_redirect_map = {
     "docs/{}".format(file_name): file_name
     for file_name in os.listdir(DOC_DIR_ROOT)
     if doc_redirect_include(file_name)
 }
+# references to RST files in repo root (README/CHANGES) redirect to their equivalent HTML in 'docs' dir
 doc_redirect_map.update({
-    file_name: file_name
+    file_name: "docs/{}".format(file_name.lower())
     for file_name in os.listdir(PROJECT_ROOT)
     if doc_redirect_include(file_name)
 })
@@ -125,6 +127,9 @@ linkcheck_ignore = [
     "https://github.com/Ouranosinc/cowbird/*",    # limit only Cowbird so others are still checked
     # ignore private links
     "https://github.com/Ouranosinc/PAVICS/*",
+    "CHANGES.rst",
+    "AUTHORS.rst",
+    r"docs/\w+.rst",
 ]
 
 linkcheck_timeout = 20

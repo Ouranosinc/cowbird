@@ -128,7 +128,7 @@ at the start of the `Configuration`_ section.
   | (Default: ``False``)
 
   Specifies whether `Cowbird` logging should also **enforce** printing the details to the console when using
-  `CLI helpers <utilities_helpers>`_.
+  `utilities`_.
   Otherwise, the configured logging methodology in `cowbird.ini`_ is used (which can also define a console handler).
 
 - | ``COWBIRD_LOG_REQUEST``

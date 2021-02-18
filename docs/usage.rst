@@ -53,11 +53,10 @@ documentation of *all* versions is available on `ReadTheDocs`_.
 CLI
 ----------------------
 
-After successful `installation`_ of `Cowbird` package, multiple `helper utilities <utilities>`_ become available
+After successful `installation`_ of `Cowbird` package, multiple helper `utilities`_ become available
 as CLI applications callable from the shell. These can be quite useful to run typical `Cowbird` operations calls
 from the terminal without having to form corresponding HTTP requests.
 Please refer to the relevant page for further details.
-
 
 Documentation
 ----------------------

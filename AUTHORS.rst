@@ -6,4 +6,4 @@ Contributors
 
 .. add yourselves to the list when submitting a PR to be in docs
 
-* Francis Charette Migneault <francis.charette-migneault@crim.ca> [`fmigneault <github.com/fmigneault>`_]
+* Francis Charette Migneault <francis.charette-migneault@crim.ca> [`@fmigneault <https://github.com/fmigneault>`_]

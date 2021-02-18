@@ -108,7 +108,7 @@ Configuration and Usage
 Change History
 --------------
 
-Addressed features, changes and bug fixes per version tag are available in `changes`_.
+Addressed features, changes and bug fixes per version tag are available in |changes|_.
 
 --------------
 Docker Images
@@ -130,12 +130,13 @@ Following most recent variants are available:
 
 
 .. These reference must be left direct (not included with 'references.rst') to allow pretty rendering on Github
+.. |changes| replace:: CHANGES
 .. _changes: CHANGES.rst
-.. _Components Diagram: ./docs/components.rst
-.. _configuration: ./docs/configuration.rst
-.. _installation: ./docs/installation.rst
-.. _usage: ./docs/usage.rst
-.. _utilities: ./docs/utilities.rst
+.. _Components Diagram: docs/components.rst
+.. _configuration: docs/configuration.rst
+.. _installation: docs/installation.rst
+.. _usage: docs/usage.rst
+.. _utilities: docs/utilities.rst
 .. _readthedocs: https://pavics-cowbird.readthedocs.io
 .. _docs: https://github.com/Ouranosinc/cowbird/tree/master/docs
 .. _bird-house: https://github.com/bird-house/birdhouse-deploy

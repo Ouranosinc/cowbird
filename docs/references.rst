@@ -22,11 +22,11 @@
 .. _Weaver: https://github.com/crim-ca/weaver
 
 .. file/source references
-.. _Components Diagram: ./docs/components.rst
-.. _configuration: ./docs/configuration.rst
-.. _installation: ./docs/installation.rst
-.. _usage: ./docs/usage.rst
-.. _utilities: ./docs/utilities.rst
+.. _Components Diagram: components.rst
+.. _configuration: configuration.rst
+.. _installation: installation.rst
+.. _usage: usage.rst
+.. _utilities: utilities.rst
 .. _config.yml: https://github.com/Ouranosinc/cowbird/tree/master/config/cowbird.example.yml
 .. _config.example.yml: https://github.com/Ouranosinc/cowbird/tree/master/config/cowbird.example.yml
 .. _cowbird.ini: https://github.com/Ouranosinc/cowbird/tree/master/config/cowbird.example.ini
