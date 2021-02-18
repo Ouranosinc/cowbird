@@ -1,0 +1,10 @@
+# these are doc-only requirements
+# we actually need to install all requirements during docs build because of OpenAPI generation
+# (see 'docs/conf.py')
+pycodestyle
+sphinx-autoapi>=1.7.0
+sphinx-paramlinks>=0.4.1
+sphinx>=3.1,<4
+sphinxcontrib-redoc>=1.6.0
+sphinx_autodoc_typehints[type_comments]>=1.11.0
+sphinx_rtd_theme

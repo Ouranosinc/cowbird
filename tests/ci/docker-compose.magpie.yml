@@ -1,0 +1,42 @@
+version: "3"
+services:
+  # extend cowbird with magpie connection
+  cowbird:
+    links:
+      - magpie
+    depends_on:
+      - magpie
+
+  # ===========================================
+  # other images cowbird interacts with
+  # (or their required dependencies)
+  # ===========================================
+  postgres:
+    container_name: "magpie-smoke-test-postgres"
+    image: "postgres:latest"
+    expose:
+      - "5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: qwerty
+      POSTGRES_DB: magpie
+
+  magpie:
+    container_name: "magpie-smoke-test-application"
+    image: pavics/magpie:3.6.0
+    restart: "no"
+    depends_on:
+      - postgres
+    links:
+      - postgres
+    ports:
+      - "2001:2001"
+    env_file:
+      - test.env
+    environment:
+      FORWARDED_ALLOW_IPS: "*"
+      # we need to enforce in case it is overridden in travis environment
+      MAGPIE_CONFIG_DIR: "/opt/local/src/magpie/config"
+      MAGPIE_POSTGRES_HOST: postgres  # connect directly to test docker
+    volumes:
+      - ./magpie.ini:/opt/local/src/magpie/config/magpie.ini

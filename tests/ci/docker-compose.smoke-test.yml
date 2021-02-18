@@ -1,0 +1,17 @@
+version: "3"
+services:
+
+  # ===========================
+  # main image being tested
+  # ===========================
+  cowbird:
+    container_name: "cowbird-smoke-test"
+    image: pavics/cowbird:latest
+    restart: "no"
+    environment:
+      FORWARDED_ALLOW_IPS: "*"
+    env_file:
+      - test.env
+    # make directly available to host for testing purpose only
+    # production instance should normally employ protected network
+    network_mode: host

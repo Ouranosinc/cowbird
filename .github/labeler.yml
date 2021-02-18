@@ -1,0 +1,27 @@
+# label rules used by .github/workflows/label.yml
+
+api:
+  - cowbird/api/**/*
+
+cli:
+  - cowbird/cli/**/*
+
+# label 'ci' all automation-related steps and files
+ci:
+  - .*  # all '.<>' files
+  - .github/**/*
+  - ci/**/*
+  - hooks/**/*
+  - Makefile
+  - Dockerfile*
+  - setup.cfg
+
+doc:
+  - "*.rst"
+  - "*.example"
+  - doc/**/*
+  - requirements-doc.txt
+
+tests:
+  - tests/**/*
+  - requirements-dev.txt

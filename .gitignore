@@ -1,0 +1,56 @@
+## Python & Build
+__pycache__
+*.py[cio]
+*.egg*
+build
+dist
+downloads
+cowbirdenv
+pip-selfcheck.json
+src
+share
+
+## Makefile
+Makefile.config
+
+## Environment
+.env
+**/*.env
+venv
+env/
+
+## IDE
+.idea
+.vscode
+
+## Tests & CI
+.coverage*
+.pytest_cache
+bandit.txt
+coverage.*
+coverage
+docker-compose.yml
+docker-compose.override.yml
+reports
+results.*
+tests/results.*
+
+## Docs
+docs/_build
+docs/cowbird.tests.rst
+docs/cowbird.rst
+
+## Repo
+config.yml
+config.yaml
+cowbird.ini
+custom.ini
+cowbird/api_docs
+cowbird/api_test
+cowbird/bin
+cowbird/env
+cowbird/include
+cowbird/lib
+cowbird/local
+gunicorn.app.wsgiapp
+error_log.txt

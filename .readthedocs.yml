@@ -1,0 +1,23 @@
+# configuration to setup readthedocs
+version: 2
+sphinx:
+  configuration: docs/conf.py
+# note:
+#   disable PDF and EPUB which break during LaTeX
+#   generation because of `redoc.js` script not found
+#formats: all
+formats:
+  - htmlzip
+  #- pdf
+  #- epub
+python:
+  version: 3.7
+  install:
+    - requirements: requirements-doc.txt
+    # required for OpenAPI generation
+    - requirements: requirements.txt
+#    - method: pip
+#      path: .
+#      extra_requirements:
+#        - docs
+  system_packages: true

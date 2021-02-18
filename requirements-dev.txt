@@ -1,0 +1,15 @@
+-r requirements-doc.txt
+autopep8
+bandit==1.6.2
+bump2version
+codacy-coverage
+coverage
+doc8
+docformatter
+flake8
+isort>5
+mock
+pylint>=2.5
+pylint-quotes
+pytest
+webtest
