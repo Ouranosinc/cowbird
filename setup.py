@@ -204,11 +204,11 @@ setup(
         "Intended Audience :: Developers",
         "License :: OSI Approved :: {} License".format(__meta__.__license__),
         "Natural Language :: English",
-        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
     ],
-    python_requires=">=3.6, <4",
+    python_requires=">=3.7, <4",
 
     # -- Package structure -------------------------------------------------
     packages=[__meta__.__package__],

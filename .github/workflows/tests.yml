@@ -47,7 +47,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.6", "3.7", "3.8"]
+        python-version: ["3.7", "3.8"]
         allow-failure: [false]
         test-case: [check, test, test-docker, coverage]
     steps:
