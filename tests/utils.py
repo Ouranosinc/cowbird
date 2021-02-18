@@ -1,5 +1,6 @@
 import functools
 import json as json_pkg  # avoid conflict name with json argument employed for some function
+import os
 from distutils.version import LooseVersion
 from typing import TYPE_CHECKING
 
@@ -13,7 +14,7 @@ from webtest.app import AppError, TestApp  # noqa
 from webtest.response import TestResponse
 
 from cowbird.app import main
-from cowbird.constants import get_constant
+from cowbird.constants import COWBIRD_ROOT, get_constant
 from cowbird.utils import CONTENT_TYPE_JSON, get_header, is_null, null
 
 
@@ -84,6 +85,7 @@ def get_test_app(settings=None):
     if not settings:
         settings = {}
     settings["cowbird.url"] = "http://localhost:80"
+    settings["cowbird.ini_file_path"] = os.path.join(COWBIRD_ROOT, "config/cowbird.example.ini")
     test_app = TestApp(main({}, **settings))
     return test_app
 
