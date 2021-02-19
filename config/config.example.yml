@@ -1,7 +1,30 @@
 components:
-  geoserver:
-    url: http://${HOSTNAME}:4002
-    proxy: https://${HOSTNAME}/twitcher/ows/proxy/geoserver
-  thredds:
-    url: http://${HOSTNAME}:8083/thredds
-    proxy: https://${HOSTNAME}/twitcher/ows/proxy/thredds
+  Magpie:
+    active: true
+    url: https://${HOSTNAME}/magpie
+  Geoserver:
+    active: true
+    url: https://${HOSTNAME}/twitcher/ows/proxy/geoserver
+  Catalog:
+    active: false
+    url: https://${HOSTNAME}/twitcher/ows/proxy/catalog
+  Thredds:
+    active: true
+  Nginx:
+    active: true
+
+synch_permissions:
+  user_workspace:
+    services:
+      geoserver: /api/workspaces/private/*
+      thredds: /catalog/birdhouse/workspaces/private/*
+    permissions_mapping:
+      - geoserver:
+          - read
+        thredds:
+          - read
+          - browse
+      - geoserver:
+          - write
+        thredds:
+          - execute
