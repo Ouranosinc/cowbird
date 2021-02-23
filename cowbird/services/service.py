@@ -1,6 +1,6 @@
 
 
-class Service:
+class Service(object):
     """
     Service interface use to notify implemented services of users/permissions
     changes.

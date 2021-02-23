@@ -68,7 +68,7 @@ def test_response_metadata():
     ], start=1):
         with contextlib.ExitStack() as stack:
             if code == 500:
-                stack.enter_context(mock.patch("cowbird.api.services.utils.Service", side_effect=MockService))
+                stack.enter_context(mock.patch("cowbird.services.Magpie", side_effect=MockService))
             headers = {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON}
             headers.update(kwargs.get("headers", {}))
             kwargs.pop("headers", None)

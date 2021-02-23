@@ -5,7 +5,7 @@ Cowbird CLI helper to execute service operations.
 import argparse
 from typing import TYPE_CHECKING
 
-from cowbird.api.services.utils import get_services
+from cowbird.services import get_services
 from cowbird.cli import LOGGER
 from cowbird.cli.utils import get_config_parser, get_format_parser, print_format, set_log_level, subparser_help
 from cowbird.utils import get_app_config

@@ -16,6 +16,7 @@ def get_services(container):
     """
     Obtains the services managed by the application.
     """
+    # FIXME: Use settings to enable/disable services
     return [Catalog("Catalog"),
             Geoserver("Geoserver"),
             Magpie("Magpie"),
