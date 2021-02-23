@@ -4,6 +4,8 @@ from cowbird.services.impl.geoserver import Geoserver
 from cowbird.services.impl.magpie import Magpie
 from cowbird.services.impl.nginx import Nginx
 from cowbird.services.impl.thredds import Thredds
+from cowbird.services.service import Service
+
 
 if TYPE_CHECKING:
     from typing import List
