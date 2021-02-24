@@ -387,7 +387,7 @@ def all_equal(iter_val, iter_ref, any_order=False):
     if len(iter_val) != len(iter_ref):
         return False
     if any_order:
-        return all([it in iter_ref for it in iter_val])
+        return all(it in iter_ref for it in iter_val)
     return all(it == ir for it, ir in zip(iter_val, iter_ref))
 
 
