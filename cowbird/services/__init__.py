@@ -4,6 +4,7 @@ from cowbird.services.impl.geoserver import Geoserver
 from cowbird.services.impl.magpie import Magpie
 from cowbird.services.impl.nginx import Nginx
 from cowbird.services.impl.thredds import Thredds
+from cowbird.services.impl.filesystem import FileSystem
 from cowbird.services.service import Service
 
 
@@ -23,4 +24,5 @@ def get_services(container):
             Geoserver("Geoserver"),
             Magpie("Magpie"),
             Nginx("Nginx"),
-            Thredds("Thredds")]
+            Thredds("Thredds"),
+            FileSystem("FileSystem")]
