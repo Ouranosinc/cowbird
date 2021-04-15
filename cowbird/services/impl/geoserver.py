@@ -5,10 +5,7 @@ from cowbird.requestqueue import RequestQueue
 class Geoserver(Service):
     """
     Keep Geoserver internal representation in synch with the platform.
-
-    Keep service-shared resources in synch when Geoserver permissions are
-    updated.
     """
-    def __init__(self, name):
-        super(Geoserver, self).__init__(name)
+    def __init__(self, name, url):
+        super(Geoserver, self).__init__(name, url)
         self.req_queue = RequestQueue()

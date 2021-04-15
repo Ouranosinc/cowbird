@@ -16,6 +16,7 @@ from pyramid.registry import Registry
 from pyramid.request import Request
 from pyramid.response import Response
 from pyramid.settings import truthy
+from pyramid.threadlocal import get_current_registry
 from requests.structures import CaseInsensitiveDict
 from webob.headers import EnvironHeaders, ResponseHeaders
 
@@ -295,14 +296,26 @@ def convert_response(response):
     return pyramid_response
 
 
-def get_settings(container):
-    # type: (AnySettingsContainer) -> SettingsType
+def get_settings(container, app=False):
+    # type: (Optional[AnySettingsContainer], bool) -> SettingsType
+    """
+    Retrieve application settings from a supported container.
+
+    :param container: supported container with an handle to application settings.
+    :param app: allow retrieving from current thread registry if no container was defined.
+    :return: found application settings dictionary.
+    :raise TypeError: when no application settings could be found or unsupported container.
+    """
     if isinstance(container, (Configurator, Request)):
         return container.registry.settings  # noqa
     if isinstance(container, Registry):
         return container.settings
     if isinstance(container, dict):
         return container
+    if container is None and app:
+        print_log("Using settings from local thread.", level=logging.DEBUG)
+        registry = get_current_registry()
+        return registry.settings
     raise TypeError("Could not retrieve settings from container object [{}]".format(type(container)))
 
 

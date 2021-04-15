@@ -1,17 +1,17 @@
 from cowbird.services.service import Service
 from cowbird.requestqueue import RequestQueue
-from cowbird.monitoring import IFSMonitor
+from cowbird.monitoring.fsmonitor import FSMonitor
 
 
-class Catalog(Service, IFSMonitor):
+class Catalog(Service, FSMonitor):
     """
     Keep the catalog index in synch when files are created/deleted/updated.
     """
 
     # FIXME: All services need to be singleton as well as monitoring
 
-    def __init__(self, name):
-        super(Catalog, self).__init__(name)
+    def __init__(self, name, url):
+        super(Catalog, self).__init__(name, url)
         self.req_queue = RequestQueue()
         # TODO: Need to monitor data directory
 
