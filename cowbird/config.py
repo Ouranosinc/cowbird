@@ -1,12 +1,17 @@
 import logging
 import os
+from typing import TYPE_CHECKING
+
 import six
 import yaml
-from cowbird.utils import (
-    get_logger,
-    print_log,
-    raise_log
-)
+
+from cowbird.utils import get_logger, print_log, raise_log
+
+if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
+    from typing import List, Union
+
+    from cowbird.typedefs import ConfigDict, Str
 
 LOGGER = get_logger(__name__)
 
@@ -59,8 +64,8 @@ def get_all_configs(path_or_dict, section, allow_missing=False):
             dir_path = os.path.abspath(path_or_dict)
             known_extensions = [".cfg", ".yml", ".yaml", ".json"]
             cfg_names = list(sorted({fn for fn in os.listdir(dir_path)
-                                     if any([fn.endswith(ext) for ext in
-                                             known_extensions])}))
+                                     if any(fn.endswith(ext) for ext in
+                                            known_extensions)}))
             return [_load_config(os.path.join(dir_path, fn),
                                  section,
                                  allow_missing) for fn in cfg_names]
@@ -74,8 +79,7 @@ def get_all_configs(path_or_dict, section, allow_missing=False):
 def _expand_all(config):
     # type: (ConfigDict) -> ConfigDict
     """
-    Applies environment variable expansion recursively to all applicable fields
-    of a configuration definition.
+    Applies environment variable expansion recursively to all applicable fields of a configuration definition.
     """
     if isinstance(config, dict):
         for cfg in list(config):

@@ -1,39 +1,40 @@
 import os
-import six
-import pytest
 import tempfile
 from time import sleep
+
+import pytest
+import six
+
+from cowbird.monitoring.fsmonitor import FSMonitor
+from cowbird.monitoring.monitoring import Monitoring
 
 if six.PY2:
     from backports import tempfile as tempfile2  # noqa  # Python 2
 else:
     tempfile2 = tempfile  # pylint: disable=C0103,invalid-name
 
-from cowbird.monitoring.fsmonitor import FSMonitor
-from cowbird.monitoring.monitoring import Monitoring
 
-
-def file_io(fn, mv_fn):
+def file_io(filename, mv_filename):
     # Create
-    with open(fn, 'w') as f:
-        f.write('Hello world!')
+    with open(filename, "w") as f:
+        f.write("Hello")
     # Update
-    #with open(fn, 'a') as f:
-    #    f.write('Hello world!')
+    with open(filename, "a") as f:
+        f.write(" world!")
     # Should create a delete and a create event
-    os.rename(fn, mv_fn)
+    os.rename(filename, mv_filename)
     # Delete
-    os.remove(mv_fn)
+    os.remove(mv_filename)
 
 
 @pytest.mark.monitoring
 def test_register_unregister_monitor():
     with tempfile2.TemporaryDirectory() as tmpdir:
-        test_file = os.path.join(tmpdir, 'testfile')
-        test_subdir = os.path.join(tmpdir, 'subdir')
-        test_subdir_file = os.path.join(test_subdir, 'test_subdir_file')
-        mv_test_file = os.path.join(test_subdir, 'moved_testfile')
-        mv_test_subdir_file = os.path.join(tmpdir, 'moved_test_subdir_file')
+        test_file = os.path.join(tmpdir, "testfile")
+        test_subdir = os.path.join(tmpdir, "subdir")
+        test_subdir_file = os.path.join(test_subdir, "test_subdir_file")
+        mv_test_file = os.path.join(test_subdir, "moved_testfile")
+        mv_test_subdir_file = os.path.join(tmpdir, "moved_test_subdir_file")
         os.mkdir(test_subdir)
 
         mon = TestMonitor()
@@ -42,8 +43,8 @@ def test_register_unregister_monitor():
         Monitoring().register(tmpdir, False, mon)
         Monitoring().register(tmpdir, True, mon2)
         Monitoring().register(test_subdir, True, mon3)
-        assert(len(Monitoring().monitors) == 2)
-        assert (len(Monitoring().monitors[tmpdir]) == 2)
+        assert len(Monitoring().monitors) == 2
+        assert len(Monitoring().monitors[tmpdir]) == 2
 
         file_io(test_file, mv_test_file)
         file_io(test_subdir_file, mv_test_subdir_file)
@@ -76,10 +77,11 @@ def test_register_unregister_monitor():
 
         Monitoring().unregister(tmpdir, mon)
         Monitoring().unregister(tmpdir, mon2)
-        assert(not Monitoring().unregister(test_subdir, mon))
+        assert not Monitoring().unregister(test_subdir, mon)
         Monitoring().unregister(test_subdir, mon3)
-        assert(len(Monitoring().monitors) == 0)
-        assert(not Monitoring().unregister(tmpdir, mon))
+        assert len(Monitoring().monitors) == 0
+        assert not Monitoring().unregister(tmpdir, mon)
+
 
 class TestMonitor(FSMonitor):
     def __init__(self):
@@ -87,11 +89,11 @@ class TestMonitor(FSMonitor):
         self.deleted = []
         self.modified = []
 
-    def on_created(self, fn):
-        self.created.append(fn)
+    def on_created(self, filename):
+        self.created.append(filename)
 
-    def on_deleted(self, fn):
-        self.deleted.append(fn)
+    def on_deleted(self, filename):
+        self.deleted.append(filename)
 
-    def on_modified(self, fn):
-        self.modified.append(fn)
+    def on_modified(self, filename):
+        self.modified.append(filename)

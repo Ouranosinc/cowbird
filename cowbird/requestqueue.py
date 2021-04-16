@@ -6,5 +6,6 @@ class RequestQueue:
     TODO: Connect to celery queue to submit request in an asynch manner
 
     """
+
     def __init__(self):
         pass

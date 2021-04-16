@@ -1,8 +1,9 @@
 import os
-from cowbird.services.service import Service
-from cowbird.requestqueue import RequestQueue
+
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
+from cowbird.requestqueue import RequestQueue
+from cowbird.services.service import Service
 
 
 class Catalog(Service, FSMonitor):
@@ -18,9 +19,9 @@ class Catalog(Service, FSMonitor):
         # TODO: Need to monitor data directory
 
     @staticmethod
-    def _user_workspace_dir(self, username):
+    def _user_workspace_dir(username):
         # FIXME
-        user_workspace_path = 'need value from settings'
+        user_workspace_path = "need value from settings"
         # TODO: path should already exists (priority on services hooks?)
         return os.path.join(user_workspace_path, username)
 
@@ -31,23 +32,23 @@ class Catalog(Service, FSMonitor):
     def delete_user(self, username):
         Monitoring().unregister(self._user_workspace_dir(username), self)
 
-    def on_created(self, fn):
+    def on_created(self, filename):
         """
-        Call when a new file is found
-        :param fn: Relative filename of a new file
-        """
-        pass
+        Call when a new file is found.
 
-    def on_deleted(self, fn):
+        :param filename: Relative filename of a new file
         """
-        Call when a file is deleted
-        :param fn: Relative filename of the removed file
-        """
-        pass
 
-    def on_modified(self, fn):
+    def on_deleted(self, filename):
         """
-        Call when a file is updated
-        :param fn: Relative filename of the updated file
+        Call when a file is deleted.
+
+        :param filename: Relative filename of the removed file
         """
-        pass
+
+    def on_modified(self, filename):
+        """
+        Call when a file is updated.
+
+        :param filename: Relative filename of the updated file
+        """

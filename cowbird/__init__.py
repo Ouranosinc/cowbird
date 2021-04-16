@@ -44,6 +44,7 @@ class RemoveSlashNotFoundViewFactory(object):
     """
     Utility that will try to resolve a path without appended slash if one was provided.
     """
+
     def __init__(self, notfound_view=None):
         self.notfound_view = notfound_view
 

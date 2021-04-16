@@ -30,13 +30,7 @@ if TYPE_CHECKING:
 
     from pyramid.events import NewRequest
 
-    from cowbird.typedefs import (
-        AnyHeadersType,
-        AnyKey,
-        AnyResponseType,
-        AnySettingsContainer,
-        SettingsType,
-    )
+    from cowbird.typedefs import AnyHeadersType, AnyKey, AnyResponseType, AnySettingsContainer, SettingsType
 
 CONTENT_TYPE_ANY = "*/*"
 CONTENT_TYPE_JSON = "application/json"

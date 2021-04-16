@@ -2,7 +2,8 @@ from typing import TYPE_CHECKING
 
 from pyramid.httpexceptions import HTTPError, HTTPInternalServerError, HTTPUnprocessableEntity
 
-from cowbird.api import exception as ax, schemas as s
+from cowbird.api import exception as ax
+from cowbird.api import schemas as s
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger
 
 if TYPE_CHECKING:

@@ -13,7 +13,7 @@ import mock
 import pytest
 
 from cowbird.cli import main as cowbird_cli
-from tests.utils import TEST_INI_FILE, TEST_CFG_FILE
+from tests.utils import TEST_CFG_FILE, TEST_INI_FILE
 
 KNOWN_HELPERS = [
     "services",

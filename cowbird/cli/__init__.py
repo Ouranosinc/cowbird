@@ -5,8 +5,8 @@ import sys
 from typing import TYPE_CHECKING
 
 from cowbird import __meta__
-from cowbird.utils import get_logger
 from cowbird.cli.utils import get_logger_parser, subparser_help
+from cowbird.utils import get_logger
 
 if TYPE_CHECKING:
     from cowbird.cli.utils import ParserMaker, ParserRunner

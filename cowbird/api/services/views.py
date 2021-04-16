@@ -1,7 +1,9 @@
-from pyramid.httpexceptions import HTTPOk, HTTPBadRequest, HTTPNotFound
+from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound, HTTPOk
 from pyramid.view import view_config
 
-from cowbird.api import exception as ax, requests as ar, schemas as s
+from cowbird.api import exception as ax
+from cowbird.api import requests as ar
+from cowbird.api import schemas as s
 from cowbird.services import get_services
 
 

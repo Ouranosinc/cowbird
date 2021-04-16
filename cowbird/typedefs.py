@@ -5,9 +5,10 @@ Additional typing definitions.
 
 from typing import TYPE_CHECKING
 
+import six
+
 if TYPE_CHECKING:
-    from typing import Any
-    from typing import Dict, List, Tuple, Union
+    from typing import Any, Dict, List, Tuple, Union
 
     from pyramid.config import Configurator
     from pyramid.httpexceptions import HTTPException
@@ -42,3 +43,9 @@ if TYPE_CHECKING:
     ConfigItem = Dict[str, JSON]
     ConfigList = List[ConfigItem]
     ConfigDict = Dict[str, Union[str, ConfigItem, ConfigList, JSON]]
+
+    if six.PY2:
+        # pylint: disable=E0602,undefined-variable  # unicode not recognized by python 3
+        Str = Union[AnyStr, unicode]  # noqa: E0602,F405,F821
+    else:
+        Str = str

@@ -3,13 +3,13 @@ import json as json_pkg  # avoid conflict name with json argument employed for s
 import os
 from distutils.version import LooseVersion
 from typing import TYPE_CHECKING
+from urllib.parse import urlparse
 
 import mock
 import requests
 import requests.exceptions
 from pyramid.httpexceptions import HTTPException
 from pyramid.testing import DummyRequest
-from urllib.parse import urlparse
 from webtest.app import AppError, TestApp  # noqa
 from webtest.response import TestResponse
 
@@ -17,10 +17,10 @@ from cowbird.app import main
 from cowbird.constants import COWBIRD_ROOT, get_constant
 from cowbird.utils import CONTENT_TYPE_JSON, get_header, is_null, null
 
-
 # employ example INI config for tests where needed to ensure that configurations are valid
 TEST_INI_FILE = os.path.join(COWBIRD_ROOT, "config/cowbird.example.ini")
 TEST_CFG_FILE = os.path.join(COWBIRD_ROOT, "config/config.example.yml")
+
 
 class TestAppContainer(object):
     test_app = None  # type: Optional[TestApp]

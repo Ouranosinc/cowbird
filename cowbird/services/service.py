@@ -2,11 +2,11 @@
 
 class Service(object):
     """
-    Service interface use to notify implemented services of users/permissions
-    changes.
+    Service interface use to notify implemented services of users/permissions changes.
 
     TODO: Synch this interface with Magpie webhooks
     """
+
     def __init__(self, name, url=None):
         self.name = name
         self.url = url

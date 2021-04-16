@@ -1,18 +1,20 @@
 import os
-
-import six
 from collections import defaultdict
 
-from watchdog.observers import Observer
+import six
 from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
+
 from cowbird.utils import SingletonMeta
 
 
 class Monitor(FileSystemEventHandler):
     """
     # TODO: This class should be mapped as a BD model
+
     # (we need to persist monitors across executions)
     """
+
     def __init__(self, path, recursive, callback):
         # TODO: To serialize the callback we would propably need an actual
         #  singleton class name
@@ -40,7 +42,8 @@ class Monitor(FileSystemEventHandler):
         self.__event_observer.join()
 
     def on_moved(self, event):
-        """Called when a file or a directory is moved or renamed.
+        """
+        Called when a file or a directory is moved or renamed.
 
         :param event:
             Event representing file/directory movement.
@@ -58,7 +61,8 @@ class Monitor(FileSystemEventHandler):
                 self.__callback.on_created(event.dest_path)
 
     def on_created(self, event):
-        """Called when a file or directory is created.
+        """
+        Called when a file or directory is created.
 
         :param event:
             Event representing file/directory creation.
@@ -68,7 +72,8 @@ class Monitor(FileSystemEventHandler):
         self.__callback.on_created(event.src_path)
 
     def on_deleted(self, event):
-        """Called when a file or directory is deleted.
+        """
+        Called when a file or directory is deleted.
 
         :param event:
             Event representing file/directory deletion.
@@ -78,7 +83,8 @@ class Monitor(FileSystemEventHandler):
         self.__callback.on_deleted(event.src_path)
 
     def on_modified(self, event):
-        """Called when a file or directory is modified.
+        """
+        Called when a file or directory is modified.
 
         :param event:
             Event representing file/directory modification.
@@ -91,8 +97,9 @@ class Monitor(FileSystemEventHandler):
 @six.add_metaclass(SingletonMeta)
 class Monitoring:
     """
-    Class handling file system monitoring and registering listeners
+    Class handling file system monitoring and registering listeners.
     """
+
     def __init__(self):
         self.monitors = defaultdict(lambda: {})
 

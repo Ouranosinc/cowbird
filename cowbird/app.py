@@ -4,8 +4,8 @@
 """
 Cowbird is a service for AuthN and AuthZ based on Ziggurat-Foundations.
 """
-from cowbird.utils import get_app_config, get_logger, print_log
 from cowbird.monitoring.monitoring import Monitoring
+from cowbird.utils import get_app_config, get_logger, print_log
 
 LOGGER = get_logger(__name__)
 

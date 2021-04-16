@@ -1,12 +1,11 @@
-from cowbird.services.service import Service
 from cowbird.permissionssynchronizer import PermissionSynchronizer
+from cowbird.services.service import Service
 
 
 class Magpie(Service):
     """
-    Complete the Magpie's webhook call by calling Magpie temporary urls.
-    Also keep service-shared resources in synch when permissions are updated for
-    one of them.
+    Complete the Magpie's webhook call by calling Magpie temporary urls. Also keep service-shared resources in synch
+    when permissions are updated for one of them.
 
     ** Cowbird components diagram 1.2.0 needs to be update since Magpie can
     handle permissions synchronisation directly on permission update events. No
