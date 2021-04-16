@@ -1,16 +1,33 @@
+import os
+
+import six
+from collections import defaultdict
+
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+from cowbird.utils import SingletonMeta
 
 
 class Monitor(FileSystemEventHandler):
     """
-
+    # TODO: This class should be mapped as a BD model
+    # (we need to persist monitors across executions)
     """
     def __init__(self, path, recursive, callback):
+        # TODO: To serialize the callback we would propably need an actual
+        #  singleton class name
         self.__callback = callback
-        self.__src_path = path
+        self.__src_path = os.path.normpath(path)
         self.__recursive = recursive
         self.__event_observer = Observer()
+
+    def save(self):
+        # TODO Save to DB
+        pass
+
+    def remove(self):
+        # TODO Remove from DB
+        pass
 
     def start(self):
         self.__event_observer.schedule(self,
@@ -30,10 +47,15 @@ class Monitor(FileSystemEventHandler):
         :type event:
             :class:`DirMovedEvent` or :class:`FileMovedEvent`
         """
-        # FIXME: Check that dest_path is under self.__src_path else don't send
-        #        on_created event
         self.__callback.on_deleted(event.src_path)
-        self.__callback.on_created(event.dest_path)
+        # If moved outside of __src_path don't send a create event
+        if event.dest_path.startswith(self.__src_path):
+            # If move under subdirectory and recursive is False don't send a
+            # create event neither
+            if self.__recursive or \
+                    os.path.dirname(event.dest_path) == \
+                    os.path.dirname(self.__src_path):
+                self.__callback.on_created(event.dest_path)
 
     def on_created(self, event):
         """Called when a file or directory is created.
@@ -66,22 +88,37 @@ class Monitor(FileSystemEventHandler):
         self.__callback.on_modified(event.src_path)
 
 
+@six.add_metaclass(SingletonMeta)
 class Monitoring:
     """
     Class handling file system monitoring and registering listeners
     """
     def __init__(self):
-        self.monitors = []
+        self.monitors = defaultdict(lambda: {})
+
+    def start(self):
+        # TODO: Load and start monitors from the BD
+        pass
 
     def register(self, path, recursive, cb_monitor):
-        mon = Monitor(path, recursive, cb_monitor)
-        mon.start()
-        self.monitors.append(mon)
-
-    def unregister(self, cb_monitor):
         try:
-            mon = self.monitors.pop(self.monitors.find(cb_monitor))
-            mon.stop()
-            return True
-        except ValueError:
-            return False
+            self.monitors[path][cb_monitor]
+        except KeyError:
+            # Doesn't already exist
+            mon = Monitor(path, recursive, cb_monitor)
+            self.monitors[path][cb_monitor] = mon
+            mon.save()
+            mon.start()
+
+    def unregister(self, path, cb_monitor):
+        if path in self.monitors:
+            try:
+                mon = self.monitors[path].pop(cb_monitor)
+                if len(self.monitors[path]) == 0:
+                    self.monitors.pop(path)
+                mon.stop()
+                mon.remove()
+                return True
+            except KeyError:
+                pass
+        return False
