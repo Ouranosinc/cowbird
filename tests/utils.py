@@ -20,7 +20,7 @@ from cowbird.utils import CONTENT_TYPE_JSON, get_header, is_null, null
 
 # employ example INI config for tests where needed to ensure that configurations are valid
 TEST_INI_FILE = os.path.join(COWBIRD_ROOT, "config/cowbird.example.ini")
-
+TEST_CFG_FILE = os.path.join(COWBIRD_ROOT, "config/config.example.yml")
 
 class TestAppContainer(object):
     test_app = None  # type: Optional[TestApp]
@@ -90,6 +90,7 @@ def get_test_app(settings=None):
         settings = {}
     settings["cowbird.url"] = "http://localhost:80"
     settings["cowbird.ini_file_path"] = TEST_INI_FILE
+    settings["cowbird.config_path"] = TEST_CFG_FILE
     test_app = TestApp(main({}, **settings))
     return test_app
 
