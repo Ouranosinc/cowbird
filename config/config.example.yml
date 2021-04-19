@@ -1,4 +1,4 @@
-components:
+services:
   Magpie:
     active: true
     url: https://${HOSTNAME}/magpie

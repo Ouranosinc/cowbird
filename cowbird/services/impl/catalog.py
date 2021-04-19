@@ -11,8 +11,6 @@ class Catalog(Service, FSMonitor):
     Keep the catalog index in synch when files are created/deleted/updated.
     """
 
-    # FIXME: All services need to be singleton
-
     def __init__(self, name, url):
         super(Catalog, self).__init__(name, url)
         self.req_queue = RequestQueue()

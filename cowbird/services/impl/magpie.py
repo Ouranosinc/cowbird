@@ -1,4 +1,4 @@
-from cowbird.permissionssynchronizer import PermissionSynchronizer
+from cowbird.permissions_synchronizer import PermissionSynchronizer
 from cowbird.services.service import Service
 
 
