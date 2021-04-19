@@ -18,6 +18,9 @@ VALID_SERVICES = ["Catalog", "Geoserver", "Magpie", "Nginx", "Thredds",
 
 @six.add_metaclass(SingletonMeta)
 class ServiceFactory:
+    """
+    Create service instance using service name
+    """
     def __init__(self):
         settings = get_settings(None, app=True)
         config_path = get_constant("COWBIRD_CONFIG_PATH", settings,
@@ -28,6 +31,11 @@ class ServiceFactory:
         self.services = {}
 
     def get_service(self, name):
+        # type: (str) -> Service
+        """
+        Instantiates a `Service` implementation using its name if it doesn't exist or else returns the existing one from
+        cache.
+        """
         try:
             return self.services[name]
         except KeyError:
@@ -41,4 +49,8 @@ class ServiceFactory:
             return svc
 
     def get_active_services(self):
+        # type: (None) -> List[Service]
+        """
+        Return a list of `Service` implementation activated in the config.
+        """
         return list(filter(None, [self.get_service(name) for name in self.services_cfg]))
