@@ -7,7 +7,17 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Preliminary design which includes:
+
+  - Synchronized services
+  - File system monitoring
+  - Permissions synchronizer
+  
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+n/a
 
 `0.1.0 <https://github.com/Ouranosinc/cowbird/tree/0.1.0>`_ (2021-02-18)
 ------------------------------------------------------------------------------------
