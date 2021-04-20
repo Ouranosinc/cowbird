@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+import six
 from pyramid.httpexceptions import HTTPError, HTTPInternalServerError, HTTPUnprocessableEntity
 
 from cowbird.api import exception as ax
@@ -11,6 +12,8 @@ if TYPE_CHECKING:
     from typing import Any, Iterable, Optional, Type, Union
 
     from pyramid.request import Request
+
+    from cowbird.typedefs import Str
 
 LOGGER = get_logger(__name__)
 
@@ -95,6 +98,32 @@ def get_multiformat_body(request, key, default=None, check_type=str, pattern=ax.
     """
     val = get_multiformat_body_raw(request, key, default=default)
     check_value(val, key, check_type, pattern, http_error=http_error, msg_on_fail=msg_on_fail)
+    return val
+
+
+def get_value_multiformat_body_checked(request, key, default=None, check_type=six.string_types, pattern=ax.PARAM_REGEX):
+    # type: (Request, Str, Any, Any, Optional[Union[Str, bool]]) -> Str
+    """
+    Obtains and validates the matched value under :paramref:`key` element from the request body.
+
+    Parsing of the body is accomplished according to ``Content-Type`` header.
+
+    :param request: request from which to retrieve the key.
+    :param key: body key variable.
+    :param default: value to return instead if not found. If this default is ``None``, it will raise.
+    :param check_type: verify that parameter value is of specified type. Set to ``None`` to disable check.
+    :param pattern: regex pattern to validate the input with.
+        If value evaluates to ``False``, skip this kind of validation
+        (default: :py:data:`magpie.api.exception.PARAM_REGEX`).
+    :return: matched path variable value.
+    :raises HTTPBadRequest: if the key could not be retrieved from the request body and has no provided default value.
+    :raises HTTPUnprocessableEntity: if the retrieved value from the key is invalid for this request.
+
+    .. seealso::
+        - :func:`get_multiformat_body`
+    """
+    val = get_multiformat_body(request, key, default=default)
+    check_value(val, key, check_type, pattern)
     return val
 
 

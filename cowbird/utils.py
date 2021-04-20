@@ -484,3 +484,11 @@ null = NullType()  # pylint: disable=C0103,invalid-name
 
 def is_null(item):
     return isinstance(item, NullType) or item is null
+
+
+def get_config_path():
+    settings = get_settings(None, app=True)
+    return get_constant("COWBIRD_CONFIG_PATH", settings,
+                        default_value=None,
+                        raise_missing=False, raise_not_set=False,
+                        print_missing=True)

@@ -2,7 +2,7 @@ import os
 
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
-from cowbird.requestqueue import RequestQueue
+from cowbird.request_queue import RequestQueue
 from cowbird.services.service import Service
 
 

@@ -98,6 +98,9 @@ class Monitor(FileSystemEventHandler):
 class Monitoring:
     """
     Class handling file system monitoring and registering listeners.
+
+    TODO: At some point we will need a consistency function that goes through all monitored folder and make sure that
+          monitoring services are up to date.
     """
 
     def __init__(self):

@@ -16,8 +16,8 @@ services:
 synch_permissions:
   user_workspace:
     services:
-      geoserver: /api/workspaces/private/*
-      thredds: /catalog/birdhouse/workspaces/private/*
+      geoserver: /api/workspaces/private/
+      thredds: /catalog/birdhouse/workspaces/private/
     permissions_mapping:
       - geoserver:
           - read

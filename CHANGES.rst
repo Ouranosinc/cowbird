@@ -11,10 +11,11 @@ Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Preliminary design which includes:
 
-  - Synchronized services
+  - Webhook API
+  - Services interface
   - File system monitoring
   - Permissions synchronizer
-  
+
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 n/a

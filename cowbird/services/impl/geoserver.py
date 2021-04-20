@@ -1,4 +1,4 @@
-from cowbird.requestqueue import RequestQueue
+from cowbird.request_queue import RequestQueue
 from cowbird.services.service import Service
 
 

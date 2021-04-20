@@ -1,5 +1,6 @@
 import mock
 import pytest
+
 from cowbird.services.service_factory import ServiceFactory
 from tests.utils import TEST_CFG_FILE
 
@@ -9,11 +10,11 @@ def test_service_factory():
     override = {"COWBIRD_CONFIG_PATH": TEST_CFG_FILE}
     with mock.patch.dict("os.environ", override):
         # Test singleton
-        m1 = ServiceFactory().get_service("Magpie")
-        m2 = ServiceFactory().get_service("Magpie")
-        assert m1 is m2
+        inst1 = ServiceFactory().get_service("Magpie")
+        inst2 = ServiceFactory().get_service("Magpie")
+        assert inst1 is inst2
         assert len(ServiceFactory().services) == 1
-        assert ServiceFactory().services["Magpie"] is m1
+        assert ServiceFactory().services["Magpie"] is inst1
 
         # Test services config
         services = ServiceFactory().get_active_services()

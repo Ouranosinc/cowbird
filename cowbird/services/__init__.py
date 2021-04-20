@@ -5,6 +5,7 @@ from cowbird.services.service_factory import ServiceFactory
 if TYPE_CHECKING:
     from typing import List
 
+    from cowbird.services.service import Service
     from cowbird.typedefs import AnySettingsContainer
 
 

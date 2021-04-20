@@ -4,8 +4,8 @@ from cowbird.services.service import Service
 
 class Magpie(Service):
     """
-    Complete the Magpie's webhook call by calling Magpie temporary urls. Also keep service-shared resources in sync
-    when permissions are updated for one of them.
+    Complete the Magpie's webhook call by calling Magpie temporary urls. Also keep service-shared resources in sync when
+    permissions are updated for one of them.
 
     ** Cowbird components diagram 1.2.0 needs to be update since Magpie can
     handle permissions synchronisation directly on permission update events. No
@@ -16,8 +16,8 @@ class Magpie(Service):
         super(Magpie, self).__init__(name, url)
         self.permissions_synch = PermissionSynchronizer()
 
-    def set_permission(self, permission):
-        self.permissions_synch.set_permission(permission)
+    def create_permission(self, permission):
+        self.permissions_synch.create_permission(permission)
 
     def delete_permission(self, permission):
         self.permissions_synch.delete_permission(permission)

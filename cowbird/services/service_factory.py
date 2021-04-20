@@ -1,16 +1,21 @@
+from typing import TYPE_CHECKING
+
 import six
 
 from cowbird.config import get_all_configs
-from cowbird.constants import get_constant
+# pylint: disable=W0611,unused-import
 from cowbird.services.impl.catalog import Catalog  # noqa: F401
 from cowbird.services.impl.filesystem import FileSystem  # noqa: F401
 from cowbird.services.impl.geoserver import Geoserver  # noqa: F401
 from cowbird.services.impl.magpie import Magpie  # noqa: F401
 from cowbird.services.impl.nginx import Nginx  # noqa: F401
 from cowbird.services.impl.thredds import Thredds  # noqa: F401
-from cowbird.utils import get_settings
-from cowbird.utils import SingletonMeta
+from cowbird.utils import SingletonMeta, get_config_path
 
+if TYPE_CHECKING:
+    from typing import List
+
+    from cowbird.services.service import Service
 
 VALID_SERVICES = ["Catalog", "Geoserver", "Magpie", "Nginx", "Thredds",
                   "FileSystem"]
@@ -19,19 +24,16 @@ VALID_SERVICES = ["Catalog", "Geoserver", "Magpie", "Nginx", "Thredds",
 @six.add_metaclass(SingletonMeta)
 class ServiceFactory:
     """
-    Create service instance using service name
+    Create service instance using service name.
     """
+
     def __init__(self):
-        settings = get_settings(None, app=True)
-        config_path = get_constant("COWBIRD_CONFIG_PATH", settings,
-                                   default_value=None,
-                                   raise_missing=False, raise_not_set=False,
-                                   print_missing=True)
+        config_path = get_config_path()
         self.services_cfg = get_all_configs(config_path, "services", allow_missing=True)[0]
         self.services = {}
 
     def get_service(self, name):
-        # type: (str) -> Service
+        # type: (ServiceFactory, str) -> Service
         """
         Instantiates a `Service` implementation using its name if it doesn't exist or else returns the existing one from
         cache.
@@ -49,7 +51,7 @@ class ServiceFactory:
             return svc
 
     def get_active_services(self):
-        # type: (None) -> List[Service]
+        # type: (ServiceFactory) -> List[Service]
         """
         Return a list of `Service` implementation activated in the config.
         """
