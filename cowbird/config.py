@@ -2,7 +2,6 @@ import logging
 import os
 from typing import TYPE_CHECKING
 
-import six
 import yaml
 
 from cowbird.utils import get_logger, print_log, raise_log

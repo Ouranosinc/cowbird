@@ -1,6 +1,5 @@
 from typing import TYPE_CHECKING
 
-import six
 from pyramid.httpexceptions import HTTPError, HTTPInternalServerError, HTTPUnprocessableEntity
 
 from cowbird.api import exception as ax
@@ -12,8 +11,6 @@ if TYPE_CHECKING:
     from typing import Any, Iterable, Optional, Type, Union
 
     from pyramid.request import Request
-
-    from cowbird.typedefs import Str
 
 LOGGER = get_logger(__name__)
 

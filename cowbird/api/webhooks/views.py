@@ -57,9 +57,9 @@ def post_permission_webhook_view(request):
                     msg_on_fail=s.PermissionWebhook_POST_BadRequestResponseSchema.description)
     service_name = ar.get_multiformat_body(request, "service_name")
     resource_id = ar.get_multiformat_body(request, "resource_id")
-    PARAM_REGEX_WITH_SLASHES = r"^/?[A-Za-z0-9]+(?:[\s_\-\./][A-Za-z0-9]+)*$"
+    param_regex_with_slashes = r"^/?[A-Za-z0-9]+(?:[\s_\-\./][A-Za-z0-9]+)*$"
     resource_full_name = ar.get_multiformat_body(request, "resource_full_name",
-                                                 pattern=PARAM_REGEX_WITH_SLASHES)
+                                                 pattern=param_regex_with_slashes)
     name = ar.get_multiformat_body(request, "name")
     access = ar.get_multiformat_body(request, "access")
     scope = ar.get_multiformat_body(request, "scope")

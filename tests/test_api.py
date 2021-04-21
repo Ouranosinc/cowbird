@@ -36,7 +36,7 @@ class TestAPI(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         # Remove custom service factory for next tests
-        SingletonMeta._instances.clear()
+        SingletonMeta._instances.clear()  # pylint: disable=W0212
         super(TestAPI, cls).tearDownClass()
 
     def test_homepage(self):
@@ -87,7 +87,7 @@ class TestAPI(unittest.TestCase):
                 resp = utils.test_request(app, "POST", "/webhooks/users", json=data)
                 utils.check_response_basic_info(resp, 200, expected_method="POST")
                 utils.check_response_basic_info(resp)
-                magpie = ServiceFactory().get_service('Magpie')
+                magpie = ServiceFactory().get_service("Magpie")
                 assert len(magpie.json()["users"]) == 1
                 assert magpie.json()["users"][0] == data["user_name"]
 
@@ -110,7 +110,7 @@ class TestAPI(unittest.TestCase):
                 }
                 resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
                 utils.check_response_basic_info(resp, 200, expected_method="POST")
-                magpie = ServiceFactory().get_service('Magpie')
+                magpie = ServiceFactory().get_service("Magpie")
                 assert len(magpie.json()["perms"]) == 1
                 assert magpie.json()["perms"][0] == data["resource_full_name"]
 
