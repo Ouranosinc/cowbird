@@ -13,7 +13,7 @@ from cowbird.services.service_factory import ServiceFactory
 def dispatch(fct_name, kwargs):
     for svc in ServiceFactory().get_active_services():
         fct = getattr(svc, fct_name)
-        fct(kwargs)
+        fct(**kwargs)
 
 
 @s.UserWebhookAPI.post(schema=s.UserWebhook_POST_RequestSchema, tags=[s.WebhooksTag],
@@ -23,15 +23,15 @@ def post_user_webhook_view(request):
     """
     User webhook used for created or removed user events.
     """
-    operation = ar.get_value_multiformat_body_checked(request, "operation")
+    operation = ar.get_multiformat_body(request, "operation")
     ax.verify_param(operation, param_name="operation",
                     param_compare=ValidOperations.values(),
                     is_in=True,
                     http_error=HTTPBadRequest,
                     msg_on_fail=s.UserWebhook_POST_BadRequestResponseSchema.description)
-    user_name = ar.get_value_multiformat_body_checked(request, "user_name")
-    if operation == ValidOperations.CreateOperation:
-        callback_url = ar.get_value_multiformat_body_checked(request, "callback_url")
+    user_name = ar.get_multiformat_body(request, "user_name")
+    if operation == ValidOperations.CreateOperation.value:
+        callback_url = ar.get_multiformat_body(request, "callback_url")
         try:
             dispatch("create_user", dict(user_name=user_name))
         except Exception:  # noqa
@@ -49,24 +49,26 @@ def post_permission_webhook_view(request):
     """
     Permission webhook used for created or removed permission events.
     """
-    operation = ar.get_value_multiformat_body_checked(request, "operation")
+    operation = ar.get_multiformat_body(request, "operation")
     ax.verify_param(operation, param_name="operation",
                     param_compare=ValidOperations.values(),
                     is_in=True,
                     http_error=HTTPBadRequest,
                     msg_on_fail=s.PermissionWebhook_POST_BadRequestResponseSchema.description)
-    service_name = ar.get_value_multiformat_body_checked(request, "service_name")
-    resource_id = ar.get_value_multiformat_body_checked(request, "resource_id")
-    resource_full_name = ar.get_value_multiformat_body_checked(request, "resource_full_name")
-    name = ar.get_value_multiformat_body_checked(request, "name")
-    access = ar.get_value_multiformat_body_checked(request, "access")
-    scope = ar.get_value_multiformat_body_checked(request, "scope")
+    service_name = ar.get_multiformat_body(request, "service_name")
+    resource_id = ar.get_multiformat_body(request, "resource_id")
+    PARAM_REGEX_WITH_SLASHES = r"^/?[A-Za-z0-9]+(?:[\s_\-\./][A-Za-z0-9]+)*$"
+    resource_full_name = ar.get_multiformat_body(request, "resource_full_name",
+                                                 pattern=PARAM_REGEX_WITH_SLASHES)
+    name = ar.get_multiformat_body(request, "name")
+    access = ar.get_multiformat_body(request, "access")
+    scope = ar.get_multiformat_body(request, "scope")
     user = ar.get_multiformat_body(request, "user")
     group = None
     if user:
         ar.check_value(user, "user")
     else:
-        group = ar.get_value_multiformat_body_checked(request, "group")
+        group = ar.get_multiformat_body(request, "group")
 
     permission = Permission(
         service_name=service_name,
@@ -78,8 +80,8 @@ def post_permission_webhook_view(request):
         user=user,
         group=group
     )
-    if operation == ValidOperations.CreateOperation:
-        dispatch("create_permission", permission)
+    if operation == ValidOperations.CreateOperation.value:
+        dispatch("create_permission", dict(permission=permission))
     else:
-        dispatch("delete_permission", permission)
+        dispatch("delete_permission", dict(permission=permission))
     return ax.valid_http(HTTPOk, detail=s.PermissionWebhook_POST_OkResponseSchema.description)

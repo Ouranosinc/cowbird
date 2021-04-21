@@ -28,7 +28,7 @@ def _load_config(path_or_dict, section, allow_missing=False):
     Loads a file path or dictionary as YAML/JSON configuration.
     """
     try:
-        if isinstance(path_or_dict, six.string_types):
+        if isinstance(path_or_dict, str):
             cfg = yaml.safe_load(open(path_or_dict, "r"))
         else:
             cfg = path_or_dict
@@ -59,7 +59,7 @@ def get_all_configs(path_or_dict, section, allow_missing=False):
         Order of file loading will be resolved by alphabetically sorted filename
         if specifying a directory path.
     """
-    if isinstance(path_or_dict, six.string_types):
+    if isinstance(path_or_dict, str):
         if os.path.isdir(path_or_dict):
             dir_path = os.path.abspath(path_or_dict)
             known_extensions = [".cfg", ".yml", ".yaml", ".json"]
@@ -90,7 +90,7 @@ def _expand_all(config):
     elif isinstance(config, (list, set)):
         for i, cfg in enumerate(config):
             config[i] = _expand_all(cfg)
-    elif isinstance(config, six.string_types):
+    elif isinstance(config, str):
         config = os.path.expandvars(str(config))
     elif isinstance(config, (int, bool, float, type(None))):
         pass

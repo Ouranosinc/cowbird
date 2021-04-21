@@ -17,18 +17,18 @@ class Catalog(Service, FSMonitor):
         # TODO: Need to monitor data directory
 
     @staticmethod
-    def _user_workspace_dir(username):
+    def _user_workspace_dir(user_name):
         # FIXME
         user_workspace_path = "need value from settings"
         # TODO: path should already exists (priority on services hooks?)
-        return os.path.join(user_workspace_path, username)
+        return os.path.join(user_workspace_path, user_name)
 
-    def create_user(self, username):
+    def create_user(self, user_name):
         # TODO: Implement: what we do? start monitoring the user directory
-        Monitoring().register(self._user_workspace_dir(username), True, self)
+        Monitoring().register(self._user_workspace_dir(user_name), True, self)
 
-    def delete_user(self, username):
-        Monitoring().unregister(self._user_workspace_dir(username), self)
+    def delete_user(self, user_name):
+        Monitoring().unregister(self._user_workspace_dir(user_name), self)
 
     def on_created(self, filename):
         """

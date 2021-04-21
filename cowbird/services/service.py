@@ -15,10 +15,10 @@ class Service(object):
     def json(self):
         return {"name": self.name, "url": self.url}
 
-    def create_user(self, username):
+    def create_user(self, user_name):
         pass
 
-    def delete_user(self, username):
+    def delete_user(self, user_name):
         pass
 
     def create_permission(self, permission):

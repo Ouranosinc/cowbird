@@ -134,10 +134,10 @@ ServiceAPI = Service(
     path="/services/{service_name}",
     name="service_detail")
 UserWebhookAPI = Service(
-    path="/users",
+    path="/webhooks/users",
     name="user_webhook")
 PermissionWebhookAPI = Service(
-    path="/permissions",
+    path="/webhooks/permissions",
     name="permission_webhook")
 
 # Path parameters

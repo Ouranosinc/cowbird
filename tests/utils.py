@@ -10,12 +10,13 @@ import requests
 import requests.exceptions
 from pyramid.httpexceptions import HTTPException
 from pyramid.testing import DummyRequest
+from pyramid.testing import setUp as PyramidSetUp
 from webtest.app import AppError, TestApp  # noqa
 from webtest.response import TestResponse
 
 from cowbird.app import main
 from cowbird.constants import COWBIRD_ROOT, get_constant
-from cowbird.utils import CONTENT_TYPE_JSON, get_header, is_null, null
+from cowbird.utils import CONTENT_TYPE_JSON, get_header, is_null, null, get_settings_from_config_ini
 
 # employ example INI config for tests where needed to ensure that configurations are valid
 TEST_INI_FILE = os.path.join(COWBIRD_ROOT, "config/cowbird.example.ini")
@@ -81,17 +82,25 @@ class TestVersion(LooseVersion):
         return super(TestVersion, self)._cmp(other)
 
 
+def config_setup_from_ini(config_ini_file_path):
+    settings = get_settings_from_config_ini(config_ini_file_path)
+    config = PyramidSetUp(settings=settings)
+    return config
+
+
 def get_test_app(settings=None):
     # type: (Optional[SettingsType]) -> TestApp
     """
     Instantiate a local test application.
     """
-    if not settings:
-        settings = {}
-    settings["cowbird.url"] = "http://localhost:80"
-    settings["cowbird.ini_file_path"] = TEST_INI_FILE
-    settings["cowbird.config_path"] = TEST_CFG_FILE
-    test_app = TestApp(main({}, **settings))
+    config = config_setup_from_ini(TEST_INI_FILE)
+    config.registry.settings["cowbird.url"] = "http://localhost:80"
+    config.registry.settings["cowbird.ini_file_path"] = TEST_INI_FILE
+    config.registry.settings["cowbird.config_path"] = TEST_CFG_FILE
+    if settings:
+        config.registry.settings.update(settings)
+
+    test_app = TestApp(main({}, **config.registry.settings))
     return test_app
 
 
