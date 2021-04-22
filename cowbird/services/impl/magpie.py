@@ -1,4 +1,4 @@
-from cowbird.permissions_synchronizer import PermissionSynchronizer
+from cowbird.permissions_synchronizer import Permission, PermissionSynchronizer
 from cowbird.services.service import Service
 
 
@@ -14,10 +14,26 @@ class Magpie(Service):
 
     def __init__(self, name, url):
         super(Magpie, self).__init__(name, url)
-        self.permissions_synch = PermissionSynchronizer()
+        self.permissions_synch = PermissionSynchronizer(self)
 
-    def create_permission(self, permission):
+    def permission_created(self, permission):
         self.permissions_synch.create_permission(permission)
 
-    def delete_permission(self, permission):
+    def permission_deleted(self, permission):
         self.permissions_synch.delete_permission(permission)
+
+    def create_permission(self, permission):
+        # type: (Permission) -> None
+        """
+        Make sure that the specified permission exists on Magpie
+        TODO: First need to check if the permission already exists
+              If the permission doesn't exist do a POST to create it
+              If the permission exists but is different do a PUT to update it
+        """
+
+    def delete_permission(self, permission):
+        # type: (Permission) -> None
+        """
+        Remove the specified permission from Magpie if it exists.
+        """
+        # TODO: Post a DELETE request, handle error silently if the permission doesn't exist

@@ -46,7 +46,7 @@ API
 
 When the application is started, the Swagger API should be available under ``/api`` path. This will render the *current*
 version API and applicable requests. Please refer to this documentation to discover all provided API paths and
-operations supported by `Cowbird` on a *running* instance (that could be older than latest code base). Alternatively,
+events supported by `Cowbird` on a *running* instance (that could be older than latest code base). Alternatively,
 documentation of *all* versions is available on `ReadTheDocs`_.
 
 
@@ -54,7 +54,7 @@ CLI
 ----------------------
 
 After successful `installation`_ of `Cowbird` package, multiple helper `utilities`_ become available
-as CLI applications callable from the shell. These can be quite useful to run typical `Cowbird` operations calls
+as CLI applications callable from the shell. These can be quite useful to run typical `Cowbird` events calls
 from the terminal without having to form corresponding HTTP requests.
 Please refer to the relevant page for further details.
 

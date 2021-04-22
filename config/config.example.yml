@@ -13,18 +13,18 @@ services:
   Nginx:
     active: true
 
-synch_permissions:
+sync_permissions:
   user_workspace:
     services:
-      geoserver: /api/workspaces/private/
-      thredds: /catalog/birdhouse/workspaces/private/
+      Geoserver: /api/workspaces/private/
+      Thredds: /catalog/birdhouse/workspaces/private/
     permissions_mapping:
-      - geoserver:
+      - Geoserver:
           - read
-        thredds:
+        Thredds:
           - read
           - browse
-      - geoserver:
+      - Geoserver:
           - write
-        thredds:
+        Thredds:
           - execute

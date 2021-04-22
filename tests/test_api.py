@@ -9,16 +9,16 @@ Tests for :mod:`cowbird.api` module.
 """
 
 import contextlib
-import unittest
 import tempfile
-import yaml
+import unittest
+
 import mock
 import pytest
+import yaml
 
-from cowbird.utils import CONTENT_TYPE_JSON
 from cowbird.services.service import Service
 from cowbird.services.service_factory import ServiceFactory
-from cowbird.utils import SingletonMeta
+from cowbird.utils import CONTENT_TYPE_JSON, SingletonMeta
 from tests import utils
 
 
@@ -60,27 +60,27 @@ class TestAPI(unittest.TestCase):
             def json(self):
                 return {"name": self.name, "users": self.users, "perms": self.perms}
 
-            def create_user(self, user_name):
+            def user_created(self, user_name):
                 self.users.append(user_name)
 
-            def delete_user(self, user_name):
+            def user_deleted(self, user_name):
                 self.users.remove(user_name)
 
-            def create_permission(self, permission):
+            def permission_created(self, permission):
                 self.perms.append(permission.resource_full_name)
 
-            def delete_permission(self, permission):
+            def permission_deleted(self, permission):
                 self.perms.remove(permission.resource_full_name)
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".cfg") as tmp:
             tmp.write(yaml.safe_dump({"services": {"Magpie": {"active": True}}}))
             tmp.seek(0)  # back to start since file still open (auto-delete if closed)
             with contextlib.ExitStack() as stack:
-                stack.enter_context(mock.patch("cowbird.services.service_factory.Magpie", side_effect=MockService))
+                stack.enter_context(mock.patch("cowbird.services.impl.magpie.Magpie", side_effect=MockService))
                 app = utils.get_test_app(settings={"cowbird.config_path": tmp.name})
 
                 data = {
-                    "operation": "create",
+                    "event": "created",
                     "user_name": "test_user",
                     "callback_url": "string"
                 }
@@ -91,14 +91,14 @@ class TestAPI(unittest.TestCase):
                 assert len(magpie.json()["users"]) == 1
                 assert magpie.json()["users"][0] == data["user_name"]
 
-                data["operation"] = "delete"
+                data["event"] = "deleted"
                 data.pop("callback_url")
                 resp = utils.test_request(app, "POST", "/webhooks/users", json=data)
                 utils.check_response_basic_info(resp, 200, expected_method="POST")
                 assert len(magpie.json()["users"]) == 0
 
                 data = {
-                    "operation": "create",
+                    "event": "created",
                     "service_name": "string",
                     "resource_id": "string",
                     "resource_full_name": "thredds/birdhouse/file.nc",
@@ -114,7 +114,7 @@ class TestAPI(unittest.TestCase):
                 assert len(magpie.json()["perms"]) == 1
                 assert magpie.json()["perms"][0] == data["resource_full_name"]
 
-                data["operation"] = "delete"
+                data["event"] = "deleted"
                 resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
                 utils.check_response_basic_info(resp, 200, expected_method="POST")
                 assert len(magpie.json()["perms"]) == 0
@@ -147,7 +147,7 @@ def test_response_metadata():
     ], start=1):
         with contextlib.ExitStack() as stack:
             if code == 500:
-                stack.enter_context(mock.patch("cowbird.services.service_factory.Magpie", side_effect=MockService))
+                stack.enter_context(mock.patch("cowbird.services.impl.magpie.Magpie", side_effect=MockService))
             headers = {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON}
             headers.update(kwargs.get("headers", {}))
             kwargs.pop("headers", None)

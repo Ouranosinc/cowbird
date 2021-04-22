@@ -85,10 +85,10 @@ def service_api_route_info(service_api, **kwargs):
 
 class ValidOperations(ExtendedEnum):
     """
-    Valid values as webhook operation.
+    Valid values as webhook event.
     """
-    CreateOperation = "create"
-    DeleteOperation = "delete"
+    CreateOperation = "created"
+    DeleteOperation = "deleted"
 
 
 def generate_api_schema(swagger_base_spec):
@@ -557,9 +557,9 @@ class Service_PATCH_UnprocessableEntityResponseSchema(Services_POST_Unprocessabl
 
 
 class UserWebhook_POST_RequestBodySchema(colander.MappingSchema):
-    operation = colander.SchemaNode(
+    event = colander.SchemaNode(
         colander.String(),
-        description="Operation performs on the user.",
+        description="User event.",
         validator=colander.OneOf(ValidOperations.values())
     )
     user_name = colander.SchemaNode(
@@ -588,9 +588,9 @@ class UserWebhook_POST_OkResponseSchema(BaseResponseSchemaAPI):
 
 
 class PermissionWebhook_POST_RequestBodySchema(colander.MappingSchema):
-    operation = colander.SchemaNode(
+    event = colander.SchemaNode(
         colander.String(),
-        description="Operation performs on the user.",
+        description="Permission event.",
         validator=colander.OneOf(ValidOperations.values())
     )
     service_name = colander.SchemaNode(

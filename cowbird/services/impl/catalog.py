@@ -23,11 +23,11 @@ class Catalog(Service, FSMonitor):
         # TODO: path should already exists (priority on services hooks?)
         return os.path.join(user_workspace_path, user_name)
 
-    def create_user(self, user_name):
+    def user_created(self, user_name):
         # TODO: Implement: what we do? start monitoring the user directory
         Monitoring().register(self._user_workspace_dir(user_name), True, self)
 
-    def delete_user(self, user_name):
+    def user_deleted(self, user_name):
         Monitoring().unregister(self._user_workspace_dir(user_name), self)
 
     def on_created(self, filename):

@@ -23,22 +23,22 @@ def post_user_webhook_view(request):
     """
     User webhook used for created or removed user events.
     """
-    operation = ar.get_multiformat_body(request, "operation")
-    ax.verify_param(operation, param_name="operation",
+    event = ar.get_multiformat_body(request, "event")
+    ax.verify_param(event, param_name="event",
                     param_compare=ValidOperations.values(),
                     is_in=True,
                     http_error=HTTPBadRequest,
                     msg_on_fail=s.UserWebhook_POST_BadRequestResponseSchema.description)
     user_name = ar.get_multiformat_body(request, "user_name")
-    if operation == ValidOperations.CreateOperation.value:
+    if event == ValidOperations.CreateOperation.value:
         callback_url = ar.get_multiformat_body(request, "callback_url")
         try:
-            dispatch("create_user", dict(user_name=user_name))
+            dispatch("user_created", dict(user_name=user_name))
         except Exception:  # noqa
             # If something bad happens, set the status as erroneous in Magpie
             requests.get(callback_url)
     else:
-        dispatch("delete_user", dict(user_name=user_name))
+        dispatch("user_deleted", dict(user_name=user_name))
     return ax.valid_http(HTTPOk, detail=s.UserWebhook_POST_OkResponseSchema.description)
 
 
@@ -49,8 +49,8 @@ def post_permission_webhook_view(request):
     """
     Permission webhook used for created or removed permission events.
     """
-    operation = ar.get_multiformat_body(request, "operation")
-    ax.verify_param(operation, param_name="operation",
+    event = ar.get_multiformat_body(request, "event")
+    ax.verify_param(event, param_name="event",
                     param_compare=ValidOperations.values(),
                     is_in=True,
                     http_error=HTTPBadRequest,
@@ -80,8 +80,8 @@ def post_permission_webhook_view(request):
         user=user,
         group=group
     )
-    if operation == ValidOperations.CreateOperation.value:
-        dispatch("create_permission", dict(permission=permission))
+    if event == ValidOperations.CreateOperation.value:
+        dispatch("permission_created", dict(permission=permission))
     else:
-        dispatch("delete_permission", dict(permission=permission))
+        dispatch("permission_deleted", dict(permission=permission))
     return ax.valid_http(HTTPOk, detail=s.PermissionWebhook_POST_OkResponseSchema.description)
