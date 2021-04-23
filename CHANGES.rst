@@ -13,8 +13,8 @@ Features / Changes
 
   - Webhook API
   - Services interface
-  - File system monitoring
   - Permissions synchronizer
+  - File system monitoring
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~

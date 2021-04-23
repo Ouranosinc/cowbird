@@ -16,6 +16,7 @@ from webtest.response import TestResponse
 
 from cowbird.app import main
 from cowbird.constants import COWBIRD_ROOT, get_constant
+from cowbird.services.service import Service
 from cowbird.utils import CONTENT_TYPE_JSON, get_header, get_settings_from_config_ini, is_null, null
 
 # employ example INI config for tests where needed to ensure that configurations are valid
@@ -80,6 +81,49 @@ class TestVersion(LooseVersion):
         if other.version == "latest":
             return -1
         return super(TestVersion, self)._cmp(other)
+
+
+class MockMagpieService(Service):
+    def __init__(self, name, url):
+        super(MockMagpieService, self).__init__(name, url)
+        self.event_users = []
+        self.event_perms = []
+        self.outbound_perms = []
+
+    def json(self):
+        return {"name": self.name,
+                "event_users": self.event_users,
+                "event_perms": self.event_perms,
+                "outbound_perms": self.outbound_perms}
+
+    def user_created(self, user_name):
+        self.event_users.append(user_name)
+
+    def user_deleted(self, user_name):
+        self.event_users.remove(user_name)
+
+    def permission_created(self, permission):
+        self.event_perms.append(permission.resource_full_name)
+
+    def permission_deleted(self, permission):
+        self.event_perms.remove(permission.resource_full_name)
+
+    def create_permission(self, permission):
+        self.outbound_perms.append(permission)
+
+    def delete_permission(self, permission):
+        for perm in self.outbound_perms:
+            if perm == permission:
+                self.outbound_perms.remove(perm)
+                return
+
+
+class MockAnyService(Service):
+    ResourceId = 1000
+
+    def get_resource_id(self, resource_full_name):
+        # type (str) -> str
+        return MockAnyService.ResourceId
 
 
 def config_setup_from_ini(config_ini_file_path):

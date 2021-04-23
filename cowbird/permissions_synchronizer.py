@@ -9,6 +9,7 @@ from cowbird.utils import get_config_path
 
 if TYPE_CHECKING:
     from typing import Dict, Generator, List, Tuple
+
     from cowbird.services.impl.magpie import Magpie
 
     if six.PY2:
@@ -35,6 +36,16 @@ class Permission:
         self.scope = scope
         self.user = user
         self.group = group
+
+    def __eq__(self, other):
+        return self.service_name == other.service_name and \
+            self.resource_id == other.resource_id and \
+            self.resource_full_name == other.resource_full_name and \
+            self.name == other.name and \
+            self.access == other.access and \
+            self.scope == other.scope and \
+            self.user == other.user and \
+            self.group == other.group
 
 
 class SyncPoint:
@@ -71,13 +82,6 @@ class SyncPoint:
         """
         return permission.resource_full_name.startswith(self.services[permission.service_name])
 
-    def resource_common_part(self, permission):
-        # type: (Permission) -> str
-        """
-        Return the part of the resource name being shared between services.
-        """
-        return permission.resource_full_name.strip(self.services[permission.service_name])
-
     def find_match(self, permission):
         # type: (Permission) -> Generator[Tuple[Str, Str], None, None]
         """
@@ -93,7 +97,7 @@ class SyncPoint:
             if permission.service_name not in mapping:
                 continue
             # Does the current permission access is covered?
-            if permission.access not in mapping[permission.service_name]:
+            if permission.name not in mapping[permission.service_name]:
                 continue
             # This permission is mapped : yields matches
             for svc, mapped_perm_name in mapping.items():
@@ -103,35 +107,25 @@ class SyncPoint:
                 for perm_name in mapped_perm_name:
                     yield svc, perm_name
 
-    def create(self, permission):
-        # type: (Permission) -> None
+    def sync(self, operation, permission):
+        # type: (str, Permission) -> None
         """
-        Create the same permission on each service sharing the same resource.
-        """
-        res_common_part = self.resource_common_part(permission)
-        for svc, perm_name in self.find_match(permission):
-            new_permission = copy.copy(permission)
-            new_permission.service_name = svc
-            new_permission.resource_full_name = self.services[svc] + res_common_part
-            new_permission.resource_id = ServiceFactory().get_service(svc).get_resource_id(
-                new_permission.resource_full_name)
-            new_permission.name = perm_name
-            self.magpie_inst.create_permission(new_permission)
+        Create or delete the same permission on each service sharing the same resource.
 
-    def delete(self, permission):
-        # type: (Permission) -> None
+        @param operation Magpie create_permission or delete_permission function name
+        @param permission Permission to synchronize with others services
         """
-        Remove the same permission on each service sharing the same resource.
-        """
-        res_common_part = self.resource_common_part(permission)
+        res_common_part_idx = len(self.services[permission.service_name])
         for svc, perm_name in self.find_match(permission):
             new_permission = copy.copy(permission)
             new_permission.service_name = svc
-            new_permission.resource_full_name = self.services[svc] + res_common_part
+            new_permission.resource_full_name = self.services[svc] + \
+                permission.resource_full_name[res_common_part_idx:]
             new_permission.resource_id = ServiceFactory().get_service(svc).get_resource_id(
                 new_permission.resource_full_name)
             new_permission.name = perm_name
-            self.magpie_inst.delete_permission(new_permission)
+            fct = getattr(self.magpie_inst, operation)
+            fct(new_permission)
 
 
 class PermissionSynchronizer(object):
@@ -158,7 +152,7 @@ class PermissionSynchronizer(object):
         Create the same permission on each service sharing the same resource.
         """
         for point in self.sync_point:
-            point.create(permission)
+            point.sync("create_permission", permission)
 
     def delete_permission(self, permission):
         # type: (Permission) -> None
@@ -166,4 +160,4 @@ class PermissionSynchronizer(object):
         Delete the same permission on each service sharing the same resource.
         """
         for point in self.sync_point:
-            point.delete(permission)
+            point.sync("delete_permission", permission)
