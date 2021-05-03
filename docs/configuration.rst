@@ -39,9 +39,9 @@ environment variable ``COWBIRD_INI_FILE_PATH``.
 File: config.yml
 ~~~~~~~~~~~~~~~~~~~
 
-This is the core configuration file that defines most of `Cowbird`'s data configuration which it must work with to
-manage :term:`services` components.
-A basic `config.example.yml`_ file is provided, for sample definition of expected schemas per service.
+This is the core configuration file that defines most of `Cowbird`'s data configuration which it must work with to manage :term:`services` components.
+A basic `config.example.yml`_ file is provided, for sample definition of expected schemas per service. Please refer to its comment header for specific format and parameter
+details.
 
 
 Settings and Constants
@@ -72,14 +72,11 @@ These settings can be used to specify where to find other settings through custo
 - | ``COWBIRD_CONFIG_DIR``
   | (Default: ``${COWBIRD_ROOT}/config``)
 
-  Configuration directory where to look for `cowbird.ini`_ and `config.yml`_ files.
+  Configuration directory where to look for `cowbird.ini`_ file.
 
 - ``COWBIRD_CONFIG_PATH``
 
   Explicit path where to find a `config.yml`_ configuration file to load at `Cowbird` startup.
-
-  .. note::
-    When provided, ``COWBIRD_CONFIG_DIR`` is ignored in favour of definitions in this file.
 
   .. seealso::
     :ref:`config_file`

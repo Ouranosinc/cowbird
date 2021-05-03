@@ -32,10 +32,6 @@ COWBIRD_MODULE_DIR = os.path.abspath(os.path.dirname(__file__))
 COWBIRD_ROOT = os.path.dirname(COWBIRD_MODULE_DIR)
 COWBIRD_CONFIG_DIR = os.getenv(
     "COWBIRD_CONFIG_DIR", os.path.join(COWBIRD_ROOT, "config"))
-COWBIRD_PROVIDERS_CONFIG_PATH = os.getenv(
-    "COWBIRD_PROVIDERS_CONFIG_PATH", "{}/providers.cfg".format(COWBIRD_CONFIG_DIR))
-COWBIRD_PERMISSIONS_CONFIG_PATH = os.getenv(
-    "COWBIRD_PERMISSIONS_CONFIG_PATH", "{}/permissions.cfg".format(COWBIRD_CONFIG_DIR))
 COWBIRD_CONFIG_PATH = os.getenv("COWBIRD_CONFIG_PATH")  # default None, require explicit specification
 COWBIRD_INI_FILE_PATH = os.getenv(
     "COWBIRD_INI_FILE_PATH", "{}/cowbird.ini".format(COWBIRD_CONFIG_DIR))
