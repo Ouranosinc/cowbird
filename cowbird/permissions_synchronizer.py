@@ -6,7 +6,7 @@ from cowbird.services.service_factory import ServiceFactory
 from cowbird.utils import get_config_path
 
 if TYPE_CHECKING:
-    from typing import Dict, Generator, List, Tuple
+    from typing import Callable, Dict, Generator, List, Tuple
 
     from cowbird.services.impl.magpie import Magpie
 
