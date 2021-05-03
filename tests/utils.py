@@ -96,6 +96,9 @@ class MockMagpieService(Service):
                 "event_perms": self.event_perms,
                 "outbound_perms": self.outbound_perms}
 
+    def get_resource_id(self, resource_full_name):
+        pass
+
     def user_created(self, user_name):
         self.event_users.append(user_name)
 
@@ -124,6 +127,18 @@ class MockAnyService(Service):
     def get_resource_id(self, resource_full_name):
         # type (str) -> str
         return MockAnyService.ResourceId
+
+    def user_created(self, user_name):
+        pass
+
+    def user_deleted(self, user_name):
+        pass
+
+    def permission_created(self, permission):
+        pass
+
+    def permission_deleted(self, permission):
+        pass
 
 
 def config_setup_from_ini(config_ini_file_path):

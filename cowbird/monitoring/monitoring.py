@@ -1,5 +1,6 @@
 import os
 from collections import defaultdict
+from typing import TYPE_CHECKING
 
 import six
 from watchdog.events import FileSystemEventHandler
@@ -7,48 +8,80 @@ from watchdog.observers import Observer
 
 from cowbird.utils import SingletonMeta
 
+if TYPE_CHECKING:
+    from typing import Union
+
+    from watchdog.events import (
+        DirCreatedEvent,
+        DirDeletedEvent,
+        DirModifiedEvent,
+        DirMovedEvent,
+        FileCreatedEvent,
+        FileDeletedEvent,
+        FileModifiedEvent,
+        FileMovedEvent
+    )
+
+    from cowbird.monitoring.fsmonitor import FSMonitor
+
 
 class Monitor(FileSystemEventHandler):
     """
-    .. todo:: This class should be mapped as a BD model
+    Implementation of the watchdog FileSystemEventHandler class Allows to start/stop directory monitoring and send
+    events to FSMonitor callback.
 
-    # (we need to persist monitors across executions)
+    .. todo:: This class should be mapped as a BD model
+              (we need to persist monitors across executions)
     """
 
     def __init__(self, path, recursive, callback):
-        # TODO: To serialize the callback we would probably need an actual
-        #  singleton class name
+        # type: (str, bool, FSMonitor) -> None
+        """
+        Initialize the path monitoring and ready to be started.
+
+        .. TODO:: To serialize the callback we would need an actual singleton class name
+
+        @param path: Path to monitor
+        @param recursive: Monitor subdirectory recursively?
+        @param callback: Events are sent to this FSMonitor object
+        """
         self.__callback = callback
         self.__src_path = os.path.normpath(path)
         self.__recursive = recursive
         self.__event_observer = Observer()
 
     def save(self):
-        # TODO Save to DB
-        pass
+        """
+        .. TODO: Serialize the monitor to a database
+        """
 
     def remove(self):
-        # TODO Remove from DB
-        pass
+        """
+        .. TODO: Remove the monitor from the database
+        """
 
     def start(self):
+        """
+        Start the monitoring so that events can be fired.
+        """
         self.__event_observer.schedule(self,
                                        self.__src_path,
                                        recursive=self.__recursive)
         self.__event_observer.start()
 
     def stop(self):
+        """
+        Stop the monitoring so that events stop to be fired.
+        """
         self.__event_observer.stop()
         self.__event_observer.join()
 
     def on_moved(self, event):
+        # type: (Union[DirMovedEvent, FileMovedEvent]) -> None
         """
         Called when a file or a directory is moved or renamed.
 
-        :param event:
-            Event representing file/directory movement.
-        :type event:
-            :class:`DirMovedEvent` or :class:`FileMovedEvent`
+        @param event: Event representing file/directory movement.
         """
         self.__callback.on_deleted(event.src_path)
         # If moved outside of __src_path don't send a create event
@@ -61,35 +94,29 @@ class Monitor(FileSystemEventHandler):
                 self.__callback.on_created(event.dest_path)
 
     def on_created(self, event):
+        # type: (Union[DirCreatedEvent, FileCreatedEvent]) -> None
         """
         Called when a file or directory is created.
 
-        :param event:
-            Event representing file/directory creation.
-        :type event:
-            :class:`DirCreatedEvent` or :class:`FileCreatedEvent`
+        @param event: Event representing file/directory creation.
         """
         self.__callback.on_created(event.src_path)
 
     def on_deleted(self, event):
+        # type: (Union[DirDeletedEvent, FileDeletedEvent]) -> None
         """
         Called when a file or directory is deleted.
 
-        :param event:
-            Event representing file/directory deletion.
-        :type event:
-            :class:`DirDeletedEvent` or :class:`FileDeletedEvent`
+        @param event: Event representing file/directory deletion.
         """
         self.__callback.on_deleted(event.src_path)
 
     def on_modified(self, event):
+        # type: (Union[DirModifiedEvent, FileModifiedEvent]) -> None
         """
         Called when a file or directory is modified.
 
-        :param event:
-            Event representing file/directory modification.
-        :type event:
-            :class:`DirModifiedEvent` or :class:`FileModifiedEvent`
+        @param event: Event representing file/directory modification.
         """
         self.__callback.on_modified(event.src_path)
 
@@ -107,10 +134,19 @@ class Monitoring:
         self.monitors = defaultdict(lambda: {})
 
     def start(self):
-        # TODO: Load and start monitors from the BD
-        pass
+        """
+        .. todo:: Load and start monitors from the BD
+        """
 
     def register(self, path, recursive, cb_monitor):
+        # type: (str, bool, FSMonitor) -> None
+        """
+        Register a monitor for a specific path and start it.
+
+        @param path: Path to monitor
+        @param recursive: Monitor subdirectory recursively?
+        @param cb_monitor: Events are sent to this FSMonitor object
+        """
         try:
             self.monitors[path][cb_monitor]
         except KeyError:
@@ -121,6 +157,14 @@ class Monitoring:
             mon.start()
 
     def unregister(self, path, cb_monitor):
+        # type: (str, FSMonitor) -> bool
+        """
+        Stop a monitor and unregister it.
+
+        @param path: Path used by the monitor
+        @param cb_monitor: FSMonitor object to remove
+        @return: True if the monitor is found and successfully stopped, False otherwise
+        """
         if path in self.monitors:
             try:
                 mon = self.monitors[path].pop(cb_monitor)

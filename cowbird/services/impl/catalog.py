@@ -8,7 +8,7 @@ from cowbird.services.service import Service
 
 class Catalog(Service, FSMonitor):
     """
-    Keep the catalog index in synch when files are created/deleted/updated.
+    Keep the catalog index in sync when files are created/deleted/updated.
     """
 
     def __init__(self, name, url):
@@ -23,6 +23,10 @@ class Catalog(Service, FSMonitor):
         # TODO: path should already exists (priority on services hooks?)
         return os.path.join(user_workspace_path, user_name)
 
+    def get_resource_id(self, resource_full_name):
+        # type (str) -> str
+        raise NotImplementedError
+
     def user_created(self, user_name):
         # TODO: Implement: what we do? start monitoring the user directory
         Monitoring().register(self._user_workspace_dir(user_name), True, self)
@@ -30,12 +34,19 @@ class Catalog(Service, FSMonitor):
     def user_deleted(self, user_name):
         Monitoring().unregister(self._user_workspace_dir(user_name), self)
 
+    def permission_created(self, permission):
+        raise NotImplementedError
+
+    def permission_deleted(self, permission):
+        raise NotImplementedError
+
     def on_created(self, filename):
         """
         Call when a new file is found.
 
         :param filename: Relative filename of a new file
         """
+        raise NotImplementedError
 
     def on_deleted(self, filename):
         """
@@ -43,6 +54,7 @@ class Catalog(Service, FSMonitor):
 
         :param filename: Relative filename of the removed file
         """
+        raise NotImplementedError
 
     def on_modified(self, filename):
         """
@@ -50,3 +62,4 @@ class Catalog(Service, FSMonitor):
 
         :param filename: Relative filename of the updated file
         """
+        raise NotImplementedError

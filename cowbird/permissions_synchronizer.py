@@ -19,7 +19,16 @@ class Permission:
     Define every property required to set a permission in Magpie.
     """
 
-    def __init__(self, service_name, resource_id, resource_full_name, name, access, scope, user=None, group=None):
+    def __init__(self,
+                 service_name,        # type: str
+                 resource_id,         # type: str
+                 resource_full_name,  # type: str
+                 name,                # type: str
+                 access,              # type: str
+                 scope,               # type: str
+                 user=None,           # type: str
+                 group=None           # type: str
+                 ):                   # type: (...) -> None
         self.service_name = service_name
         self.resource_id = resource_id
         self.resource_full_name = resource_full_name
@@ -30,6 +39,7 @@ class Permission:
         self.group = group
 
     def __eq__(self, other):
+        # type: (Permission) -> bool
         return self.service_name == other.service_name and \
             self.resource_id == other.resource_id and \
             self.resource_full_name == other.resource_full_name and \
@@ -129,6 +139,7 @@ class PermissionSynchronizer(object):
     """
 
     def __init__(self, magpie_inst):
+        # type: (Magpie) -> None
         config_path = get_config_path()
         sync_perm_cfg = get_all_configs(config_path, "sync_permissions", allow_missing=True)[0]
         self.sync_point = []

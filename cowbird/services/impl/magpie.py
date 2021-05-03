@@ -16,6 +16,16 @@ class Magpie(Service):
         super(Magpie, self).__init__(name, url)
         self.permissions_synch = PermissionSynchronizer(self)
 
+    def get_resource_id(self, resource_full_name):
+        # type (str) -> str
+        raise NotImplementedError
+
+    def user_created(self, user_name):
+        raise NotImplementedError
+
+    def user_deleted(self, user_name):
+        raise NotImplementedError
+
     def permission_created(self, permission):
         self.permissions_synch.create_permission(permission)
 
@@ -25,7 +35,8 @@ class Magpie(Service):
     def create_permission(self, permission):
         # type: (Permission) -> None
         """
-        Make sure that the specified permission exists on Magpie
+        Make sure that the specified permission exists on Magpie.
+
         .. todo:: First need to check if the permission already exists
                   If the permission doesn't exist do a POST to create it
                   If the permission exists but is different do a PUT to update it
