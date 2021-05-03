@@ -10,10 +10,9 @@ from cowbird.permissions_synchronizer import Permission
 from cowbird.services.service_factory import ServiceFactory
 
 
-def dispatch(fct_name, kwargs):
+def dispatch(svc_fct):
     for svc in ServiceFactory().get_active_services():
-        fct = getattr(svc, fct_name)
-        fct(**kwargs)
+        svc_fct(svc)
 
 
 @s.UserWebhookAPI.post(schema=s.UserWebhook_POST_RequestSchema, tags=[s.WebhooksTag],
@@ -33,12 +32,12 @@ def post_user_webhook_view(request):
     if event == ValidOperations.CreateOperation.value:
         callback_url = ar.get_multiformat_body(request, "callback_url")
         try:
-            dispatch("user_created", dict(user_name=user_name))
+            dispatch(lambda svc: svc.user_created(user_name=user_name))
         except Exception:  # noqa
             # If something bad happens, set the status as erroneous in Magpie
             requests.get(callback_url)
     else:
-        dispatch("user_deleted", dict(user_name=user_name))
+        dispatch(lambda svc: svc.user_deleted(user_name=user_name))
     return ax.valid_http(HTTPOk, detail=s.UserWebhook_POST_OkResponseSchema.description)
 
 
@@ -81,7 +80,7 @@ def post_permission_webhook_view(request):
         group=group
     )
     if event == ValidOperations.CreateOperation.value:
-        dispatch("permission_created", dict(permission=permission))
+        dispatch(lambda svc: svc.permission_created(permission=permission))
     else:
-        dispatch("permission_deleted", dict(permission=permission))
+        dispatch(lambda svc: svc.permission_deleted(permission=permission))
     return ax.valid_http(HTTPOk, detail=s.PermissionWebhook_POST_OkResponseSchema.description)
