@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import List, Union
 
-    from cowbird.typedefs import ConfigDict, Str
+    from cowbird.typedefs import ConfigDict
 
 LOGGER = get_logger(__name__)
 
@@ -22,7 +22,7 @@ class ConfigError(RuntimeError):
 
 
 def _load_config(path_or_dict, section, allow_missing=False):
-    # type: (Union[Str, ConfigDict], Str, bool) -> ConfigDict
+    # type: (Union[str, ConfigDict], str, bool) -> ConfigDict
     """
     Loads a file path or dictionary as YAML/JSON configuration.
     """
@@ -44,7 +44,7 @@ def _load_config(path_or_dict, section, allow_missing=False):
 
 
 def get_all_configs(path_or_dict, section, allow_missing=False):
-    # type: (Union[Str, ConfigDict], Str, bool) -> List[ConfigDict]
+    # type: (Union[str, ConfigDict], str, bool) -> List[ConfigDict]
     """
     Loads all configuration files specified by the path (if a directory),
     a single configuration (if a file) or directly

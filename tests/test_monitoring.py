@@ -3,15 +3,9 @@ import tempfile
 from time import sleep
 
 import pytest
-import six
 
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
-
-if six.PY2:
-    from backports import tempfile as tempfile2  # noqa  # Python 2
-else:
-    tempfile2 = tempfile  # pylint: disable=C0103,invalid-name
 
 
 def file_io(filename, mv_filename):
@@ -29,7 +23,7 @@ def file_io(filename, mv_filename):
 
 @pytest.mark.monitoring
 def test_register_unregister_monitor():
-    with tempfile2.TemporaryDirectory() as tmpdir:
+    with tempfile.TemporaryDirectory() as tmpdir:
         test_file = os.path.join(tmpdir, "testfile")
         test_subdir = os.path.join(tmpdir, "subdir")
         test_subdir_file = os.path.join(test_subdir, "test_subdir_file")

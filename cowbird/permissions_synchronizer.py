@@ -1,8 +1,6 @@
 import copy
 from typing import TYPE_CHECKING
 
-import six
-
 from cowbird.config import get_all_configs
 from cowbird.services.service_factory import ServiceFactory
 from cowbird.utils import get_config_path
@@ -12,14 +10,8 @@ if TYPE_CHECKING:
 
     from cowbird.services.impl.magpie import Magpie
 
-    if six.PY2:
-        # pylint: disable=E0602,undefined-variable  # unicode not recognized by python 3
-        Str = Union[AnyStr, unicode]  # noqa: E0602,F405,F821
-    else:
-        Str = str
-
-    SyncPointServicesType = Dict[Str, Str]
-    SyncPointMappingType = List[Dict[Str, List[Str]]]
+    SyncPointServicesType = Dict[str, str]
+    SyncPointMappingType = List[Dict[str, List[str]]]
 
 
 class Permission:
@@ -83,7 +75,7 @@ class SyncPoint:
         return permission.resource_full_name.startswith(self.services[permission.service_name])
 
     def find_match(self, permission):
-        # type: (Permission) -> Generator[Tuple[Str, Str], None, None]
+        # type: (Permission) -> Generator[Tuple[str, str], None, None]
         """
         Search and yield for every match a (service, permission name) tuple that is mapped with this permission.
         """
