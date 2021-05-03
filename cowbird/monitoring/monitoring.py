@@ -10,13 +10,13 @@ from cowbird.utils import SingletonMeta
 
 class Monitor(FileSystemEventHandler):
     """
-    # TODO: This class should be mapped as a BD model
+    .. todo:: This class should be mapped as a BD model
 
     # (we need to persist monitors across executions)
     """
 
     def __init__(self, path, recursive, callback):
-        # TODO: To serialize the callback we would propably need an actual
+        # TODO: To serialize the callback we would probably need an actual
         #  singleton class name
         self.__callback = callback
         self.__src_path = os.path.normpath(path)
@@ -99,8 +99,8 @@ class Monitoring:
     """
     Class handling file system monitoring and registering listeners.
 
-    TODO: At some point we will need a consistency function that goes through all monitored folder and make sure that
-          monitoring services are up to date.
+    .. todo:: At some point we will need a consistency function that goes through all monitored folder and make sure
+              that monitoring services are up to date.
     """
 
     def __init__(self):

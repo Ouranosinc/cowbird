@@ -3,7 +3,7 @@
 class RequestQueue:
     """
     Handle API requests queue
-    TODO: Connect to celery queue to submit request in an asynch manner
+    .. todo:: Connect to celery queue to submit request in an async manner
 
     """
 

@@ -124,8 +124,8 @@ class PermissionSynchronizer(object):
     """
     Keep service-shared resources in sync when permissions are updated for one of them.
 
-    TODO: At some point we will need a consistency function that goes through all permissions of all services and make
-          sure that linked services have the same permissions.
+    .. todo:: At some point we will need a consistency function that goes through all permissions of all services and
+              make sure that linked services have the same permissions.
     """
 
     def __init__(self, magpie_inst):

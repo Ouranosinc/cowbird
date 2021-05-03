@@ -26,9 +26,9 @@ class Magpie(Service):
         # type: (Permission) -> None
         """
         Make sure that the specified permission exists on Magpie
-        TODO: First need to check if the permission already exists
-              If the permission doesn't exist do a POST to create it
-              If the permission exists but is different do a PUT to update it
+        .. todo:: First need to check if the permission already exists
+                  If the permission doesn't exist do a POST to create it
+                  If the permission exists but is different do a PUT to update it
         """
 
     def delete_permission(self, permission):

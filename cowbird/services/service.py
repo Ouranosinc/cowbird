@@ -2,10 +2,10 @@
 
 class Service(object):
     """
-    Service interface use to notify implemented services of users/permissions changes.
+    Service interface used to notify implemented services of users/permissions changes.
 
-    TODO: At some point we will need a consistency function that goes through all Magpie users and make sure that
-          services are up to date.
+    .. todo:: At some point we will need a consistency function that goes through all Magpie users and make sure that
+              services are up to date.
     """
 
     def __init__(self, name, url=None):
