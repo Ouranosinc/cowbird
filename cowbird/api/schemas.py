@@ -25,7 +25,8 @@ from cowbird.utils import (
     CONTENT_TYPE_JSON,
     KNOWN_CONTENT_TYPES,
     SUPPORTED_ACCEPT_TYPES,
-    SUPPORTED_FORMAT_TYPES
+    SUPPORTED_FORMAT_TYPES,
+    ExtendedEnum
 )
 
 if TYPE_CHECKING:
@@ -82,6 +83,14 @@ def service_api_route_info(service_api, **kwargs):
     return kwargs
 
 
+class ValidOperations(ExtendedEnum):
+    """
+    Valid values as webhook event.
+    """
+    CreateOperation = "created"
+    DeleteOperation = "deleted"
+
+
 def generate_api_schema(swagger_base_spec):
     # type: (Dict[str, Union[str, List[str]]]) -> JSON
     """
@@ -124,9 +133,12 @@ ServicesAPI = Service(
 ServiceAPI = Service(
     path="/services/{service_name}",
     name="service_detail")
-OperationsAPI = Service(
-    path="/operations",
-    name="operation_list")
+UserWebhookAPI = Service(
+    path="/webhooks/users",
+    name="user_webhook")
+PermissionWebhookAPI = Service(
+    path="/webhooks/permissions",
+    name="permission_webhook")
 
 # Path parameters
 OperationParameter = colander.SchemaNode(
@@ -139,28 +151,23 @@ ServiceNameParameter = colander.SchemaNode(
     example="my-wps")
 
 
-class Operation_RequestPathSchema(colander.MappingSchema):
-    operation = OperationParameter
-
-
 class Service_RequestPathSchema(colander.MappingSchema):
     service_name = ServiceNameParameter
 
 
 # Tags
 APITag = "API"
-OperationTag = "Operations"
-
+WebhooksTag = "Webhooks"
 ServicesTag = "Service"
 
 TAG_DESCRIPTIONS = {
     APITag: "General information about the API.",
-    OperationTag:
-        "Operations that are managed by {}.\n\n".format(__meta__.__title__) +
-        "Each of the managed operations provides specific functionalities against specific birds of the stack.",
+    WebhooksTag:
+        "Webhooks that are managed by {}.\n\n".format(__meta__.__title__) +
+        "Each of the managed webhook provides specific functionalities against specific services of the stack.",
     ServicesTag:
         "Services that are managed by {}.\n\n".format(__meta__.__title__) +
-        "Each service defines informations such as endpoint and configuration details for running operations.",
+        "Each service defines information such as endpoint and configuration details for running webhooks.",
 }
 
 # Header definitions
@@ -549,6 +556,97 @@ class Service_PATCH_UnprocessableEntityResponseSchema(Services_POST_Unprocessabl
     pass
 
 
+class UserWebhook_POST_RequestBodySchema(colander.MappingSchema):
+    event = colander.SchemaNode(
+        colander.String(),
+        description="User event.",
+        validator=colander.OneOf(ValidOperations.values())
+    )
+    user_name = colander.SchemaNode(
+        colander.String(),
+        description="User name being created or deleted."
+    )
+    callback_url = colander.SchemaNode(
+        colander.String(),
+        description="Callback url to call in case of error while handling user creation.",
+        missing=colander.drop
+    )
+
+
+class UserWebhook_POST_RequestSchema(BaseRequestSchemaAPI):
+    body = UserWebhook_POST_RequestBodySchema()
+
+
+class UserWebhook_POST_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "Invalid value parameters for user webhook."
+    body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
+class UserWebhook_POST_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "User event successfully handled."
+    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
+
+
+class PermissionWebhook_POST_RequestBodySchema(colander.MappingSchema):
+    event = colander.SchemaNode(
+        colander.String(),
+        description="Permission event.",
+        validator=colander.OneOf(ValidOperations.values())
+    )
+    service_name = colander.SchemaNode(
+        colander.String(),
+        description="Service name of the resource affected by the permission update."
+    )
+    resource_id = colander.SchemaNode(
+        colander.String(),
+        description="Id of the resource affected by the permission update."
+    )
+    resource_full_name = colander.SchemaNode(
+        colander.String(),
+        description="Full resource name including parents of the resource affected by the permission update.",
+        example="thredds/birdhouse/file.nc"
+    )
+    name = colander.SchemaNode(
+        colander.String(),
+        description="Permission name applicable to the service/resource.",
+        example="read"
+    )
+    access = colander.SchemaNode(
+        colander.String(),
+        description="Permission access rule to the service/resource.",
+        example="allow"
+    )
+    scope = colander.SchemaNode(
+        colander.String(),
+        description="Permission scope over service/resource tree hierarchy.",
+        example="recursive"
+    )
+    user = colander.SchemaNode(
+        colander.String(),
+        description="User name for which the permission is applied or dropped. (User or group must be provided).",
+        missing=colander.drop
+    )
+    group = colander.SchemaNode(
+        colander.String(),
+        description="Group name for which the permission is applied or dropped. (User or group must be provided).",
+        missing=colander.drop
+    )
+
+
+class PermissionWebhook_POST_RequestSchema(BaseRequestSchemaAPI):
+    body = PermissionWebhook_POST_RequestBodySchema()
+
+
+class PermissionWebhook_POST_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "Invalid value parameters for permission webhook."
+    body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
+
+
+class PermissionWebhook_POST_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Permission event successfully handled."
+    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
+
+
 class Version_GET_ResponseBodySchema(BaseResponseBodySchema):
     version = colander.SchemaNode(
         colander.String(),
@@ -608,6 +706,18 @@ Service_PATCH_responses = {
     "403": Service_PATCH_ForbiddenResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": Service_PATCH_UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+UserWebhook_POST_responses = {
+    "200": UserWebhook_POST_OkResponseSchema(),
+    "400": UserWebhook_POST_BadRequestResponseSchema(),
+    "406": NotAcceptableResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+PermissionWebhook_POST_responses = {
+    "200": PermissionWebhook_POST_OkResponseSchema(),
+    "400": PermissionWebhook_POST_BadRequestResponseSchema(),
+    "406": NotAcceptableResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 Version_GET_responses = {

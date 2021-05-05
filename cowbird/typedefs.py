@@ -6,8 +6,7 @@ Additional typing definitions.
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Any
-    from typing import Dict, List, Tuple, Union
+    from typing import Any, Dict, List, Tuple, Union
 
     from pyramid.config import Configurator
     from pyramid.httpexceptions import HTTPException

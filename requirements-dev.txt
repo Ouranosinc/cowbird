@@ -9,7 +9,7 @@ docformatter
 flake8
 isort>5
 mock
-pylint>=2.5
+pylint>=2.7,<2.8
 pylint-quotes
 pytest
 webtest

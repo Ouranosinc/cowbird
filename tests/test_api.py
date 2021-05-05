@@ -9,12 +9,15 @@ Tests for :mod:`cowbird.api` module.
 """
 
 import contextlib
+import tempfile
 import unittest
 
 import mock
 import pytest
+import yaml
 
-from cowbird.utils import CONTENT_TYPE_JSON
+from cowbird.services.service_factory import ServiceFactory
+from cowbird.utils import CONTENT_TYPE_JSON, SingletonMeta
 from tests import utils
 
 
@@ -29,6 +32,12 @@ class TestAPI(unittest.TestCase):
     def setUpClass(cls):
         cls.app = utils.get_test_app()
 
+    @classmethod
+    def tearDownClass(cls):
+        # Remove the service instances initialized with the lean magpie cfg for next tests
+        SingletonMeta._instances.clear()  # pylint: disable=W0212
+        super(TestAPI, cls).tearDownClass()
+
     def test_homepage(self):
         app = utils.get_test_app()
         resp = utils.test_request(app, "GET", "/")
@@ -39,6 +48,55 @@ class TestAPI(unittest.TestCase):
         utils.check_val_is_in("description", body)
         utils.check_val_is_in("documentation", body)
         utils.check_val_is_in("cowbird", body["name"])
+
+    def test_webhooks(self):
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".cfg") as tmp:
+            tmp.write(yaml.safe_dump({"services": {"Magpie": {"active": True}}}))
+            tmp.seek(0)  # back to start since file still open (auto-delete if closed)
+            with contextlib.ExitStack() as stack:
+                stack.enter_context(mock.patch("cowbird.services.impl.magpie.Magpie",
+                                               side_effect=utils.MockMagpieService))
+                app = utils.get_test_app(settings={"cowbird.config_path": tmp.name})
+
+                data = {
+                    "event": "created",
+                    "user_name": "test_user",
+                    "callback_url": "string"
+                }
+                resp = utils.test_request(app, "POST", "/webhooks/users", json=data)
+                utils.check_response_basic_info(resp, 200, expected_method="POST")
+                utils.check_response_basic_info(resp)
+                magpie = ServiceFactory().get_service("Magpie")
+                assert len(magpie.json()["event_users"]) == 1
+                assert magpie.json()["event_users"][0] == data["user_name"]
+
+                data["event"] = "deleted"
+                data.pop("callback_url")
+                resp = utils.test_request(app, "POST", "/webhooks/users", json=data)
+                utils.check_response_basic_info(resp, 200, expected_method="POST")
+                assert len(magpie.json()["event_users"]) == 0
+
+                data = {
+                    "event": "created",
+                    "service_name": "string",
+                    "resource_id": "string",
+                    "resource_full_name": "thredds/birdhouse/file.nc",
+                    "name": "read",
+                    "access": "allow",
+                    "scope": "recursive",
+                    "user": "string",
+                    "group": "string"
+                }
+                resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
+                utils.check_response_basic_info(resp, 200, expected_method="POST")
+                magpie = ServiceFactory().get_service("Magpie")
+                assert len(magpie.json()["event_perms"]) == 1
+                assert magpie.json()["event_perms"][0] == data["resource_full_name"]
+
+                data["event"] = "deleted"
+                resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
+                utils.check_response_basic_info(resp, 200, expected_method="POST")
+                assert len(magpie.json()["event_perms"]) == 0
 
 
 @pytest.mark.api
@@ -68,7 +126,7 @@ def test_response_metadata():
     ], start=1):
         with contextlib.ExitStack() as stack:
             if code == 500:
-                stack.enter_context(mock.patch("cowbird.api.services.utils.Service", side_effect=MockService))
+                stack.enter_context(mock.patch("cowbird.services.impl.magpie.Magpie", side_effect=MockService))
             headers = {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON}
             headers.update(kwargs.get("headers", {}))
             kwargs.pop("headers", None)

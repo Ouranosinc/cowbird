@@ -16,7 +16,9 @@ from pyramid.httpexceptions import HTTPBadRequest, HTTPForbidden, HTTPInternalSe
 from pyramid.settings import asbool
 
 from cowbird import __meta__
-from cowbird.api import exception as ax, generic as ag, requests as ar
+from cowbird.api import exception as ax
+from cowbird.api import generic as ag
+from cowbird.api import requests as ar
 from cowbird.utils import CONTENT_TYPE_JSON, ExtendedEnum, get_header
 from tests import utils
 

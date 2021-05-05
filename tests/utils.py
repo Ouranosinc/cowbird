@@ -3,23 +3,25 @@ import json as json_pkg  # avoid conflict name with json argument employed for s
 import os
 from distutils.version import LooseVersion
 from typing import TYPE_CHECKING
+from urllib.parse import urlparse
 
 import mock
 import requests
 import requests.exceptions
 from pyramid.httpexceptions import HTTPException
 from pyramid.testing import DummyRequest
-from urllib.parse import urlparse
+from pyramid.testing import setUp as PyramidSetUp
 from webtest.app import AppError, TestApp  # noqa
 from webtest.response import TestResponse
 
 from cowbird.app import main
 from cowbird.constants import COWBIRD_ROOT, get_constant
-from cowbird.utils import CONTENT_TYPE_JSON, get_header, is_null, null
-
+from cowbird.services.service import Service
+from cowbird.utils import CONTENT_TYPE_JSON, get_header, get_settings_from_config_ini, is_null, null
 
 # employ example INI config for tests where needed to ensure that configurations are valid
 TEST_INI_FILE = os.path.join(COWBIRD_ROOT, "config/cowbird.example.ini")
+TEST_CFG_FILE = os.path.join(COWBIRD_ROOT, "config/config.example.yml")
 
 
 class TestAppContainer(object):
@@ -81,16 +83,83 @@ class TestVersion(LooseVersion):
         return super(TestVersion, self)._cmp(other)
 
 
+class MockMagpieService(Service):
+    def __init__(self, name, url):
+        super(MockMagpieService, self).__init__(name, url)
+        self.event_users = []
+        self.event_perms = []
+        self.outbound_perms = []
+
+    def json(self):
+        return {"name": self.name,
+                "event_users": self.event_users,
+                "event_perms": self.event_perms,
+                "outbound_perms": self.outbound_perms}
+
+    def get_resource_id(self, resource_full_name):
+        pass
+
+    def user_created(self, user_name):
+        self.event_users.append(user_name)
+
+    def user_deleted(self, user_name):
+        self.event_users.remove(user_name)
+
+    def permission_created(self, permission):
+        self.event_perms.append(permission.resource_full_name)
+
+    def permission_deleted(self, permission):
+        self.event_perms.remove(permission.resource_full_name)
+
+    def create_permission(self, permission):
+        self.outbound_perms.append(permission)
+
+    def delete_permission(self, permission):
+        for perm in self.outbound_perms:
+            if perm == permission:
+                self.outbound_perms.remove(perm)
+                return
+
+
+class MockAnyService(Service):
+    ResourceId = 1000
+
+    def get_resource_id(self, resource_full_name):
+        # type (str) -> str
+        return MockAnyService.ResourceId
+
+    def user_created(self, user_name):
+        pass
+
+    def user_deleted(self, user_name):
+        pass
+
+    def permission_created(self, permission):
+        pass
+
+    def permission_deleted(self, permission):
+        pass
+
+
+def config_setup_from_ini(config_ini_file_path):
+    settings = get_settings_from_config_ini(config_ini_file_path)
+    config = PyramidSetUp(settings=settings)
+    return config
+
+
 def get_test_app(settings=None):
     # type: (Optional[SettingsType]) -> TestApp
     """
     Instantiate a local test application.
     """
-    if not settings:
-        settings = {}
-    settings["cowbird.url"] = "http://localhost:80"
-    settings["cowbird.ini_file_path"] = TEST_INI_FILE
-    test_app = TestApp(main({}, **settings))
+    config = config_setup_from_ini(TEST_INI_FILE)
+    config.registry.settings["cowbird.url"] = "http://localhost:80"
+    config.registry.settings["cowbird.ini_file_path"] = TEST_INI_FILE
+    config.registry.settings["cowbird.config_path"] = TEST_CFG_FILE
+    if settings:
+        config.registry.settings.update(settings)
+
+    test_app = TestApp(main({}, **config.registry.settings))
     return test_app
 
 
@@ -387,7 +456,7 @@ def all_equal(iter_val, iter_ref, any_order=False):
     if len(iter_val) != len(iter_ref):
         return False
     if any_order:
-        return all([it in iter_ref for it in iter_val])
+        return all(it in iter_ref for it in iter_val)
     return all(it == ir for it, ir in zip(iter_val, iter_ref))
 
 

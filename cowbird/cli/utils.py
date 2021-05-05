@@ -1,8 +1,9 @@
 import argparse
-import logging
 import json
-import yaml
+import logging
 from typing import TYPE_CHECKING
+
+import yaml
 
 from cowbird.constants import get_constant
 

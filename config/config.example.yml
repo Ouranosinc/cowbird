@@ -1,7 +1,42 @@
-components:
-  geoserver:
-    url: http://${HOSTNAME}:4002
-    proxy: https://${HOSTNAME}/twitcher/ows/proxy/geoserver
-  thredds:
-    url: http://${HOSTNAME}:8083/thredds
-    proxy: https://${HOSTNAME}/twitcher/ows/proxy/thredds
+## Combined configuration definition to setup objects at Cowbird startup
+## See documentation 'Configuration'
+
+# [Required] Definition of managed services by Cowbird.
+services:
+  Magpie:                            # Service name must match a Cowbird's known Service implementation
+    active: true                     # A service can be disabled (Cowbird will not forward any event to it)
+    url: https://${HOSTNAME}/magpie  # The API url of that service where Cowbird can interact with it
+  Geoserver:
+    active: true
+    url: https://${HOSTNAME}/twitcher/ows/proxy/geoserver
+  Catalog:
+    active: false
+    url: https://${HOSTNAME}/twitcher/ows/proxy/catalog
+  Thredds:
+    active: true
+  Nginx:
+    active: true
+
+# [Required] This section defines how to synchronize permissions between services when they shared resources
+sync_permissions:
+  # Friendly name to identify a sync point (The value is not used by Cowbird so this can be any relevant keyword)
+  user_workspace:
+    # [Required] This section defines a list of services (referring to the service name of the 'services' section)
+    # sharing resources
+    services:
+      Geoserver: /api/workspaces/private/                # <Service name>:<Resource root matching with other services>
+      Thredds: /catalog/birdhouse/workspaces/private/    # Every service sharing the same resources can be added in this
+                                                         # list
+    # [Required] This section defines an array of permissions mapping between services
+    # In this example, for every Geoserver's `read` permission, a `read` and `browse` permissions will be created in
+    # Thredds. If a `browse` permission is created in Thredds a `read` permission will be added to `Geoserver`.
+    permissions_mapping:
+      - Geoserver: # 1st mapping between Geoserver:[read] and Thredds:[read,browse]
+          - read
+        Thredds:
+          - read
+          - browse
+      - Geoserver: # 2nd mapping between Geoserver:[write] and Thredds:[execute]
+          - write
+        Thredds:
+          - execute

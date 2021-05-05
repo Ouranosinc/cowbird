@@ -6,9 +6,11 @@ from cowbird import constants as c
 
 @pytest.mark.utils
 def test_get_constant_with_same_name():
+    # TODO: Not so sure of the intention of this test, was using COWBIRD_URL, but obviously COWBIRD_URL is override
+    #  from settings and test failed.  COWBIRD_ROOT is in COWBIRD_CONSTANTS and not overridable so now it works.
     test_value = "test-constant"
-    c.COWBIRD_URL = test_value
-    value = c.get_constant("COWBIRD_URL")
+    c.COWBIRD_ROOT = test_value
+    value = c.get_constant("COWBIRD_ROOT")
     assert value == test_value
 
 
