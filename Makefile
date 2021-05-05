@@ -316,18 +316,57 @@ stat: 		## display processes with PID(s) of gunicorn instance(s) running the app
 ## --- Docker targets --- ##
 
 .PHONY: docker-info
-docker-info:	## tag version of docker image for build/push
-	@echo "Docker image will be built, tagged and pushed as:"
-	@echo "$(DOCKER_TAG)"
+docker-info:		## obtain docker image information
+	@echo "Docker image will be built as: "
+	@echo "$(APP_NAME):$(APP_VERSION)"
+	@echo "Docker image will be pushed as:"
+	@echo "$(DOCKER_REPO):$(APP_VERSION)"
+
+.PHONY: docker-build-base
+docker-build-base:							## build the base docker image
+	docker build "$(APP_ROOT)" -f "$(APP_ROOT)/docker/Dockerfile-base" -t "$(APP_NAME):base"
+	docker tag "$(APP_NAME):base" "$(APP_NAME):latest"
+	docker tag "$(APP_NAME):base" "$(DOCKER_REPO):latest"
+	docker tag "$(APP_NAME):base" "$(DOCKER_REPO):$(APP_VERSION)"
+
+.PHONY: docker-build-webservice
+docker-build-webservice: docker-build-base		## build the web service docker image
+	docker build "$(APP_ROOT)" -f "$(APP_ROOT)/docker/Dockerfile-webservice" -t "$(APP_NAME):$(APP_VERSION)-webservice"
+	docker tag "$(APP_NAME):$(APP_VERSION)-webservice" "$(APP_NAME):latest-webservice"
+	docker tag "$(APP_NAME):$(APP_VERSION)-webservice" "$(DOCKER_REPO):latest-webservice"
+	docker tag "$(APP_NAME):$(APP_VERSION)-webservice" "$(DOCKER_REPO):$(APP_VERSION)-webservice"
+
+.PHONY: docker-build-worker
+docker-build-worker: docker-build-base		## build the worker docker image
+	docker build "$(APP_ROOT)" -f "$(APP_ROOT)/docker/Dockerfile-worker" -t "$(APP_NAME):$(APP_VERSION)-worker"
+	docker tag "$(APP_NAME):$(APP_VERSION)-worker" "$(APP_NAME):latest-worker"
+	docker tag "$(APP_NAME):$(APP_VERSION)-worker" "$(DOCKER_REPO):latest-worker"
+	docker tag "$(APP_NAME):$(APP_VERSION)-worker" "$(DOCKER_REPO):$(APP_VERSION)-worker"
 
 .PHONY: docker-build
-docker-build:	## build Docker image
-	docker build "$(APP_ROOT)" -t "$(LATEST_TAG)"
-	docker tag "$(LATEST_TAG)" "$(DOCKER_TAG)"
+docker-build: docker-build-base docker-build-webservice docker-build-worker		## build all docker images
 
 .PHONY: docker-push
 docker-push: docker-build	## push built docker image
 	docker push "$(DOCKER_TAG)"
+
+.PHONY: docker-push-base
+docker-push-base: docker-build-base			## push the base docker image
+	docker push "$(DOCKER_REPO):$(APP_VERSION)"
+	docker push "$(DOCKER_REPO):latest"
+
+.PHONY: docker-push-webservice
+docker-push-webservice: docker-build-webservice	## push the webservice docker image
+	docker push "$(DOCKER_REPO):$(APP_VERSION)-webservice"
+	docker push "$(DOCKER_REPO):latest-webservice"
+
+.PHONY: docker-push-worker
+docker-push-worker: docker-build-worker		## push the worker docker image
+	docker push "$(DOCKER_REPO):$(APP_VERSION)-worker"
+	docker push "$(DOCKER_REPO):latest-worker"
+
+.PHONY: docker-push
+docker-push: docker-push-base docker-push-webservice docker-push-worker  ## push all docker images
 
 DOCKER_TEST_COMPOSES := -f "$(APP_ROOT)/tests/ci/docker-compose.smoke-test.yml"
 .PHONY: docker-test
@@ -338,10 +377,26 @@ docker-test: docker-build	## execute a smoke test of the built Docker image (val
 	curl localhost:$(APP_PORT) | grep "$(APP_NAME)"
 	docker-compose $(DOCKER_TEST_COMPOSES) stop
 
+.PHONY: docker-stat
+docker-stat:  ## query docker-compose images status (from 'docker-test')
+	docker-compose $(DOCKER_TEST_COMPOSES) ps
+
 .PHONY: docker-clean
-docker-clean: 	## remove any leftover images from docker target operations
-	docker rmi $(docker images -f "reference=$(DOCKER_REPO)" -q)
-	docker-compose $(DOCKER_TEST_COMPOSES) down
+docker-clean:  ## remove all built docker images (only matching current/latest versions)
+	docker-compose $(DOCKER_TEST_COMPOSES) down || true
+	docker rmi -f "$(DOCKER_REPO):$(APP_VERSION)-webservice" || true
+	docker rmi -f "$(DOCKER_REPO):latest-webservice" || true
+	docker rmi -f "$(APP_NAME):$(APP_VERSION)-webservice" || true
+	docker rmi -f "$(APP_NAME):latest-webservice" || true
+	docker rmi -f "$(DOCKER_REPO):$(APP_VERSION)-worker" || true
+	docker rmi -f "$(DOCKER_REPO):latest-worker" || true
+	docker rmi -f "$(APP_NAME):$(APP_VERSION)-worker" || true
+	docker rmi -f "$(APP_NAME):latest-worker" || true
+	docker rmi -f "$(DOCKER_REPO):$(APP_VERSION)" || true
+	docker rmi -f "$(DOCKER_REPO):latest" || true
+	docker rmi -f "$(APP_NAME):$(APP_VERSION)" || true
+	docker rmi -f "$(APP_NAME):latest" || true
+	docker rmi -f "$(APP_NAME):base" || true
 
 ## --- Static code check targets ---
 

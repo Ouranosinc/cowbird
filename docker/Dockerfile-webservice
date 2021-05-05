@@ -1,0 +1,4 @@
+FROM cowbird:base
+LABEL description.short="Cowbird Web Service"
+
+CMD gunicorn --paste ${COWBIRD_CONFIG_DIR}/cowbird.ini --preload

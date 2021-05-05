@@ -197,6 +197,9 @@ def get_app_config(container):
     config.include("cowbird")
     # NOTE: don't call 'config.scan("cowbird")' to avoid parsing issues with colander/cornice,
     #       add them explicitly with 'config.include(<module>)', and then they can do 'config.scan()'
+
+    config.include("pyramid_celery")
+    config.configure_celery(config_ini)
     return config
 
 

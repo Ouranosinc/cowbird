@@ -43,7 +43,7 @@ docs/cowbird.rst
 ## Repo
 config.yml
 config.yaml
-cowbird.ini
+cowbird*.ini
 custom.ini
 cowbird/api_docs
 cowbird/api_test
