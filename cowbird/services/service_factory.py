@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
 import six
+import importlib
 
 from cowbird.config import get_all_configs
 from cowbird.utils import SingletonMeta, get_config_path
@@ -34,19 +35,12 @@ class ServiceFactory:
         try:
             return self.services[name]
         except KeyError:
-            # pylint: disable=W0641,unused-import
-            from cowbird.services.impl.catalog import Catalog  # noqa: F401
-            from cowbird.services.impl.filesystem import FileSystem  # noqa: F401
-            from cowbird.services.impl.geoserver import Geoserver  # noqa: F401
-            from cowbird.services.impl.magpie import Magpie  # noqa: F401
-            from cowbird.services.impl.nginx import Nginx  # noqa: F401
-            from cowbird.services.impl.thredds import Thredds  # noqa: F401
-
             svc = None
             if name in VALID_SERVICES and \
                name in self.services_cfg and \
                self.services_cfg[name].get("active", False):
-                cls = locals()[name]
+                module = importlib.import_module(".".join(["cowbird.services.impl", name.lower()]))
+                cls = getattr(module, name)
                 svc = cls(name, self.services_cfg[name].get("url", None))
             self.services[name] = svc
             return svc
