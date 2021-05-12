@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`0.2.0 <https://github.com/Ouranosinc/cowbird/tree/0.2.0>`_ (2021-05-12)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Preliminary design which includes:
