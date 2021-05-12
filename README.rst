@@ -76,11 +76,11 @@ the resources under those services such that the complete ecosystem can seamless
     :alt: Codacy Badge
     :target: https://www.codacy.com/app/fmigneault/Cowbird?utm_source=github.com&utm_medium=referral&utm_content=Ouranosinc/cowbird&utm_campaign=Badge_Grade
 
-.. |docker_build_mode| image:: https://img.shields.io/docker/automated/pavics/cowbird.svg?label=build
+.. |docker_build_mode| image:: https://img.shields.io/docker/cloud/automated/pavics/cowbird.svg?label=build
     :alt: Docker Build Status (latest tag)
     :target: https://hub.docker.com/r/pavics/cowbird/builds
 
-.. |docker_build_status| image:: https://img.shields.io/docker/build/pavics/cowbird.svg?label=status
+.. |docker_build_status| image:: https://img.shields.io/docker/cloud/build/pavics/cowbird.svg?label=status
     :alt: Docker Build Status (latest tag)
     :target: https://hub.docker.com/r/pavics/cowbird/builds
 
