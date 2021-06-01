@@ -9,6 +9,7 @@ Tests for :mod:`cowbird.api` module.
 """
 
 import contextlib
+import os
 import tempfile
 import unittest
 
@@ -30,17 +31,18 @@ class TestAPI(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.app = utils.get_test_app()
+        cls.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)
+        with cls.cfg_file as f:
+            f.write(yaml.safe_dump({"services": {"Magpie": {"active": True}}}))
+        cls.app = utils.get_test_app(settings={"cowbird.config_path": cls.cfg_file.name})
 
     @classmethod
     def tearDownClass(cls):
-        # Remove the service instances initialized with the lean magpie cfg for next tests
-        SingletonMeta._instances.clear()  # pylint: disable=W0212
-        super(TestAPI, cls).tearDownClass()
+        utils.clear_services_instances()
+        os.unlink(cls.cfg_file.name)
 
     def test_homepage(self):
-        app = utils.get_test_app()
-        resp = utils.test_request(app, "GET", "/")
+        resp = utils.test_request(self.app, "GET", "/")
         body = utils.check_response_basic_info(resp)
         utils.check_val_is_in("name", body)
         utils.check_val_is_in("title", body)
@@ -50,53 +52,48 @@ class TestAPI(unittest.TestCase):
         utils.check_val_is_in("cowbird", body["name"])
 
     def test_webhooks(self):
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".cfg") as tmp:
-            tmp.write(yaml.safe_dump({"services": {"Magpie": {"active": True}}}))
-            tmp.seek(0)  # back to start since file still open (auto-delete if closed)
-            with contextlib.ExitStack() as stack:
-                stack.enter_context(mock.patch("cowbird.services.impl.magpie.Magpie",
-                                               side_effect=utils.MockMagpieService))
-                app = utils.get_test_app(settings={"cowbird.config_path": tmp.name})
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(mock.patch("cowbird.services.impl.magpie.Magpie",
+                                           side_effect=utils.MockMagpieService))
+            data = {
+                "event": "created",
+                "user_name": "test_user",
+                "callback_url": "string"
+            }
+            resp = utils.test_request(self.app, "POST", "/webhooks/users", json=data)
+            utils.check_response_basic_info(resp, 200, expected_method="POST")
+            utils.check_response_basic_info(resp)
+            magpie = ServiceFactory().get_service("Magpie")
+            assert len(magpie.json()["event_users"]) == 1
+            assert magpie.json()["event_users"][0] == data["user_name"]
 
-                data = {
-                    "event": "created",
-                    "user_name": "test_user",
-                    "callback_url": "string"
-                }
-                resp = utils.test_request(app, "POST", "/webhooks/users", json=data)
-                utils.check_response_basic_info(resp, 200, expected_method="POST")
-                utils.check_response_basic_info(resp)
-                magpie = ServiceFactory().get_service("Magpie")
-                assert len(magpie.json()["event_users"]) == 1
-                assert magpie.json()["event_users"][0] == data["user_name"]
+            data["event"] = "deleted"
+            data.pop("callback_url")
+            resp = utils.test_request(self.app, "POST", "/webhooks/users", json=data)
+            utils.check_response_basic_info(resp, 200, expected_method="POST")
+            assert len(magpie.json()["event_users"]) == 0
 
-                data["event"] = "deleted"
-                data.pop("callback_url")
-                resp = utils.test_request(app, "POST", "/webhooks/users", json=data)
-                utils.check_response_basic_info(resp, 200, expected_method="POST")
-                assert len(magpie.json()["event_users"]) == 0
+            data = {
+                "event": "created",
+                "service_name": "string",
+                "resource_id": "string",
+                "resource_full_name": "thredds/birdhouse/file.nc",
+                "name": "read",
+                "access": "allow",
+                "scope": "recursive",
+                "user": "string",
+                "group": "string"
+            }
+            resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
+            utils.check_response_basic_info(resp, 200, expected_method="POST")
+            magpie = ServiceFactory().get_service("Magpie")
+            assert len(magpie.json()["event_perms"]) == 1
+            assert magpie.json()["event_perms"][0] == data["resource_full_name"]
 
-                data = {
-                    "event": "created",
-                    "service_name": "string",
-                    "resource_id": "string",
-                    "resource_full_name": "thredds/birdhouse/file.nc",
-                    "name": "read",
-                    "access": "allow",
-                    "scope": "recursive",
-                    "user": "string",
-                    "group": "string"
-                }
-                resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
-                utils.check_response_basic_info(resp, 200, expected_method="POST")
-                magpie = ServiceFactory().get_service("Magpie")
-                assert len(magpie.json()["event_perms"]) == 1
-                assert magpie.json()["event_perms"][0] == data["resource_full_name"]
-
-                data["event"] = "deleted"
-                resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
-                utils.check_response_basic_info(resp, 200, expected_method="POST")
-                assert len(magpie.json()["event_perms"]) == 0
+            data["event"] = "deleted"
+            resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
+            utils.check_response_basic_info(resp, 200, expected_method="POST")
+            assert len(magpie.json()["event_perms"]) == 0
 
 
 @pytest.mark.api
