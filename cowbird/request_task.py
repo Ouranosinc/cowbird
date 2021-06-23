@@ -3,10 +3,16 @@ from celery import Task
 
 class RequestTask(Task):
     """
-    Handle API requests queue.
+    Celery base task that should be used to handle API requests.
 
-    .. todo:: Connect to celery queue to submit request in an async manner
-    See https://github.com/celery/celery/issues/3744#issuecomment-271366923 for class registration
+    To inherit of the propre configuration (autoretry, backoff and jitter strategy) simply decorate your asynchrone
+    function like this :
+
+    @shared_task(bind=True, base=RequestTask)
+    def function_name(self, any, wanted, parameters):
+
+    bind=True will provide the self argument to the function which is the celery Task
+    base=RequestTask will instantiate a RequestTask rather than a base celery Task as the self object
     """
     autoretry_for = (Exception,)
     retry_backoff = True
@@ -19,8 +25,9 @@ class RequestTask(Task):
         raise NotImplementedError('Tasks must define the run method.')
 
     def abort_chain(self):
-        # TODO: Useful?
-        # TODO: What to do with already completed tasks? Rollback?
-        #       If they are idempotent then it's not useful. If we redo them, for exemple create something,
-        #       it will first check for existence and not crash if it does.
-        self.request.callbacks = None
+        """
+        Calling this function from a task will prevent any downstream tasks to be run after it but still report success.
+        """
+        # TODO: Not working, maybe just raising some exception?
+        # TODO: What should we do with previous completed tasks? It will leave the service in a bad state...
+        self.request.chain = None
