@@ -1,4 +1,4 @@
 FROM cowbird:base
 LABEL description.short="Cowbird Worker"
 
-CMD celery worker -A pyramid_celery.celery_app --ini "${COWBIRD_CONFIG_DIR}/cowbird.ini"
+CMD celery -A pyramid_celery.celery_app worker --ini "${COWBIRD_CONFIG_DIR}/cowbird.ini"
