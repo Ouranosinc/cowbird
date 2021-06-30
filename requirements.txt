@@ -1,4 +1,4 @@
-celery[mongodb]==4.4.2
+celery[mongodb]==5.1 # 5.1 fix tasks chain pending indefinitely when a task raises an exception
 colander
 cornice>=5
 cornice_swagger>=0.7.0

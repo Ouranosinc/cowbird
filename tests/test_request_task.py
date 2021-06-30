@@ -1,5 +1,4 @@
-import celery.exceptions
-import six
+from abc import ABC
 import pytest
 import unittest
 from unittest.mock import patch
@@ -8,10 +7,10 @@ from time import sleep
 from tests import utils
 from celery import chain
 from celery import shared_task
-from celery.states import SUCCESS
-from cowbird.request_task import RequestTask
+from celery.states import SUCCESS, FAILURE
+from requests.exceptions import RequestException
+from cowbird.request_task import RequestTask, AbortException
 from cowbird.services.service_factory import ServiceFactory
-from cowbird.utils import SingletonMeta
 
 
 """
@@ -30,47 +29,25 @@ TL;DR :
 def celery_config():
     return {
         'broker_url': 'memory://',
-        'result_backend': 'rpc'
+        'result_backend': 'cache+memory://'
     }
 
 
-def get_timeout(task, timeout):
-    """
-    Replace the task.get(timeout=timeout) because this function timeout every time with rpc result_backend
-    """
-    for _ in range(timeout):
-        if task.ready():
-            return task.get()
-        sleep(1)
-    raise celery.exceptions.TimeoutError()
+class UnreliableRequestTask(RequestTask, ABC):
+    retry_jitter = False  # Turn off RequestTask.jitter to get reliable result
+    test_max_retries = 3  # Max retries to be used by the test task
+    invoke_time = []      # Log every call invocation
+
+    def __call__(self, *args, **kwargs):
+        UnreliableRequestTask.invoke_time.append(datetime.now())
+        return self.run(*args, **kwargs)
 
 
-@shared_task(bind=True, base=RequestTask)
-def sum_task(self, param1, param2):
+@shared_task(bind=True, base=UnreliableRequestTask)
+def unreliable_request_task(self, param1, param2):
     # type (int, int) -> int
-    return param1 + param2
-
-
-@six.add_metaclass(SingletonMeta)
-class UnreliableTaskStats:
-    """
-    Hold unreliable task runtime stats
-    """
-    max_retries = 4
-
-    def __init__(self):
-        self.invoke_time = []
-
-    def called(self):
-        self.invoke_time.append(datetime.now())
-
-
-@shared_task(bind=True, base=RequestTask)
-def sum_unreliable_task(self, param1, param2):
-    # type (int, int) -> int
-    UnreliableTaskStats().called()
-    if self.request.retries < UnreliableTaskStats.max_retries:
-        raise Exception()
+    if self.request.retries < UnreliableRequestTask.test_max_retries:
+        raise RequestException()
     return param1 + param2
 
 
@@ -78,6 +55,12 @@ def sum_unreliable_task(self, param1, param2):
 def abort_sum_task(self, param1, param2):
     # type (int, int) -> int
     self.abort_chain()
+    return param1 + param2
+
+
+@shared_task(base=RequestTask)
+def sum_task(param1, param2):
+    # type (int, int) -> int
     return param1 + param2
 
 
@@ -99,20 +82,19 @@ class TestRequestTask(unittest.TestCase):
                     sum_task.s(3),
                     sum_task.s(6))
         task = res.delay()
-        assert get_timeout(task, timeout=10) == 12
+        assert task.get(timeout=5) == 12
         assert task.status == SUCCESS
 
     def test_retrying(self):
         res = chain(sum_task.s(1, 2),
-                    sum_unreliable_task.s(3),
+                    unreliable_request_task.s(3),
                     sum_task.s(6))
         task = res.delay()
-
-        assert get_timeout(task, timeout=60) == 12
+        assert task.get(timeout=20) == 12
         assert task.status == SUCCESS
-        invoke_time = UnreliableTaskStats().invoke_time
+        invoke_time = UnreliableRequestTask.invoke_time
         # Check number of retries
-        assert len(invoke_time) == UnreliableTaskStats.max_retries + 1
+        assert len(invoke_time) == UnreliableRequestTask.test_max_retries + 1
         # Check backoff strategy
         assert (invoke_time[-1] - invoke_time[-2]) > (invoke_time[1] - invoke_time[0])
 
@@ -121,16 +103,18 @@ class TestRequestTask(unittest.TestCase):
                     abort_sum_task.s(3),
                     sum_task.s(6))
         task = res.delay()
-        # TODO: Test case still not working, aborting the chain leave the chain in pending state
-        assert get_timeout(task, timeout=10) == 6
-        assert task.status == SUCCESS
+        with pytest.raises(AbortException):
+            task.get(timeout=5)
+        assert task.status == FAILURE
 
     @patch("cowbird.services.impl.geoserver.Geoserver.create_workspace")
     @patch("cowbird.services.impl.geoserver.Geoserver.create_datastore")
     def test_geoserver(self, create_datastore_mock, create_workspace_mock):
         test_user_name = "test_user"
         test_workspace_id = 1000
+        test_datastore_id = 1000
         create_workspace_mock.return_value = test_workspace_id
+        create_datastore_mock.return_value = test_datastore_id
         geoserver = ServiceFactory().get_service("Geoserver")
 
         # geoserver should call create_workspace and then create_datastore
