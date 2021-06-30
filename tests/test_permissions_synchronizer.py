@@ -63,6 +63,15 @@ class TestSyncPermissions(unittest.TestCase):
         os.unlink(cls.cfg_file.name)
 
     def test_sync(self):
+        """
+        This test parses the sync config and check that when a permission is created in the perm_synchronizer the proper
+        permission is created for every synchronized service.
+
+        The PermissionSynchronizer create_permission function will first find if the applied permission exists in the
+        config. Then for every configured service it will obtain the  equivalent permission for this service and apply
+        it to the mocked Magpie service. The outbound_perm dict of the mocked Magpie service is then check to validate
+        that every permission that should have been created in Magpie exists.
+        """
         with contextlib.ExitStack() as stack:
             stack.enter_context(mock.patch("cowbird.services.impl.magpie.Magpie",
                                            side_effect=utils.MockMagpieService))
@@ -74,8 +83,10 @@ class TestSyncPermissions(unittest.TestCase):
             magpie = ServiceFactory().get_service("Magpie")
 
             resource_name = "resource1"
+            # Loop over every service having a permission that must be synchronized to another one
             for svc in self.test_services:
                 for perm_name in self.sync_perm_name[svc]:
+                    # Create the permission for this service that would be provided by Magpie as a hook
                     permission = Permission(
                         service_name=svc,
                         resource_id="0",
@@ -84,8 +95,16 @@ class TestSyncPermissions(unittest.TestCase):
                         access="string1",
                         scope="string2",
                         user="string3")
+
+                    # Apply this permission to the synchronizer (this is the function that is tested!)
                     PermissionSynchronizer(magpie).create_permission(permission)
+
+                    # magpie, which is mocked, will store every permission request that should have been done to the
+                    # Magpie service in the `outbound_perms` dict.
                     assert len(magpie.json()["outbound_perms"]) == len(self.sync_perm_name[self.mapped_service[svc]])
+
+                    # Validate that the mocked magpie instance has received a permission request for every mapped
+                    # permission
                     for idx, mapped_perm_name in enumerate(self.sync_perm_name[self.mapped_service[svc]]):
                         outbound_perm = magpie.json()["outbound_perms"][idx]
                         assert outbound_perm.service_name == self.mapped_service[svc]
@@ -96,5 +115,11 @@ class TestSyncPermissions(unittest.TestCase):
                         assert outbound_perm.access == permission.access
                         assert outbound_perm.scope == permission.scope
                         assert outbound_perm.user == permission.user
+
+                    # This is the second function being tested which should make remove permission requests to magpie
+                    # for every mapped permission
                     PermissionSynchronizer(magpie).delete_permission(permission)
+
+                    # Again the mocked magpie instance should remove every permission from its `outbound_perms` rather
+                    # than making the remove permission request to the Magpie service.
                     assert len(magpie.json()["outbound_perms"]) == 0

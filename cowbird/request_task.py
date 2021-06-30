@@ -20,9 +20,10 @@ class RequestTask(Task, ABC):
     There is also an abort_chain function to stop the chain of requests in case of an unrecoverable event
 
     To use this class simply decorate your asynchronous function like this :
+        shared_task::
 
-    @shared_task(bind=True, base=RequestTask)
-    def function_name(self, any, wanted, parameters):
+            @shared_task(bind=True, base=RequestTask)
+            def function_name(self, any, wanted, parameters):
 
     bind=True will provide the self argument to the function which is the celery Task (not required)
     base=RequestTask will instantiate a RequestTask rather than a base celery Task as the self object

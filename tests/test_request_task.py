@@ -1,6 +1,7 @@
 """
-Helpful documentation on how to setup celery test fixtures: https://medium.com/@scythargon/how-to-use-celery-pytest-
-fixtures-for-celery-intergration-testing-6d61c91775d9.
+Helpful documentation on how to setup celery test fixtures:
+
+https://medium.com/@scythargon/how-to-use-celery-pytest-fixtures-for-celery-intergration-testing-6d61c91775d9.
 
 TL;DR :
 - Add a session fixture with an in-memory celery config
