@@ -102,8 +102,13 @@ endif
 
 # docker
 DOCKER_REPO := pavics/cowbird
-DOCKER_TAG  := $(DOCKER_REPO):$(APP_VERSION)
-LATEST_TAG  := $(DOCKER_REPO):latest
+BASE_TAG := $(APP_NAME):base
+LATEST_TAG := $(APP_NAME):latest
+VERSION_TAG := $(APP_NAME):$(APP_VERSION)
+REPO_LATEST_TAG := $(DOCKER_REPO):latest
+REPO_VERSION_TAG := $(DOCKER_REPO):$(APP_VERSION)
+WEBSVC_SUFFIX := -webservice
+WORKER_SUFFIX := -worker
 
 .DEFAULT_GOAL := help
 
@@ -158,7 +163,9 @@ info:		## display make information
 	@echo "  Application Version    $(APP_VERSION)"
 	@echo "  Download Cache         $(DOWNLOAD_CACHE)"
 	@echo "  Test Reports           $(REPORTS_DIR)"
-	@echo "  Docker Tag             $(DOCKER_TAG)"
+	@echo "  Base Docker Tag        $(REPO_VERSION_TAG)"
+	@echo "  Webservice Docker Tag  $(REPO_VERSION_TAG)$(WEBSVC_SUFFIX)"
+	@echo "  Worker Docker Tag      $(REPO_VERSION_TAG)$(WORKER_SUFFIX)"
 
 ## --- Cleanup targets --- ##
 
@@ -317,49 +324,54 @@ stat: 		## display processes with PID(s) of gunicorn instance(s) running the app
 
 .PHONY: docker-info
 docker-info:		## obtain docker image information
-	@echo "Docker image will be built as: "
-	@echo "$(APP_NAME):$(APP_VERSION)"
-	@echo "Docker image will be pushed as:"
-	@echo "$(DOCKER_REPO):$(APP_VERSION)"
+	@echo "Docker images will be built as: "
+	@echo "$(VERSION_TAG)"
+	@echo "$(VERSION_TAG)$(WEBSVC_SUFFIX)"
+	@echo "$(VERSION_TAG)$(WORKER_SUFFIX)"
+	@echo "Docker images will be pushed as:"
+	@echo "$(REPO_VERSION_TAG)"
+	@echo "$(REPO_VERSION_TAG)$(WEBSVC_SUFFIX)"
+	@echo "$(REPO_VERSION_TAG)$(WORKER_SUFFIX)"
 
 .PHONY: docker-build-base
 docker-build-base:							## build the base docker image
-	docker build "$(APP_ROOT)" -f "$(APP_ROOT)/docker/Dockerfile-base" -t "$(APP_NAME):base"
-	docker tag "$(APP_NAME):base" "$(APP_NAME):latest"
-	docker tag "$(APP_NAME):base" "$(DOCKER_REPO):latest"
-	docker tag "$(APP_NAME):base" "$(DOCKER_REPO):$(APP_VERSION)"
+	docker build "$(APP_ROOT)" -f "$(APP_ROOT)/docker/Dockerfile-base" -t "$(BASE_TAG)"
+	docker tag "$(BASE_TAG)" "$(VERSION_TAG)"
+	docker tag "$(BASE_TAG)" "$(LATEST_TAG)"
+	docker tag "$(BASE_TAG)" "$(REPO_LATEST_TAG)"
+	docker tag "$(BASE_TAG)" "$(REPO_VERSION_TAG)"
 
 .PHONY: docker-build-webservice
 docker-build-webservice: docker-build-base		## build the web service docker image
-	docker build "$(APP_ROOT)" -f "$(APP_ROOT)/docker/Dockerfile-webservice" -t "$(APP_NAME):$(APP_VERSION)-webservice"
-	docker tag "$(APP_NAME):$(APP_VERSION)-webservice" "$(APP_NAME):latest-webservice"
-	docker tag "$(APP_NAME):$(APP_VERSION)-webservice" "$(DOCKER_REPO):latest-webservice"
-	docker tag "$(APP_NAME):$(APP_VERSION)-webservice" "$(DOCKER_REPO):$(APP_VERSION)-webservice"
+	docker build "$(APP_ROOT)" -f "$(APP_ROOT)/docker/Dockerfile$(WEBSVC_SUFFIX)" -t "$(VERSION_TAG)$(WEBSVC_SUFFIX)"
+	docker tag "$(VERSION_TAG)$(WEBSVC_SUFFIX)" "$(LATEST_TAG)$(WEBSVC_SUFFIX)"
+	docker tag "$(VERSION_TAG)$(WEBSVC_SUFFIX)" "$(REPO_LATEST_TAG)$(WEBSVC_SUFFIX)"
+	docker tag "$(VERSION_TAG)$(WEBSVC_SUFFIX)" "$(REPO_VERSION_TAG)$(WEBSVC_SUFFIX)"
 
 .PHONY: docker-build-worker
 docker-build-worker: docker-build-base		## build the worker docker image
-	docker build "$(APP_ROOT)" -f "$(APP_ROOT)/docker/Dockerfile-worker" -t "$(APP_NAME):$(APP_VERSION)-worker"
-	docker tag "$(APP_NAME):$(APP_VERSION)-worker" "$(APP_NAME):latest-worker"
-	docker tag "$(APP_NAME):$(APP_VERSION)-worker" "$(DOCKER_REPO):latest-worker"
-	docker tag "$(APP_NAME):$(APP_VERSION)-worker" "$(DOCKER_REPO):$(APP_VERSION)-worker"
+	docker build "$(APP_ROOT)" -f "$(APP_ROOT)/docker/Dockerfile$(WORKER_SUFFIX)" -t "$(VERSION_TAG)$(WORKER_SUFFIX)"
+	docker tag "$(VERSION_TAG)$(WORKER_SUFFIX)" "$(LATEST_TAG)$(WORKER_SUFFIX)"
+	docker tag "$(VERSION_TAG)$(WORKER_SUFFIX)" "$(REPO_LATEST_TAG)$(WORKER_SUFFIX)"
+	docker tag "$(VERSION_TAG)$(WORKER_SUFFIX)" "$(REPO_VERSION_TAG)$(WORKER_SUFFIX)"
 
 .PHONY: docker-build
 docker-build: docker-build-base docker-build-webservice docker-build-worker		## build all docker images
 
 .PHONY: docker-push-base
 docker-push-base: docker-build-base			## push the base docker image
-	docker push "$(DOCKER_REPO):$(APP_VERSION)"
-	docker push "$(DOCKER_REPO):latest"
+	docker push "$(REPO_VERSION_TAG)"
+	docker push "$(REPO_LATEST_TAG)"
 
 .PHONY: docker-push-webservice
 docker-push-webservice: docker-build-webservice	## push the webservice docker image
-	docker push "$(DOCKER_REPO):$(APP_VERSION)-webservice"
-	docker push "$(DOCKER_REPO):latest-webservice"
+	docker push "$(REPO_VERSION_TAG)$(WEBSVC_SUFFIX)"
+	docker push "$(REPO_LATEST_TAG)$(WEBSVC_SUFFIX)"
 
 .PHONY: docker-push-worker
 docker-push-worker: docker-build-worker		## push the worker docker image
-	docker push "$(DOCKER_REPO):$(APP_VERSION)-worker"
-	docker push "$(DOCKER_REPO):latest-worker"
+	docker push "$(REPO_VERSION_TAG)$(WORKER_SUFFIX)"
+	docker push "$(REPO_LATEST_TAG)$(WORKER_SUFFIX)"
 
 .PHONY: docker-push
 docker-push: docker-push-base docker-push-webservice docker-push-worker  ## push all docker images
@@ -380,19 +392,19 @@ docker-stat:  ## query docker-compose images status (from 'docker-test')
 .PHONY: docker-clean
 docker-clean:  ## remove all built docker images (only matching current/latest versions)
 	docker-compose $(DOCKER_TEST_COMPOSES) down || true
-	docker rmi -f "$(DOCKER_REPO):$(APP_VERSION)-webservice" || true
-	docker rmi -f "$(DOCKER_REPO):latest-webservice" || true
-	docker rmi -f "$(APP_NAME):$(APP_VERSION)-webservice" || true
-	docker rmi -f "$(APP_NAME):latest-webservice" || true
-	docker rmi -f "$(DOCKER_REPO):$(APP_VERSION)-worker" || true
-	docker rmi -f "$(DOCKER_REPO):latest-worker" || true
-	docker rmi -f "$(APP_NAME):$(APP_VERSION)-worker" || true
-	docker rmi -f "$(APP_NAME):latest-worker" || true
-	docker rmi -f "$(DOCKER_REPO):$(APP_VERSION)" || true
-	docker rmi -f "$(DOCKER_REPO):latest" || true
-	docker rmi -f "$(APP_NAME):$(APP_VERSION)" || true
-	docker rmi -f "$(APP_NAME):latest" || true
-	docker rmi -f "$(APP_NAME):base" || true
+	docker rmi -f "$(REPO_VERSION_TAG)$(WEBSVC_SUFFIX)" || true
+	docker rmi -f "$(REPO_LATEST_TAG)$(WEBSVC_SUFFIX)" || true
+	docker rmi -f "$(VERSION_TAG)$(WEBSVC_SUFFIX)" || true
+	docker rmi -f "$(LATEST_TAG)$(WEBSVC_SUFFIX)" || true
+	docker rmi -f "$(REPO_VERSION_TAG)$(WORKER_SUFFIX)" || true
+	docker rmi -f "$(REPO_LATEST_TAG)$(WORKER_SUFFIX)" || true
+	docker rmi -f "$(VERSION_TAG)$(WORKER_SUFFIX)" || true
+	docker rmi -f "$(LATEST_TAG)$(WORKER_SUFFIX)" || true
+	docker rmi -f "$(REPO_VERSION_TAG)" || true
+	docker rmi -f "$(REPO_LATEST_TAG)" || true
+	docker rmi -f "$(VERSION_TAG)" || true
+	docker rmi -f "$(LATEST_TAG)" || true
+	docker rmi -f "$(BASE_TAG)" || true
 
 ## --- Static code check targets ---
 
