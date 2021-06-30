@@ -346,10 +346,6 @@ docker-build-worker: docker-build-base		## build the worker docker image
 .PHONY: docker-build
 docker-build: docker-build-base docker-build-webservice docker-build-worker		## build all docker images
 
-.PHONY: docker-push
-docker-push: docker-build	## push built docker image
-	docker push "$(DOCKER_TAG)"
-
 .PHONY: docker-push-base
 docker-push-base: docker-build-base			## push the base docker image
 	docker push "$(DOCKER_REPO):$(APP_VERSION)"
