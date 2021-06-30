@@ -58,7 +58,7 @@ class TestAPI(unittest.TestCase):
             data = {
                 "event": "created",
                 "user_name": "test_user",
-                "callback_url": "string"
+                "callback_url": "http://magpie.domain.ca/tmp/109e1d0d-e27c-4601-9d45-984c9b61ebff"
             }
             resp = utils.test_request(self.app, "POST", "/webhooks/users", json=data)
             utils.check_response_basic_info(resp, 200, expected_method="POST")

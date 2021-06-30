@@ -40,12 +40,14 @@ def post_user_webhook_view(request):
                     msg_on_fail=s.UserWebhook_POST_BadRequestResponseSchema.description)
     user_name = ar.get_multiformat_body(request, "user_name")
     if event == ValidOperations.CreateOperation.value:
-        callback_url = ar.get_multiformat_body(request, "callback_url")
+        # FIXME: Tried with ax.URL_REGEX, but cannot match what seems valid urls...
+        callback_url = ar.get_multiformat_body(request, "callback_url", pattern=None)
         try:
             dispatch(lambda svc: svc.user_created(user_name=user_name))
         except Exception:  # noqa
             # If something bad happens, set the status as erroneous in Magpie
             requests.get(callback_url)
+            # TODO: return something else than 200
     else:
         dispatch(lambda svc: svc.user_deleted(user_name=user_name))
     return ax.valid_http(HTTPOk, detail=s.UserWebhook_POST_OkResponseSchema.description)
