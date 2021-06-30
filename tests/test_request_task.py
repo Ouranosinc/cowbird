@@ -1,35 +1,34 @@
-from abc import ABC
-import pytest
-import unittest
-from unittest.mock import patch
-from datetime import datetime
-from time import sleep
-from tests import utils
-from celery import chain
-from celery import shared_task
-from celery.states import SUCCESS, FAILURE
-from requests.exceptions import RequestException
-from cowbird.request_task import RequestTask, AbortException
-from cowbird.services.service_factory import ServiceFactory
-
-
 """
-Helpful documentation on how to setup celery test fixtures:
-https://medium.com/@scythargon/how-to-use-celery-pytest-fixtures-for-celery-intergration-testing-6d61c91775d9
+Helpful documentation on how to setup celery test fixtures: https://medium.com/@scythargon/how-to-use-celery-pytest-
+fixtures-for-celery-intergration-testing-6d61c91775d9.
 
 TL;DR :
 - Add a session fixture with an in-memory celery config
 - Use the celery_session_app and celery_session_worker fixtures for the tests
-- Don't forget to use the shared_task decorator instead of the usual app.task because shared_task use a proxy allowing 
-  the task to be bound to any app (including the celery_session_app fixture). 
+- Don't forget to use the shared_task decorator instead of the usual app.task because shared_task use a proxy allowing
+  the task to be bound to any app (including the celery_session_app fixture).
 """
+import unittest
+from abc import ABC
+from datetime import datetime
+from time import sleep
+from unittest.mock import patch
+
+import pytest
+from celery import chain, shared_task
+from celery.states import FAILURE, SUCCESS
+from requests.exceptions import RequestException
+
+from cowbird.request_task import AbortException, RequestTask
+from cowbird.services.service_factory import ServiceFactory
+from tests import utils
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def celery_config():
     return {
-        'broker_url': 'memory://',
-        'result_backend': 'cache+memory://'
+        "broker_url": "memory://",
+        "result_backend": "cache+memory://"
     }
 
 
@@ -65,8 +64,8 @@ def sum_task(param1, param2):
 
 
 @pytest.mark.request_task
-@pytest.mark.usefixtures('celery_session_app')
-@pytest.mark.usefixtures('celery_session_worker')
+@pytest.mark.usefixtures("celery_session_app")
+@pytest.mark.usefixtures("celery_session_worker")
 class TestRequestTask(unittest.TestCase):
 
     @classmethod

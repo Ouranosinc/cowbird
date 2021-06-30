@@ -18,7 +18,7 @@ import pytest
 import yaml
 
 from cowbird.services.service_factory import ServiceFactory
-from cowbird.utils import CONTENT_TYPE_JSON, SingletonMeta
+from cowbird.utils import CONTENT_TYPE_JSON
 from tests import utils
 
 

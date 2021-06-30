@@ -1,11 +1,12 @@
 from abc import ABC
+
 from celery import Task
 from requests.exceptions import RequestException
 
 
 class AbortException(Exception):
     """
-    Exception raised when the chain must be interrupted
+    Exception raised when the chain must be interrupted.
     """
 
 
@@ -30,7 +31,7 @@ class RequestTask(Task, ABC):
     retry_backoff = True
     retry_backoff_max = 600  # Max backoff to 10 min
     retry_jitter = True
-    retry_kwargs = {'max_retries': 15}
+    retry_kwargs = {"max_retries": 15}
 
     def abort_chain(self):
         """

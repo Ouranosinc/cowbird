@@ -17,7 +17,7 @@ from webtest.response import TestResponse
 from cowbird.app import main
 from cowbird.constants import COWBIRD_ROOT, get_constant
 from cowbird.services.service import Service
-from cowbird.utils import SingletonMeta, CONTENT_TYPE_JSON, get_header, get_settings_from_config_ini, is_null, null
+from cowbird.utils import CONTENT_TYPE_JSON, SingletonMeta, get_header, get_settings_from_config_ini, is_null, null
 
 # employ example INI config for tests where needed to ensure that configurations are valid
 TEST_INI_FILE = os.path.join(COWBIRD_ROOT, "config/cowbird.example.ini")

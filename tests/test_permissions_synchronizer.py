@@ -1,5 +1,5 @@
-import os
 import contextlib
+import os
 import tempfile
 import unittest
 
@@ -9,7 +9,6 @@ import yaml
 
 from cowbird.permissions_synchronizer import Permission, PermissionSynchronizer
 from cowbird.services.service_factory import ServiceFactory
-from cowbird.utils import SingletonMeta
 from tests import utils
 
 
@@ -79,7 +78,7 @@ class TestSyncPermissions(unittest.TestCase):
                 for perm_name in self.sync_perm_name[svc]:
                     permission = Permission(
                         service_name=svc,
-                        resource_id=0,
+                        resource_id="0",
                         resource_full_name=self.res_root[svc] + resource_name,
                         name=perm_name,
                         access="string1",
@@ -92,7 +91,7 @@ class TestSyncPermissions(unittest.TestCase):
                         assert outbound_perm.service_name == self.mapped_service[svc]
                         assert outbound_perm.resource_id == utils.MockAnyService.ResourceId
                         assert outbound_perm.resource_full_name == \
-                               self.res_root[self.mapped_service[svc]] + resource_name
+                            self.res_root[self.mapped_service[svc]] + resource_name
                         assert outbound_perm.name == mapped_perm_name
                         assert outbound_perm.access == permission.access
                         assert outbound_perm.scope == permission.scope

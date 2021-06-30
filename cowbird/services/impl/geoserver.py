@@ -1,8 +1,8 @@
+from celery import chain, shared_task
+
 from cowbird.request_task import RequestTask
 from cowbird.services.service import Service
 from cowbird.services.service_factory import ServiceFactory
-from celery import chain
-from celery import shared_task
 
 
 class Geoserver(Service):
@@ -21,7 +21,7 @@ class Geoserver(Service):
         # ..todo: Replace this simple stub with real implementation
         res = chain(create_workspace.s(user_name),
                     create_datastore.s("default"))
-        task = res.delay()
+        res.delay()
 
     def user_deleted(self, user_name):
         raise NotImplementedError
@@ -35,7 +35,8 @@ class Geoserver(Service):
     def create_workspace(self, name):
         # type (Geoserver, str) -> int
         """
-        Create a new Geoserver workspace
+        Create a new Geoserver workspace.
+
         @param self: Geoserver instance
         @param name: Workspace name
         @return: Workspace id
@@ -46,7 +47,8 @@ class Geoserver(Service):
     def create_datastore(self, workspace_id, name):
         # type (Geoserver, int, str) -> int
         """
-        Create a new Geoserver workspace
+        Create a new Geoserver workspace.
+
         @param self: Geoserver instance
         @param workspace_id: Workspace id where the datastore must be created
         @param name: Datastore name

@@ -1,5 +1,6 @@
-import pytest
 import unittest
+
+import pytest
 
 from cowbird.services.service_factory import ServiceFactory
 from tests import utils

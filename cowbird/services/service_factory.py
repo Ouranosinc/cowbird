@@ -1,7 +1,7 @@
+import importlib
 from typing import TYPE_CHECKING
 
 import six
-import importlib
 
 from cowbird.config import get_all_configs
 from cowbird.utils import SingletonMeta, get_config_path
