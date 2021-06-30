@@ -8,11 +8,21 @@ from cowbird.api import schemas as s
 from cowbird.api.schemas import ValidOperations
 from cowbird.permissions_synchronizer import Permission
 from cowbird.services.service_factory import ServiceFactory
+from cowbird.utils import get_logger
 
 
 def dispatch(svc_fct):
+    logger = get_logger(__name__)
+    exceptions = []
     for svc in ServiceFactory().get_active_services():
-        svc_fct(svc)
+        # Allow every service to be notified even if one of them throw an error
+        try:
+            svc_fct(svc)
+        except Exception as exception:  # noqa
+            exceptions.append(exception)
+            logger.error("Exception raises while handling event for service [%s] : [%r]", svc.name, exception)
+    if exceptions:
+        raise Exception(exceptions)
 
 
 @s.UserWebhookAPI.post(schema=s.UserWebhook_POST_RequestSchema, tags=[s.WebhooksTag],
