@@ -20,7 +20,7 @@ def dispatch(svc_fct):
             svc_fct(svc)
         except Exception as exception:  # noqa
             exceptions.append(exception)
-            logger.error("Exception raises while handling event for service [%s] : [%r]", svc.name, exception)
+            logger.error("Exception raised while handling event for service [%s] : [%r]", svc.name, exception)
     if exceptions:
         raise Exception(exceptions)
 
