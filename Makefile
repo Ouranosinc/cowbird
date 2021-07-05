@@ -424,7 +424,7 @@ docker-clean:  ## remove all built docker images (only matching current/latest v
 mkdir-reports:
 	@mkdir -p "$(REPORTS_DIR)"
 
-CHECKS := test pep8 lint security doc8 links imports css
+CHECKS := pep8 lint security doc8 links imports css
 CHECKS := $(addprefix check-, $(CHECKS))
 
 .PHONY: check
