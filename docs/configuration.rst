@@ -40,7 +40,7 @@ File: config.yml
 ~~~~~~~~~~~~~~~~~~~
 
 This is the core configuration file that defines most of `Cowbird`'s data configuration which it must work with to
-manage :term:`services` components.
+manage :term:`Services` components.
 A basic `config.example.yml`_ file is provided, for sample definition of expected schemas per service. Please refer to
 its comment header for specific format and parameter
 details.
