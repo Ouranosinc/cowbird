@@ -1,15 +1,23 @@
-import mock
+import unittest
+
 import pytest
 
 from cowbird.services.service_factory import ServiceFactory
-from tests.utils import TEST_CFG_FILE, get_test_app
+from tests import utils
 
 
 @pytest.mark.service_factory
-def test_service_factory():
-    override = {"COWBIRD_CONFIG_PATH": TEST_CFG_FILE}
-    with mock.patch.dict("os.environ", override):
-        get_test_app()
+class TestServiceFactory(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.app = utils.get_test_app(settings={"cowbird.config_path": utils.TEST_CFG_FILE})
+
+    @classmethod
+    def tearDownClass(cls):
+        utils.clear_services_instances()
+
+    def test_service_factory(self):
         # Test singleton
         inst1 = ServiceFactory().get_service("Magpie")
         inst2 = ServiceFactory().get_service("Magpie")

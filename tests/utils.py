@@ -14,10 +14,10 @@ from pyramid.testing import setUp as PyramidSetUp
 from webtest.app import AppError, TestApp  # noqa
 from webtest.response import TestResponse
 
-from cowbird.app import main
+from cowbird.app import get_app
 from cowbird.constants import COWBIRD_ROOT, get_constant
 from cowbird.services.service import Service
-from cowbird.utils import CONTENT_TYPE_JSON, get_header, get_settings_from_config_ini, is_null, null
+from cowbird.utils import CONTENT_TYPE_JSON, SingletonMeta, get_header, get_settings_from_config_ini, is_null, null
 
 # employ example INI config for tests where needed to ensure that configurations are valid
 TEST_INI_FILE = os.path.join(COWBIRD_ROOT, "config/cowbird.example.ini")
@@ -141,6 +141,11 @@ class MockAnyService(Service):
         pass
 
 
+def clear_services_instances():
+    # Remove the service instances initialized with test specific config
+    SingletonMeta._instances.clear()  # pylint: disable=W0212
+
+
 def config_setup_from_ini(config_ini_file_path):
     settings = get_settings_from_config_ini(config_ini_file_path)
     config = PyramidSetUp(settings=settings)
@@ -159,7 +164,7 @@ def get_test_app(settings=None):
     if settings:
         config.registry.settings.update(settings)
 
-    test_app = TestApp(main({}, **config.registry.settings))
+    test_app = TestApp(get_app({}, **config.registry.settings))
     return test_app
 
 

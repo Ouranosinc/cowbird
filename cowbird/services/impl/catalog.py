@@ -2,7 +2,6 @@ import os
 
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
-from cowbird.request_queue import RequestQueue
 from cowbird.services.service import Service
 
 
@@ -13,7 +12,6 @@ class Catalog(Service, FSMonitor):
 
     def __init__(self, name, url):
         super(Catalog, self).__init__(name, url)
-        self.req_queue = RequestQueue()
         # TODO: Need to monitor data directory
 
     @staticmethod

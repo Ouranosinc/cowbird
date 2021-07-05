@@ -7,7 +7,15 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* Add the RequestTask celery task for handling external services requests.
+* Add a docker image for the celery worker
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+n/a
 
 `0.2.0 <https://github.com/Ouranosinc/cowbird/tree/0.2.0>`_ (2021-05-12)
 ------------------------------------------------------------------------------------

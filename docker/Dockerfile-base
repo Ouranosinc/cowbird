@@ -1,5 +1,6 @@
 FROM python:3.7-alpine
-LABEL Description="Runs Cowbird middleware to manage interactions between various birds of the bird-house stack."
+LABEL description.short="Cowbird base"
+LABEL description.long="Cowbird middleware to manage interactions between various birds of the bird-house stack."
 LABEL Maintainer="Ouranos, CRIM"
 LABEL Vendor="Ouranos inc."
 LABEL Version="0.2.0"
@@ -29,4 +30,4 @@ COPY ./cowbird ${COWBIRD_DIR}/cowbird/
 # equivalent of `make install` without conda env and pre-installed packages
 RUN pip install --no-dependencies -e ${COWBIRD_DIR}
 
-CMD gunicorn --paste ${COWBIRD_CONFIG_DIR}/cowbird.ini --preload
+CMD ["bash"]
