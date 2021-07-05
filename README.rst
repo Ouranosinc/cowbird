@@ -74,7 +74,7 @@ the resources under those services such that the complete ecosystem can seamless
 
 .. |codacy| image:: https://api.codacy.com/project/badge/Grade/1920f28c7e2140a083f527a803c58ae7
     :alt: Codacy Badge
-    :target: https://www.codacy.com/app/fmigneault/Cowbird?utm_source=github.com&utm_medium=referral&utm_content=Ouranosinc/cowbird&utm_campaign=Badge_Grade
+    :target: https://app.codacy.com/gh/Ouranosinc/Magpie/dashboard
 
 .. |docker_build_mode| image:: https://img.shields.io/docker/cloud/automated/pavics/cowbird.svg?label=build
     :alt: Docker Build Status (latest tag)
