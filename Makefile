@@ -300,6 +300,18 @@ install-dev: conda-env	## install package requirements for development and testi
 	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) -r "$(APP_ROOT)/requirements-dev.txt"'
 	@echo "Successfully installed dev requirements."
 
+# install locally to ensure they can be found by config extending them
+.PHONY: install-npm
+install-npm:    		## install npm package manager if it cannot be found
+	@[ -f "$(shell which npm)" ] || ( \
+		echo "Binary package manager npm not found. Attempting to install it."; \
+		apt-get install npm \
+	)
+	@[ `npm ls 2>/dev/null | grep stylelint-config-standard | wc -l` = 1 ] || ( \
+		echo "Install required libraries for style checks." && \
+		npm install stylelint stylelint-config-standard --save-dev \
+	)
+
 ## --- Launchers targets --- ##
 
 .PHONY: cron
@@ -412,11 +424,14 @@ docker-clean:  ## remove all built docker images (only matching current/latest v
 mkdir-reports:
 	@mkdir -p "$(REPORTS_DIR)"
 
+CHECKS := test pep8 lint security doc8 links imports css
+CHECKS := $(addprefix check-, $(CHECKS))
+
 .PHONY: check
 check: check-all	## alias for 'check-all' target
 
 .PHONY: check-all
-check-all: clean-test check-pep8 check-lint check-security check-docs check-links	## run every code style checks
+check-all: $(CHECKS)	## run every code style checks
 
 .PHONY: check-pep8
 check-pep8: mkdir-reports install-dev		## run PEP8 code style checks
@@ -490,11 +505,22 @@ check-imports: mkdir-reports install-dev	## run imports code checks
 	 	isort --check-only --diff --recursive $(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/check-imports.txt")'
 
+.PHONY: check-css
+check-css: mkdir-reports install-npm
+	@echo "Running CSS style checks..."
+	@npx stylelint \
+		--config "$(APP_ROOT)/.stylelintrc.json" \
+		--output-file "$(REPORTS_DIR)/fixed-css.txt" \
+		"$(APP_ROOT)/**/*.css"
+
+FIXES := imports lint docf css
+FIXES := $(addprefix fix-, $(FIXES))
+
 .PHONY: fix
 fix: fix-all	## alias for 'fix-all' target
 
 .PHONY: fix-all
-fix-all: fix-imports fix-lint fix-docf	## fix all applicable code check corrections automatically
+fix-all: $(FIXES)	## fix all applicable code check corrections automatically
 
 .PHONY: fix-imports
 fix-imports: install-dev	## fix import code checks corrections automatically
@@ -527,6 +553,15 @@ fix-docf: install-dev	## fix some PEP8 code documentation style problems automat
 			--recursive \
 			$(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/fixed-docf.txt")'
+
+.PHONY: fix-css
+fix-css: mkdir-reports install-npm		## fix CSS styles problems automatically
+	@echo "Fixing CSS style problems..."
+	@npx stylelint \
+		--fix \
+		--config "$(APP_ROOT)/.stylelintrc.json" \
+		--output-file "$(REPORTS_DIR)/fixed-css.txt" \
+		"$(APP_ROOT)/**/*.css"
 
 ## --- Test targets --- ##
 
