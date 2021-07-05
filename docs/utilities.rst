@@ -1,5 +1,6 @@
 .. include:: references.rst
 
+.. _utilities:
 .. _utilities_page:
 
 CLI Utilities

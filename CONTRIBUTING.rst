@@ -54,14 +54,19 @@ Get Started!
 
 Ready to contribute? Here's how to set up `cowbird` for local development.
 
-1. Clone the repository ::
+1. Clone the repository :
+
+
+.. code-block:: console
 
     git clone https://github.com/Ouranosinc/cowbird
 
 
 2. Install your local copy (see `installation`_)
 
-3. When you're done making changes, check that your changes pass code formatting and tests::
+3. When you're done making changes, check that your changes pass code formatting and tests:
+
+.. code-block:: console
 
     make check
     make test
@@ -86,7 +91,9 @@ Before you submit a pull request, check that it meets these guidelines:
 Tips
 ----
 
-To run a subset of tests::
+To run a subset of tests:
+
+.. code-block:: console
 
     make SPEC="<CUSTOM TEST SPECIFICATIONS>" test-custom
 
