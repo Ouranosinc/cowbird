@@ -502,7 +502,7 @@ check-imports: mkdir-reports install-dev	## run imports code checks
 	@echo "Running import checks..."
 	@-rm -fr "$(REPORTS_DIR)/check-imports.txt"
 	@bash -c '$(CONDA_CMD) \
-	 	isort --check-only --diff --recursive $(APP_ROOT) \
+	 	isort --check-only --diff $(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/check-imports.txt")'
 
 .PHONY: check-css
@@ -527,7 +527,7 @@ fix-imports: install-dev	## fix import code checks corrections automatically
 	@echo "Fixing flagged import checks..."
 	@-rm -fr "$(REPORTS_DIR)/fixed-imports.txt"
 	@bash -c '$(CONDA_CMD) \
-		isort --recursive $(APP_ROOT) \
+		isort $(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/fixed-imports.txt")'
 
 .PHONY: fix-lint
