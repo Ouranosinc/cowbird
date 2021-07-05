@@ -1,7 +1,7 @@
 ---
 name: Bug Report
 about: Create a report to help us improve
-title: "[BUG]"
+title: \[BUG\]
 labels: bug
 assignees: fmigneault
 
@@ -24,7 +24,7 @@ A clear and concise description of what you expected to happen.
 If applicable, add screenshots to help explain your problem.
 
 **Desktop (please complete the following information):**
- - OS: [e.g. Linux|Windows] (if running locally)
- - Browser [e.g. chrome, safari] (if running as a service)
+ - OS: \[e.g. Linux|Windows\] (if running locally)
+ - Browser \[e.g. chrome, safari\] (if running as a service)
  - Instance: URL
- - Version ["1.2.3", see `/version` endpoint]
+ - Version \["1.2.3", see `/version` endpoint\]

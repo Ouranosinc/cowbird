@@ -1,5 +1,6 @@
 .. include:: references.rst
 
+.. _utilities:
 .. _utilities_page:
 
 CLI Utilities
@@ -30,7 +31,7 @@ More specifically:
     cowbird services list --help
 
 
-The ``cowbird`` CLI should be available on your path directly following `installation`_ of the package.
+The ``cowbird`` CLI should be available on your path directly following :ref:`installation` of the package.
 When using an ``conda`` environment, you should activate it first to make the CLI available.
 
 Source code of these helpers can be found `here <https://github.com/Ouranosinc/cowbird/tree/master/cowbird/cli>`_.

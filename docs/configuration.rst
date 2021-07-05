@@ -1,5 +1,6 @@
 .. include:: references.rst
 
+.. _configuration:
 .. _configuration_page:
 
 Configuration
@@ -40,7 +41,7 @@ File: config.yml
 ~~~~~~~~~~~~~~~~~~~
 
 This is the core configuration file that defines most of `Cowbird`'s data configuration which it must work with to
-manage :term:`services` components.
+manage :term:`Services` components.
 A basic `config.example.yml`_ file is provided, for sample definition of expected schemas per service. Please refer to
 its comment header for specific format and parameter
 details.
@@ -55,7 +56,7 @@ activatable setting (e.g.: ``True`` or ``False``), or when specified with more s
 
 Configuration variables will be used by `Cowbird` on startup unless prior definition is found within `cowbird.ini`_.
 All variables (i.e.: non-``[constant]`` parameters) can also be specified by their ``cowbird.[variable_name]`` setting
-counterpart as described at the start of the `Configuration`_ section.
+counterpart as described at the start of the :ref:`configuration` section.
 
 Loading Settings
 ~~~~~~~~~~~~~~~~~
@@ -100,7 +101,7 @@ Application Settings
 
 Following configuration parameters are used to define values that are employed by `Cowbird` after loading
 the `Loading Settings`_. All ``cowbird.[variable_name]`` counterpart definitions are also available as described
-at the start of the `Configuration`_ section.
+at the start of the :ref:`configuration` section.
 
 - | ``COWBIRD_URL``
   | (Default: ``"http://localhost:2001"``)
@@ -127,7 +128,7 @@ at the start of the `Configuration`_ section.
   | (Default: ``False``)
 
   Specifies whether `Cowbird` logging should also **enforce** printing the details to the console when using
-  `utilities`_.
+  :ref:`utilities`.
   Otherwise, the configured logging methodology in `cowbird.ini`_ is used (which can also define a console handler).
 
 - | ``COWBIRD_LOG_REQUEST``

@@ -36,7 +36,7 @@ def main(args=None, parser=None, namespace=None):
     args = parser.parse_args(args=args, namespace=namespace)
     set_log_level(args)
     LOGGER.debug("Getting configuration")
-    config = get_app_config({"cowbird.ini_file_path": args.config})
+    config = get_app_config({"cowbird.ini_file_path": args.config}, celery=False)
     if args.command == "list":
         services = get_services(config)
         svc_json = [svc.name for svc in services]

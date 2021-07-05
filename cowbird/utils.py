@@ -155,8 +155,8 @@ def islambda(func):
     return isinstance(func, types.LambdaType) and func.__name__ == (lambda: None).__name__  # noqa
 
 
-def get_app_config(container):
-    # type: (AnySettingsContainer) -> Configurator
+def get_app_config(container, celery=True):
+    # type: (AnySettingsContainer, bool) -> Configurator
     """
     Generates application configuration with all required utilities and settings configured.
     """
@@ -198,8 +198,9 @@ def get_app_config(container):
     # NOTE: don't call 'config.scan("cowbird")' to avoid parsing issues with colander/cornice,
     #       add them explicitly with 'config.include(<module>)', and then they can do 'config.scan()'
 
-    config.include("pyramid_celery")
-    config.configure_celery(config_ini)
+    if celery:
+        config.include("pyramid_celery")
+        config.configure_celery(config_ini)
     return config
 
 

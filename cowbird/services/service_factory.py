@@ -23,7 +23,8 @@ class ServiceFactory:
 
     def __init__(self):
         config_path = get_config_path()
-        self.services_cfg = get_all_configs(config_path, "services", allow_missing=True)[0]
+        configs = get_all_configs(config_path, "services", allow_missing=True)
+        self.services_cfg = configs[0] if configs else []
         self.services = {}
 
     def get_service(self, name):

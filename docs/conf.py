@@ -15,6 +15,7 @@
 
 # pylint: disable=C0103,invalid-name
 
+import inspect
 import json
 import os
 import re
@@ -65,6 +66,23 @@ extensions = [
 
 
 image_source_dir = "_static"
+
+# following avoids an error where documentation is having trouble resolving
+# inherited members (methods/properties) from Celery Task in 'cowbird.request_task.RequestTask'
+def autodoc_skip_member(app, what, name, obj, skip, options):  # noqa
+    if skip:
+        return skip
+
+    from cowbird.request_task import RequestTask
+    from celery.app.task import Task
+    if obj is not RequestTask:
+        return skip
+
+    request_task_members = set(member[0] for member in inspect.getmembers(RequestTask))
+    celery_task_members = set(member[0] for member in inspect.getmembers(Task))
+    includes = request_task_members - celery_task_members
+    exclude = name not in includes
+    return skip or exclude
 
 
 def doc_redirect_include(file_path):
@@ -378,3 +396,7 @@ texinfo_documents = [
 
 intersphinx_mapping = {
 }
+
+
+def setup(app):
+    app.connect("autodoc-skip-member", autodoc_skip_member)

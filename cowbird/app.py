@@ -10,7 +10,6 @@ from cowbird.monitoring.monitoring import Monitoring
 # TODO: This is required by the celery worker to discover tasks,
 #       we should add something like the celery autodiscover_tasks
 from cowbird.services.impl import geoserver  # noqa # pylint: disable=unused-import
-
 from cowbird.utils import get_app_config, get_logger, print_log
 
 LOGGER = get_logger(__name__)

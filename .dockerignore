@@ -12,6 +12,10 @@ Dockerfile
 venv
 env/
 
+## Node
+node_modules
+package-lock.json
+
 ## Makefile
 downloads
 
