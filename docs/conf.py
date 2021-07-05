@@ -66,6 +66,10 @@ extensions = [
 
 image_source_dir = "_static"
 
+# following option avoids an error where documentation is having trouble resolving
+# inherited members (methods/properties) from Celery Task in 'cowbird.request_task.RequestTask'
+viewcode_follow_imported_members = False
+
 
 def doc_redirect_include(file_path):
     if any(re.match(regex, file_path) for regex in doc_redirect_ignores):
