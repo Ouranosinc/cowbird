@@ -44,13 +44,13 @@ the resources under those services such that the complete ecosystem can seamless
     :alt: Requires Python 3.7+
     :target: https://www.python.org/getit
 
-.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/cowbird/0.2.0.svg
+.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/cowbird/0.3.0.svg
     :alt: Commits since latest release
-    :target: https://github.com/Ouranosinc/cowbird/compare/0.2.0...master
+    :target: https://github.com/Ouranosinc/cowbird/compare/0.3.0...master
 
-.. |version| image:: https://img.shields.io/badge/tag-0.2.0-blue.svg?style=flat
+.. |version| image:: https://img.shields.io/badge/tag-0.3.0-blue.svg?style=flat
     :alt: Latest Tag
-    :target: https://github.com/Ouranosinc/cowbird/tree/0.2.0
+    :target: https://github.com/Ouranosinc/cowbird/tree/0.3.0
 
 .. |dependencies| image:: https://pyup.io/repos/github/Ouranosinc/cowbird/shield.svg
     :alt: Dependencies Status
@@ -60,9 +60,9 @@ the resources under those services such that the complete ecosystem can seamless
     :alt: Github Actions CI Build Status (master branch)
     :target: https://travis-ci.com/Ouranosinc/cowbird
 
-.. |github_tagged| image:: https://img.shields.io/github/workflow/status/Ouranosinc/cowbird/Tests/0.2.0?label=0.2.0
+.. |github_tagged| image:: https://img.shields.io/github/workflow/status/Ouranosinc/cowbird/Tests/0.3.0?label=0.3.0
     :alt: Github Actions CI Build Status (latest tag)
-    :target: https://github.com/Ouranosinc/cowbird/tree/0.2.0
+    :target: https://github.com/Ouranosinc/cowbird/tree/0.3.0
 
 .. |readthedocs| image:: https://img.shields.io/readthedocs/pavics-cowbird
     :alt: Readthedocs Build Status (master branch)
@@ -120,7 +120,7 @@ Following most recent variants are available:
     :header-rows: 1
 
     * - Cowbird
-    * - pavics/cowbird:0.2.0
+    * - pavics/cowbird:0.3.0
     * - pavics/cowbird:latest
 
 
