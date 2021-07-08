@@ -1,7 +1,7 @@
 from copy import deepcopy
 
+import celery.exceptions
 from celery import shared_task
-from celery.exceptions import TimeoutError
 from pyramid.httpexceptions import HTTPOk
 from pyramid.security import NO_PERMISSION_REQUIRED
 from pyramid.view import view_config
@@ -40,13 +40,20 @@ def get_version(request):  # noqa: W0212
     task = get_worker_version.delay()
     try:
         worker_version = task.get(timeout=2)
-    except TimeoutError:
-        worker_version = "worker unreachable"
+        worker_detail = worker_version
+    except celery.exceptions.TimeoutError:
+        worker_version = None
+        worker_detail = "worker unreachable"
     except NotImplementedError:
-        worker_version = "unknown"  # TODO: Once we have a database, it could be used to store the jobs result
+        worker_version = None
+        worker_detail = "unknown"  # TODO: Once we have a database, it could be used to store the jobs result
+    api_version = __meta__.__version__
+    detail = "Web service version : [{0}], worker version : [{1}]. Any mismatch can cause misbehavior.".format(
+        api_version, worker_detail)
     version = {
-        "version": __meta__.__version__,
-        "worker_version": worker_version
+        "version": api_version,
+        "worker_version": worker_version,
+        "version_detail": detail
     }
     return ax.valid_http(http_success=HTTPOk, content=version, content_type=CONTENT_TYPE_JSON,
                          detail=s.Version_GET_OkResponseSchema.description)
