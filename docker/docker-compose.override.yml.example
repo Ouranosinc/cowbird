@@ -1,0 +1,42 @@
+version: "3.4"
+
+services:
+  cowbird:
+    image: pavics/cowbird:latest-webservice
+    container_name: cowbird-webservice
+    ports:
+      - "7000:7000"
+    environment:
+      HOSTNAME: localhost
+      FORWARDED_ALLOW_IPS: "*"
+      COWBIRD_CONFIG_PATH: /config.yml
+    links:
+      - mongodb
+    volumes:
+      - ../config/config.yml:/config.yml
+      - ../config/cowbird.docker.ini:/opt/local/src/cowbird/config/cowbird.ini
+    restart: always
+
+  worker:
+    image: pavics/cowbird:latest-worker
+    container_name: cowbird-worker
+    links:
+      - mongodb
+    volumes:
+      - ../config/config.yml:/config.yml
+      - ../config/cowbird.docker.ini:/opt/local/src/cowbird/config/cowbird.ini
+    environment:
+      COWBIRD_CONFIG_PATH: /config.yml
+    restart: always
+  magpie:
+    volumes:
+      - ./config/magpie/config.docker.yml:/config.yml
+    environment:
+      HOSTNAME: 0.0.0.0
+      MAGPIE_URL: http://magpie:2001/magpie  # change this url depending of your setup
+      POSTGRES_HOST: postgres
+      MAGPIE_POSTGRES_HOST: postgres
+    links:
+      - postgres
+    ports:
+      - "2001:2001"

@@ -1,0 +1,58 @@
+## Combined Configuration
+## ------------------------
+## Prepare or suppress known entity definitions at Magpie startup.
+## See documentation 'Configuration' for detail about loading method, order and other relevant information.
+## ------------------------
+
+# All following sections are optional.
+# All parameters must fulfill data validation rules as per corresponding API requests.
+# (e.g.: minimum password length as defined by Magpie instance settings, allowed characters for fields, etc.)
+
+# all providers are defined first
+providers:
+  # see full format details in 'providers.cfg'
+
+# permissions are loaded after providers
+permissions:
+  # see full format details in 'permissions.cfg'
+  # for each definition:
+  #   can refer to below 'users' and 'groups' that will be created dynamically as needed with corresponding information
+  #   user or group name not matched against any extended definition will be created with defaults for other fields
+
+# extended definitions for users to create
+# default values will be used for missing optional fields
+#   not providing an entry referenced somewhere else (e.g.: in permissions)
+#   will default to only using the user name and defaults for every other field
+users:
+  #- username: username  # required if entry provided
+  #  password:           # optional (default: random password of size MAGPIE_PASSWORD_MIN_LENGTH)
+  #  email:              # optional (default: <username>@mail.com)
+  #  group: <group.name> # optional (default: anonymous, otherwise one of 'groups' matched by 'name')
+                        #          (if group name doesn't exist in 'groups', other parameters use defaults)
+
+# extended definitions for groups to create
+# default values will be used for missing optional fields
+#   not providing an entry referenced somewhere else (e.g.: in permissions or users)
+#   will default to only using the group name and defaults for every other field
+groups:
+  #- name: <groupname>                 # required if entry provided
+  #  description: <some description>   # optional (default: empty)
+  #  discoverable: True                # optional (default: False)
+
+# Definitions of all the webhooks urls that will be called when creating or deleting a users.
+webhooks:
+  - name: cowbird_create_user
+    action: create_user
+    method: POST
+    url: http://cowbird:7000/webhooks/users
+    payload:
+      event : "created"
+      user_name : "{{user.name}}"
+      callback_url : "{{callback_url}}"
+  - name: cowbird_remove_user
+    action: delete_user
+    method: POST
+    url: http://cowbird:7000/webhooks/users
+    payload:
+      event : "deleted"
+      user_name : "{{user.name}}"

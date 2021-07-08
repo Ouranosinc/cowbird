@@ -34,6 +34,7 @@ bandit.txt
 coverage.*
 coverage
 docker-compose.yml
+docker-compose.dev.yml
 docker-compose.override.yml
 reports
 results.*

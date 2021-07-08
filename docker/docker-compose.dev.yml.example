@@ -1,0 +1,13 @@
+version: "3.4"
+
+services:
+  magpie:
+    volumes:
+      - ./config/magpie/config.dev.yml:/config.yml
+    environment:
+      HOSTNAME: 0.0.0.0
+      MAGPIE_URL: https://0.0.0.0/magpie  # change this url depending of your setup
+      POSTGRES_HOST: 0.0.0.0
+      MAGPIE_POSTGRES_HOST: 0.0.0.0
+    # Share the host network with Magpie allowing Magpie to reach Cowbird running on host's IDE
+    network_mode: "host"

@@ -10,7 +10,7 @@ services:
     active: true
     url: https://${HOSTNAME}/twitcher/ows/proxy/geoserver
   Catalog:
-    active: false
+    active: true
     url: https://${HOSTNAME}/twitcher/ows/proxy/catalog
   Thredds:
     active: true
