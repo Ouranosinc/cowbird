@@ -1,5 +1,7 @@
+import time
 from copy import deepcopy
-
+from celery import shared_task
+from celery.exceptions import TimeoutError
 from pyramid.httpexceptions import HTTPOk
 from pyramid.security import NO_PERMISSION_REQUIRED
 from pyramid.view import view_config
@@ -35,8 +37,21 @@ def get_version(request):  # noqa: W0212
     """
     Version of the API.
     """
+    task = get_worker_version.delay()
+    try:
+        worker_version = task.get(timeout=2)
+    except TimeoutError:
+        worker_version = "worker unreachable"
+    except NotImplementedError:
+        worker_version = "unknown"  # TODO: Once we have a database, it could be used to store the jobs result
     version = {
         "version": __meta__.__version__,
+        "worker_version": worker_version
     }
     return ax.valid_http(http_success=HTTPOk, content=version, content_type=CONTENT_TYPE_JSON,
                          detail=s.Version_GET_OkResponseSchema.description)
+
+
+@shared_task()
+def get_worker_version():
+    return __meta__.__version__

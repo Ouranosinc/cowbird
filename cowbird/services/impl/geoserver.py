@@ -3,6 +3,9 @@ from celery import chain, shared_task
 from cowbird.request_task import RequestTask
 from cowbird.services.service import Service
 from cowbird.services.service_factory import ServiceFactory
+from cowbird.utils import get_logger
+
+logger = get_logger(__name__)
 
 
 class Geoserver(Service):
@@ -41,6 +44,7 @@ class Geoserver(Service):
         @param name: Workspace name
         @return: Workspace id
         """
+        logger.info("Creating workspace in geoserver")
         # TODO
         return 1
 
@@ -54,6 +58,7 @@ class Geoserver(Service):
         @param name: Datastore name
         @return: Datastore id
         """
+        logger.info("Creating datastore in geoserver")
         # TODO
         return 1
 
