@@ -10,7 +10,7 @@ from cowbird.permissions_synchronizer import Permission
 from cowbird.services.service_factory import ServiceFactory
 from cowbird.utils import get_logger
 
-logger = get_logger(__name__)
+LOGGER = get_logger(__name__)
 
 
 def dispatch(svc_fct, fct_name):
@@ -18,11 +18,11 @@ def dispatch(svc_fct, fct_name):
     for svc in ServiceFactory().get_active_services():
         # Allow every service to be notified even if one of them throw an error
         try:
-            logger.info("Dispatching event [%s] for service [%s]", fct_name, svc.name)
+            LOGGER.info("Dispatching event [%s] for service [%s]", fct_name, svc.name)
             svc_fct(svc)
         except Exception as exception:  # noqa
             exceptions.append(exception)
-            logger.error("Exception raised while handling event [%s] for service [%s] : [%r]",
+            LOGGER.error("Exception raised while handling event [%s] for service [%s] : [%r]",
                          fct_name, svc.name, exception)
     if exceptions:
         raise Exception(exceptions)
@@ -49,7 +49,7 @@ def post_user_webhook_view(request):
             dispatch(lambda svc: svc.user_created(user_name=user_name), "user_created")
         except Exception:  # noqa
             # If something bad happens, set the status as erroneous in Magpie
-            logger.warning("Exception occurs while dispatching event, calling Magpie callback url : [%s]", callback_url)
+            LOGGER.warning("Exception occurs while dispatching event, calling Magpie callback url : [%s]", callback_url)
             requests.get(callback_url)
             # TODO: return something else than 200
     else:

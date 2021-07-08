@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
     from cowbird.services.service import Service
 
-logger = get_logger(__name__)
+LOGGER = get_logger(__name__)
 
 VALID_SERVICES = ["Catalog", "Geoserver", "Magpie", "Nginx", "Thredds",
                   "FileSystem"]
@@ -28,7 +28,7 @@ class ServiceFactory:
         configs = get_all_configs(config_path, "services", allow_missing=True)
         self.services_cfg = configs[0] if configs else []
         self.services = {}
-        logger.info("Services config : [%s]", ", ".join(["{0} [{1}]".format(name, cfg.get("active", False))
+        LOGGER.info("Services config : [%s]", ", ".join(["{0} [{1}]".format(name, cfg.get("active", False))
                                                          for name, cfg in self.services_cfg.items()]))
 
     def get_service(self, name):
