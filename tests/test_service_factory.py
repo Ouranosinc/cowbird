@@ -1,7 +1,8 @@
-import unittest
-import pytest
 import os
 import tempfile
+import unittest
+
+import pytest
 import yaml
 
 from cowbird.services.service_factory import ServiceFactory
@@ -14,7 +15,7 @@ class TestServiceFactory(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """
-        Setup a config where 1 service is set inactive
+        Setup a config where 1 service is set inactive.
         """
         data = {
             "services": {

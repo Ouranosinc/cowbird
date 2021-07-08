@@ -1,5 +1,5 @@
-import time
 from copy import deepcopy
+
 from celery import shared_task
 from celery.exceptions import TimeoutError
 from pyramid.httpexceptions import HTTPOk
