@@ -26,10 +26,8 @@ services:
     container_name: magpie
     volumes:
       - ./config/magpie/magpie.ini:/opt/local/src/magpie/config/magpie.ini
-      # - ./config/magpie/magpie.ini:/magpie.ini
     environment:
       FORWARDED_ALLOW_IPS: "*"
-      # MAGPIE_INI_FILE_PATH: /magpie.ini
       MAGPIE_CONFIG_PATH: /config.yml
       # Need to comment the magpie.url in the magpie ini file as it has precedence over this variable
       MAGPIE_SECRET: itzaseekrit
