@@ -74,5 +74,6 @@ def test_cowbird_services_list_with_formats():
         assert "+===" in out_lines[2]
         assert "| Magpie" in out_lines[3]
         assert "| Geoserver" in out_lines[4]
-        assert "| Thredds" in out_lines[5]
-        assert "| Nginx" in out_lines[6]
+        assert "| Catalog" in out_lines[5]
+        assert "| Thredds" in out_lines[6]
+        assert "| Nginx" in out_lines[7]
