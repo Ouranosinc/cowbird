@@ -9,12 +9,12 @@ services:
     environment:
       HOSTNAME: localhost
       FORWARDED_ALLOW_IPS: "*"
-      COWBIRD_CONFIG_PATH: /config.yml
+      COWBIRD_CONFIG_PATH: /config.example.yml
     links:
       - mongodb
     volumes:
-      - ../config/config.yml:/config.yml
-      - ../config/cowbird.docker.ini:/opt/local/src/cowbird/config/cowbird.ini
+      - ../config/config.example.yml:/config.yml
+      - ../config/cowbird.docker.example.ini:/opt/local/src/cowbird/config/cowbird.ini
     restart: always
 
   worker:
@@ -23,8 +23,8 @@ services:
     links:
       - mongodb
     volumes:
-      - ../config/config.yml:/config.yml
-      - ../config/cowbird.docker.ini:/opt/local/src/cowbird/config/cowbird.ini
+      - ../config/config.example.yml:/config.yml
+      - ../config/cowbird.docker.example.ini:/opt/local/src/cowbird/config/cowbird.ini
     environment:
       COWBIRD_CONFIG_PATH: /config.yml
     restart: always

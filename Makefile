@@ -401,12 +401,12 @@ docker-test: docker-build	## execute a smoke test of the built Docker image (val
 docker-stat:  ## query docker-compose images status (from 'docker-test')
 	docker-compose $(DOCKER_TEST_COMPOSES) ps
 
-DOCKER_COMPOSES := -f "$(APP_ROOT)/docker/docker-compose.yml" -f "$(APP_ROOT)/docker/docker-compose.override.yml"
+DOCKER_COMPOSES := -f "$(APP_ROOT)/docker/docker-compose.example.yml" -f "$(APP_ROOT)/docker/docker-compose.override.example.yml"
 .PHONY: docker-up
 docker-up: docker-build   ## run all containers using compose
 	docker-compose $(DOCKER_COMPOSES) up
 
-DOCKER_DEV_COMPOSES := -f "$(APP_ROOT)/docker/docker-compose.yml" -f "$(APP_ROOT)/docker/docker-compose.dev.yml"
+DOCKER_DEV_COMPOSES := -f "$(APP_ROOT)/docker/docker-compose.example.yml" -f "$(APP_ROOT)/docker/docker-compose.dev.example.yml"
 .PHONY: docker-up-dev
 docker-up-dev: docker-build   ## run all dependencies containers using compose ready to be used by a local cowbird
 	docker-compose $(DOCKER_DEV_COMPOSES) up
