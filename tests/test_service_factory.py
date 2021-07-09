@@ -17,7 +17,7 @@ class TestServiceFactory(unittest.TestCase):
         """
         Setup a config where 1 service is set inactive.
         """
-        data = {
+        cls.test_data = {
             "services": {
                 "Catalog": {"active": False},
                 "Geoserver": {"active": True},
@@ -28,7 +28,7 @@ class TestServiceFactory(unittest.TestCase):
         }
         cls.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)
         with cls.cfg_file as f:
-            f.write(yaml.safe_dump(data))
+            f.write(yaml.safe_dump(cls.test_data))
         cls.app = utils.get_test_app(settings={"cowbird.config_path": cls.cfg_file.name})
 
     @classmethod
@@ -45,8 +45,14 @@ class TestServiceFactory(unittest.TestCase):
         assert ServiceFactory().services["Magpie"] is inst1
 
         # Test services config
-        services = ServiceFactory().get_active_services()
-        assert services[0].name == "Geoserver"
-        assert services[1].name == "Magpie"
-        assert services[2].name == "Nginx"
-        assert services[3].name == "Thredds"
+        active_services = [service.name for service in ServiceFactory().get_active_services()]
+        # Every active service should be in test data
+        for service in active_services:
+            assert service in TestServiceFactory.test_data["services"]
+            assert TestServiceFactory.test_data["services"][service]["active"]
+        # Every activated test service should be in the active services
+        for test_service, config in TestServiceFactory.test_data["services"].items():
+            if config["active"]:
+                assert test_service in active_services
+            else:
+                assert test_service not in active_services
