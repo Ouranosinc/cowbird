@@ -1,3 +1,4 @@
+import inspect
 import requests
 from pyramid.httpexceptions import HTTPBadRequest, HTTPOk
 from pyramid.view import view_config
@@ -13,17 +14,18 @@ from cowbird.utils import get_logger
 LOGGER = get_logger(__name__)
 
 
-def dispatch(svc_fct, fct_name):
+def dispatch(svc_fct):
     exceptions = []
+    event_name = inspect.getsource(svc_fct).strip("\n").strip(" ")
     for svc in ServiceFactory().get_active_services():
         # Allow every service to be notified even if one of them throw an error
         try:
-            LOGGER.info("Dispatching event [%s] for service [%s]", fct_name, svc.name)
+            LOGGER.info("Dispatching event [%s] for service [%s]", event_name, svc.name)
             svc_fct(svc)
         except Exception as exception:  # noqa
             exceptions.append(exception)
             LOGGER.error("Exception raised while handling event [%s] for service [%s] : [%r]",
-                         fct_name, svc.name, exception)
+                         event_name, svc.name, exception)
     if exceptions:
         raise Exception(exceptions)
 
@@ -46,14 +48,14 @@ def post_user_webhook_view(request):
         # FIXME: Tried with ax.URL_REGEX, but cannot match what seems valid urls...
         callback_url = ar.get_multiformat_body(request, "callback_url", pattern=None)
         try:
-            dispatch(lambda svc: svc.user_created(user_name=user_name), "user_created")
+            dispatch(lambda svc: svc.user_created(user_name=user_name))
         except Exception:  # noqa
             # If something bad happens, set the status as erroneous in Magpie
             LOGGER.warning("Exception occurs while dispatching event, calling Magpie callback url : [%s]", callback_url)
             requests.get(callback_url)
             # TODO: return something else than 200
     else:
-        dispatch(lambda svc: svc.user_deleted(user_name=user_name), "user_deleted")
+        dispatch(lambda svc: svc.user_deleted(user_name=user_name))
     return ax.valid_http(HTTPOk, detail=s.UserWebhook_POST_OkResponseSchema.description)
 
 
@@ -96,7 +98,7 @@ def post_permission_webhook_view(request):
         group=group
     )
     if event == ValidOperations.CreateOperation.value:
-        dispatch(lambda svc: svc.permission_created(permission=permission), "permission_created")
+        dispatch(lambda svc: svc.permission_created(permission=permission))
     else:
-        dispatch(lambda svc: svc.permission_deleted(permission=permission), "permission_deleted")
+        dispatch(lambda svc: svc.permission_deleted(permission=permission))
     return ax.valid_http(HTTPOk, detail=s.PermissionWebhook_POST_OkResponseSchema.description)
