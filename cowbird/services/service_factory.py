@@ -26,7 +26,7 @@ class ServiceFactory:
     def __init__(self):
         config_path = get_config_path()
         configs = get_all_configs(config_path, "services", allow_missing=True)
-        self.services_cfg = configs[0] if configs else []
+        self.services_cfg = configs[0] if configs else {}
         self.services = {}
         LOGGER.info("Services config : [%s]", ", ".join(["{0} [{1}]".format(name, cfg.get("active", False))
                                                          for name, cfg in self.services_cfg.items()]))
