@@ -14,7 +14,7 @@ services:
       - mongodb
     volumes:
       - ../config/config.example.yml:/config.yml
-      - ../config/cowbird.docker.example.ini:/opt/local/src/cowbird/config/cowbird.ini
+      - ../config/cowbird.docker.ini:/opt/local/src/cowbird/config/cowbird.ini
     restart: always
 
   worker:
@@ -24,7 +24,7 @@ services:
       - mongodb
     volumes:
       - ../config/config.example.yml:/config.yml
-      - ../config/cowbird.docker.example.ini:/opt/local/src/cowbird/config/cowbird.ini
+      - ../config/cowbird.docker.ini:/opt/local/src/cowbird/config/cowbird.ini
     environment:
       COWBIRD_CONFIG_PATH: /config.yml
     restart: always
