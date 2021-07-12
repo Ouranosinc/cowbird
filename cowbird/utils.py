@@ -203,7 +203,6 @@ def get_app_config(container, celery=True):
     #       add them explicitly with 'config.include(<module>)', and then they can do 'config.scan()'
 
     if celery:
-        import sys
         # Add the config dir in path so that celeryconfig file can be found
         sys.path.append(os.path.dirname(config_ini))
         config.include("pyramid_celery")
