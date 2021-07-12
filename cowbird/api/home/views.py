@@ -46,14 +46,15 @@ def get_version(request):  # noqa: W0212
         worker_detail = "worker unreachable"
     except NotImplementedError:
         worker_version = None
-        worker_detail = "unknown"  # TODO: Once we have a database, it could be used to store the jobs result
+        worker_detail = "unknown"
     api_version = __meta__.__version__
     detail = "Web service version : [{0}], worker version : [{1}]. Any mismatch can cause misbehavior.".format(
         api_version, worker_detail)
     version = {
         "version": api_version,
         "worker_version": worker_version,
-        "version_detail": detail
+        "version_detail": detail,
+        "db_version": request.db.get_version()
     }
     return ax.valid_http(http_success=HTTPOk, content=version, content_type=CONTENT_TYPE_JSON,
                          detail=s.Version_GET_OkResponseSchema.description)
@@ -61,4 +62,4 @@ def get_version(request):  # noqa: W0212
 
 @shared_task()
 def get_worker_version():
-    return __meta__.__version__
+    return "really from worker"  # __meta__.__version__

@@ -19,6 +19,7 @@ from pyramid.settings import truthy
 from pyramid.threadlocal import get_current_registry
 from requests.structures import CaseInsensitiveDict
 from webob.headers import EnvironHeaders, ResponseHeaders
+from celery.app import Celery
 
 from cowbird import __meta__
 from cowbird.constants import get_constant, validate_required
@@ -228,6 +229,20 @@ def get_settings_from_config_ini(config_ini_path, section=None):
     if section is None:
         section = "app:{}_app".format(__meta__.__package__)
     return dict(parser.items(section=section))
+
+
+def get_registry(container, nothrow=False):
+    # type: (AnyRegistryContainer, bool) -> Optional[Registry]
+    """Retrieves the application ``registry`` from various containers referencing to it."""
+    if isinstance(container, Celery):
+        return container.conf.get("PYRAMID_REGISTRY", {})
+    if isinstance(container, (Configurator, Request)):
+        return container.registry
+    if isinstance(container, Registry):
+        return container
+    if nothrow:
+        return None
+    raise TypeError("Could not retrieve registry from container object of type [{}].".format(type(container)))
 
 
 def get_json(response):
@@ -442,7 +457,6 @@ class ExtendedEnum(Enum):
 
 
 # taken from https://stackoverflow.com/questions/6760685/creating-a-singleton-in-python
-# works in Python 2 & 3
 class SingletonMeta(type):
     """
     A metaclass that creates a Singleton base class when called.

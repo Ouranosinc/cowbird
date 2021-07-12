@@ -31,12 +31,9 @@ def test_register_unregister_monitor():
         mv_test_subdir_file = os.path.join(tmpdir, "moved_test_subdir_file")
         os.mkdir(test_subdir)
 
-        mon = TestMonitor()
-        mon2 = TestMonitor()
-        mon3 = TestMonitor()
-        Monitoring().register(tmpdir, False, mon)
-        Monitoring().register(tmpdir, True, mon2)
-        Monitoring().register(test_subdir, True, mon3)
+        mon = Monitoring().register(tmpdir, False, TestMonitor).callback_instance
+        mon2 = Monitoring().register(tmpdir, True, TestMonitor).callback_instance
+        mon3 = Monitoring().register(test_subdir, True, TestMonitor).callback_instance
         assert len(Monitoring().monitors) == 2
         assert len(Monitoring().monitors[tmpdir]) == 2
 
@@ -82,6 +79,10 @@ class TestMonitor(FSMonitor):
         self.created = []
         self.deleted = []
         self.modified = []
+
+    @staticmethod
+    def get_instance():
+        return TestMonitor()
 
     def on_created(self, filename):
         self.created.append(filename)

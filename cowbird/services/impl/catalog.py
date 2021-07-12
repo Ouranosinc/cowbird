@@ -42,6 +42,14 @@ class Catalog(Service, FSMonitor):
     def permission_deleted(self, permission):
         raise NotImplementedError
 
+    @staticmethod
+    def get_instance():
+        """
+        Return the Catalog singleton instance from the class name used to retrieve the FSMonitor from the DB
+        """
+        from cowbird.services.service_factory import ServiceFactory
+        return ServiceFactory().get_service("Catalog")
+
     def on_created(self, filename):
         """
         Call when a new file is found.

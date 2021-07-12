@@ -1,8 +1,6 @@
 import importlib
 from typing import TYPE_CHECKING
 
-import six
-
 from cowbird.config import get_all_configs
 from cowbird.utils import SingletonMeta, get_config_path, get_logger
 
@@ -17,8 +15,7 @@ VALID_SERVICES = ["Catalog", "Geoserver", "Magpie", "Nginx", "Thredds",
                   "FileSystem"]
 
 
-@six.add_metaclass(SingletonMeta)
-class ServiceFactory:
+class ServiceFactory(metaclass=SingletonMeta):
     """
     Create service instance using service name.
     """

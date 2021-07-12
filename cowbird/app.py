@@ -25,10 +25,10 @@ def get_app(global_config=None, **settings):
     global_config.update(settings)
     config = get_app_config(global_config)
 
-    Monitoring().start()
-
     print_log("Starting Cowbird app...", LOGGER)
     wsgi_app = config.make_wsgi_app()
+
+    Monitoring(config).start()
     return wsgi_app
 
 
