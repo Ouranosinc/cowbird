@@ -162,13 +162,17 @@ def get_app_config(container, celery=True):
     """
     import cowbird.constants  # pylint: disable=C0415  # to override specific constants/variables
 
+    logger = get_logger(__name__)
+
     # override INI config path if provided with --paste to gunicorn, otherwise use environment variable
     config_settings = get_settings(container)
     config_env = get_constant("COWBIRD_INI_FILE_PATH", config_settings, raise_missing=True)
     config_ini = (container or {}).get("__file__", config_env)
+    logger.info("Using initialisation file : [%s]", config_ini)
     if config_ini != config_env:
         cowbird.constants.COWBIRD_INI_FILE_PATH = config_ini
         config_settings["cowbird.ini_file_path"] = config_ini
+        logger.info("Environment variable COWBIRD_INI_FILE_PATH [%s] ignored", config_env)
     settings = get_settings_from_config_ini(config_ini)
     settings.update(config_settings)
 
@@ -199,6 +203,9 @@ def get_app_config(container, celery=True):
     #       add them explicitly with 'config.include(<module>)', and then they can do 'config.scan()'
 
     if celery:
+        import sys
+        # Add the config dir in path so that celeryconfig file can be found
+        sys.path.append(os.path.dirname(config_ini))
         config.include("pyramid_celery")
         config.configure_celery(config_ini)
     return config

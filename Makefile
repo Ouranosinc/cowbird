@@ -394,7 +394,7 @@ docker-test: docker-build	## execute a smoke test of the built Docker image (val
 	@echo "Smoke test of built application docker image"
 	docker-compose $(DOCKER_TEST_COMPOSES) up -d
 	sleep 5
-	curl localhost:$(APP_PORT) | grep "$(APP_NAME)"
+	curl localhost:$(APP_PORT)/version | python -m json.tool | grep "version"
 	docker-compose $(DOCKER_TEST_COMPOSES) stop
 
 .PHONY: docker-stat
@@ -404,8 +404,8 @@ docker-stat:  ## query docker-compose images status (from 'docker-test')
 DOCKER_COMPOSES := -f "$(APP_ROOT)/docker/docker-compose.example.yml" -f "$(APP_ROOT)/docker/docker-compose.override.example.yml"
 .PHONY: docker-up
 docker-up: docker-build   ## run all containers using compose
-	# Create a cowbird ini file specifically for the docker-compose network
-	sed 's/BROKER_URL = mongodb:\/\/.*:/BROKER_URL = mongodb:\/\/mongodb:/g' config/cowbird.example.ini > config/cowbird.docker.ini
+	# Create a celeryconfig.py specifically for the docker-compose network
+	sed 's/mongodb:\/\/.*:/mongodb:\/\/mongodb:/g' config/celeryconfig.py > config/celeryconfig.docker.py
 	docker-compose $(DOCKER_COMPOSES) up
 
 DOCKER_DEV_COMPOSES := -f "$(APP_ROOT)/docker/docker-compose.example.yml" -f "$(APP_ROOT)/docker/docker-compose.dev.example.yml"
