@@ -67,14 +67,19 @@ extensions = [
 
 image_source_dir = "_static"
 
-# following avoids an error where documentation is having trouble resolving
-# inherited members (methods/properties) from Celery Task in 'cowbird.request_task.RequestTask'
+
 def autodoc_skip_member(app, what, name, obj, skip, options):  # noqa
+    """
+    Avoids an error where documentation is having trouble resolving inherited members (methods/properties) from Celery
+    Task in 'cowbird.request_task.RequestTask'.
+    """
+
     if skip:
         return skip
 
-    from cowbird.request_task import RequestTask
     from celery.app.task import Task
+
+    from cowbird.request_task import RequestTask
     if obj is not RequestTask:
         return skip
 

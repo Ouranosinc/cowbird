@@ -650,12 +650,20 @@ class PermissionWebhook_POST_OkResponseSchema(BaseResponseSchemaAPI):
 class Version_GET_ResponseBodySchema(BaseResponseBodySchema):
     version = colander.SchemaNode(
         colander.String(),
-        description="Cowbird version string",
+        description="Cowbird API version string",
         example=__meta__.__version__)
+    worker_version = colander.SchemaNode(
+        colander.String(),
+        description="Cowbird worker version string",
+        example=__meta__.__version__,
+        default=None)
     db_version = colander.SchemaNode(
         colander.String(),
         description="Database version string",
         exemple="a395ef9d3fe6")
+    version_detail = colander.SchemaNode(
+        colander.String(),
+        description="Version detail string")
 
 
 class Version_GET_OkResponseSchema(BaseResponseSchemaAPI):

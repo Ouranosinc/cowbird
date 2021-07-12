@@ -401,9 +401,26 @@ docker-test: docker-build	## execute a smoke test of the built Docker image (val
 docker-stat:  ## query docker-compose images status (from 'docker-test')
 	docker-compose $(DOCKER_TEST_COMPOSES) ps
 
-.PHONY: docker-clean
-docker-clean:  ## remove all built docker images (only matching current/latest versions)
+DOCKER_COMPOSES := -f "$(APP_ROOT)/docker/docker-compose.example.yml" -f "$(APP_ROOT)/docker/docker-compose.override.example.yml"
+.PHONY: docker-up
+docker-up: docker-build   ## run all containers using compose
+	# Create a cowbird ini file specifically for the docker-compose network
+	sed 's/BROKER_URL = mongodb:\/\/.*:/BROKER_URL = mongodb:\/\/mongodb:/g' config/cowbird.example.ini > config/cowbird.docker.ini
+	docker-compose $(DOCKER_COMPOSES) up
+
+DOCKER_DEV_COMPOSES := -f "$(APP_ROOT)/docker/docker-compose.example.yml" -f "$(APP_ROOT)/docker/docker-compose.dev.example.yml"
+.PHONY: docker-up-dev
+docker-up-dev: docker-build   ## run all dependencies containers using compose ready to be used by a local cowbird
+	docker-compose $(DOCKER_DEV_COMPOSES) up
+
+.PHONY: docker-down
+docker-down:  ## stop running containers and remove them
 	docker-compose $(DOCKER_TEST_COMPOSES) down || true
+	docker-compose $(DOCKER_DEV_COMPOSES) down || true
+	docker-compose $(DOCKER_COMPOSES) down --remove-orphans || true
+
+.PHONY: docker-clean
+docker-clean: docker-down  ## remove all built docker images (only matching current/latest versions)
 	docker rmi -f "$(REPO_VERSION_TAG)$(WEBSVC_SUFFIX)" || true
 	docker rmi -f "$(REPO_LATEST_TAG)$(WEBSVC_SUFFIX)" || true
 	docker rmi -f "$(VERSION_TAG)$(WEBSVC_SUFFIX)" || true

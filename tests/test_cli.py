@@ -11,6 +11,7 @@ import subprocess
 
 import mock
 import pytest
+import yaml
 
 from cowbird.cli import main as cowbird_cli
 from tests.utils import TEST_CFG_FILE, TEST_INI_FILE
@@ -62,6 +63,7 @@ def test_cowbird_helper_as_python():
 @pytest.mark.cli
 def test_cowbird_services_list_with_formats():
     override = {"COWBIRD_CONFIG_PATH": TEST_CFG_FILE}
+    cfg = yaml.safe_load(open(TEST_CFG_FILE, "r"))
     with mock.patch.dict("os.environ", override):
         out_lines = run_and_get_output("cowbird services list -f yaml -c '{}'".format(TEST_INI_FILE))
         assert out_lines[0] == "services:"
@@ -72,7 +74,16 @@ def test_cowbird_services_list_with_formats():
         assert "+---" in out_lines[0]
         assert "| services" in out_lines[1]
         assert "+===" in out_lines[2]
-        assert "| Magpie" in out_lines[3]
-        assert "| Geoserver" in out_lines[4]
-        assert "| Thredds" in out_lines[5]
-        assert "| Nginx" in out_lines[6]
+
+        # Test services config
+        active_services = [line.strip("|").strip(" ") for line in out_lines[3:-1]]
+        # Every active service should be in test data
+        for service in active_services:
+            assert service in cfg["services"]
+            assert cfg["services"][service]["active"]
+        # Every activated test service should be in the active services
+        for test_service, config in cfg["services"].items():
+            if config["active"]:
+                assert test_service in active_services
+            else:
+                assert test_service not in active_services

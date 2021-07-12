@@ -3,6 +3,9 @@ import os
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
 from cowbird.services.service import Service
+from cowbird.utils import get_logger
+
+LOGGER = get_logger(__name__)
 
 
 class Catalog(Service, FSMonitor):
@@ -26,6 +29,7 @@ class Catalog(Service, FSMonitor):
         raise NotImplementedError
 
     def user_created(self, user_name):
+        LOGGER.info("Start monitoring workspace of user [%s]", user_name)
         # TODO: Implement: what we do? start monitoring the user directory
         Monitoring().register(self._user_workspace_dir(user_name), True, self)
 

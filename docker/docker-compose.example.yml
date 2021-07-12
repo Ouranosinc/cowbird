@@ -1,0 +1,50 @@
+version: "3.4"
+
+services:
+  mongodb:
+    image: mongo:3.4.0
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    # MongoDB crash with permission denied errors if the command is not overridden like this
+    command: bash -c 'chown -R mongodb:mongodb /data && chmod -R 755 /data && mongod'
+    restart: always
+
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: qwerty
+      POSTGRES_DB: magpie
+      POSTGRES_USER: magpie
+    restart: always
+
+  magpie:
+    image: pavics/magpie:latest
+    container_name: magpie
+    volumes:
+      - ./config/magpie/magpie.ini:/opt/local/src/magpie/config/magpie.ini
+    environment:
+      FORWARDED_ALLOW_IPS: "*"
+      MAGPIE_CONFIG_PATH: /config.example.yml
+      # Need to comment the magpie.url in the magpie ini file as it has precedence over this variable
+      MAGPIE_SECRET: itzaseekrit
+      MAGPIE_ADMIN_GROUP: administrators
+      MAGPIE_ADMIN_USER: admin
+      MAGPIE_ADMIN_PASSWORD: qwertyqwerty
+      MAGPIE_USER_GROUP: users
+      MAGPIE_ANONYMOUS_USER: anonymous
+      MAGPIE_PORT: 2001
+      MAGPIE_LOG_LEVEL: INFO
+      TWITCHER_PROTECTED_PATH: /twitcher/ows/proxy
+      POSTGRES_USER: magpie
+      POSTGRES_PASSWORD: qwerty
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: magpie
+      MAGPIE_POSTGRES_USERNAME: magpie
+      MAGPIE_POSTGRES_PASSWORD: qwerty
+      MAGPIE_POSTGRES_DB: magpie
+      MAGPIE_POSTGRES_PORT: 5432
+    restart: always

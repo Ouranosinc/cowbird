@@ -1,3 +1,5 @@
+import inspect
+
 import requests
 from pyramid.httpexceptions import HTTPBadRequest, HTTPOk
 from pyramid.view import view_config
@@ -10,17 +12,21 @@ from cowbird.permissions_synchronizer import Permission
 from cowbird.services.service_factory import ServiceFactory
 from cowbird.utils import get_logger
 
+LOGGER = get_logger(__name__)
+
 
 def dispatch(svc_fct):
-    logger = get_logger(__name__)
     exceptions = []
+    event_name = inspect.getsource(svc_fct).strip("\n").strip(" ")
     for svc in ServiceFactory().get_active_services():
         # Allow every service to be notified even if one of them throw an error
         try:
+            LOGGER.info("Dispatching event [%s] for service [%s]", event_name, svc.name)
             svc_fct(svc)
         except Exception as exception:  # noqa
             exceptions.append(exception)
-            logger.error("Exception raised while handling event for service [%s] : [%r]", svc.name, exception)
+            LOGGER.error("Exception raised while handling event [%s] for service [%s] : [%r]",
+                         event_name, svc.name, exception)
     if exceptions:
         raise Exception(exceptions)
 
@@ -46,6 +52,7 @@ def post_user_webhook_view(request):
             dispatch(lambda svc: svc.user_created(user_name=user_name))
         except Exception:  # noqa
             # If something bad happens, set the status as erroneous in Magpie
+            LOGGER.warning("Exception occurs while dispatching event, calling Magpie callback url : [%s]", callback_url)
             requests.get(callback_url)
             # TODO: return something else than 200
     else:
