@@ -20,6 +20,8 @@ def file_io(filename, mv_filename):
     # Delete
     os.remove(mv_filename)
 
+# TODO: Will need to mock a database
+
 
 @pytest.mark.monitoring
 def test_register_unregister_monitor():
@@ -31,10 +33,22 @@ def test_register_unregister_monitor():
         mv_test_subdir_file = os.path.join(tmpdir, "moved_test_subdir_file")
         os.mkdir(test_subdir)
 
-        mon = Monitoring().register(tmpdir, False, TestMonitor).callback_instance
+        # Test registering directly a callback instance
+        mon = TestMonitor()
+        internal_mon = Monitoring().register(tmpdir, False, mon)
+        assert internal_mon.callback_instance == mon
+
+        # Test registering a callback via class name
         mon2 = Monitoring().register(tmpdir, True, TestMonitor).callback_instance
-        mon3 = Monitoring().register(test_subdir, True, TestMonitor).callback_instance
+
+        # Test registering a callback via a qualified class name string
+        mon3 = Monitoring().register(test_subdir, True, "cowbird.tests.test_monitoring.TestMonitor").callback_instance
+        assert type(mon3) == TestMonitor
+
+        # monitors first level is distinct path to monitor : (tmp_dir and test_subdir)
         assert len(Monitoring().monitors) == 2
+
+        # monitors second level is distinct callback, for tmpdir : (mon and mon2)
         assert len(Monitoring().monitors[tmpdir]) == 2
 
         file_io(test_file, mv_test_file)

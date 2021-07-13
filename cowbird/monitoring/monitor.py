@@ -1,9 +1,10 @@
 import os
+import importlib
 from typing import TYPE_CHECKING
 
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
-
+from cowbird.monitoring.fsmonitor import FSMonitor
 
 if TYPE_CHECKING:
     from typing import Union
@@ -19,7 +20,11 @@ if TYPE_CHECKING:
         FileMovedEvent
     )
 
-    from cowbird.monitoring.fsmonitor import FSMonitor
+
+class MonitorException(Exception):
+    """
+    Error indicating that a Monitor cannot be instantiate correctly.
+    """
 
 
 class Monitor(FileSystemEventHandler):
@@ -37,7 +42,23 @@ class Monitor(FileSystemEventHandler):
         @param recursive: Monitor subdirectory recursively?
         @param callback: Events are sent to this FSMonitor object
         """
-        self.__callback = callback.get_instance()
+
+        if isinstance(callback, FSMonitor):
+            self.__callback = callback
+        elif isinstance(callback, type) and issubclass(callback, FSMonitor):
+            self.__callback = callback.get_instance()
+        elif isinstance(callback, str):
+            try:
+                module_name = ".".join(callback.split(".")[:-1])
+                class_name = callback.split(".")[-1]
+                module = importlib.import_module(module_name)
+                cls = getattr(module, class_name)
+                self.__callback = cls.get_instance()
+            except (AttributeError, ValueError):
+                raise MonitorException("Cannot instanciate the following FSMonitor : {}".format(callback))
+        else:
+            raise TypeError("Unsupported callback type : [{}] ({})".format(callback, type(callback)))
+
         self.__src_path = os.path.normpath(path)
         self.__recursive = recursive
         self.__event_observer = Observer()
@@ -48,7 +69,8 @@ class Monitor(FileSystemEventHandler):
 
     @property
     def callback(self):
-        return type(self.__callback)  # FIXME: Need the class name
+        cls = type(self.__callback)
+        return ".".join([cls.__module__, cls.__qualname__])
 
     @property
     def callback_instance(self):

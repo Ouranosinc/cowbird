@@ -4,6 +4,7 @@
 """
 Cowbird is a service for AuthN and AuthZ based on Ziggurat-Foundations.
 """
+import sys
 from pyramid_celery import celery_app as app
 
 from cowbird.monitoring.monitoring import Monitoring
@@ -28,7 +29,11 @@ def get_app(global_config=None, **settings):
     print_log("Starting Cowbird app...", LOGGER)
     wsgi_app = config.make_wsgi_app()
 
-    Monitoring(config).start()
+    # The main app is doing the monitoring
+    if not sys.argv[0].endswith('celery'):
+        # TODO: The monitoring should be done in a single worker to avoid picking an event multiple time
+        Monitoring(config).start()
+
     return wsgi_app
 
 

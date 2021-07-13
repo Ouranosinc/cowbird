@@ -31,7 +31,7 @@ class Catalog(Service, FSMonitor):
     def user_created(self, user_name):
         LOGGER.info("Start monitoring workspace of user [%s]", user_name)
         # TODO: Implement: what we do? start monitoring the user directory
-        Monitoring().register(self._user_workspace_dir(user_name), True, self)
+        Monitoring().register(self._user_workspace_dir(user_name), True, Catalog)
 
     def user_deleted(self, user_name):
         Monitoring().unregister(self._user_workspace_dir(user_name), self)

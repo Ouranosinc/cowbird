@@ -6,14 +6,9 @@ from typing import TYPE_CHECKING
 import pymongo
 from urllib.parse import urlparse
 
+from cowbird.database.base import DatabaseInterface
 from cowbird.database.stores import StoreInterface, MonitoringStore
 from cowbird.utils import get_settings
-
-if TYPE_CHECKING:
-    from typing import Any, Optional, Type, Union
-    from pymongo.database import Database
-    from cowbird.typedefs import AnySettingsContainer, JSON
-    StoreSelector = Union[Type[StoreInterface], StoreInterface, str]
 
 # pylint: disable=C0103,invalid-name
 MongoDB = None  # type: Optional[Database]
@@ -22,6 +17,11 @@ MongodbStores = frozenset([
 ])
 
 if TYPE_CHECKING:
+    from typing import Any, Optional, Type, Union
+    from pymongo.database import Database
+    from cowbird.typedefs import AnySettingsContainer, JSON
+    from cowbird.database.base import StoreSelector
+
     # pylint: disable=E0601,used-before-assignment
     AnyMongodbStore = Union[MongodbStores]
     AnyMongodbStoreType = Union[
@@ -31,13 +31,15 @@ if TYPE_CHECKING:
     ]
 
 
-class MongoDatabase:
+class MongoDatabase(DatabaseInterface):
     _database = None
     _settings = None
     _stores = None
+    type = "mongodb"
 
     def __init__(self, container):
         # type: (AnySettingsContainer) -> None
+        super(MongoDatabase, self).__init__(container)
         self._database = get_mongodb_engine(container)
         self._settings = get_settings(container)
         self._stores = dict()
@@ -45,17 +47,6 @@ class MongoDatabase:
     def reset_store(self, store_type):
         store_type = self._get_store_type(store_type)
         return self._stores.pop(store_type, None)
-
-    @staticmethod
-    def _get_store_type(store_type):
-        # type: (StoreSelector) -> str
-        if isinstance(store_type, StoreInterface):
-            return store_type.type
-        if isinstance(store_type, type) and issubclass(store_type, StoreInterface):
-            return store_type.type
-        if isinstance(store_type, str):
-            return store_type
-        raise TypeError("Unsupported store type selector: [{}] ({})".format(store_type, type(store_type)))
 
     def get_store(self, store_type, *store_args, **store_kwargs):
         # type: (Union[str, Type[StoreInterface], AnyMongodbStoreType], *Any, **Any) -> AnyMongodbStore
@@ -84,13 +75,14 @@ class MongoDatabase:
         # type: (...) -> Any
         return self._database
 
-    def get_version(self):
-        # type: (...) -> str
+    def get_information(self):
+        # type: (...) -> JSON
         """
-        :returns: version
+        :returns: {'version': version, 'type': db_type}
         """
         result = list(self._database.version.find().limit(1))[0]
-        return result["version_num"]
+        db_version = result["version_num"]
+        return {"version": db_version, "type": self.type}
 
     def is_ready(self):
         # type: (...) -> bool
@@ -121,10 +113,12 @@ def get_mongodb_engine(container):
     # type: (AnySettingsContainer) -> Database
     """Obtains the database with configuration ready for usage."""
     db = get_mongodb_connection(container)
-    db.services.create_index("name", unique=True)
-    db.services.create_index("url", unique=True)
-    db.processes.create_index("identifier", unique=True)
-    db.jobs.create_index("id", unique=True)
-    db.quotes.create_index("id", unique=True)
-    db.bills.create_index("id", unique=True)
+    for store in MongodbStores:
+        if len(store.index_fields) > 1:
+            index = []
+            for field in store.index_fields:
+                index.append((field, 1))
+        else:
+            index = store.index_fields[0]
+        getattr(db, store.type).create_index(index, unique=True)
     return db
