@@ -53,8 +53,7 @@ def get_version(request):  # noqa: W0212
     version = {
         "version": api_version,
         "worker_version": worker_version,
-        "version_detail": detail,
-        "db_version": request.db.get_version()
+        "version_detail": detail
     }
     return ax.valid_http(http_success=HTTPOk, content=version, content_type=CONTENT_TYPE_JSON,
                          detail=s.Version_GET_OkResponseSchema.description)

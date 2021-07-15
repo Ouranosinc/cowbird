@@ -1,5 +1,7 @@
 from cowbird.permissions_synchronizer import Permission, PermissionSynchronizer
 from cowbird.services.service import Service
+from cowbird.services.service import (
+    SERVICE_URL_PARAM)
 
 
 class Magpie(Service):
@@ -11,9 +13,10 @@ class Magpie(Service):
     handle permissions synchronisation directly on permission update events. No
     need to handle them explicitly in nginx, thredds and geoserver classes.
     """
+    required_params = [SERVICE_URL_PARAM]
 
-    def __init__(self, name, url):
-        super(Magpie, self).__init__(name, url)
+    def __init__(self, name, **kwargs):
+        super(Magpie, self).__init__(name, **kwargs)
         self.permissions_synch = PermissionSynchronizer(self)
 
     def get_resource_id(self, resource_full_name):

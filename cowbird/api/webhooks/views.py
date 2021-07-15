@@ -53,7 +53,10 @@ def post_user_webhook_view(request):
         except Exception:  # noqa
             # If something bad happens, set the status as erroneous in Magpie
             LOGGER.warning("Exception occurs while dispatching event, calling Magpie callback url : [%s]", callback_url)
-            requests.get(callback_url)
+            try:
+                requests.get(callback_url)
+            except requests.exceptions.RequestException as e:
+                LOGGER.warning("Cannot complete the Magpie callback url request to [%s] : [%s]", callback_url, e)
             # TODO: return something else than 200
     else:
         dispatch(lambda svc: svc.user_deleted(user_name=user_name))

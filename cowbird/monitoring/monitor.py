@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 from cowbird.monitoring.fsmonitor import FSMonitor
+from cowbird.utils import get_logger
 
 if TYPE_CHECKING:
     from typing import Union
@@ -20,6 +21,7 @@ if TYPE_CHECKING:
         FileMovedEvent
     )
 
+LOGGER = get_logger(__name__)
 
 class MonitorException(Exception):
     """
@@ -101,7 +103,11 @@ class Monitor(FileSystemEventHandler):
         self.__event_observer.schedule(self,
                                        self.__src_path,
                                        recursive=self.__recursive)
-        self.__event_observer.start()
+        try:
+            self.__event_observer.start()
+        except OSError:
+            LOGGER.warning("Cannot monitor the following file or directory [%s]: No such file or directory",
+                           self.__src_path)
 
     def stop(self):
         """

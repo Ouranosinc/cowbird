@@ -22,8 +22,17 @@ class ServiceFactory(metaclass=SingletonMeta):
 
     def __init__(self):
         config_path = get_config_path()
-        configs = get_all_configs(config_path, "services", allow_missing=True)
-        self.services_cfg = configs[0] if configs else {}
+        svcs_configs = get_all_configs(config_path, "services", allow_missing=True)
+        self.services_cfg = {}
+        for svcs_config in svcs_configs:
+            if not svcs_config:
+                LOGGER.warning("Services configuration is empty.")
+                continue
+            for name, cfg in svcs_config.items():
+                if name in self.services_cfg:
+                    LOGGER.warning("Ignoring a duplicate service configuration for [%s].", name)
+                else:
+                    self.services_cfg[name] = cfg
         self.services = {}
         LOGGER.info("Services config : [%s]", ", ".join(["{0} [{1}]".format(name, cfg.get("active", False))
                                                          for name, cfg in self.services_cfg.items()]))
@@ -43,13 +52,14 @@ class ServiceFactory(metaclass=SingletonMeta):
                self.services_cfg[name].get("active", False):
                 module = importlib.import_module(".".join(["cowbird.services.impl", name.lower()]))
                 cls = getattr(module, name)
-                svc = cls(name, self.services_cfg[name].get("url", None))
+                svc = cls(name, **self.services_cfg[name])
             self.services[name] = svc
             return svc
 
     def get_active_services(self):
         # type: (ServiceFactory) -> List[Service]
         """
-        Return a list of `Service` implementation activated in the config.
+        Return a sorted list by priority of `Service` implementation activated in the config.
         """
-        return list(filter(None, [self.get_service(name) for name in self.services_cfg]))
+        return sorted(filter(None, [self.get_service(name) for name in self.services_cfg]),
+                      key=lambda svc: svc.priority)

@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 from cowbird.config import get_all_configs
 from cowbird.services.service_factory import ServiceFactory
-from cowbird.utils import get_config_path
+from cowbird.utils import get_config_path, get_logger
 
 if TYPE_CHECKING:
     from typing import Callable, Dict, Generator, List, Tuple
@@ -12,6 +12,8 @@ if TYPE_CHECKING:
 
     SyncPointServicesType = Dict[str, str]
     SyncPointMappingType = List[Dict[str, List[str]]]
+
+LOGGER = get_logger(__name__)
 
 
 class Permission:
@@ -138,13 +140,17 @@ class PermissionSynchronizer(object):
     def __init__(self, magpie_inst):
         # type: (Magpie) -> None
         config_path = get_config_path()
-        sync_perm_cfg = get_all_configs(config_path, "sync_permissions", allow_missing=True)[0]
+        sync_perm_cfgs = get_all_configs(config_path, "sync_permissions", allow_missing=True)
         self.sync_point = []
         self.magpie_inst = magpie_inst
 
-        for sync_cfg in sync_perm_cfg.values():
-            self.sync_point.append(SyncPoint(services=sync_cfg["services"],
-                                             mapping=sync_cfg["permissions_mapping"]))
+        for sync_perm_config in sync_perm_cfgs:
+            if not sync_perm_config:
+                LOGGER.warning("Sync_permissions configuration is empty.")
+                continue
+            for sync_cfg in sync_perm_config.values():
+                self.sync_point.append(SyncPoint(services=sync_cfg["services"],
+                                                 mapping=sync_cfg["permissions_mapping"]))
 
     def create_permission(self, permission):
         # type: (Permission) -> None

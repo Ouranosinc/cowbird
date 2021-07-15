@@ -1,7 +1,30 @@
+import os
 import abc
+import math
+from cowbird.utils import get_logger
+
+SERVICE_PRIORITY_PARAM = "priority"
+SERVICE_URL_PARAM = "url"
+SERVICE_WORKSPACE_DIR_PARAM = "workspace_dir"
+
+SERVICE_PARAMETERS = frozenset([
+    SERVICE_PRIORITY_PARAM,
+    SERVICE_URL_PARAM,
+    SERVICE_WORKSPACE_DIR_PARAM,
+])
+
+LOGGER = get_logger(__name__)
+
+
+class ServiceConfigurationException(Exception):
+    """
+    Exception thrown when a service cannot be instantiated because of a bad configuration
+    """
 
 
 class Service(abc.ABC):
+    __slots__ = ["required_params"]
+
     """
     Service interface used to notify implemented services of users/permissions changes.
 
@@ -9,12 +32,38 @@ class Service(abc.ABC):
               services are up to date.
     """
 
-    def __init__(self, name, url=None):
+    def __init__(self, name, **kwargs):
+        # type (str, dict) -> None
+        """
+        @param name: Service name
+        @param kwargs: The base class handle, but doesn't require the following variables:
+                        param `priority`: Relative priority between services while handling events
+                                          (lower value has higher priority, default value is last)
+                        param `url`: Location of the web service represented by the cowbird service
+                        param `workspace_dir`:
+        """
+        if self.required_params is None:  # pylint: disable=E1101,no-member
+            raise NotImplementedError("Service 'required_params' must be overridden in inheriting class.")
         self.name = name
-        self.url = url
+        self.priority = kwargs.get(SERVICE_PRIORITY_PARAM, math.inf)
+        self.url = kwargs.get(SERVICE_URL_PARAM, None)
+        self.workspace_dir = kwargs.get(SERVICE_WORKSPACE_DIR_PARAM, None)
+        for required_param in self.required_params:
+            if required_param not in SERVICE_PARAMETERS:
+                raise Exception("Invalid service parameter : {}".format(required_param))
+            if not getattr(self, required_param):
+                error_msg = "{} service requires the following missing configuration parameter : [{}]".format(
+                    self.__class__.__name__,
+                    required_param
+                )
+                LOGGER.error(error_msg)
+                raise ServiceConfigurationException(error_msg)
 
     def json(self):
-        return {"name": self.name, "url": self.url}
+        return {"name": self.name}
+
+    def _user_workspace_dir(self, user_name):
+        return os.path.join(self.workspace_dir, user_name)
 
     @abc.abstractmethod
     def get_resource_id(self, resource_full_name):

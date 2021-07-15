@@ -61,7 +61,7 @@ class Monitoring(metaclass=SingletonMeta):
         """
         if path in self.monitors:
             try:
-                mon = self.monitors[path].pop(cb_monitor)
+                mon = self.monitors[path].pop(cb_monitor)  # FIXME: cb_monitor is not the same object used for registering
                 if len(self.monitors[path]) == 0:
                     self.monitors.pop(path)
                 mon.stop()
