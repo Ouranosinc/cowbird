@@ -23,9 +23,10 @@ if TYPE_CHECKING:
 
 LOGGER = get_logger(__name__)
 
+
 class MonitorException(Exception):
     """
-    Error indicating that a Monitor cannot be instantiate correctly.
+    Error indicating that a Monitor cannot be started because of an invalid path or callback.
     """
 
 
@@ -36,34 +37,55 @@ class Monitor(FileSystemEventHandler):
     """
 
     def __init__(self, path, recursive, callback):
-        # type: (str, bool, FSMonitor) -> None
+        # type: (str, bool, Union[FSMonitor, Type[FSMonitor], str]) -> None
         """
         Initialize the path monitoring and ready to be started.
 
         @param path: Path to monitor
         @param recursive: Monitor subdirectory recursively?
-        @param callback: Events are sent to this FSMonitor object
+        @param callback: Events are sent to this FSMonitor.
+                         Can be an object, a class type implementing FSMonitor or a string containing module and class
+                         name. The class type or string is used to instantiate an object using the class method
+                         FSMonitor.get_instance()
         """
+        if not os.path.exists(path):
+            raise MonitorException("Cannot monitor the following file or directory [{}]: No such file or directory",
+                                   path)
+        self.__src_path = path
+        self.__recursive = recursive
+        self.__callback = self.get_fsmonitor_instance(callback)
+        self.__event_observer = Observer()
 
+    @staticmethod
+    def get_fsmonitor_instance(callback):
+        # type: (Union[FSMonitor, Type[FSMonitor], str]) -> FSMonitor
+        """
+        Return a FSMonitor instance from multiple possible forms including the FSMonitor type, the FSMonitor full
+        qualified class name or a direct instance which is returned as is.
+        """
         if isinstance(callback, FSMonitor):
-            self.__callback = callback
+            return callback
         elif isinstance(callback, type) and issubclass(callback, FSMonitor):
-            self.__callback = callback.get_instance()
+            return callback.get_instance()
         elif isinstance(callback, str):
             try:
                 module_name = ".".join(callback.split(".")[:-1])
                 class_name = callback.split(".")[-1]
                 module = importlib.import_module(module_name)
                 cls = getattr(module, class_name)
-                self.__callback = cls.get_instance()
+                return cls.get_instance()
             except (AttributeError, ValueError):
-                raise MonitorException("Cannot instanciate the following FSMonitor : {}".format(callback))
-        else:
-            raise TypeError("Unsupported callback type : [{}] ({})".format(callback, type(callback)))
+                raise MonitorException("Cannot instantiate the following FSMonitor callback : {}".format(callback))
+        raise TypeError("Unsupported callback type : [{}] ({})".format(callback, type(callback)))
 
-        self.__src_path = os.path.normpath(path)
-        self.__recursive = recursive
-        self.__event_observer = Observer()
+    @staticmethod
+    def get_qualified_class_name(monitor):
+        # type: (FSMonitor) -> str
+        """
+        Returns the full qualified class name of the FSMonitor object (string of the form module.class_name)
+        """
+        cls = type(monitor)
+        return ".".join([cls.__module__, cls.__qualname__])
 
     @property
     def path(self):
@@ -71,8 +93,7 @@ class Monitor(FileSystemEventHandler):
 
     @property
     def callback(self):
-        cls = type(self.__callback)
-        return ".".join([cls.__module__, cls.__qualname__])
+        return self.get_qualified_class_name(self.__callback)
 
     @property
     def callback_instance(self):

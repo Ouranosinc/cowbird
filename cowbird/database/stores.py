@@ -97,10 +97,12 @@ class MonitoringStore(StoreInterface, MongodbStore):
             try:
                 monitors.append(Monitor(**{key: val for key, val in mon_params.items() if key != "_id"}))
             except MonitorException as e:
-                LOGGER.warning("Failed to start monitoring the following path [%s] with this monitor [%s] : [%s]",
+                LOGGER.warning("Failed to start monitoring the following path [%s] with this monitor [%s] "
+                               "(Will be removed from database) : [%s]",
                                mon_params["path"],
                                mon_params["callback"],
                                e)
+                self.collection.delete_one(mon_params)
         return monitors
 
     def clear_services(self):
