@@ -6,6 +6,7 @@ import pytest
 
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
+from cowbird.services.service_factory import ServiceFactory
 
 
 def file_io(filename, mv_filename):
@@ -40,16 +41,15 @@ def test_register_unregister_monitor():
 
         # Test registering a callback via class name
         mon2 = Monitoring().register(tmpdir, True, TestMonitor).callback_instance
-
-        # Test registering a callback via a qualified class name string
-        mon3 = Monitoring().register(test_subdir, True, "cowbird.tests.test_monitoring.TestMonitor").callback_instance
-        assert type(mon3) == TestMonitor
+        mon3 = Monitoring().register(test_subdir, True, TestMonitor).callback_instance
 
         # monitors first level is distinct path to monitor : (tmp_dir and test_subdir)
         assert len(Monitoring().monitors) == 2
 
         # monitors second level is distinct callback, for tmpdir : (mon and mon2)
-        assert len(Monitoring().monitors[tmpdir]) == 2
+        assert len(Monitoring().monitors[tmpdir]) == 1 # TODO: Now monitor are store by qualified name and not by instance, so here we got one
+                                                       #       but mon2 was recursive and not the other, we must handle this case and make sure
+                                                       #       the recursive win if a collision occurs
 
         file_io(test_file, mv_test_file)
         file_io(test_subdir_file, mv_test_subdir_file)
@@ -86,6 +86,10 @@ def test_register_unregister_monitor():
         Monitoring().unregister(test_subdir, mon3)
         assert len(Monitoring().monitors) == 0
         assert not Monitoring().unregister(tmpdir, mon)
+
+        # Test registering a callback via a qualified class name string
+        catalog_mon = Monitoring().register(tmpdir, False, "cowbird.services.impl.catalog.Catalog").callback_instance
+        assert catalog_mon == ServiceFactory().get_service("Catalog")
 
 
 class TestMonitor(FSMonitor):

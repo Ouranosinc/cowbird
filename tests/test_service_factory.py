@@ -20,10 +20,10 @@ class TestServiceFactory(unittest.TestCase):
         cls.test_data = {
             "services": {
                 "Catalog": {"active": False},
-                "Geoserver": {"active": True},
-                "Magpie": {"active": True},
-                "Nginx": {"active": True},
-                "Thredds": {"active": True}
+                "Geoserver": {"active": True, "url": "", "workspace_dir": ""},
+                "Magpie": {"active": True, "url": ""},
+                "Nginx": {"active": True, "url": ""},
+                "Thredds": {"active": True, "url": ""}
             }
         }
         cls.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)
@@ -56,3 +56,7 @@ class TestServiceFactory(unittest.TestCase):
                 assert test_service in active_services
             else:
                 assert test_service not in active_services
+
+    def test_service_configuration(self):
+        pass
+        # TODO: Required parameters validation

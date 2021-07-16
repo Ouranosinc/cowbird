@@ -84,8 +84,10 @@ class TestVersion(LooseVersion):
 
 
 class MockMagpieService(Service):
-    def __init__(self, name, url):
-        super(MockMagpieService, self).__init__(name, url)
+    required_params = []
+
+    def __init__(self, name, **kwargs):
+        super(MockMagpieService, self).__init__(name, **kwargs)
         self.event_users = []
         self.event_perms = []
         self.outbound_perms = []
@@ -122,7 +124,11 @@ class MockMagpieService(Service):
 
 
 class MockAnyService(Service):
+    required_params = []
     ResourceId = 1000
+
+    def __init__(self, name, **kwargs):
+        super(MockAnyService, self).__init__(name, **kwargs)
 
     def get_resource_id(self, resource_full_name):
         # type (str) -> str
