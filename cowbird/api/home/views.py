@@ -61,4 +61,4 @@ def get_version(request):  # noqa: W0212
 
 @shared_task()
 def get_worker_version():
-    return "really from worker"  # __meta__.__version__
+    return __meta__.__version__
