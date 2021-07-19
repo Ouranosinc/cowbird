@@ -54,7 +54,7 @@ class Monitor(FileSystemEventHandler):
         self.__src_path = path
         self.__recursive = recursive
         self.__callback = self.get_fsmonitor_instance(callback)
-        self.__event_observer = Observer()
+        self.__event_observer = None
 
     @staticmethod
     def get_fsmonitor_instance(callback):
@@ -86,6 +86,17 @@ class Monitor(FileSystemEventHandler):
         """
         cls = type(monitor)
         return ".".join([cls.__module__, cls.__qualname__])
+
+    @property
+    def recursive(self):
+        return self.__recursive
+
+    @recursive.setter
+    def recursive(self, value):
+        if self.__recursive != value:
+            self.stop()
+            self.__recursive = value
+            self.start()
 
     @property
     def path(self):
@@ -121,6 +132,12 @@ class Monitor(FileSystemEventHandler):
         """
         Start the monitoring so that events can be fired.
         """
+        if self.__event_observer:
+            msg = "This monitor [path={}, callback={}] is already started".format(path=self.path,
+                                                                                  callback=self.callback)
+            LOGGER.error(msg)
+            raise MonitorException(msg)
+        self.__event_observer = Observer()
         self.__event_observer.schedule(self,
                                        self.__src_path,
                                        recursive=self.__recursive)
@@ -136,6 +153,7 @@ class Monitor(FileSystemEventHandler):
         """
         self.__event_observer.stop()
         self.__event_observer.join()
+        self.__event_observer = None
 
     def on_moved(self, event):
         # type: (Union[DirMovedEvent, FileMovedEvent]) -> None

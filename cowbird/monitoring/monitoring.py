@@ -46,7 +46,12 @@ class Monitoring(metaclass=SingletonMeta):
         """
         try:
             callback = Monitor.get_qualified_class_name(Monitor.get_fsmonitor_instance(cb_monitor))
-            return self.monitors[path][callback]
+            monitor = self.monitors[path][callback]
+            # If the monitor already exists but is not recursive, make it recursive if required
+            # (recursivity takes precedence)
+            if not monitor.recursive and recursive:
+                monitor.recursive = True
+            return monitor
         except KeyError:
             # Doesn't already exist
             try:
