@@ -1,3 +1,4 @@
+import abc
 import os
 import tempfile
 import unittest
@@ -6,6 +7,10 @@ import pytest
 import yaml
 
 from cowbird.services.service_factory import ServiceFactory
+from cowbird.services.service import (
+    ServiceConfigurationException,
+    SERVICE_URL_PARAM,
+    SERVICE_WORKSPACE_DIR_PARAM)
 from tests import utils
 
 
@@ -58,5 +63,36 @@ class TestServiceFactory(unittest.TestCase):
                 assert test_service not in active_services
 
     def test_service_configuration(self):
-        pass
-        # TODO: Required parameters validation
+        invalid_config = {"active": True, SERVICE_URL_PARAM: ""}
+        valid_config = {"active": True, SERVICE_URL_PARAM: "https://service.domain", SERVICE_WORKSPACE_DIR_PARAM: "/"}
+
+        # Should raise if the config does not include a required param
+        with pytest.raises(ServiceConfigurationException):
+            GoodService("GoodService", **invalid_config)
+
+        # Should raise if the service does not define its required params
+        with pytest.raises(NotImplementedError):
+            BadService("BadService", **valid_config)
+
+        # Should raise if a service defines an invalid param
+        with pytest.raises(Exception):
+            BadParamService("BadParamService", **valid_config)
+
+        svc = GoodService("GoodService", **valid_config)
+        assert getattr(svc, SERVICE_URL_PARAM) == valid_config[SERVICE_URL_PARAM]
+        assert getattr(svc, SERVICE_WORKSPACE_DIR_PARAM) == valid_config[SERVICE_WORKSPACE_DIR_PARAM]
+
+
+class BadService(utils.MockAnyServiceBase):
+    #  This service is bad because Service implementation must define the required_params variable
+    pass
+
+
+class BadParamService(utils.MockAnyServiceBase):
+    #  This service is bad because the required_params must only include param from the frozen set SERVICE_PARAMETERS
+    required_params = [SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM, "Invalid_param_name"]
+
+
+class GoodService(utils.MockAnyServiceBase):
+    # This service is good param wise and should be properly configured
+    required_params = [SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM]

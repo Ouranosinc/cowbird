@@ -123,12 +123,8 @@ class MockMagpieService(Service):
                 return
 
 
-class MockAnyService(Service):
-    required_params = []
+class MockAnyServiceBase(Service):
     ResourceId = 1000
-
-    def __init__(self, name, **kwargs):
-        super(MockAnyService, self).__init__(name, **kwargs)
 
     def get_resource_id(self, resource_full_name):
         # type (str) -> str
@@ -145,6 +141,10 @@ class MockAnyService(Service):
 
     def permission_deleted(self, permission):
         pass
+
+
+class MockAnyService(MockAnyServiceBase):
+    required_params = []
 
 
 def clear_services_instances():

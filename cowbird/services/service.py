@@ -42,7 +42,7 @@ class Service(abc.ABC):
                         param `url`: Location of the web service represented by the cowbird service
                         param `workspace_dir`:
         """
-        if self.required_params is None:  # pylint: disable=E1101,no-member
+        if getattr(self, "required_params", None) is None:
             raise NotImplementedError("Service 'required_params' must be overridden in inheriting class.")
         self.name = name
         self.priority = kwargs.get(SERVICE_PRIORITY_PARAM, math.inf)
