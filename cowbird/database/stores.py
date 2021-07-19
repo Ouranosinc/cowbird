@@ -11,7 +11,8 @@ import pymongo
 from cowbird.monitoring.monitor import Monitor, MonitorException
 
 if TYPE_CHECKING:
-    from typing import Any, Dict, List, Optional, Tuple, Union, Type
+    from typing import Any, Dict, List, Optional, Tuple
+
     from pymongo.collection import Collection
 
 LOGGER = logging.getLogger(__name__)
@@ -58,7 +59,9 @@ class MongodbStore:
 
 class MonitoringStore(StoreInterface, MongodbStore):
     """
-    Registry for monitoring instances. Uses `MongoDB` to store what is monitored and by whom.
+    Registry for monitoring instances.
+
+    Uses `MongoDB` to store what is monitored and by whom.
     """
     type = "monitors"
     index_fields = ["callback", "path"]
@@ -96,12 +99,12 @@ class MonitoringStore(StoreInterface, MongodbStore):
         for mon_params in self.collection.find().sort("callback", pymongo.ASCENDING):
             try:
                 monitors.append(Monitor(**{key: val for key, val in mon_params.items() if key != "_id"}))
-            except MonitorException as e:
+            except MonitorException as exc:
                 LOGGER.warning("Failed to start monitoring the following path [%s] with this monitor [%s] "
                                "(Will be removed from database) : [%s]",
                                mon_params["path"],
                                mon_params["callback"],
-                               e)
+                               exc)
                 self.collection.delete_one(mon_params)
         return monitors
 

@@ -10,7 +10,7 @@ class FSMonitor(abc.ABC):
     @abc.abstractmethod
     def get_instance():
         """
-        Must return a monitor instance
+        Must return a monitor instance.
         """
         raise NotImplementedError
 

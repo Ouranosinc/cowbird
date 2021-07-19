@@ -1,11 +1,6 @@
-import os
-
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
-from cowbird.services.service import Service
-from cowbird.services.service import (
-    SERVICE_URL_PARAM,
-    SERVICE_WORKSPACE_DIR_PARAM)
+from cowbird.services.service import SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM, Service
 from cowbird.utils import get_logger
 
 LOGGER = get_logger(__name__)
@@ -41,7 +36,7 @@ class Catalog(Service, FSMonitor):
     @staticmethod
     def get_instance():
         """
-        Return the Catalog singleton instance from the class name used to retrieve the FSMonitor from the DB
+        Return the Catalog singleton instance from the class name used to retrieve the FSMonitor from the DB.
         """
         from cowbird.services.service_factory import ServiceFactory
         return ServiceFactory().get_service("Catalog")

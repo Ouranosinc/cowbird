@@ -1,7 +1,5 @@
 from cowbird.permissions_synchronizer import Permission, PermissionSynchronizer
-from cowbird.services.service import Service
-from cowbird.services.service import (
-    SERVICE_URL_PARAM)
+from cowbird.services.service import SERVICE_URL_PARAM, Service
 
 
 class Magpie(Service):

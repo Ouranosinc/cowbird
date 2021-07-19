@@ -2,12 +2,12 @@
 # http://docs.pylonsproject.org/projects/pyramid-cookbook/en/latest/database/mongodb.html
 import warnings
 from typing import TYPE_CHECKING
-
-import pymongo
 from urllib.parse import urlparse
 
+import pymongo
+
 from cowbird.database.base import DatabaseInterface
-from cowbird.database.stores import StoreInterface, MonitoringStore
+from cowbird.database.stores import MonitoringStore, StoreInterface
 from cowbird.utils import get_settings
 
 # pylint: disable=C0103,invalid-name
@@ -18,9 +18,11 @@ MongodbStores = frozenset([
 
 if TYPE_CHECKING:
     from typing import Any, Optional, Type, Union
+
     from pymongo.database import Database
-    from cowbird.typedefs import AnySettingsContainer, JSON
+
     from cowbird.database.base import StoreSelector
+    from cowbird.typedefs import JSON, AnySettingsContainer
 
     # pylint: disable=E0601,used-before-assignment
     AnyMongodbStore = Union[MongodbStores]
@@ -91,7 +93,9 @@ class MongoDatabase(DatabaseInterface):
 
 def get_mongodb_connection(container):
     # type: (AnySettingsContainer) -> Database
-    """Obtains the basic database connection from settings."""
+    """
+    Obtains the basic database connection from settings.
+    """
 
     settings = get_settings(container)
     default_mongo_uri = "mongodb://0.0.0.0:27017/cowbird"
@@ -111,7 +115,9 @@ def get_mongodb_connection(container):
 
 def get_mongodb_engine(container):
     # type: (AnySettingsContainer) -> Database
-    """Obtains the database with configuration ready for usage."""
+    """
+    Obtains the database with configuration ready for usage.
+    """
     db = get_mongodb_connection(container)
     for store in MongodbStores:
         if len(store.index_fields) > 1:

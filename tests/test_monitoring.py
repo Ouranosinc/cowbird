@@ -44,8 +44,8 @@ def test_register_unregister_monitor():
         mon2 = internal_mon2.callback_instance
         internal_mon3 = Monitoring().register(test_subdir, False, TestMonitor)
         mon3 = internal_mon3.callback_instance
-        assert type(mon2) == TestMonitor2
-        assert type(mon3) == TestMonitor
+        assert isinstance(mon2, TestMonitor2)
+        assert isinstance(mon3, TestMonitor)
 
         # Test collision when 2 monitors are registered using the same path and class name
         assert not internal_mon3.recursive

@@ -1,13 +1,16 @@
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
-from cowbird.monitoring.monitor import Monitor, MonitorException
 from cowbird.database import get_db
 from cowbird.database.stores import MonitoringStore
+from cowbird.monitoring.monitor import Monitor, MonitorException
 from cowbird.utils import SingletonMeta, get_logger
 
 if TYPE_CHECKING:
+    from typing import Type, Union
+
     from cowbird.monitoring.fsmonitor import FSMonitor
+    from cowbird.typedefs import AnySettingsContainer
 
 LOGGER = get_logger(__name__)
 
@@ -20,13 +23,24 @@ class Monitoring(metaclass=SingletonMeta):
               that monitoring services are up to date.
     """
 
-    def __init__(self, config):
+    def __init__(self, config=None):
+        # type: (AnySettingsContainer) -> None
+        """
+        Initialize the monitoring instance from configured application settings.
+
+        @param config: AnySettingsContainer object from which the db can be retrieved.
+                       The default value of None is only there to disable pylint E1120. The singleton instance
+                       must be initialized with a proper config and after that the init function should not be hit.
+        """
+        if not config:
+            raise Exception("Without proper application settings, the Monitoring class cannot obtains a proper database"
+                            " store.")
         self.monitors = defaultdict(lambda: {})
         self.store = get_db(config).get_store(MonitoringStore)
 
     def start(self):
         """
-        Load existing monitors and start the monitoring
+        Load existing monitors and start the monitoring.
         """
         monitors = self.store.list_monitors()
         for mon in monitors:
@@ -60,9 +74,9 @@ class Monitoring(metaclass=SingletonMeta):
                 self.monitors[mon.path][mon.callback] = mon
                 self.store.save_monitor(mon)
                 return mon
-            except MonitorException as e:
+            except MonitorException as exc:
                 LOGGER.warning("Failed to start monitoring the following path [%s] with this monitor [%s] : [%s]",
-                               path, callback, e)
+                               path, callback, exc)
         return None
 
     def unregister(self, path, cb_monitor):

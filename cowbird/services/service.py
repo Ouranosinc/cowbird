@@ -1,6 +1,7 @@
-import os
 import abc
 import math
+import os
+
 from cowbird.utils import get_logger
 
 SERVICE_PRIORITY_PARAM = "priority"
@@ -18,13 +19,13 @@ LOGGER = get_logger(__name__)
 
 class ServiceConfigurationException(Exception):
     """
-    Exception thrown when a service cannot be instantiated because of a bad configuration
+    Exception thrown when a service cannot be instantiated because of a bad configuration.
     """
 
 
 class Service(abc.ABC):
-    __slots__ = ["required_params"]
-
+    __slots__ = ["required_params",  # Must be defined in each and every implementation
+                 "name", "priority", "url", "workspace_dir"]
     """
     Service interface used to notify implemented services of users/permissions changes.
 
@@ -48,7 +49,7 @@ class Service(abc.ABC):
         self.priority = kwargs.get(SERVICE_PRIORITY_PARAM, math.inf)
         self.url = kwargs.get(SERVICE_URL_PARAM, None)
         self.workspace_dir = kwargs.get(SERVICE_WORKSPACE_DIR_PARAM, None)
-        for required_param in self.required_params:
+        for required_param in self.required_params:  # pylint: disable=E1101,no-member
             if required_param not in SERVICE_PARAMETERS:
                 raise Exception("Invalid service parameter : {}".format(required_param))
             if getattr(self, required_param) is None:

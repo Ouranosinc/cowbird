@@ -1,15 +1,19 @@
 import abc
 from typing import TYPE_CHECKING
+
 from cowbird.database.stores import StoreInterface
 
 if TYPE_CHECKING:
     from typing import Type, Union
-    from cowbird.typedefs import AnySettingsContainer, JSON
+
+    from cowbird.typedefs import JSON, AnySettingsContainer
     StoreSelector = Union[Type[StoreInterface], StoreInterface, str]
 
 
 class DatabaseInterface(metaclass=abc.ABCMeta):
-    """Return the unique identifier of db type matching settings."""
+    """
+    Return the unique identifier of db type matching settings.
+    """
     __slots__ = ["type"]
 
     def __init__(self, _):

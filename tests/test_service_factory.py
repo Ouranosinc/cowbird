@@ -1,4 +1,3 @@
-import abc
 import os
 import tempfile
 import unittest
@@ -6,11 +5,8 @@ import unittest
 import pytest
 import yaml
 
+from cowbird.services.service import SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM, ServiceConfigurationException
 from cowbird.services.service_factory import ServiceFactory
-from cowbird.services.service import (
-    ServiceConfigurationException,
-    SERVICE_URL_PARAM,
-    SERVICE_WORKSPACE_DIR_PARAM)
 from tests import utils
 
 

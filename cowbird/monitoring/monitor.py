@@ -1,14 +1,15 @@
-import os
 import importlib
+import os
 from typing import TYPE_CHECKING
 
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
+
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.utils import get_logger
 
 if TYPE_CHECKING:
-    from typing import Union
+    from typing import Dict, Type, Union
 
     from watchdog.events import (
         DirCreatedEvent,
@@ -49,8 +50,8 @@ class Monitor(FileSystemEventHandler):
                          FSMonitor.get_instance()
         """
         if not os.path.exists(path):
-            raise MonitorException("Cannot monitor the following file or directory [{}]: No such file or directory",
-                                   path)
+            raise MonitorException("Cannot monitor the following file or directory [{}]: No such file or directory"
+                                   .format(path))
         self.__src_path = path
         self.__recursive = recursive
         self.__callback = self.get_fsmonitor_instance(callback)
@@ -65,9 +66,9 @@ class Monitor(FileSystemEventHandler):
         """
         if isinstance(callback, FSMonitor):
             return callback
-        elif isinstance(callback, type) and issubclass(callback, FSMonitor):
+        if isinstance(callback, type) and issubclass(callback, FSMonitor):
             return callback.get_instance()
-        elif isinstance(callback, str):
+        if isinstance(callback, str):
             try:
                 module_name = ".".join(callback.split(".")[:-1])
                 class_name = callback.split(".")[-1]
@@ -114,7 +115,7 @@ class Monitor(FileSystemEventHandler):
     def key(self):
         # type: () -> Dict
         """
-        Return a dict that can be used as a unique key to identify this Monitor in a BD
+        Return a dict that can be used as a unique key to identify this Monitor in a BD.
         """
         return dict(callback=self.callback,
                     path=self.path)
@@ -133,8 +134,8 @@ class Monitor(FileSystemEventHandler):
         Start the monitoring so that events can be fired.
         """
         if self.__event_observer:
-            msg = "This monitor [path={}, callback={}] is already started".format(path=self.path,
-                                                                                  callback=self.callback)
+            msg = "This monitor [path={}, callback={}] is already started".format(self.path,
+                                                                                  self.callback)
             LOGGER.error(msg)
             raise MonitorException(msg)
         self.__event_observer = Observer()

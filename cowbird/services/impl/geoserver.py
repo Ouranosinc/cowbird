@@ -1,11 +1,8 @@
 from celery import chain, shared_task
 
 from cowbird.request_task import RequestTask
-from cowbird.services.service import Service
+from cowbird.services.service import SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM, Service
 from cowbird.services.service_factory import ServiceFactory
-from cowbird.services.service import (
-    SERVICE_URL_PARAM,
-    SERVICE_WORKSPACE_DIR_PARAM)
 from cowbird.utils import get_logger
 
 LOGGER = get_logger(__name__)

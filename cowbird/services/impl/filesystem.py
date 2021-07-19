@@ -1,9 +1,7 @@
 import os
 import shutil
 
-from cowbird.services.service import Service
-from cowbird.services.service import (
-    SERVICE_WORKSPACE_DIR_PARAM)
+from cowbird.services.service import SERVICE_WORKSPACE_DIR_PARAM, Service
 from cowbird.utils import get_logger
 
 LOGGER = get_logger(__name__)

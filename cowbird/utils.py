@@ -10,6 +10,7 @@ from enum import Enum
 from inspect import isclass, isfunction
 from typing import TYPE_CHECKING
 
+from celery.app import Celery
 from pyramid.config import Configurator
 from pyramid.httpexceptions import HTTPClientError, HTTPException
 from pyramid.registry import Registry
@@ -19,7 +20,6 @@ from pyramid.settings import truthy
 from pyramid.threadlocal import get_current_registry
 from requests.structures import CaseInsensitiveDict
 from webob.headers import EnvironHeaders, ResponseHeaders
-from celery.app import Celery
 
 from cowbird import __meta__
 from cowbird.constants import get_constant, validate_required
@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import _TC  # noqa: E0611,F401,W0212 # pylint: disable=E0611
     from typing import Any, List, NoReturn, Optional, Type, Union
+    AnyRegistryContainer = Union[Configurator, Registry, Request, Celery]
 
     from pyramid.events import NewRequest
 
@@ -233,7 +234,9 @@ def get_settings_from_config_ini(config_ini_path, section=None):
 
 def get_registry(container, nothrow=False):
     # type: (AnyRegistryContainer, bool) -> Optional[Registry]
-    """Retrieves the application ``registry`` from various containers referencing to it."""
+    """
+    Retrieves the application ``registry`` from various containers referencing to it.
+    """
     if isinstance(container, Celery):
         return container.conf.get("PYRAMID_REGISTRY", {})
     if isinstance(container, (Configurator, Request)):
