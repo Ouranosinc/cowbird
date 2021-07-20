@@ -388,6 +388,12 @@ docker-push-worker: docker-build-worker		## push the worker docker image
 .PHONY: docker-push
 docker-push: docker-push-base docker-push-webservice docker-push-worker  ## push all docker images
 
+.PHONY: docker-config
+docker-config:  ## update docker specific config from examples files
+	# Create a celeryconfig.py specifically for the docker-compose network
+	sed 's/mongodb:\/\/.*:/mongodb:\/\/mongodb:/g' config/celeryconfig.py > config/celeryconfig.docker.py
+	sed 's/mongodb:\/\/.*:/mongodb:\/\/mongodb:/g' config/cowbird.example.ini > config/cowbird.docker.ini
+
 DOCKER_TEST_COMPOSES := -f "$(APP_ROOT)/tests/ci/docker-compose.smoke-test.yml"
 .PHONY: docker-test
 docker-test: docker-build	## execute a smoke test of the built Docker image (validate that it boots)
@@ -395,6 +401,8 @@ docker-test: docker-build	## execute a smoke test of the built Docker image (val
 	docker-compose $(DOCKER_TEST_COMPOSES) up -d
 	sleep 5
 	curl localhost:$(APP_PORT)/version | python -m json.tool | grep "version"
+	curl localhost:$(APP_PORT) | grep $(APP_NAME)
+	docker-compose $(DOCKER_TEST_COMPOSES) logs
 	docker-compose $(DOCKER_TEST_COMPOSES) stop
 
 .PHONY: docker-stat
@@ -403,9 +411,7 @@ docker-stat:  ## query docker-compose images status (from 'docker-test')
 
 DOCKER_COMPOSES := -f "$(APP_ROOT)/docker/docker-compose.example.yml" -f "$(APP_ROOT)/docker/docker-compose.override.example.yml"
 .PHONY: docker-up
-docker-up: docker-build   ## run all containers using compose
-	# Create a celeryconfig.py specifically for the docker-compose network
-	sed 's/mongodb:\/\/.*:/mongodb:\/\/mongodb:/g' config/celeryconfig.py > config/celeryconfig.docker.py
+docker-up: docker-build docker-config   ## run all containers using compose
 	docker-compose $(DOCKER_COMPOSES) up
 
 DOCKER_DEV_COMPOSES := -f "$(APP_ROOT)/docker/docker-compose.example.yml" -f "$(APP_ROOT)/docker/docker-compose.dev.example.yml"

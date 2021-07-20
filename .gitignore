@@ -19,7 +19,6 @@ Makefile.config
 
 ## Environment
 .env
-**/*.env
 venv
 env/
 

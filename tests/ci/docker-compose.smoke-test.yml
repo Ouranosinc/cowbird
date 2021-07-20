@@ -16,7 +16,8 @@ services:
     # production instance should normally employ protected network
     network_mode: host
     volumes:
-      - ../config/celeryconfig.py:/opt/local/src/cowbird/config/celeryconfig.py
+      - ../../config/cowbird.example.ini:/opt/local/src/cowbird/config/cowbird.ini
+      - ../../config/celeryconfig.py:/opt/local/src/cowbird/config/celeryconfig.py
 
   worker:
     image: pavics/cowbird:latest-worker
@@ -26,7 +27,8 @@ services:
     # production instance should normally employ protected network
     network_mode: host
     volumes:
-      - ../config/celeryconfig.py:/opt/local/src/cowbird/config/celeryconfig.py
+      - ../../config/cowbird.example.ini:/opt/local/src/cowbird/config/cowbird.ini
+      - ../../config/celeryconfig.py:/opt/local/src/cowbird/config/celeryconfig.py
 
   mongodb:
     image: mongo:3.4.0
