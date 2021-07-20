@@ -20,7 +20,7 @@ from pyramid.request import Request
 from pyramid.response import Response
 from pyramid.settings import truthy
 from pyramid.threadlocal import get_current_registry
-from pyramid_celery import celery_app as app
+from pyramid_celery import celery_app as pyramid_celery_app
 from requests.structures import CaseInsensitiveDict
 from webob.headers import EnvironHeaders, ResponseHeaders
 
@@ -61,6 +61,9 @@ SUPPORTED_ACCEPT_TYPES = [
 ]
 SUPPORTED_FORMAT_TYPES = list(FORMAT_TYPE_MAPPING.keys())
 KNOWN_CONTENT_TYPES = SUPPORTED_ACCEPT_TYPES + [CONTENT_TYPE_FORM, CONTENT_TYPE_ANY]
+
+USE_CELERY_CFG = "use_celery"
+USE_PYRAMID_CELERY_APP_CFG = "use_pyramid_celery_app"
 
 
 def get_logger(name, level=None, force_stdout=None, message_format=None, datetime_format=None):
@@ -168,7 +171,8 @@ def configure_celery(config, config_ini):
     # celery to create its own app instance (which is not configured properly and is bugging the shared tasks).
     # Also it must be done early because as soon as config scan is started, some packages may include celery and
     # and it will create its own app instance.
-    app.set_default()
+    if config.registry.settings.get(USE_PYRAMID_CELERY_APP_CFG, True):
+        pyramid_celery_app.set_default()
 
     # Add the config dir in path so that celeryconfig file can be found
     sys.path.append(os.path.dirname(config_ini))
@@ -191,7 +195,7 @@ def configure_celery(config, config_ini):
         logger.info("Importing celery tasks from module [%s]", module)
 
 
-def get_app_config(container, celery=True):
+def get_app_config(container):
     # type: (AnySettingsContainer, bool) -> Configurator
     """
     Generates application configuration with all required utilities and settings configured.
@@ -231,7 +235,7 @@ def get_app_config(container, celery=True):
     config.setup_registry(settings=settings)
 
     # Must be done before include scan, see configure_celery for more details
-    if celery:
+    if settings.get(USE_CELERY_CFG, True):
         configure_celery(config, config_ini)
 
     # don't use scan otherwise modules like 'cowbird.adapter' are

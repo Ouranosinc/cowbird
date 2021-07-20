@@ -18,6 +18,7 @@ from cowbird.app import get_app
 from cowbird.constants import COWBIRD_ROOT, get_constant
 from cowbird.services.service import Service
 from cowbird.utils import CONTENT_TYPE_JSON, SingletonMeta, get_header, get_settings_from_config_ini, is_null, null
+from cowbird.utils import USE_PYRAMID_CELERY_APP_CFG
 
 # employ example INI config for tests where needed to ensure that configurations are valid
 TEST_INI_FILE = os.path.join(COWBIRD_ROOT, "config/cowbird.example.ini")
@@ -172,6 +173,8 @@ def get_test_app(settings=None):
         port=os.getenv("COWBIRD_TEST_DB_PORT", "27017"),
         db_name=os.getenv("COWBIRD_TEST_DB_NAME", "cowbird-test")
     )
+    #  For test, we want to use the real Celery app which is properly mocked
+    config.registry.settings[USE_PYRAMID_CELERY_APP_CFG] = False
     if settings:
         config.registry.settings.update(settings)
 
