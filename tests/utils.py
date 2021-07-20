@@ -170,7 +170,7 @@ def get_test_app(settings=None):
     config.registry.settings["mongo_uri"] = "mongodb://{host}:{port}/{db_name}".format(
         host=os.getenv("COWBIRD_TEST_DB_HOST", "127.0.0.1"),
         port=os.getenv("COWBIRD_TEST_DB_PORT", "27017"),
-        db_name=os.getenv("COWBIRD_TEST_DB_NAME", "weaver-test")
+        db_name=os.getenv("COWBIRD_TEST_DB_NAME", "cowbird-test")
     )
     if settings:
         config.registry.settings.update(settings)

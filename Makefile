@@ -401,7 +401,7 @@ docker-test: docker-build	## execute a smoke test of the built Docker image (val
 	docker-compose $(DOCKER_TEST_COMPOSES) up -d
 	sleep 5
 	curl localhost:$(APP_PORT)/version | python -m json.tool | grep "version"
-	curl localhost:$(APP_PORT) | grep $(APP_NAME)
+	curl localhost:$(APP_PORT) | python -m json.tool | grep $(APP_NAME)
 	docker-compose $(DOCKER_TEST_COMPOSES) logs
 	docker-compose $(DOCKER_TEST_COMPOSES) stop
 
