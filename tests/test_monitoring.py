@@ -21,8 +21,6 @@ def file_io(filename, mv_filename):
     # Delete
     os.remove(mv_filename)
 
-# TODO: Will need to mock a database
-
 
 @pytest.mark.monitoring
 def test_register_unregister_monitor():
