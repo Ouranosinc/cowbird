@@ -1,6 +1,7 @@
+import unittest
+
 import mock
 import pytest
-import unittest
 from pymongo.collection import Collection
 from pymongo.cursor import Cursor
 

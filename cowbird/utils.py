@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import importlib
 import json
 import logging
 import os
+import subprocess  # nosec B404
 import sys
 import types
-import subprocess
-import importlib
 from configparser import ConfigParser
 from enum import Enum
 from inspect import isclass, isfunction
@@ -181,7 +181,7 @@ def configure_celery(config, config_ini):
 
     logger.info("Locating celery tasks...")
     grep_command = ["grep", "--include=*.py", "-rw", os.path.dirname(__file__), "-e", "^@shared_task"]
-    task_files = subprocess.run(grep_command, stdout=subprocess.PIPE, text=True)
+    task_files = subprocess.run(grep_command, stdout=subprocess.PIPE, text=True, check=True)  # nosec B603
     install_dir = os.path.dirname(os.path.dirname(__file__))
     modules_set = set()
     for file in task_files.stdout.strip("\n").split("\n"):

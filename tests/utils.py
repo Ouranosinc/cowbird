@@ -17,8 +17,15 @@ from webtest.response import TestResponse
 from cowbird.app import get_app
 from cowbird.constants import COWBIRD_ROOT, get_constant
 from cowbird.services.service import Service
-from cowbird.utils import CONTENT_TYPE_JSON, SingletonMeta, get_header, get_settings_from_config_ini, is_null, null
-from cowbird.utils import USE_PYRAMID_CELERY_APP_CFG
+from cowbird.utils import (
+    CONTENT_TYPE_JSON,
+    USE_PYRAMID_CELERY_APP_CFG,
+    SingletonMeta,
+    get_header,
+    get_settings_from_config_ini,
+    is_null,
+    null
+)
 
 # employ example INI config for tests where needed to ensure that configurations are valid
 TEST_INI_FILE = os.path.join(COWBIRD_ROOT, "config/cowbird.example.ini")
