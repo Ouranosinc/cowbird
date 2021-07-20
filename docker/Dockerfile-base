@@ -15,6 +15,7 @@ COPY requirements* setup.py README.rst CHANGES.rst ${COWBIRD_DIR}/
 RUN apk update \
     && apk add \
     bash \
+    grep \
     libxslt-dev \
     && apk add --virtual .build-deps \
     gcc \

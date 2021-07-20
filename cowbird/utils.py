@@ -185,6 +185,8 @@ def configure_celery(config, config_ini):
     install_dir = os.path.dirname(os.path.dirname(__file__))
     modules_set = set()
     for file in task_files.stdout.strip("\n").split("\n"):
+        if not file:
+            continue
         # Python file relative to package install directory
         rel_name = os.path.relpath(file.split(":")[0], install_dir)
         # Get the module name by striping the extension .py and replacing / by .
