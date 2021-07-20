@@ -5,6 +5,8 @@ import logging
 import os
 import sys
 import types
+import subprocess
+import importlib
 from configparser import ConfigParser
 from enum import Enum
 from inspect import isclass, isfunction
@@ -18,6 +20,7 @@ from pyramid.request import Request
 from pyramid.response import Response
 from pyramid.settings import truthy
 from pyramid.threadlocal import get_current_registry
+from pyramid_celery import celery_app as app
 from requests.structures import CaseInsensitiveDict
 from webob.headers import EnvironHeaders, ResponseHeaders
 
@@ -157,6 +160,37 @@ def islambda(func):
     return isinstance(func, types.LambdaType) and func.__name__ == (lambda: None).__name__  # noqa
 
 
+def configure_celery(config, config_ini):
+    logger = get_logger(__name__)
+    logger.info("Configuring celery")
+
+    # shared_tasks use the default celery app by default so setting the pyramid_celery celery_app as default prevent
+    # celery to create its own app instance (which is not configured properly and is bugging the shared tasks).
+    # Also it must be done early because as soon as config scan is started, some packages may include celery and
+    # and it will create its own app instance.
+    app.set_default()
+
+    # Add the config dir in path so that celeryconfig file can be found
+    sys.path.append(os.path.dirname(config_ini))
+    config.include("pyramid_celery")
+    config.configure_celery(config_ini)
+
+    logger.info("Locating celery tasks...")
+    grep_command = ["grep", "--include=*.py", "-rw", os.path.dirname(__file__), "-e", "^@shared_task"]
+    task_files = subprocess.run(grep_command, stdout=subprocess.PIPE, text=True)
+    install_dir = os.path.dirname(os.path.dirname(__file__))
+    modules_set = set()
+    for file in task_files.stdout.strip("\n").split("\n"):
+        # Python file relative to package install directory
+        rel_name = os.path.relpath(file.split(":")[0], install_dir)
+        # Get the module name by striping the extension .py and replacing / by .
+        mod_name = rel_name[:-3].replace("/", ".")
+        modules_set.add(mod_name)
+    for module in modules_set:
+        importlib.import_module(module)
+        logger.info("Importing celery tasks from module [%s]", module)
+
+
 def get_app_config(container, celery=True):
     # type: (AnySettingsContainer, bool) -> Configurator
     """
@@ -196,6 +230,10 @@ def get_app_config(container, celery=True):
     config = Configurator() if not isinstance(container, Configurator) else container
     config.setup_registry(settings=settings)
 
+    # Must be done before include scan, see configure_celery for more details
+    if celery:
+        configure_celery(config, config_ini)
+
     # don't use scan otherwise modules like 'cowbird.adapter' are
     # automatically found and cause import errors on missing packages
     print_log("Including Cowbird modules...", LOGGER)
@@ -204,11 +242,6 @@ def get_app_config(container, celery=True):
     # NOTE: don't call 'config.scan("cowbird")' to avoid parsing issues with colander/cornice,
     #       add them explicitly with 'config.include(<module>)', and then they can do 'config.scan()'
 
-    if celery:
-        # Add the config dir in path so that celeryconfig file can be found
-        sys.path.append(os.path.dirname(config_ini))
-        config.include("pyramid_celery")
-        config.configure_celery(config_ini)
     return config
 
 

@@ -15,7 +15,8 @@ Features / Changes
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* Celery has now a proper result backend
+* Celery has now a proper result backend.
+* Celery tasks are auto-discovered package-wide, no need to import them manually.
 
 `0.3.0 <https://github.com/Ouranosinc/cowbird/tree/0.3.0>`_ (2021-07-06)
 ------------------------------------------------------------------------------------
