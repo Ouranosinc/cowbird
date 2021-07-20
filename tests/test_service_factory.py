@@ -27,6 +27,9 @@ class TestServiceFactory(unittest.TestCase):
                 "Thredds": {"active": True, "url": ""}
             }
         }
+        cls.priority = ["Thredds", "Magpie"]
+        for idx, svc in enumerate(cls.priority):
+            cls.test_data["services"][svc]["priority"] = idx
         cls.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)
         with cls.cfg_file as f:
             f.write(yaml.safe_dump(cls.test_data))
@@ -51,12 +54,17 @@ class TestServiceFactory(unittest.TestCase):
         for service in active_services:
             assert service in TestServiceFactory.test_data["services"]
             assert TestServiceFactory.test_data["services"][service]["active"]
+
         # Every activated test service should be in the active services
         for test_service, config in TestServiceFactory.test_data["services"].items():
             if config["active"]:
                 assert test_service in active_services
             else:
                 assert test_service not in active_services
+
+        # Prioritize services should appear in the proper order
+        for idx, svc in enumerate(self.priority):
+            assert active_services[idx] == svc
 
     def test_service_configuration(self):
         invalid_config = {"active": True, SERVICE_URL_PARAM: ""}
