@@ -38,6 +38,7 @@ def includeme(config):
     config.include("cornice")
     config.include("cornice_swagger")
     config.include("cowbird.api")
+    config.include("cowbird.database")
 
 
 class RemoveSlashNotFoundViewFactory(object):

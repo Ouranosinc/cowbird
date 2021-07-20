@@ -19,7 +19,6 @@ Makefile.config
 
 ## Environment
 .env
-**/*.env
 venv
 env/
 
@@ -44,6 +43,7 @@ docs/cowbird.tests.rst
 docs/cowbird.rst
 
 ## Repo
+celeryconfig.docker.py
 config.yml
 config.yaml
 cowbird*.ini

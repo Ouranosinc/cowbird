@@ -32,7 +32,7 @@ class TestSyncPermissions(unittest.TestCase):
                               service2: service1}
         data = {
             "services": {
-                "Magpie": {"active": True},
+                "Magpie": {"active": True, "url": ""},
                 service1: {"active": True},
                 service2: {"active": True}
             },

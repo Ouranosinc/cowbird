@@ -46,7 +46,7 @@ def get_version(request):  # noqa: W0212
         worker_detail = "worker unreachable"
     except NotImplementedError:
         worker_version = None
-        worker_detail = "unknown"  # TODO: Once we have a database, it could be used to store the jobs result
+        worker_detail = "unknown"
     api_version = __meta__.__version__
     detail = "Web service version : [{0}], worker version : [{1}]. Any mismatch can cause misbehavior.".format(
         api_version, worker_detail)

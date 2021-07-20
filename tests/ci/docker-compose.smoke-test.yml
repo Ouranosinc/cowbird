@@ -6,13 +6,36 @@ services:
   # main image being tested
   # ===========================
   cowbird:
-    container_name: "cowbird-smoke-test"
     image: pavics/cowbird:latest-webservice
+    container_name: "cowbird-webservice-smoke-test"
     restart: "no"
     environment:
+      HOSTNAME: localhost
       FORWARDED_ALLOW_IPS: "*"
-    env_file:
-      - test.env
     # make directly available to host for testing purpose only
     # production instance should normally employ protected network
     network_mode: host
+    volumes:
+      - ../../config/cowbird.example.ini:/opt/local/src/cowbird/config/cowbird.ini
+      - ../../config/celeryconfig.py:/opt/local/src/cowbird/config/celeryconfig.py
+
+  worker:
+    image: pavics/cowbird:latest-worker
+    container_name: "cowbird-worker-smoke-test"
+    restart: "no"
+    # make directly available to host for testing purpose only
+    # production instance should normally employ protected network
+    network_mode: host
+    volumes:
+      - ../../config/cowbird.example.ini:/opt/local/src/cowbird/config/cowbird.ini
+      - ../../config/celeryconfig.py:/opt/local/src/cowbird/config/celeryconfig.py
+
+  mongodb:
+    image: mongo:3.4.0
+    container_name: "mongodb-smoke-test"
+    restart: "no"
+      # make directly available to host for testing purpose only
+      # production instance should normally employ protected network
+    network_mode: host
+    # MongoDB crash with permission denied errors if the command is not overridden like this
+    command: bash -c 'chown -R mongodb:mongodb /data && chmod -R 755 /data && mongod'

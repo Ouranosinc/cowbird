@@ -5,6 +5,10 @@ class Nginx(Service):
     """
     Nothing to do right now.
     """
+    required_params = []
+
+    def __init__(self, name, **kwargs):
+        super(Nginx, self).__init__(name, **kwargs)
 
     def get_resource_id(self, resource_full_name):
         # type (str) -> str

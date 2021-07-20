@@ -6,6 +6,14 @@ class FSMonitor(abc.ABC):
     Interface being called when something chang on the filesystem.
     """
 
+    @staticmethod
+    @abc.abstractmethod
+    def get_instance():
+        """
+        Must return a monitor instance.
+        """
+        raise NotImplementedError
+
     @abc.abstractmethod
     def on_created(self, filename):
         # type: (str) -> None

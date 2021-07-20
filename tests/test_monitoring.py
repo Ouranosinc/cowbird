@@ -6,6 +6,7 @@ import pytest
 
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
+from cowbird.services.service_factory import ServiceFactory
 
 
 def file_io(filename, mv_filename):
@@ -31,19 +32,36 @@ def test_register_unregister_monitor():
         mv_test_subdir_file = os.path.join(tmpdir, "moved_test_subdir_file")
         os.mkdir(test_subdir)
 
+        # Test registering directly a callback instance
         mon = TestMonitor()
-        mon2 = TestMonitor()
-        mon3 = TestMonitor()
-        Monitoring().register(tmpdir, False, mon)
-        Monitoring().register(tmpdir, True, mon2)
-        Monitoring().register(test_subdir, True, mon3)
+        internal_mon = Monitoring().register(tmpdir, False, mon)
+        assert internal_mon.callback_instance == mon
+
+        # Test registering a callback via class name
+        internal_mon2 = Monitoring().register(tmpdir, True, TestMonitor2)
+        mon2 = internal_mon2.callback_instance
+        internal_mon3 = Monitoring().register(test_subdir, False, TestMonitor)
+        mon3 = internal_mon3.callback_instance
+        assert isinstance(mon2, TestMonitor2)
+        assert isinstance(mon3, TestMonitor)
+
+        # Test collision when 2 monitors are registered using the same path and class name
+        assert not internal_mon3.recursive
+        internal_mon4 = Monitoring().register(test_subdir, True, TestMonitor)
+        assert internal_mon4 is internal_mon3
+        assert internal_mon3.recursive  # Recursive should take precedence when a collision occurs
+
+        # monitors first level is distinct path to monitor : (tmp_dir and test_subdir)
         assert len(Monitoring().monitors) == 2
+
+        # monitors second level is distinct callback, for tmpdir : (TestMonitor and TestMonitor2)
         assert len(Monitoring().monitors[tmpdir]) == 2
 
+        # Do some io operations that should be picked by the monitors
         file_io(test_file, mv_test_file)
         file_io(test_subdir_file, mv_test_subdir_file)
-
         sleep(1)
+
         # Root dir non-recursive
         assert len(mon.created) == 2
         assert mon.created[0] == test_file
@@ -69,12 +87,17 @@ def test_register_unregister_monitor():
         assert sorted(set(mon3.modified)) == [test_subdir,
                                               test_subdir_file]
 
+        # Validate cleanup
         Monitoring().unregister(tmpdir, mon)
         Monitoring().unregister(tmpdir, mon2)
-        assert not Monitoring().unregister(test_subdir, mon)
-        Monitoring().unregister(test_subdir, mon3)
+        assert not Monitoring().unregister(test_subdir, mon2)  # Here we try to unregister a path with a bad class type
+        Monitoring().unregister(test_subdir, mon3)  # Here we have the good class type
         assert len(Monitoring().monitors) == 0
         assert not Monitoring().unregister(tmpdir, mon)
+
+        # Test registering a callback via a qualified class name string
+        catalog_mon = Monitoring().register(tmpdir, False, "cowbird.services.impl.catalog.Catalog").callback_instance
+        assert catalog_mon == ServiceFactory().get_service("Catalog")
 
 
 class TestMonitor(FSMonitor):
@@ -82,6 +105,10 @@ class TestMonitor(FSMonitor):
         self.created = []
         self.deleted = []
         self.modified = []
+
+    @staticmethod
+    def get_instance():
+        return TestMonitor()
 
     def on_created(self, filename):
         self.created.append(filename)
@@ -91,3 +118,10 @@ class TestMonitor(FSMonitor):
 
     def on_modified(self, filename):
         self.modified.append(filename)
+
+
+class TestMonitor2(TestMonitor):
+    # Allow a second full qualified class name to register as monitor
+    @staticmethod
+    def get_instance():
+        return TestMonitor2()
