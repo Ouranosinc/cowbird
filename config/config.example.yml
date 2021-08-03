@@ -10,7 +10,7 @@
 #   a required parameter is missing for a service it will throw a `ServiceConfigurationException` exception.
 #
 #   service:
-#     active:             [optional, default False] bool allowing to deactivate a service and stop managing it
+#     active:             [optional, default=False] bool allowing to deactivate a service and stop managing it
 #     priority:           [optional, default=math.inf] Relative priority between services while handling events
 #                         Lower values have higher priority, default value is last
 #     url:                [optional, default=None] URI of the web service represented by this Cowbird service.

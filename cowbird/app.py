@@ -2,7 +2,7 @@
 # coding: utf-8
 
 """
-Cowbird is a service for AuthN and AuthZ based on Ziggurat-Foundations.
+Cowbird is a middleware that manages interactions between various birds of the bird-house stack.
 """
 import sys
 
