@@ -72,7 +72,7 @@ class MonitoringStore(StoreInterface, MongodbStore):
         MongodbStore.__init__(self, *db_args, **db_kwargs)
 
     def save_monitor(self, monitor):
-        # type: (Monitor) -> bool
+        # type: (Monitor) -> None
         """
         Stores Monitor in `MongoDB` storage.
         """
@@ -80,15 +80,13 @@ class MonitoringStore(StoreInterface, MongodbStore):
         if self.collection.count_documents(monitor.key) > 0:
             self.collection.delete_one(monitor.key)
         self.collection.insert_one(monitor.params())
-        return True
 
     def delete_monitor(self, monitor):
-        # type: (Monitor) -> bool
+        # type: (Monitor) -> None
         """
         Removes Monitor from `MongoDB` storage.
         """
         self.collection.delete_one(monitor.key)
-        return True
 
     def list_monitors(self):
         # type: () -> List[Monitor]
@@ -109,9 +107,8 @@ class MonitoringStore(StoreInterface, MongodbStore):
         return monitors
 
     def clear_services(self):
-        # type: () -> bool
+        # type: () -> None
         """
         Removes all Monitor from `MongoDB` storage.
         """
         self.collection.drop()
-        return True
