@@ -51,12 +51,16 @@ class Monitoring(metaclass=SingletonMeta):
         # type: (str, bool, Union[FSMonitor, Type[FSMonitor], str]) -> Monitor
         """
         Register a monitor for a specific path and start it.
+        If a monitor already exists for the specific path/cb_monitor combination it is directly returned. If this
+        monitor was not recursively monitoring its path and the `recursive` flag is now true, this one take precedence
+        and the monitor is updated accordingly. If the `recursive` flag was true and now it is false it has no effect.
 
         @param path: Path to monitor
         @param recursive: Monitor subdirectory recursively?
         @param cb_monitor: FSMonitor for which an instance is created and events are sent
                            Can be an object, a class type implementing FSMonitor or a string containing module and class
                            name.
+        @return The monitor registered or already existing for the specific path/cb_monitor combination.
         """
         try:
             callback = Monitor.get_qualified_class_name(Monitor.get_fsmonitor_instance(cb_monitor))

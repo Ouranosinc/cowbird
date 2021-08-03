@@ -27,14 +27,14 @@ LOGGER = get_logger(__name__)
 
 class MonitorException(Exception):
     """
-    Error indicating that a Monitor cannot be started because of an invalid path or callback.
+    Error indicating that a :class:`Monitor` cannot be started because of an invalid path or callback.
     """
 
 
 class Monitor(FileSystemEventHandler):
     """
-    Implementation of the watchdog FileSystemEventHandler class Allows to start/stop directory monitoring and send
-    events to FSMonitor callback.
+    Implementation of the watchdog :class:`FileSystemEventHandler` class Allows to start/stop directory monitoring and
+    send events to :class:`FSMonitor` callback.
     """
 
     def __init__(self, path, recursive, callback):
@@ -45,9 +45,9 @@ class Monitor(FileSystemEventHandler):
         @param path: Path to monitor
         @param recursive: Monitor subdirectory recursively?
         @param callback: Events are sent to this FSMonitor.
-                         Can be an object, a class type implementing FSMonitor or a string containing module and class
-                         name. The class type or string is used to instantiate an object using the class method
-                         FSMonitor.get_instance()
+                         Can be an object, a class type implementing :class:`FSMonitor` or a string containing module
+                         and class name. The class type or string is used to instantiate an object using the class
+                         method `FSMonitor.get_instance()`
         """
         if not os.path.exists(path):
             raise MonitorException("Cannot monitor the following file or directory [{}]: No such file or directory"
@@ -61,8 +61,8 @@ class Monitor(FileSystemEventHandler):
     def get_fsmonitor_instance(callback):
         # type: (Union[FSMonitor, Type[FSMonitor], str]) -> FSMonitor
         """
-        Return a FSMonitor instance from multiple possible forms including the FSMonitor type, the FSMonitor full
-        qualified class name or a direct instance which is returned as is.
+        Return a :class:`FSMonitor` instance from multiple possible forms including the :class:`FSMonitor` type, the
+        :class:`FSMonitor` full qualified class name or a direct instance which is returned as is.
         """
         if isinstance(callback, FSMonitor):
             return callback
@@ -83,7 +83,7 @@ class Monitor(FileSystemEventHandler):
     def get_qualified_class_name(monitor):
         # type: (FSMonitor) -> str
         """
-        Returns the full qualified class name of the FSMonitor object (string of the form module.class_name)
+        Returns the full qualified class name of the :class:`FSMonitor` object (string of the form module.class_name)
         """
         cls = type(monitor)
         return ".".join([cls.__module__, cls.__qualname__])
@@ -115,7 +115,7 @@ class Monitor(FileSystemEventHandler):
     def key(self):
         # type: () -> Dict
         """
-        Return a dict that can be used as a unique key to identify this Monitor in a BD.
+        Return a dict that can be used as a unique key to identify this :class:`Monitor` in a BD.
         """
         return dict(callback=self.callback,
                     path=self.path)
@@ -123,7 +123,8 @@ class Monitor(FileSystemEventHandler):
     def params(self):
         # type: () -> Dict
         """
-        Return a dict serializing this object from which a new Monitor can be recreated using the init function.
+        Return a dict serializing this object from which a new :class:`Monitor` can be recreated using the init
+        function.
         """
         return dict(callback=self.callback,
                     path=self.path,
