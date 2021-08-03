@@ -9,7 +9,7 @@ LOGGER = get_logger(__name__)
 
 class FileSystem(Service):
     """
-    Keep the proper directory structure in synch with the platform.
+    Keep the proper directory structure in sync with the platform.
     """
     required_params = [SERVICE_WORKSPACE_DIR_PARAM]
 
