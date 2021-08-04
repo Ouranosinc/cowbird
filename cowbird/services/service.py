@@ -25,7 +25,7 @@ class ServiceConfigurationException(Exception):
 
 class Service(abc.ABC):
     __slots__ = ["required_params",  # Must be defined in each and every implementation
-                 "name", "priority", "url", "workspace_dir"]
+                 "name", SERVICE_PRIORITY_PARAM, SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM]
     """
     Service interface used to notify implemented services of users/permissions changes.
 

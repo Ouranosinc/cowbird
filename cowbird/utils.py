@@ -164,8 +164,7 @@ def islambda(func):
 
 
 def configure_celery(config, config_ini):
-    logger = get_logger(__name__)
-    logger.info("Configuring celery")
+    LOGGER.info("Configuring celery")
 
     # shared_tasks use the default celery app by default so setting the pyramid_celery celery_app as default prevent
     # celery to create its own app instance (which is not configured properly and is bugging the shared tasks).
@@ -179,7 +178,7 @@ def configure_celery(config, config_ini):
     config.include("pyramid_celery")
     config.configure_celery(config_ini)
 
-    logger.info("Locating celery tasks...")
+    LOGGER.info("Locating celery tasks...")
     grep_command = ["grep", "--include=*.py", "-rw", os.path.dirname(__file__), "-e", "^@shared_task"]
     task_files = subprocess.run(grep_command, stdout=subprocess.PIPE, text=True, check=True)  # nosec B603
     install_dir = os.path.dirname(os.path.dirname(__file__))
@@ -194,7 +193,7 @@ def configure_celery(config, config_ini):
         modules_set.add(mod_name)
     for module in modules_set:
         importlib.import_module(module)
-        logger.info("Importing celery tasks from module [%s]", module)
+        LOGGER.info("Importing celery tasks from module [%s]", module)
 
 
 def get_app_config(container):
@@ -204,17 +203,15 @@ def get_app_config(container):
     """
     import cowbird.constants  # pylint: disable=C0415  # to override specific constants/variables
 
-    logger = get_logger(__name__)
-
     # override INI config path if provided with --paste to gunicorn, otherwise use environment variable
     config_settings = get_settings(container)
     config_env = get_constant("COWBIRD_INI_FILE_PATH", config_settings, raise_missing=True)
     config_ini = (container or {}).get("__file__", config_env)
-    logger.info("Using initialisation file : [%s]", config_ini)
+    LOGGER.info("Using initialisation file : [%s]", config_ini)
     if config_ini != config_env:
         cowbird.constants.COWBIRD_INI_FILE_PATH = config_ini
         config_settings["cowbird.ini_file_path"] = config_ini
-        logger.info("Environment variable COWBIRD_INI_FILE_PATH [%s] ignored", config_env)
+        LOGGER.info("Environment variable COWBIRD_INI_FILE_PATH [%s] ignored", config_env)
     settings = get_settings_from_config_ini(config_ini)
     settings.update(config_settings)
 
