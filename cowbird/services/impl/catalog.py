@@ -1,8 +1,6 @@
-import os
-
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
-from cowbird.services.service import Service
+from cowbird.services.service import SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM, Service
 from cowbird.utils import get_logger
 
 LOGGER = get_logger(__name__)
@@ -12,28 +10,28 @@ class Catalog(Service, FSMonitor):
     """
     Keep the catalog index in sync when files are created/deleted/updated.
     """
+    required_params = [SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM]
 
-    def __init__(self, name, url):
-        super(Catalog, self).__init__(name, url)
+    def __init__(self, name, **kwargs):
+        # type: (str, dict) -> None
+        """
+        Create the catalog instance.
+
+        @param name: Service name
+        """
+        super(Catalog, self).__init__(name, **kwargs)
         # TODO: Need to monitor data directory
-
-    @staticmethod
-    def _user_workspace_dir(user_name):
-        # FIXME
-        user_workspace_path = "need value from settings"
-        # TODO: path should already exists (priority on services hooks?)
-        return os.path.join(user_workspace_path, user_name)
 
     def get_resource_id(self, resource_full_name):
         # type (str) -> str
         raise NotImplementedError
 
     def user_created(self, user_name):
-        LOGGER.info("Start monitoring workspace of user [%s]", user_name)
-        # TODO: Implement: what we do? start monitoring the user directory
-        Monitoring().register(self._user_workspace_dir(user_name), True, self)
+        LOGGER.info("Start monitoring workspace of created user [%s]", user_name)
+        Monitoring().register(self._user_workspace_dir(user_name), True, Catalog)
 
     def user_deleted(self, user_name):
+        LOGGER.info("Stop monitoring workspace of removed user [%s]", user_name)
         Monitoring().unregister(self._user_workspace_dir(user_name), self)
 
     def permission_created(self, permission):
@@ -42,13 +40,21 @@ class Catalog(Service, FSMonitor):
     def permission_deleted(self, permission):
         raise NotImplementedError
 
+    @staticmethod
+    def get_instance():
+        """
+        Return the Catalog singleton instance from the class name used to retrieve the FSMonitor from the DB.
+        """
+        from cowbird.services.service_factory import ServiceFactory
+        return ServiceFactory().get_service("Catalog")
+
     def on_created(self, filename):
         """
         Call when a new file is found.
 
         :param filename: Relative filename of a new file
         """
-        raise NotImplementedError
+        LOGGER.info("The following file [%s] has just been created", filename)
 
     def on_deleted(self, filename):
         """
@@ -56,7 +62,7 @@ class Catalog(Service, FSMonitor):
 
         :param filename: Relative filename of the removed file
         """
-        raise NotImplementedError
+        LOGGER.info("The following file [%s] has just been deleted", filename)
 
     def on_modified(self, filename):
         """
@@ -64,4 +70,4 @@ class Catalog(Service, FSMonitor):
 
         :param filename: Relative filename of the updated file
         """
-        raise NotImplementedError
+        LOGGER.info("The following file [%s] has just been modified", filename)

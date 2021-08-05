@@ -7,7 +7,16 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* Basic users' workspaces management for new or removed users.
+* Add a Mongo database backend to store/restore monitoring state across sessions.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Celery has now a proper result backend.
+* Celery tasks are auto-discovered package-wide, no need to import them manually.
 
 `0.3.0 <https://github.com/Ouranosinc/cowbird/tree/0.3.0>`_ (2021-07-06)
 ------------------------------------------------------------------------------------

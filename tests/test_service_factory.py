@@ -5,6 +5,7 @@ import unittest
 import pytest
 import yaml
 
+from cowbird.services.service import SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM, ServiceConfigurationException
 from cowbird.services.service_factory import ServiceFactory
 from tests import utils
 
@@ -20,12 +21,15 @@ class TestServiceFactory(unittest.TestCase):
         cls.test_data = {
             "services": {
                 "Catalog": {"active": False},
-                "Geoserver": {"active": True},
-                "Magpie": {"active": True},
-                "Nginx": {"active": True},
-                "Thredds": {"active": True}
+                "Geoserver": {"active": True, "url": "", "workspace_dir": ""},
+                "Magpie": {"active": True, "url": ""},
+                "Nginx": {"active": True, "url": ""},
+                "Thredds": {"active": True, "url": ""}
             }
         }
+        cls.priority = ["Thredds", "Magpie"]
+        for idx, svc in enumerate(cls.priority):
+            cls.test_data["services"][svc]["priority"] = idx
         cls.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)
         with cls.cfg_file as f:
             f.write(yaml.safe_dump(cls.test_data))
@@ -50,9 +54,49 @@ class TestServiceFactory(unittest.TestCase):
         for service in active_services:
             assert service in TestServiceFactory.test_data["services"]
             assert TestServiceFactory.test_data["services"][service]["active"]
+
         # Every activated test service should be in the active services
         for test_service, config in TestServiceFactory.test_data["services"].items():
             if config["active"]:
                 assert test_service in active_services
             else:
                 assert test_service not in active_services
+
+        # Prioritize services should appear in the proper order
+        for idx, svc in enumerate(self.priority):
+            assert active_services[idx] == svc
+
+    def test_service_configuration(self):
+        invalid_config = {"active": True, SERVICE_URL_PARAM: ""}
+        valid_config = {"active": True, SERVICE_URL_PARAM: "https://service.domain", SERVICE_WORKSPACE_DIR_PARAM: "/"}
+
+        # Should raise if the config does not include a required param
+        with pytest.raises(ServiceConfigurationException):
+            GoodService("GoodService", **invalid_config)
+
+        # Should raise if the service does not define its required params
+        with pytest.raises(NotImplementedError):
+            BadService("BadService", **valid_config)
+
+        # Should raise if a service defines an invalid param
+        with pytest.raises(Exception):
+            BadParamService("BadParamService", **valid_config)
+
+        svc = GoodService("GoodService", **valid_config)
+        assert getattr(svc, SERVICE_URL_PARAM) == valid_config[SERVICE_URL_PARAM]
+        assert getattr(svc, SERVICE_WORKSPACE_DIR_PARAM) == valid_config[SERVICE_WORKSPACE_DIR_PARAM]
+
+
+class BadService(utils.MockAnyServiceBase):
+    #  This service is bad because Service implementation must define the required_params variable
+    pass
+
+
+class BadParamService(utils.MockAnyServiceBase):
+    #  This service is bad because the required_params must only include param from the frozen set SERVICE_PARAMETERS
+    required_params = [SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM, "Invalid_param_name"]
+
+
+class GoodService(utils.MockAnyServiceBase):
+    # This service is good param wise and should be properly configured
+    required_params = [SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM]

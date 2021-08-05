@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import importlib
 import json
 import logging
 import os
+import subprocess  # nosec B404
 import sys
 import types
 from configparser import ConfigParser
@@ -10,6 +12,7 @@ from enum import Enum
 from inspect import isclass, isfunction
 from typing import TYPE_CHECKING
 
+from celery.app import Celery
 from pyramid.config import Configurator
 from pyramid.httpexceptions import HTTPClientError, HTTPException
 from pyramid.registry import Registry
@@ -17,6 +20,7 @@ from pyramid.request import Request
 from pyramid.response import Response
 from pyramid.settings import truthy
 from pyramid.threadlocal import get_current_registry
+from pyramid_celery import celery_app as pyramid_celery_app
 from requests.structures import CaseInsensitiveDict
 from webob.headers import EnvironHeaders, ResponseHeaders
 
@@ -30,7 +34,14 @@ if TYPE_CHECKING:
 
     from pyramid.events import NewRequest
 
-    from cowbird.typedefs import AnyHeadersType, AnyKey, AnyResponseType, AnySettingsContainer, SettingsType
+    from cowbird.typedefs import (
+        AnyHeadersType,
+        AnyKey,
+        AnyRegistryContainer,
+        AnyResponseType,
+        AnySettingsContainer,
+        SettingsType
+    )
 
 CONTENT_TYPE_ANY = "*/*"
 CONTENT_TYPE_JSON = "application/json"
@@ -56,6 +67,12 @@ SUPPORTED_ACCEPT_TYPES = [
 ]
 SUPPORTED_FORMAT_TYPES = list(FORMAT_TYPE_MAPPING.keys())
 KNOWN_CONTENT_TYPES = SUPPORTED_ACCEPT_TYPES + [CONTENT_TYPE_FORM, CONTENT_TYPE_ANY]
+
+# The following two settings are for internal use only and are not meant to be exposed or changed from config file
+# This setting is set to true before creating the app for the cli, the pyramid app use the default false value
+CLI_MODE_CFG = "cli_mode"
+# This setting is set to true before creating the test app, the pyramid app use the default false value
+USE_TEST_CELERY_APP_CFG = "use_test_celery_app"
 
 
 def get_logger(name, level=None, force_stdout=None, message_format=None, datetime_format=None):
@@ -155,7 +172,42 @@ def islambda(func):
     return isinstance(func, types.LambdaType) and func.__name__ == (lambda: None).__name__  # noqa
 
 
-def get_app_config(container, celery=True):
+def configure_celery(config, config_ini):
+    LOGGER.info("Configuring celery")
+
+    # shared_tasks use the default celery app by default so setting the pyramid_celery celery_app as default prevent
+    # celery to create its own app instance (which is not configured properly and is bugging the shared tasks).
+    # Also it must be done early because as soon as config scan is started, some packages may include celery and
+    # and it will create its own app instance.
+    #
+    # ** If the test celery app must be used, nothing has to be done since this is already the default app **
+    if not config.registry.settings.get(USE_TEST_CELERY_APP_CFG, False):
+        pyramid_celery_app.set_default()
+
+    # Add the config dir in path so that celeryconfig file can be found
+    sys.path.append(os.path.dirname(config_ini))
+    config.include("pyramid_celery")
+    config.configure_celery(config_ini)
+
+    LOGGER.info("Locating celery tasks...")
+    grep_command = ["grep", "--include=*.py", "-rw", os.path.dirname(__file__), "-e", "^@shared_task"]
+    task_files = subprocess.run(grep_command, stdout=subprocess.PIPE, text=True, check=True)  # nosec B603
+    install_dir = os.path.dirname(os.path.dirname(__file__))
+    modules_set = set()
+    for file in task_files.stdout.strip("\n").split("\n"):
+        if not file:
+            continue
+        # Python file relative to package install directory
+        rel_name = os.path.relpath(file.split(":")[0], install_dir)
+        # Get the module name by striping the extension .py and replacing / by .
+        mod_name = rel_name[:-3].replace("/", ".")
+        modules_set.add(mod_name)
+    for module in modules_set:
+        importlib.import_module(module)
+        LOGGER.info("Importing celery tasks from module [%s]", module)
+
+
+def get_app_config(container):
     # type: (AnySettingsContainer, bool) -> Configurator
     """
     Generates application configuration with all required utilities and settings configured.
@@ -166,9 +218,11 @@ def get_app_config(container, celery=True):
     config_settings = get_settings(container)
     config_env = get_constant("COWBIRD_INI_FILE_PATH", config_settings, raise_missing=True)
     config_ini = (container or {}).get("__file__", config_env)
+    LOGGER.info("Using initialisation file : [%s]", config_ini)
     if config_ini != config_env:
         cowbird.constants.COWBIRD_INI_FILE_PATH = config_ini
         config_settings["cowbird.ini_file_path"] = config_ini
+        LOGGER.info("Environment variable COWBIRD_INI_FILE_PATH [%s] ignored", config_env)
     settings = get_settings_from_config_ini(config_ini)
     settings.update(config_settings)
 
@@ -190,6 +244,11 @@ def get_app_config(container, celery=True):
     config = Configurator() if not isinstance(container, Configurator) else container
     config.setup_registry(settings=settings)
 
+    # Celery is not required in cli mode
+    if not settings.get(CLI_MODE_CFG, False):
+        # Must be done before include scan, see configure_celery for more details
+        configure_celery(config, config_ini)
+
     # don't use scan otherwise modules like 'cowbird.adapter' are
     # automatically found and cause import errors on missing packages
     print_log("Including Cowbird modules...", LOGGER)
@@ -198,9 +257,6 @@ def get_app_config(container, celery=True):
     # NOTE: don't call 'config.scan("cowbird")' to avoid parsing issues with colander/cornice,
     #       add them explicitly with 'config.include(<module>)', and then they can do 'config.scan()'
 
-    if celery:
-        config.include("pyramid_celery")
-        config.configure_celery(config_ini)
     return config
 
 
@@ -222,6 +278,22 @@ def get_settings_from_config_ini(config_ini_path, section=None):
     if section is None:
         section = "app:{}_app".format(__meta__.__package__)
     return dict(parser.items(section=section))
+
+
+def get_registry(container, nothrow=False):
+    # type: (AnyRegistryContainer, bool) -> Optional[Registry]
+    """
+    Retrieves the application ``registry`` from various containers referencing to it.
+    """
+    if isinstance(container, Celery):
+        return container.conf.get("PYRAMID_REGISTRY", {})
+    if isinstance(container, (Configurator, Request)):
+        return container.registry
+    if isinstance(container, Registry):
+        return container
+    if nothrow:
+        return None
+    raise TypeError("Could not retrieve registry from container object of type [{}].".format(type(container)))
 
 
 def get_json(response):
@@ -436,7 +508,6 @@ class ExtendedEnum(Enum):
 
 
 # taken from https://stackoverflow.com/questions/6760685/creating-a-singleton-in-python
-# works in Python 2 & 3
 class SingletonMeta(type):
     """
     A metaclass that creates a Singleton base class when called.

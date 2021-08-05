@@ -1,7 +1,7 @@
 from celery import chain, shared_task
 
 from cowbird.request_task import RequestTask
-from cowbird.services.service import Service
+from cowbird.services.service import SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM, Service
 from cowbird.services.service_factory import ServiceFactory
 from cowbird.utils import get_logger
 
@@ -12,9 +12,16 @@ class Geoserver(Service):
     """
     Keep Geoserver internal representation in sync with the platform.
     """
+    required_params = [SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM]
 
-    def __init__(self, name, url):
-        super(Geoserver, self).__init__(name, url)
+    def __init__(self, name, **kwargs):
+        # type: (str, dict) -> None
+        """
+        Create the geoserver instance.
+
+        @param name: Service name
+        """
+        super(Geoserver, self).__init__(name, **kwargs)
 
     def get_resource_id(self, resource_full_name):
         # type (str) -> str

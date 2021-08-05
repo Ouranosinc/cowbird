@@ -17,7 +17,15 @@ from webtest.response import TestResponse
 from cowbird.app import get_app
 from cowbird.constants import COWBIRD_ROOT, get_constant
 from cowbird.services.service import Service
-from cowbird.utils import CONTENT_TYPE_JSON, SingletonMeta, get_header, get_settings_from_config_ini, is_null, null
+from cowbird.utils import (
+    CONTENT_TYPE_JSON,
+    USE_TEST_CELERY_APP_CFG,
+    SingletonMeta,
+    get_header,
+    get_settings_from_config_ini,
+    is_null,
+    null
+)
 
 # employ example INI config for tests where needed to ensure that configurations are valid
 TEST_INI_FILE = os.path.join(COWBIRD_ROOT, "config/cowbird.example.ini")
@@ -84,8 +92,10 @@ class TestVersion(LooseVersion):
 
 
 class MockMagpieService(Service):
-    def __init__(self, name, url):
-        super(MockMagpieService, self).__init__(name, url)
+    required_params = []
+
+    def __init__(self, name, **kwargs):
+        super(MockMagpieService, self).__init__(name, **kwargs)
         self.event_users = []
         self.event_perms = []
         self.outbound_perms = []
@@ -121,7 +131,7 @@ class MockMagpieService(Service):
                 return
 
 
-class MockAnyService(Service):
+class MockAnyServiceBase(Service):
     ResourceId = 1000
 
     def get_resource_id(self, resource_full_name):
@@ -139,6 +149,10 @@ class MockAnyService(Service):
 
     def permission_deleted(self, permission):
         pass
+
+
+class MockAnyService(MockAnyServiceBase):
+    required_params = []
 
 
 def clear_services_instances():
@@ -161,6 +175,14 @@ def get_test_app(settings=None):
     config.registry.settings["cowbird.url"] = "http://localhost:80"
     config.registry.settings["cowbird.ini_file_path"] = TEST_INI_FILE
     config.registry.settings["cowbird.config_path"] = TEST_CFG_FILE
+    config.registry.settings["mongo_uri"] = "mongodb://{host}:{port}/{db_name}".format(
+        host=os.getenv("COWBIRD_TEST_DB_HOST", "127.0.0.1"),
+        port=os.getenv("COWBIRD_TEST_DB_PORT", "27017"),
+        db_name=os.getenv("COWBIRD_TEST_DB_NAME", "cowbird-test")
+    )
+    # For test, we want to use the real Celery app which is properly mocked
+    # By setting the internal setting USE_TEST_CELERY_APP_CFG to true, the pyramid celery app will not be used
+    config.registry.settings[USE_TEST_CELERY_APP_CFG] = True
     if settings:
         config.registry.settings.update(settings)
 

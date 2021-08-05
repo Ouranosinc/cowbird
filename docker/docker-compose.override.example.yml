@@ -9,12 +9,15 @@ services:
     environment:
       HOSTNAME: localhost
       FORWARDED_ALLOW_IPS: "*"
-      COWBIRD_CONFIG_PATH: /config.example.yml
+    env_file:
+      - ./config/cowbird/cowbird.env
     links:
       - mongodb
     volumes:
       - ../config/config.example.yml:/config.yml
       - ../config/cowbird.docker.ini:/opt/local/src/cowbird/config/cowbird.ini
+      - ../config/celeryconfig.docker.py:/opt/local/src/cowbird/config/celeryconfig.py
+      - ./user_workspaces:/user_workspaces
     restart: always
 
   worker:
@@ -25,8 +28,10 @@ services:
     volumes:
       - ../config/config.example.yml:/config.yml
       - ../config/cowbird.docker.ini:/opt/local/src/cowbird/config/cowbird.ini
-    environment:
-      COWBIRD_CONFIG_PATH: /config.yml
+      - ../config/celeryconfig.docker.py:/opt/local/src/cowbird/config/celeryconfig.py
+      - ./user_workspaces:/user_workspaces
+    env_file:
+      - ./config/cowbird/cowbird.env
     restart: always
   magpie:
     volumes:

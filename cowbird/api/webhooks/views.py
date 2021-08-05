@@ -17,7 +17,7 @@ LOGGER = get_logger(__name__)
 
 def dispatch(svc_fct):
     exceptions = []
-    event_name = inspect.getsource(svc_fct).strip("\n").strip(" ")
+    event_name = inspect.getsource(svc_fct).split(":")[1].strip()
     for svc in ServiceFactory().get_active_services():
         # Allow every service to be notified even if one of them throw an error
         try:
@@ -48,15 +48,27 @@ def post_user_webhook_view(request):
     if event == ValidOperations.CreateOperation.value:
         # FIXME: Tried with ax.URL_REGEX, but cannot match what seems valid urls...
         callback_url = ar.get_multiformat_body(request, "callback_url", pattern=None)
-        try:
-            dispatch(lambda svc: svc.user_created(user_name=user_name))
-        except Exception:  # noqa
+
+        def svc_fct(svc):
+            svc.user_created(user_name=user_name)
+    else:
+        callback_url = None
+
+        def svc_fct(svc):
+            svc.user_deleted(user_name=user_name)
+    try:
+        dispatch(svc_fct)
+    except Exception:  # noqa
+        if callback_url:
             # If something bad happens, set the status as erroneous in Magpie
             LOGGER.warning("Exception occurs while dispatching event, calling Magpie callback url : [%s]", callback_url)
-            requests.get(callback_url)
-            # TODO: return something else than 200
-    else:
-        dispatch(lambda svc: svc.user_deleted(user_name=user_name))
+            try:
+                requests.get(callback_url)
+            except requests.exceptions.RequestException as exc:
+                LOGGER.warning("Cannot complete the Magpie callback url request to [%s] : [%s]", callback_url, exc)
+        else:
+            LOGGER.warning("Exception occurs while dispatching event")
+        # TODO: return something else than 200
     return ax.valid_http(HTTPOk, detail=s.UserWebhook_POST_OkResponseSchema.description)
 
 

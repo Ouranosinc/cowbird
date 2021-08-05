@@ -6,8 +6,9 @@ Additional typing definitions.
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Any, Dict, List, Tuple, Union
+    from typing import Any, Dict, List, Tuple, Type, Union
 
+    from celery.app import Celery
     from pyramid.config import Configurator
     from pyramid.httpexceptions import HTTPException
     from pyramid.registry import Registry
@@ -24,6 +25,7 @@ if TYPE_CHECKING:
     SettingValue = Union[str, Number, bool, None]
     SettingsType = Dict[str, SettingValue]
     AnySettingsContainer = Union[Configurator, Registry, Request, SettingsType]
+    AnyRegistryContainer = Union[Configurator, Registry, Request, Celery]
 
     ParamsType = Dict[str, Any]
     CookiesType = Union[Dict[str, str], List[Tuple[str, str]]]
@@ -41,3 +43,6 @@ if TYPE_CHECKING:
     ConfigItem = Dict[str, JSON]
     ConfigList = List[ConfigItem]
     ConfigDict = Dict[str, Union[str, ConfigItem, ConfigList, JSON]]
+
+    from cowbird.database.stores import StoreInterface
+    StoreSelector = Union[Type[StoreInterface], StoreInterface, str]
