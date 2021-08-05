@@ -2,7 +2,7 @@ import importlib
 from typing import TYPE_CHECKING
 
 from cowbird.config import get_all_configs
-from cowbird.utils import SingletonMeta, get_config_path, get_logger
+from cowbird.utils import SingletonMeta, get_config_path, get_logger, get_settings
 
 if TYPE_CHECKING:
     from typing import List
@@ -21,6 +21,7 @@ class ServiceFactory(metaclass=SingletonMeta):
     """
 
     def __init__(self):
+        self.settings = get_settings(None, app=True)
         config_path = get_config_path()
         svcs_configs = get_all_configs(config_path, "services", allow_missing=True)
         self.services_cfg = {}
@@ -52,7 +53,7 @@ class ServiceFactory(metaclass=SingletonMeta):
                self.services_cfg[name].get("active", False):
                 module = importlib.import_module(".".join(["cowbird.services.impl", name.lower()]))
                 cls = getattr(module, name)
-                svc = cls(name, **self.services_cfg[name])
+                svc = cls(settings=self.settings, name=name, **self.services_cfg[name])
             self.services[name] = svc
             return svc
 

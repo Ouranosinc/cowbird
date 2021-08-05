@@ -1,8 +1,13 @@
 import os
 import shutil
+from typing import TYPE_CHECKING
 
 from cowbird.services.service import SERVICE_WORKSPACE_DIR_PARAM, Service
 from cowbird.utils import get_logger
+
+if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
+    from cowbird.typedefs import SettingsType
 
 LOGGER = get_logger(__name__)
 
@@ -13,14 +18,15 @@ class FileSystem(Service):
     """
     required_params = [SERVICE_WORKSPACE_DIR_PARAM]
 
-    def __init__(self, name, **kwargs):
-        # type: (str, dict) -> None
+    def __init__(self, settings, name, **kwargs):
+        # type: (SettingsType, str, dict) -> None
         """
         Create the file system instance.
 
+        @param settings: Cowbird settings for convenience
         @param name: Service name
         """
-        super(FileSystem, self).__init__(name, **kwargs)
+        super(FileSystem, self).__init__(settings, name, **kwargs)
 
     def get_resource_id(self, resource_full_name):
         # type (str) -> str

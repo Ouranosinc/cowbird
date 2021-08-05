@@ -567,3 +567,11 @@ def get_config_path():
                         default_value=None,
                         raise_missing=False, raise_not_set=False,
                         print_missing=True)
+
+
+def get_ssl_verify(container):
+    # type: (Optional[AnySettingsContainer]) -> bool
+    return get_constant("COWBIRD_SSL_VERIFY", container,
+                        default_value=True,
+                        raise_missing=False, raise_not_set=False,
+                        print_missing=True)

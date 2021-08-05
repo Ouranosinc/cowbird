@@ -94,8 +94,8 @@ class TestVersion(LooseVersion):
 class MockMagpieService(Service):
     required_params = []
 
-    def __init__(self, name, **kwargs):
-        super(MockMagpieService, self).__init__(name, **kwargs)
+    def __init__(self, settings, name, **kwargs):
+        super(MockMagpieService, self).__init__(settings, name, **kwargs)
         self.event_users = []
         self.event_perms = []
         self.outbound_perms = []

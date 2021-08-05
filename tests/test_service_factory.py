@@ -72,17 +72,17 @@ class TestServiceFactory(unittest.TestCase):
 
         # Should raise if the config does not include a required param
         with pytest.raises(ServiceConfigurationException):
-            GoodService("GoodService", **invalid_config)
+            GoodService(ServiceFactory().settings, "GoodService", **invalid_config)
 
         # Should raise if the service does not define its required params
         with pytest.raises(NotImplementedError):
-            BadService("BadService", **valid_config)
+            BadService(ServiceFactory().settings, "BadService", **valid_config)
 
         # Should raise if a service defines an invalid param
         with pytest.raises(Exception):
             BadParamService("BadParamService", **valid_config)
 
-        svc = GoodService("GoodService", **valid_config)
+        svc = GoodService(ServiceFactory().settings, "GoodService", **valid_config)
         assert getattr(svc, SERVICE_URL_PARAM) == valid_config[SERVICE_URL_PARAM]
         assert getattr(svc, SERVICE_WORKSPACE_DIR_PARAM) == valid_config[SERVICE_WORKSPACE_DIR_PARAM]
 
