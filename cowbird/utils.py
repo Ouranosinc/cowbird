@@ -18,7 +18,7 @@ from pyramid.httpexceptions import HTTPClientError, HTTPException
 from pyramid.registry import Registry
 from pyramid.request import Request
 from pyramid.response import Response
-from pyramid.settings import truthy
+from pyramid.settings import asbool, truthy
 from pyramid.threadlocal import get_current_registry
 from pyramid_celery import celery_app as pyramid_celery_app
 from requests.structures import CaseInsensitiveDict
@@ -571,7 +571,7 @@ def get_config_path():
 
 def get_ssl_verify(container):
     # type: (Optional[AnySettingsContainer]) -> bool
-    return get_constant("COWBIRD_SSL_VERIFY", container,
-                        default_value=True,
-                        raise_missing=False, raise_not_set=False,
-                        print_missing=True)
+    return asbool(get_constant("COWBIRD_SSL_VERIFY", container,
+                               default_value=True,
+                               raise_missing=False, raise_not_set=False,
+                               print_missing=True))
