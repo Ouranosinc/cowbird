@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from cowbird.database.stores import StoreInterface
 
 if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
     from typing import Type, Union
 
     from cowbird.typedefs import JSON, AnySettingsContainer

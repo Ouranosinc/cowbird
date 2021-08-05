@@ -7,6 +7,7 @@ from cowbird.monitoring.monitor import Monitor, MonitorException
 from cowbird.utils import SingletonMeta, get_logger
 
 if TYPE_CHECKING:
+    # pylint: disable=E0601,used-before-assignment
     from typing import Type, Union
 
     from cowbird.monitoring.fsmonitor import FSMonitor
@@ -50,10 +51,10 @@ class Monitoring(metaclass=SingletonMeta):
     def register(self, path, recursive, cb_monitor):
         # type: (str, bool, Union[FSMonitor, Type[FSMonitor], str]) -> Monitor
         """
-        Register a monitor for a specific path and start it.
-        If a monitor already exists for the specific path/cb_monitor combination it is directly returned. If this
-        monitor was not recursively monitoring its path and the `recursive` flag is now true, this one take precedence
-        and the monitor is updated accordingly. If the `recursive` flag was true and now it is false it has no effect.
+        Register a monitor for a specific path and start it. If a monitor already exists for the specific
+        path/cb_monitor combination it is directly returned. If this monitor was not recursively monitoring its path and
+        the `recursive` flag is now true, this one take precedence and the monitor is updated accordingly. If the
+        `recursive` flag was true and now it is false it has no effect.
 
         @param path: Path to monitor
         @param recursive: Monitor subdirectory recursively?

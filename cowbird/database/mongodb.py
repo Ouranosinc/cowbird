@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 import pymongo
 
 from cowbird.database.base import DatabaseInterface
-from cowbird.database.stores import MonitoringStore, StoreInterface
+from cowbird.database.stores import MonitoringStore
 from cowbird.utils import get_settings
 
 # pylint: disable=C0103,invalid-name
@@ -17,14 +17,15 @@ MongodbStores = frozenset([
 ])
 
 if TYPE_CHECKING:
+    # pylint: disable=E0601,used-before-assignment
     from typing import Any, Optional, Type, Union
 
     from pymongo.database import Database
 
     from cowbird.database.base import StoreSelector
+    from cowbird.database.stores import StoreInterface
     from cowbird.typedefs import JSON, AnySettingsContainer
 
-    # pylint: disable=E0601,used-before-assignment
     AnyMongodbStore = Union[MongodbStores]
     AnyMongodbStoreType = Union[
         StoreSelector,

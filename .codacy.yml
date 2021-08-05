@@ -4,3 +4,4 @@ exclude_paths:
   - 'docs/conf.py'
   - 'docs/sync.py'
   - 'ci/travis_pypi_setup.py'
+  - 'config/celeryconfig.py'
