@@ -11,7 +11,7 @@ import pymongo
 from cowbird.monitoring.monitor import Monitor, MonitorException
 
 if TYPE_CHECKING:
-    # pylint: disable=E0601,used-before-assignment
+    # pylint: disable=W0611,unused-import
     from typing import Any, Dict, List, Optional, Tuple
 
     from pymongo.collection import Collection

@@ -7,7 +7,7 @@ from cowbird.monitoring.monitor import Monitor, MonitorException
 from cowbird.utils import SingletonMeta, get_logger
 
 if TYPE_CHECKING:
-    # pylint: disable=E0601,used-before-assignment
+    # pylint: disable=W0611,unused-import
     from typing import Type, Union
 
     from cowbird.monitoring.fsmonitor import FSMonitor

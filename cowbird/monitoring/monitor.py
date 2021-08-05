@@ -9,7 +9,7 @@ from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.utils import get_logger
 
 if TYPE_CHECKING:
-    # pylint: disable=E0601,used-before-assignment
+    # pylint: disable=W0611,unused-import
     from typing import Dict, Type, Union
 
     from watchdog.events import (

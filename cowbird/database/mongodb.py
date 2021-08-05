@@ -17,7 +17,7 @@ MongodbStores = frozenset([
 ])
 
 if TYPE_CHECKING:
-    # pylint: disable=E0601,used-before-assignment
+    # pylint: disable=W0611,unused-import
     from typing import Any, Optional, Type, Union
 
     from pymongo.database import Database
