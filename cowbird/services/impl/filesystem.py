@@ -14,6 +14,12 @@ class FileSystem(Service):
     required_params = [SERVICE_WORKSPACE_DIR_PARAM]
 
     def __init__(self, name, **kwargs):
+        # type: (str, dict) -> None
+        """
+        Create the file system instance.
+
+        @param name: Service name
+        """
         super(FileSystem, self).__init__(name, **kwargs)
 
     def get_resource_id(self, resource_full_name):

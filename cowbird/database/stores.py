@@ -27,6 +27,9 @@ class StoreInterface(object, metaclass=abc.ABCMeta):
     index_fields = []
 
     def __init__(self):
+        """
+        Check that the store implementation defines its type and index_fields.
+        """
         if not self.type:
             raise NotImplementedError("Store 'type' must be overridden in inheriting class.")
         if not self.index_fields:
@@ -40,6 +43,9 @@ class MongodbStore:
 
     def __init__(self, collection):
         # type: (Collection, Optional[Dict[str, Any]]) -> None
+        """
+        Validate and hold the collection for all the implementation.
+        """
         if not isinstance(collection, pymongo.collection.Collection):
             raise TypeError("Collection not of expected type.")
         self.collection = collection  # type: Collection
@@ -50,11 +56,10 @@ class MongodbStore:
         """
         Filters :class:`MongodbStore`-specific arguments to safely pass them down its ``__init__``.
         """
-        collection = None
         if len(args):
             collection = args[0]
-        elif "collection" in kwargs:    # pylint: disable=R1715
-            collection = kwargs["collection"]
+        else:
+            collection = kwargs.get("collection", None)
         return tuple([collection]), {}
 
 
@@ -68,6 +73,9 @@ class MonitoringStore(StoreInterface, MongodbStore):
     index_fields = ["callback", "path"]
 
     def __init__(self, *args, **kwargs):
+        """
+        Init the store used to save monitors.
+        """
         db_args, db_kwargs = MongodbStore.get_args_kwargs(*args, **kwargs)
         StoreInterface.__init__(self)
         MongodbStore.__init__(self, *db_args, **db_kwargs)

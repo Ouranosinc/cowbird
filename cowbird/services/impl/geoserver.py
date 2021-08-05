@@ -15,6 +15,12 @@ class Geoserver(Service):
     required_params = [SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM]
 
     def __init__(self, name, **kwargs):
+        # type: (str, dict) -> None
+        """
+        Create the geoserver instance.
+
+        @param name: Service name
+        """
         super(Geoserver, self).__init__(name, **kwargs)
 
     def get_resource_id(self, resource_full_name):

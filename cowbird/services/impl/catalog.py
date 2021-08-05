@@ -13,6 +13,12 @@ class Catalog(Service, FSMonitor):
     required_params = [SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM]
 
     def __init__(self, name, **kwargs):
+        # type: (str, dict) -> None
+        """
+        Create the catalog instance.
+
+        @param name: Service name
+        """
         super(Catalog, self).__init__(name, **kwargs)
         # TODO: Need to monitor data directory
 

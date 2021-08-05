@@ -31,11 +31,17 @@ if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import _TC  # noqa: E0611,F401,W0212 # pylint: disable=E0611
     from typing import Any, List, NoReturn, Optional, Type, Union
-    AnyRegistryContainer = Union[Configurator, Registry, Request, Celery]
 
     from pyramid.events import NewRequest
 
-    from cowbird.typedefs import AnyHeadersType, AnyKey, AnyResponseType, AnySettingsContainer, SettingsType
+    from cowbird.typedefs import (
+        AnyHeadersType,
+        AnyKey,
+        AnyRegistryContainer,
+        AnyResponseType,
+        AnySettingsContainer,
+        SettingsType
+    )
 
 CONTENT_TYPE_ANY = "*/*"
 CONTENT_TYPE_JSON = "application/json"

@@ -48,7 +48,7 @@ class Monitor(FileSystemEventHandler):
         @param callback: Events are sent to this FSMonitor.
                          Can be an object, a class type implementing :class:`FSMonitor` or a string containing module
                          and class name. The class type or string is used to instantiate an object using the class
-                         method `FSMonitor.get_instance()`
+                         method :meth:`FSMonitor.get_instance()`
         """
         if not os.path.exists(path):
             raise MonitorException("Cannot monitor the following file or directory [{}]: No such file or directory"

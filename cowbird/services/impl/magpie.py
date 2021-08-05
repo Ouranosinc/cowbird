@@ -14,6 +14,12 @@ class Magpie(Service):
     required_params = [SERVICE_URL_PARAM]
 
     def __init__(self, name, **kwargs):
+        # type: (str, dict) -> None
+        """
+        Create the magpie instance and instantiate the permission synchronizer that will handle the permission events.
+
+        @param name: Service name
+        """
         super(Magpie, self).__init__(name, **kwargs)
         self.permissions_synch = PermissionSynchronizer(self)
 

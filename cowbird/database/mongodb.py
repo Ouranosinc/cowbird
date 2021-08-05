@@ -42,6 +42,9 @@ class MongoDatabase(DatabaseInterface):
 
     def __init__(self, container):
         # type: (AnySettingsContainer) -> None
+        """
+        Initialize the mongo database from various type of container.
+        """
         super(MongoDatabase, self).__init__(container)
         self._database = get_mongodb_engine(container)
         self._settings = get_settings(container)

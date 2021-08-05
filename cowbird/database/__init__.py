@@ -1,3 +1,9 @@
+"""
+Database package for pyramid.
+
+Add the database in the pyramid registry and a property db for the requests.
+"""
+
 import logging
 from typing import TYPE_CHECKING
 

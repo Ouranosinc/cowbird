@@ -5,10 +5,7 @@ from cowbird.database.stores import StoreInterface
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Type, Union
-
-    from cowbird.typedefs import JSON, AnySettingsContainer
-    StoreSelector = Union[Type[StoreInterface], StoreInterface, str]
+    from cowbird.typedefs import JSON, AnySettingsContainer, StoreSelector
 
 
 class DatabaseInterface(metaclass=abc.ABCMeta):
@@ -19,6 +16,9 @@ class DatabaseInterface(metaclass=abc.ABCMeta):
 
     def __init__(self, _):
         # type: (AnySettingsContainer) -> None
+        """
+        Database interface defining a minimum set of function mostly around store management.
+        """
         if not self.type:  # pylint: disable=E1101,no-member
             raise NotImplementedError("Database 'type' must be overridden in inheriting class.")
 
