@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from cowbird.cli import LOGGER
 from cowbird.cli.utils import get_config_parser, get_format_parser, print_format, set_log_level, subparser_help
 from cowbird.services import get_services
-from cowbird.utils import USE_CELERY_CFG, get_app_config
+from cowbird.utils import CLI_MODE_CFG, get_app_config
 
 if TYPE_CHECKING:
     from cowbird.cli.utils import CommandPrefixes, HelperParser, ParsedArgs, ParserArgs, ParseResult, SharedParsers
@@ -36,8 +36,10 @@ def main(args=None, parser=None, namespace=None):
     args = parser.parse_args(args=args, namespace=namespace)
     set_log_level(args)
     LOGGER.debug("Getting configuration")
+
+    # Set the internal setting CLI_MODE_CFG to true which is used to prevent celery activation
     config = get_app_config({"cowbird.ini_file_path": args.config,
-                             USE_CELERY_CFG: False})
+                             CLI_MODE_CFG: True})
     if args.command == "list":
         services = get_services(config)
         svc_json = [svc.name for svc in services]

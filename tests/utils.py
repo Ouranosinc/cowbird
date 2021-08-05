@@ -19,7 +19,7 @@ from cowbird.constants import COWBIRD_ROOT, get_constant
 from cowbird.services.service import Service
 from cowbird.utils import (
     CONTENT_TYPE_JSON,
-    USE_PYRAMID_CELERY_APP_CFG,
+    USE_TEST_CELERY_APP_CFG,
     SingletonMeta,
     get_header,
     get_settings_from_config_ini,
@@ -180,8 +180,9 @@ def get_test_app(settings=None):
         port=os.getenv("COWBIRD_TEST_DB_PORT", "27017"),
         db_name=os.getenv("COWBIRD_TEST_DB_NAME", "cowbird-test")
     )
-    #  For test, we want to use the real Celery app which is properly mocked
-    config.registry.settings[USE_PYRAMID_CELERY_APP_CFG] = False
+    # For test, we want to use the real Celery app which is properly mocked
+    # By setting the internal setting USE_TEST_CELERY_APP_CFG to true, the pyramid celery app will not be used
+    config.registry.settings[USE_TEST_CELERY_APP_CFG] = True
     if settings:
         config.registry.settings.update(settings)
 
