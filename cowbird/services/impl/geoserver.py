@@ -1,11 +1,11 @@
-from typing import TYPE_CHECKING
-
+import requests
 from celery import chain, shared_task
 
 from cowbird.request_task import RequestTask
-from cowbird.services.service import SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM, Service
+from cowbird.services.service import (Service, SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM, SERVICE_ADMIN_USER,
+                                      SERVICE_ADMIN_PASSWORD)
 from cowbird.services.service_factory import ServiceFactory
-from cowbird.utils import get_logger
+from cowbird.utils import get_logger, CONTENT_TYPE_JSON
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
@@ -18,7 +18,7 @@ class Geoserver(Service):
     """
     Keep Geoserver internal representation in sync with the platform.
     """
-    required_params = [SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM]
+    required_params = [SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM, SERVICE_ADMIN_USER, SERVICE_ADMIN_PASSWORD]
 
     def __init__(self, settings, name, **kwargs):
         # type: (SettingsType, str, dict) -> None
@@ -28,17 +28,19 @@ class Geoserver(Service):
         @param settings: Cowbird settings for convenience
         @param name: Service name
         """
-        super(Geoserver, self).__init__(settings, name, **kwargs)
+        super(Geoserver, self).__init__(name, **kwargs)
+        self.api_url = "{}/rest".format(self.url)
+        self.auth = (self.admin_user, self.admin_password)
+        self.headers = {"Content-type": CONTENT_TYPE_JSON}
 
     def get_resource_id(self, resource_full_name):
         # type (str) -> str
         raise NotImplementedError
 
     def user_created(self, user_name):
-        # ..todo: Replace this simple stub with real implementation
-        res = chain(create_workspace.s(user_name),
-                    create_datastore.s("default"))
-        res.delay()
+        # res = chain(create_workspace.s(user_name), create_datastore.s(user_name)
+        # res.delay()
+        self.create_workspace(user_name)
 
     def user_deleted(self, user_name):
         raise NotImplementedError
@@ -54,13 +56,27 @@ class Geoserver(Service):
         """
         Create a new Geoserver workspace.
 
-        @param self: Geoserver instance
         @param name: Workspace name
-        @return: Workspace id
         """
         LOGGER.info("Creating workspace in geoserver")
-        # TODO
-        return 1
+
+        request_url = "{}/workspaces/".format(self.api_url)
+        payload = {"workspace": {"name": name, "isolated": "True"}}
+
+        request = requests.post(
+            url=request_url,
+            json=payload,
+            auth=self.auth,
+            headers=self.headers,
+        )
+
+        request_code = request.status_code
+        if request_code == 201:
+            LOGGER.info("Geoserver workspace was successfully created")
+        elif request_code == 409:
+            LOGGER.error("Unable to create Geoserver workspace as it already exists")
+        else:
+            LOGGER.error("There was an error creating the workspace in Geoserver")
 
     def create_datastore(self, workspace_id, name):
         # type (Geoserver, int, str) -> int
@@ -85,7 +101,7 @@ def create_workspace(self, name):
 
 
 @shared_task(bind=True, base=RequestTask)
-def create_datastore(self, workspace_id, name):
+def create_datastore(self, workspace_name):
     # type (int, str) -> int
     # Avoid any actual logic in celery task handler, only task related stuff should be done here
-    return ServiceFactory().get_service("Geoserver").create_datastore(workspace_id, name)
+    return ServiceFactory().get_service("Geoserver").create_datastore(workspace_name)
