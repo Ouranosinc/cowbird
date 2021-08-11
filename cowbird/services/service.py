@@ -12,11 +12,15 @@ if TYPE_CHECKING:
 SERVICE_PRIORITY_PARAM = "priority"
 SERVICE_URL_PARAM = "url"
 SERVICE_WORKSPACE_DIR_PARAM = "workspace_dir"
+SERVICE_ADMIN_USER = "admin_user"
+SERVICE_ADMIN_PASSWORD = "admin_password"
 
 SERVICE_PARAMETERS = frozenset([
     SERVICE_PRIORITY_PARAM,
     SERVICE_URL_PARAM,
     SERVICE_WORKSPACE_DIR_PARAM,
+    SERVICE_ADMIN_USER,
+    SERVICE_ADMIN_PASSWORD
 ])
 
 LOGGER = get_logger(__name__)
@@ -30,8 +34,15 @@ class ServiceConfigurationException(Exception):
 
 class Service(abc.ABC):
     __slots__ = ["required_params",  # Must be defined in each and every implementation
-                 "settings", "name", "ssl_verify",
-                 SERVICE_PRIORITY_PARAM, SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM]
+                 "settings",
+                 "name",
+                 "ssl_verify",
+                 SERVICE_PRIORITY_PARAM,
+                 SERVICE_URL_PARAM,
+                 SERVICE_WORKSPACE_DIR_PARAM,
+                 SERVICE_ADMIN_USER,
+                 SERVICE_ADMIN_PASSWORD
+                 ]
     """
     Service interface used to notify implemented services of users/permissions changes.
 
@@ -59,7 +70,8 @@ class Service(abc.ABC):
         self.workspace_dir = kwargs.get(SERVICE_WORKSPACE_DIR_PARAM, None)
         # Services making outbound requests should use this settings to avoid SSLError on test/dev setup
         self.ssl_verify = get_ssl_verify(self.settings)
-
+        self.admin_user = kwargs.get(SERVICE_ADMIN_USER, None)
+        self.admin_password = kwargs.get(SERVICE_ADMIN_PASSWORD, None)
         for required_param in self.required_params:  # pylint: disable=E1101,no-member
             if required_param not in SERVICE_PARAMETERS:
                 raise Exception("Invalid service parameter : {}".format(required_param))
