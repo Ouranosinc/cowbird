@@ -48,3 +48,41 @@ services:
       MAGPIE_POSTGRES_DB: magpie
       MAGPIE_POSTGRES_PORT: 5432
     restart: always
+
+  geoserver:
+    image: kartoza/geoserver:2.19.0
+    container_name: geoserver
+    ports:
+      - 8765:8080
+    restart: on-failure
+    volumes:
+      - /user_workspaces:/user_workspaces
+    environment:
+      - GEOSERVER_DATA_DIR=/opt/footprints_dir
+      - GEOWEBCACHE_CACHE_DIR=/opt/geoserver/data_dir/gwc
+      - GEOSERVER_ADMIN_USER=admin
+      - GEOSERVER_ADMIN_PASSWORD=myawesomegeoserver
+      - INITIAL_MEMORY=2G
+      - MAXIMUM_MEMORY=4G
+    depends_on:
+      - geoserver-db
+    healthcheck:
+      test: curl --fail -s http://localhost:8080/ || exit 1
+      interval: 1m30s
+      timeout: 10s
+      retries: 3
+
+  geoserver-db:
+    image: kartoza/postgis:13-3.1
+    container_name: geoserver-db
+    ports:
+      - 32767:5432
+    environment:
+      - POSTGRES_DB=gis,gwc
+      - POSTGRES_USER=docker
+      - POSTGRES_PASS=docker
+      - ALLOW_IP_RANGE=0.0.0.0/0
+      - FORCE_SSL=FALSE
+    restart: on-failure
+    healthcheck:
+      test: "exit 0"
