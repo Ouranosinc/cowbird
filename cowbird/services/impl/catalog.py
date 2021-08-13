@@ -1,7 +1,13 @@
+from typing import TYPE_CHECKING
+
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
 from cowbird.services.service import SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM, Service
 from cowbird.utils import get_logger
+
+if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
+    from cowbird.typedefs import SettingsType
 
 LOGGER = get_logger(__name__)
 
@@ -12,14 +18,15 @@ class Catalog(Service, FSMonitor):
     """
     required_params = [SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM]
 
-    def __init__(self, name, **kwargs):
-        # type: (str, dict) -> None
+    def __init__(self, settings, name, **kwargs):
+        # type: (SettingsType, str, dict) -> None
         """
         Create the catalog instance.
 
+        @param settings: Cowbird settings for convenience
         @param name: Service name
         """
-        super(Catalog, self).__init__(name, **kwargs)
+        super(Catalog, self).__init__(settings, name, **kwargs)
         # TODO: Need to monitor data directory
 
     def get_resource_id(self, resource_full_name):

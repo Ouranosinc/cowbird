@@ -1,5 +1,11 @@
+from typing import TYPE_CHECKING
+
 from cowbird.permissions_synchronizer import Permission, PermissionSynchronizer
 from cowbird.services.service import SERVICE_URL_PARAM, Service
+
+if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
+    from cowbird.typedefs import SettingsType
 
 
 class Magpie(Service):
@@ -13,14 +19,15 @@ class Magpie(Service):
     """
     required_params = [SERVICE_URL_PARAM]
 
-    def __init__(self, name, **kwargs):
-        # type: (str, dict) -> None
+    def __init__(self, settings, name, **kwargs):
+        # type: (SettingsType, str, dict) -> None
         """
         Create the magpie instance and instantiate the permission synchronizer that will handle the permission events.
 
+        @param settings: Cowbird settings for convenience
         @param name: Service name
         """
-        super(Magpie, self).__init__(name, **kwargs)
+        super(Magpie, self).__init__(settings, name, **kwargs)
         self.permissions_synch = PermissionSynchronizer(self)
 
     def get_resource_id(self, resource_full_name):

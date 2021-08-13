@@ -1,8 +1,13 @@
 import abc
 import math
 import os
+from typing import TYPE_CHECKING
 
-from cowbird.utils import get_logger
+from cowbird.utils import get_logger, get_ssl_verify
+
+if TYPE_CHECKING:
+    # pylint: disable=W0611,unused-import
+    from cowbird.typedefs import SettingsType
 
 SERVICE_PRIORITY_PARAM = "priority"
 SERVICE_URL_PARAM = "url"
@@ -25,7 +30,8 @@ class ServiceConfigurationException(Exception):
 
 class Service(abc.ABC):
     __slots__ = ["required_params",  # Must be defined in each and every implementation
-                 "name", SERVICE_PRIORITY_PARAM, SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM]
+                 "settings", "name", "ssl_verify",
+                 SERVICE_PRIORITY_PARAM, SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM]
     """
     Service interface used to notify implemented services of users/permissions changes.
 
@@ -33,9 +39,10 @@ class Service(abc.ABC):
               services are up to date.
     """
 
-    def __init__(self, name, **kwargs):
-        # type (str, dict) -> None
+    def __init__(self, settings, name, **kwargs):
+        # type: (SettingsType, str, dict) -> None
         """
+        @param settings: Cowbird settings for convenience
         @param name: Service name
         @param kwargs: The base class handle, but doesn't require the following variables:
                         param `priority`: Relative priority between services while handling events
@@ -45,10 +52,14 @@ class Service(abc.ABC):
         """
         if getattr(self, "required_params", None) is None:
             raise NotImplementedError("Service 'required_params' must be overridden in inheriting class.")
+        self.settings = settings
         self.name = name
         self.priority = kwargs.get(SERVICE_PRIORITY_PARAM, math.inf)
         self.url = kwargs.get(SERVICE_URL_PARAM, None)
         self.workspace_dir = kwargs.get(SERVICE_WORKSPACE_DIR_PARAM, None)
+        # Services making outbound requests should use this settings to avoid SSLError on test/dev setup
+        self.ssl_verify = get_ssl_verify(self.settings)
+
         for required_param in self.required_params:  # pylint: disable=E1101,no-member
             if required_param not in SERVICE_PARAMETERS:
                 raise Exception("Invalid service parameter : {}".format(required_param))

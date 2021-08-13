@@ -10,7 +10,7 @@ from cowbird.api import schemas as s
 from cowbird.api.schemas import ValidOperations
 from cowbird.permissions_synchronizer import Permission
 from cowbird.services.service_factory import ServiceFactory
-from cowbird.utils import get_logger
+from cowbird.utils import get_logger, get_ssl_verify
 
 LOGGER = get_logger(__name__)
 
@@ -63,7 +63,7 @@ def post_user_webhook_view(request):
             # If something bad happens, set the status as erroneous in Magpie
             LOGGER.warning("Exception occurs while dispatching event, calling Magpie callback url : [%s]", callback_url)
             try:
-                requests.get(callback_url)
+                requests.get(callback_url, verify=get_ssl_verify(request))
             except requests.exceptions.RequestException as exc:
                 LOGGER.warning("Cannot complete the Magpie callback url request to [%s] : [%s]", callback_url, exc)
         else:
