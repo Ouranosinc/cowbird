@@ -65,27 +65,22 @@ class Geoserver(Service):
 
         request_url = "{}/workspaces/".format(self.api_url)
         payload = {"workspace": {"name": name, "isolated": "True"}}
-
-        request = requests.post(
-            url=request_url,
-            json=payload,
-            auth=self.auth,
-            headers=self.headers,
-        )
+        request = requests.post(url=request_url, json=payload, auth=self.auth, headers=self.headers)
 
         request_code = request.status_code
         string_to_find = "Workspace &#39;{}&#39; already exists".format(name)
         if request_code == 201:
             LOGGER.info("Geoserver workspace was successfully created : %s", name)
         elif request_code == 401 and string_to_find in request.text:
-            # This is done because Geoserver's reply/error code is misleading in this case
-            # and returns HTML content. `raise_for_status` only states invalid credentials
+            # This is done because Geoserver's reply/error code is misleading in this case and
+            # returns HTML content.
             LOGGER.error("The following Geoserver workspace already exists : %s", name)
+        elif request_code == 401:
+            LOGGER.error("The request has not been applied because it lacks valid authentication credentials.")
         elif request_code == 500:
             LOGGER.error(request.text)
         else:
             LOGGER.error("There was an error creating the workspace in Geoserver : %s", name)
-            request.raise_for_status()
 
     def create_datastore(self, workspace_name):
         # type (Geoserver, int, str) -> int
@@ -137,11 +132,12 @@ class Geoserver(Service):
         request_code = request.status_code
         if request_code == 201:
             LOGGER.info("Datastore has been successfully created : %s", datastore_name)
+        elif request_code == 401:
+            LOGGER.error("The request has not been applied because it lacks valid authentication credentials.")
         elif request_code == 500:
             LOGGER.error(request.text)
         else:
             LOGGER.error("There was an error creating the datastore : %s", datastore_name)
-            request.raise_for_status()
 
     def _configure_datastore_settings(self, datastore_name, workspace_name):
         """
@@ -198,11 +194,12 @@ class Geoserver(Service):
         request_code = request.status_code
         if request_code == 200:
             LOGGER.info("Datastore has been successfully configured : %s", datastore_name)
+        elif request_code == 401:
+            LOGGER.error("The request has not been applied because it lacks valid authentication credentials.")
         elif request_code == 500:
             LOGGER.error(request.text)
         else:
             LOGGER.error("There was an error configuring the datastore : %s", datastore_name)
-            request.raise_for_status()
 
 
 @shared_task(bind=True, base=RequestTask)
