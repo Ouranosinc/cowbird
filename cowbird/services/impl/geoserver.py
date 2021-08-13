@@ -46,7 +46,7 @@ class Geoserver(Service):
         self.create_datastore(user_name)
 
     def user_deleted(self, user_name):
-        LOGGER.info("Creating workspace in geoserver")
+        LOGGER.info("Removing workspace in geoserver")
         self.remove_workspace(user_name)
 
     def permission_created(self, permission):
@@ -71,11 +71,11 @@ class Geoserver(Service):
         request_code = request.status_code
         string_to_find = "Workspace &#39;{}&#39; already exists".format(name)
         if request_code == 201:
-            LOGGER.info("Geoserver workspace was successfully created : %s", name)
+            LOGGER.info("Geoserver workspace [%s] was successfully created.", name)
         elif request_code == 401 and string_to_find in request.text:
             # This is done because Geoserver's reply/error code is misleading in this case and
             # returns HTML content.
-            LOGGER.error("The following Geoserver workspace already exists : %s", name)
+            LOGGER.error("The following Geoserver workspace already exists: [%s]", name)
         elif request_code == 401:
             LOGGER.error("The request has not been applied because it lacks valid authentication credentials.")
         elif request_code == 500:
@@ -95,12 +95,12 @@ class Geoserver(Service):
 
         request_code = request.status_code
         if request_code == 200:
-            LOGGER.info("Geoserver workspace was successfully removed : %s", name)
+            LOGGER.info("Geoserver workspace [%s] was successfully removed.", name)
         elif request_code == 403:
             LOGGER.error(
-                "Geoserver workspace '%s' is not empty. Make sure `recurse` is set to `true` to delete workspace")
+                "Geoserver workspace [%s] is not empty. Make sure `recurse` is set to `true` to delete workspace")
         elif request_code == 404:
-            LOGGER.error("Geoserver workspace '%s' was not found.", name)
+            LOGGER.error("Geoserver workspace [%s] was not found.", name)
 
     def create_datastore(self, workspace_name):
         # type (Geoserver, int, str) -> int
@@ -151,13 +151,13 @@ class Geoserver(Service):
 
         request_code = request.status_code
         if request_code == 201:
-            LOGGER.info("Datastore has been successfully created : %s", datastore_name)
+            LOGGER.info("Datastore [%s] has been successfully created.", datastore_name)
         elif request_code == 401:
             LOGGER.error("The request has not been applied because it lacks valid authentication credentials.")
         elif request_code == 500:
             LOGGER.error(request.text)
         else:
-            LOGGER.error("There was an error creating the datastore : %s", datastore_name)
+            LOGGER.error("There was an error creating the following datastore: [%s]", datastore_name)
 
     def _configure_datastore_settings(self, datastore_name, workspace_name):
         """
@@ -213,13 +213,13 @@ class Geoserver(Service):
 
         request_code = request.status_code
         if request_code == 200:
-            LOGGER.info("Datastore has been successfully configured : %s", datastore_name)
+            LOGGER.info("Datastore [%s] has been successfully configured.", datastore_name)
         elif request_code == 401:
             LOGGER.error("The request has not been applied because it lacks valid authentication credentials.")
         elif request_code == 500:
             LOGGER.error(request.text)
         else:
-            LOGGER.error("There was an error configuring the datastore : %s", datastore_name)
+            LOGGER.error("There was an error configuring the following datastore: [%s]", datastore_name)
 
 
 @shared_task(bind=True, base=RequestTask)
