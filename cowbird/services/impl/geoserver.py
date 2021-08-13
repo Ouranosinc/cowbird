@@ -1,3 +1,5 @@
+import os
+
 import requests
 from celery import chain, shared_task
 
@@ -41,6 +43,7 @@ class Geoserver(Service):
         # res = chain(create_workspace.s(user_name), create_datastore.s(user_name)
         # res.delay()
         self.create_workspace(user_name)
+        self.create_datastore(user_name)
 
     def user_deleted(self, user_name):
         raise NotImplementedError
@@ -71,26 +74,135 @@ class Geoserver(Service):
         )
 
         request_code = request.status_code
+        string_to_find = "Workspace &#39;{}&#39; already exists".format(name)
         if request_code == 201:
-            LOGGER.info("Geoserver workspace was successfully created")
-        elif request_code == 409:
-            LOGGER.error("Unable to create Geoserver workspace as it already exists")
+            LOGGER.info("Geoserver workspace was successfully created : %s", name)
+        elif request_code == 401 and string_to_find in request.text:
+            # This is done because Geoserver's reply/error code is misleading in this case
+            # and returns HTML content. `raise_for_status` only states invalid credentials
+            LOGGER.error("The following Geoserver workspace already exists : %s", name)
+        elif request_code == 500:
+            LOGGER.error(request.text)
         else:
-            LOGGER.error("There was an error creating the workspace in Geoserver")
+            LOGGER.error("There was an error creating the workspace in Geoserver : %s", name)
+            request.raise_for_status()
 
-    def create_datastore(self, workspace_id, name):
+    def create_datastore(self, workspace_name):
         # type (Geoserver, int, str) -> int
         """
         Create a new Geoserver workspace.
 
         @param self: Geoserver instance
-        @param workspace_id: Workspace id where the datastore must be created
-        @param name: Datastore name
-        @return: Datastore id
+        @param workspace_name: Workspace id where the datastore must be created
         """
         LOGGER.info("Creating datastore in geoserver")
-        # TODO
-        return 1
+
+        datastore_name = "shapefile_datastore_{}".format(workspace_name)
+        self._initial_datastore_creation(workspace_name=workspace_name, datastore_name=datastore_name)
+        self._configure_datastore_settings(workspace_name=workspace_name, datastore_name=datastore_name)
+
+    #
+    # Helper functions
+    #
+    def _get_datastore_dir(self, workspace_name):
+        return os.path.join(self.workspace_dir, workspace_name, "shapefile_datastore")
+
+    @staticmethod
+    def _create_datastore_dir(datastore_path):
+        try:
+            os.mkdir(datastore_path)
+        except FileExistsError:
+            LOGGER.info("User datastore directory already existing (skip creation): [%s]", datastore_path)
+
+    def _initial_datastore_creation(self, workspace_name, datastore_name):
+        """
+        Initial creation of the datastore with no connection parameters.
+
+        @param workspace_name: Name of the workspace in which the datastore is created
+        @param datastore_name: Name of the datastore that will be created
+        """
+        request_url = "{}/workspaces/{}/datastores".format(self.api_url, workspace_name)
+
+        payload = {
+            "dataStore": {
+                "name": datastore_name,
+                "type": "Directory of spatial files (shapefiles)",
+                "connectionParameters": {
+                    "entry": []
+                },
+            }
+        }
+        request = requests.post(url=request_url, json=payload, auth=self.auth, headers=self.headers)
+
+        request_code = request.status_code
+        if request_code == 201:
+            LOGGER.info("Datastore has been successfully created : %s", datastore_name)
+        elif request_code == 500:
+            LOGGER.error(request.text)
+        else:
+            LOGGER.error("There was an error creating the datastore : %s", datastore_name)
+            request.raise_for_status()
+
+    def _configure_datastore_settings(self, datastore_name, workspace_name):
+        """
+        Configures the connection parameters of the datastore.
+
+        This is done as a secondary step because Geoserver tends to create the wrong type of datastore
+        (shapefile instead of directory of shapefiles) when setting them at creation.
+
+        @param workspace_name: Name of the workspace in which the datastore is created
+        @param datastore_name: Name of the datastore that will be created
+        @return:
+        """
+        datastore_path = self._get_datastore_dir(workspace_name)
+        self._create_datastore_dir(datastore_path)
+        geoserver_datastore_path = "file://{}".format(datastore_path)
+
+        request_url = "{}/workspaces/{}/datastores/{}".format(self.api_url, workspace_name, datastore_name)
+        payload = {
+            "dataStore": {
+                "name": datastore_name,
+                "type": "Directory of spatial files (shapefiles)",
+                "connectionParameters": {
+                    "entry": [
+                        {'$': 'UTF-8',
+                         '@key': 'charset'},
+                        {'$': 'shapefile',
+                         '@key': 'filetype'},
+                        {'$': 'true',
+                         '@key': 'create spatial '
+                                 'index'},
+                        {'$': 'true',
+                         '@key': 'memory mapped '
+                                 'buffer'},
+                        {'$': 'GMT',
+                         '@key': 'timezone'},
+                        {'$': 'true',
+                         '@key': 'enable spatial '
+                                 'index'},
+                        {'$': 'http://{}'.format(datastore_name),
+                         '@key': 'namespace'},
+                        {'$': 'true',
+                         '@key': 'cache and reuse '
+                                 'memory maps'},
+                        {'$': geoserver_datastore_path,
+                         '@key': 'url'},
+                        {'$': 'shape',
+                         '@key': 'fstype'},
+                    ]
+                },
+            }
+        }
+        request = requests.put(url=request_url, json=payload, auth=self.auth, headers=self.headers)
+
+        request_code = request.status_code
+        if request_code == 200:
+            LOGGER.info("Datastore has been successfully configured : %s", datastore_name)
+        elif request_code == 500:
+            LOGGER.error(request.text)
+        else:
+            LOGGER.error("There was an error configuring the datastore : %s", datastore_name)
+            request.raise_for_status()
 
 
 @shared_task(bind=True, base=RequestTask)
