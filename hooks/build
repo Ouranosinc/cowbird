@@ -1,0 +1,7 @@
+#!/bin/bash
+
+echo "=> Information of Cowbird images to build (docker tag: $DOCKER_TAG)"
+make APP_VERSION=${DOCKER_TAG} docker-info
+
+echo "=> Building variations of Cowbird images (docker tag: $DOCKER_TAG)"
+make APP_VERSION=${DOCKER_TAG} docker-build
