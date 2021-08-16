@@ -135,18 +135,18 @@ Following most recent variants are available:
 
 
 .. |cowbird_tag_base| replace:: pavics/cowbird:0.4.0
-.. _cowbird_tag_base: https://hub.docker.com/r/pavics/magpie/tags?page=1&ordering=last_updated&name=0.4.0
+.. _cowbird_tag_base: https://hub.docker.com/r/pavics/cowbird/tags?page=1&ordering=last_updated&name=0.4.0
 .. |cowbird_tag_worker| replace:: pavics/cowbird:0.4.0-worker
-.. _cowbird_tag_worker: https://hub.docker.com/r/pavics/magpie/tags?page=1&ordering=last_updated&name=0.4.0-worker
+.. _cowbird_tag_worker: https://hub.docker.com/r/pavics/cowbird/tags?page=1&ordering=last_updated&name=0.4.0-worker
 .. |cowbird_tag_websvc| replace:: pavics/cowbird:0.4.0-webservice
-.. _cowbird_tag_websvc: https://hub.docker.com/r/pavics/magpie/tags?page=1&ordering=last_updated&name=0.4.0-webservice
+.. _cowbird_tag_websvc: https://hub.docker.com/r/pavics/cowbird/tags?page=1&ordering=last_updated&name=0.4.0-webservice
 
 .. |cowbird_latest_base| replace:: pavics/cowbird:latest
-.. _cowbird_latest_base: https://hub.docker.com/r/pavics/magpie/tags?page=1&ordering=last_updated&name=latest
+.. _cowbird_latest_base: https://hub.docker.com/r/pavics/cowbird/tags?page=1&ordering=last_updated&name=latest
 .. |cowbird_latest_worker| replace:: pavics/cowbird:latest-worker
-.. _cowbird_latest_worker: https://hub.docker.com/r/pavics/magpie/tags?page=1&ordering=last_updated&name=latest-worker
+.. _cowbird_latest_worker: https://hub.docker.com/r/pavics/cowbird/tags?page=1&ordering=last_updated&name=latest-worker
 .. |cowbird_latest_websvc| replace:: pavics/cowbird:latest-webservice
-.. _cowbird_latest_websvc: https://hub.docker.com/r/pavics/magpie/tags?page=1&ordering=last_updated&name=latest-webservice
+.. _cowbird_latest_websvc: https://hub.docker.com/r/pavics/cowbird/tags?page=1&ordering=last_updated&name=latest-webservice
 
 
 **Notes:**
