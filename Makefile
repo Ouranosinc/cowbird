@@ -337,13 +337,13 @@ stat: 		## display processes with PID(s) of gunicorn instance(s) running the app
 .PHONY: docker-info
 docker-info:		## obtain docker image information
 	@echo "Docker images will be built as: "
-	@echo "$(VERSION_TAG)"
-	@echo "$(VERSION_TAG)$(WEBSVC_SUFFIX)"
-	@echo "$(VERSION_TAG)$(WORKER_SUFFIX)"
+	@echo "  $(VERSION_TAG)"
+	@echo "  $(VERSION_TAG)$(WEBSVC_SUFFIX)"
+	@echo "  $(VERSION_TAG)$(WORKER_SUFFIX)"
 	@echo "Docker images will be pushed as:"
-	@echo "$(REPO_VERSION_TAG)"
-	@echo "$(REPO_VERSION_TAG)$(WEBSVC_SUFFIX)"
-	@echo "$(REPO_VERSION_TAG)$(WORKER_SUFFIX)"
+	@echo "  $(REPO_VERSION_TAG)"
+	@echo "  $(REPO_VERSION_TAG)$(WEBSVC_SUFFIX)"
+	@echo "  $(REPO_VERSION_TAG)$(WORKER_SUFFIX)"
 
 .PHONY: docker-build-base
 docker-build-base:							## build the base docker image
