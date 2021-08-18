@@ -1,0 +1,8 @@
+#!/bin/bash
+
+CUR_DIR=$(dirname "$0")
+# set by DockerHub auto-build
+DOCKER_TAG=${DOCKER_TAG:-latest}
+
+echo "=> Pushing built Cowbird images (docker tag: $DOCKER_TAG)"
+make -C "${CUR_DIR}/../.." APP_VERSION="${DOCKER_TAG}" docker-push
