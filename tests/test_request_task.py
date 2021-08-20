@@ -111,10 +111,6 @@ class TestRequestTask(unittest.TestCase):
     @patch("cowbird.services.impl.geoserver.Geoserver.create_datastore")
     def test_geoserver(self, create_datastore_mock, create_workspace_mock):
         test_user_name = "test_user"
-        test_workspace_id = 1000
-        test_datastore_id = 1000
-        create_workspace_mock.return_value = test_workspace_id
-        create_datastore_mock.return_value = test_datastore_id
         geoserver = ServiceFactory().get_service("Geoserver")
 
         # geoserver should call create_workspace and then create_datastore
@@ -125,4 +121,4 @@ class TestRequestTask(unittest.TestCase):
 
         create_workspace_mock.assert_called_with(test_user_name)
         # TODO: hard-coded "default" datastore name is based on the current demo implementation. Must be improved.
-        create_datastore_mock.assert_called_with(test_workspace_id, "default")
+        create_datastore_mock.assert_called_with(test_user_name)
