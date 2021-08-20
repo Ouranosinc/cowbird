@@ -54,7 +54,7 @@ class Geoserver(Service):
         raise NotImplementedError
 
     def create_workspace(self, name):
-        # type (Geoserver, str) -> int
+        # type (Geoserver, str) -> None
         """
         Create a new Geoserver workspace.
 
@@ -82,6 +82,7 @@ class Geoserver(Service):
             LOGGER.error("There was an error creating the workspace in Geoserver : %s", name)
 
     def remove_workspace(self, name):
+        # type (Geoserver, str) -> None
         """
         Removes a workspace from geoserver. Will allso remove all datastores associated with
         the workspace.
@@ -101,7 +102,7 @@ class Geoserver(Service):
             LOGGER.error("Geoserver workspace [%s] was not found.", name)
 
     def create_datastore(self, workspace_name):
-        # type (Geoserver, int, str) -> int
+        # type (Geoserver, str) -> None
         """
         Create a new Geoserver workspace.
 
@@ -118,16 +119,19 @@ class Geoserver(Service):
     # Helper functions
     #
     def _get_datastore_dir(self, workspace_name):
+        # type (Geoserver, str) -> str
         return os.path.join(self.workspace_dir, workspace_name, "shapefile_datastore")
 
     @staticmethod
     def _create_datastore_dir(datastore_path):
+        # type (str) -> None
         try:
             os.mkdir(datastore_path)
         except FileExistsError:
             LOGGER.info("User datastore directory already existing (skip creation): [%s]", datastore_path)
 
     def _initial_datastore_creation(self, workspace_name, datastore_name):
+        # type (Geoserver, str, str) -> None
         """
         Initial creation of the datastore with no connection parameters.
 
@@ -158,6 +162,7 @@ class Geoserver(Service):
             LOGGER.error("There was an error creating the following datastore: [%s]", datastore_name)
 
     def _configure_datastore_settings(self, datastore_name, workspace_name):
+        # type (Geoserver, str, str) -> None
         """
         Configures the connection parameters of the datastore.
 
