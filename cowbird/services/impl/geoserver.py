@@ -40,14 +40,12 @@ class Geoserver(Service):
         raise NotImplementedError
 
     def user_created(self, user_name):
-        # res = chain(create_workspace.s(user_name), create_datastore.s(user_name)
-        # res.delay()
-        self.create_workspace(user_name)
-        self.create_datastore(user_name)
+        res = chain(create_workspace.si(user_name) | create_datastore.si(user_name))
+        res.delay()
 
     def user_deleted(self, user_name):
         LOGGER.info("Removing workspace in geoserver")
-        self.remove_workspace(user_name)
+        remove_workspace.delay(user_name)
 
     def permission_created(self, permission):
         raise NotImplementedError
@@ -224,13 +222,20 @@ class Geoserver(Service):
 
 @shared_task(bind=True, base=RequestTask)
 def create_workspace(self, name):
-    # type (str) -> int
+    # type (str) -> None
     # Avoid any actual logic in celery task handler, only task related stuff should be done here
     return ServiceFactory().get_service("Geoserver").create_workspace(name)
 
 
 @shared_task(bind=True, base=RequestTask)
-def create_datastore(self, workspace_name):
-    # type (int, str) -> int
+def create_datastore(self, name):
+    # type (str) -> None
     # Avoid any actual logic in celery task handler, only task related stuff should be done here
-    return ServiceFactory().get_service("Geoserver").create_datastore(workspace_name)
+    return ServiceFactory().get_service("Geoserver").create_datastore(name)
+
+
+@shared_task(bind=True, base=RequestTask)
+def remove_workspace(self, name):
+    # type (str) -> None
+    # Avoid any actual logic in celery task handler, only task related stuff should be done here
+    return ServiceFactory().get_service("Geoserver").remove_workspace(name)
