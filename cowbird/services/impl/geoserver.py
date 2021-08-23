@@ -62,43 +62,38 @@ class Geoserver(Service):
         """
         LOGGER.info("Creating workspace in geoserver")
 
-        request_url = "{}/workspaces/".format(self.api_url)
-        payload = {"workspace": {"name": name, "isolated": "True"}}
-        request = requests.post(url=request_url, json=payload, auth=self.auth, headers=self.headers)
-
-        request_code = request.status_code
+        response = self._create_workspace_request(name)
+        response_code = response.status_code
         string_to_find = "Workspace &#39;{}&#39; already exists".format(name)
-        if request_code == 201:
+        if response_code == 201:
             LOGGER.info("Geoserver workspace [%s] was successfully created.", name)
-        elif request_code == 401 and string_to_find in request.text:
+        elif response_code == 401 and string_to_find in response.text:
             # This is done because Geoserver's reply/error code is misleading in this case and
             # returns HTML content.
             LOGGER.error("The following Geoserver workspace already exists: [%s]", name)
-        elif request_code == 401:
+        elif response_code == 401:
             LOGGER.error("The request has not been applied because it lacks valid authentication credentials.")
-        elif request_code == 500:
-            LOGGER.error(request.text)
+        elif response_code == 500:
+            LOGGER.error(response.text)
         else:
             LOGGER.error("There was an error creating the workspace in Geoserver : %s", name)
 
     def remove_workspace(self, name):
         # type (Geoserver, str) -> None
         """
-        Removes a workspace from geoserver. Will allso remove all datastores associated with
+        Removes a workspace from geoserver. Will also remove all datastores associated with
         the workspace.
 
         @param name: Workspace name
         """
-        request_url = "{}/workspaces/{}?recurse=true".format(self.api_url, name)
-        request = requests.delete(url=request_url, auth=self.auth, headers=self.headers)
-
-        request_code = request.status_code
-        if request_code == 200:
+        response = self._remove_workspace_request(name)
+        response_code = response.status_code
+        if response_code == 200:
             LOGGER.info("Geoserver workspace [%s] was successfully removed.", name)
-        elif request_code == 403:
+        elif response_code == 403:
             LOGGER.error(
                 "Geoserver workspace [%s] is not empty. Make sure `recurse` is set to `true` to delete workspace")
-        elif request_code == 404:
+        elif response_code == 404:
             LOGGER.error("Geoserver workspace [%s] was not found.", name)
 
     def create_datastore(self, workspace_name):
@@ -112,12 +107,47 @@ class Geoserver(Service):
         LOGGER.info("Creating datastore in geoserver")
 
         datastore_name = "shapefile_datastore_{}".format(workspace_name)
-        self._initial_datastore_creation(workspace_name=workspace_name, datastore_name=datastore_name)
-        self._configure_datastore_settings(workspace_name=workspace_name, datastore_name=datastore_name)
+        creation_response = self._create_datastore_request(workspace_name=workspace_name, datastore_name=datastore_name)
+        response_code = creation_response.status_code
+        if response_code == 201:
+            LOGGER.info("Datastore [%s] has been successfully created.", datastore_name)
+        elif response_code == 401:
+            LOGGER.error("The request has not been applied because it lacks valid authentication credentials.")
+        elif response_code == 500:
+            LOGGER.error(creation_response.text)
+        else:
+            LOGGER.error("There was an error creating the following datastore: [%s]", datastore_name)
+
+        datastore_path = self._get_datastore_dir(workspace_name)
+        self._create_datastore_dir(datastore_path)
+
+        configuration_response = self._configure_datastore_request(datastore_path=datastore_path,
+                                                                   datastore_name=datastore_name,
+                                                                   workspace_name=workspace_name)
+        response_code = configuration_response.status_code
+        if response_code == 200:
+            LOGGER.info("Datastore [%s] has been successfully configured.", datastore_name)
+        elif response_code == 401:
+            LOGGER.error("The request has not been applied because it lacks valid authentication credentials.")
+        elif response_code == 500:
+            LOGGER.error(configuration_response.text)
+        else:
+            LOGGER.error("There was an error configuring the following datastore: [%s]", datastore_name)
 
     #
-    # Helper functions
+    # Helper/request functions
     #
+    def _create_workspace_request(self, workspace_name):
+        request_url = "{}/workspaces/".format(self.api_url)
+        payload = {"workspace": {"name": workspace_name, "isolated": "True"}}
+        request = requests.post(url=request_url, json=payload, auth=self.auth, headers=self.headers)
+        return request
+
+    def _remove_workspace_request(self, workspace_name):
+        request_url = "{}/workspaces/{}?recurse=true".format(self.api_url, workspace_name)
+        request = requests.delete(url=request_url, auth=self.auth, headers=self.headers)
+        return request
+
     def _get_datastore_dir(self, workspace_name):
         # type (Geoserver, str) -> str
         return os.path.join(self.workspace_dir, workspace_name, "shapefile_datastore")
@@ -130,7 +160,7 @@ class Geoserver(Service):
         except FileExistsError:
             LOGGER.info("User datastore directory already existing (skip creation): [%s]", datastore_path)
 
-    def _initial_datastore_creation(self, workspace_name, datastore_name):
+    def _create_datastore_request(self, workspace_name, datastore_name):
         # type (Geoserver, str, str) -> None
         """
         Initial creation of the datastore with no connection parameters.
@@ -139,7 +169,6 @@ class Geoserver(Service):
         @param datastore_name: Name of the datastore that will be created
         """
         request_url = "{}/workspaces/{}/datastores".format(self.api_url, workspace_name)
-
         payload = {
             "dataStore": {
                 "name": datastore_name,
@@ -150,18 +179,9 @@ class Geoserver(Service):
             }
         }
         request = requests.post(url=request_url, json=payload, auth=self.auth, headers=self.headers)
+        return request
 
-        request_code = request.status_code
-        if request_code == 201:
-            LOGGER.info("Datastore [%s] has been successfully created.", datastore_name)
-        elif request_code == 401:
-            LOGGER.error("The request has not been applied because it lacks valid authentication credentials.")
-        elif request_code == 500:
-            LOGGER.error(request.text)
-        else:
-            LOGGER.error("There was an error creating the following datastore: [%s]", datastore_name)
-
-    def _configure_datastore_settings(self, datastore_name, workspace_name):
+    def _configure_datastore_request(self, datastore_name, datastore_path, workspace_name):
         # type (Geoserver, str, str) -> None
         """
         Configures the connection parameters of the datastore.
@@ -173,10 +193,7 @@ class Geoserver(Service):
         @param datastore_name: Name of the datastore that will be created
         @return:
         """
-        datastore_path = self._get_datastore_dir(workspace_name)
-        self._create_datastore_dir(datastore_path)
         geoserver_datastore_path = "file://{}".format(datastore_path)
-
         request_url = "{}/workspaces/{}/datastores/{}".format(self.api_url, workspace_name, datastore_name)
         payload = {
             "dataStore": {
@@ -213,16 +230,7 @@ class Geoserver(Service):
             }
         }
         request = requests.put(url=request_url, json=payload, auth=self.auth, headers=self.headers)
-
-        request_code = request.status_code
-        if request_code == 200:
-            LOGGER.info("Datastore [%s] has been successfully configured.", datastore_name)
-        elif request_code == 401:
-            LOGGER.error("The request has not been applied because it lacks valid authentication credentials.")
-        elif request_code == 500:
-            LOGGER.error(request.text)
-        else:
-            LOGGER.error("There was an error configuring the following datastore: [%s]", datastore_name)
+        return request
 
 
 @shared_task(bind=True, base=RequestTask)
