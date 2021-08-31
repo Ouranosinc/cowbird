@@ -121,9 +121,9 @@ class Geoserver(Service):
         datastore_path = self._get_datastore_dir(workspace_name)
         self._create_datastore_dir(datastore_path)
 
-        configuration_response = self._configure_datastore_request(datastore_path=datastore_path,
+        configuration_response = self._configure_datastore_request(workspace_name=workspace_name,
                                                                    datastore_name=datastore_name,
-                                                                   workspace_name=workspace_name)
+                                                                   datastore_path=datastore_path)
         response_code = configuration_response.status_code
         if response_code == 200:
             LOGGER.info("Datastore [%s] has been successfully configured.", datastore_name)
@@ -181,7 +181,7 @@ class Geoserver(Service):
         request = requests.post(url=request_url, json=payload, auth=self.auth, headers=self.headers)
         return request
 
-    def _configure_datastore_request(self, datastore_name, datastore_path, workspace_name):
+    def _configure_datastore_request(self, workspace_name, datastore_name, datastore_path):
         # type (Geoserver, str, str) -> None
         """
         Configures the connection parameters of the datastore.
