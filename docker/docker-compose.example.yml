@@ -53,7 +53,7 @@ services:
     image: kartoza/geoserver:2.19.0
     container_name: geoserver
     ports:
-      - 8765:8080
+      - "8765:8080"
     restart: on-failure
     volumes:
       - /user_workspaces:/user_workspaces
@@ -76,7 +76,7 @@ services:
     image: kartoza/postgis:13-3.1
     container_name: geoserver-db
     ports:
-      - 32767:5432
+      - "32767:5432"
     environment:
       - POSTGRES_DB=gis,gwc
       - POSTGRES_USER=docker
