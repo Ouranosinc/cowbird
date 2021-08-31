@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 import pytest
 import os
 import yaml
@@ -21,11 +22,7 @@ def get_geoserver_settings():
 GEOSERVER_SETTINGS = get_geoserver_settings()
 
 
-@pytest.fixture
-def geoserver():
-    return Geoserver(name="Geoserver", **GEOSERVER_SETTINGS)
-
-
+@pytest.mark.geoserver
 class TestGeoserverRequests:
     workspaces = {
         "creation": "test-workspace-creation",
@@ -36,6 +33,10 @@ class TestGeoserverRequests:
         "datastore-config": "test-datastore-configuration",
         "datastore-duplicate": "test-duplicate-datastore"
     }
+
+    @pytest.fixture
+    def geoserver(self):
+        return Geoserver(name="Geoserver", **GEOSERVER_SETTINGS)
 
     def teardown_class(self):
         # Couldn't pass fixture to teardown function.
