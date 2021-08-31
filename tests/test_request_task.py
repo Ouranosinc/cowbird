@@ -120,5 +120,4 @@ class TestRequestTask(unittest.TestCase):
         sleep(2)
 
         create_workspace_mock.assert_called_with(test_user_name)
-        # TODO: hard-coded "default" datastore name is based on the current demo implementation. Must be improved.
         create_datastore_mock.assert_called_with(test_user_name)
