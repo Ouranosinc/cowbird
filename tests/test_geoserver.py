@@ -3,23 +3,10 @@ import pytest
 import os
 import yaml
 from cowbird.constants import COWBIRD_ROOT
+from cowbird.services import ServiceFactory
 from cowbird.services.impl.geoserver import Geoserver
+from tests import utils
 
-
-def get_geoserver_settings():
-    config_path = os.path.join(COWBIRD_ROOT, "config/config.example.yml")
-    settings_dictionary = yaml.safe_load(open(config_path, "r"))
-    geoserver_settings = settings_dictionary["services"]["Geoserver"]
-    if "${HOSTNAME}" in geoserver_settings["url"]:
-        hostname = os.getenv("HOSTNAME", "localhost")
-        geoserver_settings["url"] = geoserver_settings["url"].replace("${HOSTNAME}", hostname)
-    if "${WORKSPACE_DIR}" in geoserver_settings["workspace_dir"]:
-        workdir = os.getenv("WORKSPACE_DIR", "/tmp/test-datastore")
-        geoserver_settings["workspace_dir"] = geoserver_settings["workspace_dir"].replace("${WORKDIR}", workdir)
-    return geoserver_settings
-
-
-GEOSERVER_SETTINGS = get_geoserver_settings()
 
 
 @pytest.mark.geoserver
@@ -36,11 +23,12 @@ class TestGeoserverRequests:
 
     @pytest.fixture
     def geoserver(self):
-        return Geoserver(name="Geoserver", **GEOSERVER_SETTINGS)
+        # return Geoserver(settings={}, name="Geoserver", **GEOSERVER_SETTINGS)
+        return ServiceFactory().get_service("Geoserver")
 
     def teardown_class(self):
         # Couldn't pass fixture to teardown function.
-        teardown_gs = Geoserver(name="Geoserver", **GEOSERVER_SETTINGS)
+        teardown_gs = ServiceFactory().get_service("Geoserver")
         for _, workspace in self.workspaces.items():
             teardown_gs._remove_workspace_request(workspace_name=workspace)
 
@@ -84,7 +72,7 @@ class TestGeoserverRequests:
 
         request = geoserver._configure_datastore_request(workspace_name=self.workspaces["datastore-config"],
                                                          datastore_name="test-datastore",
-                                                         datastore_path=GEOSERVER_SETTINGS["workspace_dir"])
+                                                         datastore_path=geoserver.workspace_dir)
         assert request.status_code == 200
 
     def test_duplicate_datastore(self, geoserver):
