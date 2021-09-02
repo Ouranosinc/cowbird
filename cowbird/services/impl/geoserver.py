@@ -153,6 +153,21 @@ class Geoserver(Service):
         else:
             LOGGER.error("There was an error publishing the following shapefile: [%s]", filename)
 
+    def remove_shapefile(self, workspace_name, filename):
+        datastore_name = self.get_datastore_name(workspace_name)
+        response = self._remove_shapefile_request(workspace_name=workspace_name,
+                                                  datastore_name=datastore_name,
+                                                  filename=filename)
+        response_code = response.status_code
+        if response_code == 200:
+            LOGGER.info("Shapefile [%s] has been successfully publish by Geoserver.", filename)
+        elif response_code == 401:
+            LOGGER.error("The request has not been applied because it lacks valid authentication credentials.")
+        elif response_code == 500:
+            LOGGER.error(response.text)
+        else:
+            LOGGER.error("There was an error publishing the following shapefile: [%s]", filename)
+
     #
     # Helper/request functions
     #
@@ -293,6 +308,14 @@ class Geoserver(Service):
             }
         }
         request = requests.post(url=request_url, json=payload, auth=self.auth, headers=self.headers)
+        return request
+
+    def _remove_shapefile_request(self, workspace_name, datastore_name, filename):
+        request_url = "{}/workspaces/{}/datastores/{}/featuretypes/{}?recurse=true".format(self.api_url,
+                                                                                           workspace_name,
+                                                                                           datastore_name,
+                                                                                           filename)
+        request = requests.delete(url=request_url, auth=self.auth, headers=self.headers)
         return request
 
 
