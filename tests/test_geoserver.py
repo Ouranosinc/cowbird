@@ -1,12 +1,7 @@
 # pylint: disable=protected-access
 import pytest
-import os
-import yaml
-from cowbird.constants import COWBIRD_ROOT
 from cowbird.services import ServiceFactory
-from cowbird.services.impl.geoserver import Geoserver
 from tests import utils
-
 
 
 @pytest.mark.geoserver
@@ -23,7 +18,6 @@ class TestGeoserverRequests:
 
     @pytest.fixture
     def geoserver(self):
-        # return Geoserver(settings={}, name="Geoserver", **GEOSERVER_SETTINGS)
         return ServiceFactory().get_service("Geoserver")
 
     def teardown_class(self):
