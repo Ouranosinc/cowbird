@@ -20,6 +20,12 @@ class TestSyncPermissions(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        # TODO Find better fix
+        # `utils.clear_services_instances()` here is only used to fix a side effect caused by the
+        # use of the `ServiceFactory()` in test_geoserver.py, which made this test class fail.
+        # Using it directly in the teardown of the `TestGeoserverRequests()` class then caused
+        # the `test_register_unregister_monitor` tests to fail.
+        utils.clear_services_instances()
         service1 = "Geoserver"
         service2 = "Thredds"
         cls.test_services = [service1, service2]

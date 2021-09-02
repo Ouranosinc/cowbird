@@ -18,6 +18,7 @@ class TestGeoserverRequests:
 
     @pytest.fixture
     def geoserver(self):
+        # TODO Using `ServiceFactory()` here creates a side effect in `TestSyncPermissions()`. Temp fix is in place
         return ServiceFactory().get_service("Geoserver")
 
     def teardown_class(self):
