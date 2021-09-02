@@ -245,30 +245,30 @@ class Geoserver(Service):
                 "type": "Directory of spatial files (shapefiles)",
                 "connectionParameters": {
                     "entry": [
-                        {'$': 'UTF-8',
-                         '@key': 'charset'},
-                        {'$': 'shapefile',
-                         '@key': 'filetype'},
-                        {'$': 'true',
-                         '@key': 'create spatial '
-                                 'index'},
-                        {'$': 'true',
-                         '@key': 'memory mapped '
-                                 'buffer'},
-                        {'$': 'GMT',
-                         '@key': 'timezone'},
-                        {'$': 'true',
-                         '@key': 'enable spatial '
-                                 'index'},
-                        {'$': 'http://{}'.format(datastore_name),
-                         '@key': 'namespace'},
-                        {'$': 'true',
-                         '@key': 'cache and reuse '
-                                 'memory maps'},
-                        {'$': geoserver_datastore_path,
-                         '@key': 'url'},
-                        {'$': 'shape',
-                         '@key': 'fstype'},
+                        {"$": "UTF-8",
+                         "@key": "charset"},
+                        {"$": "shapefile",
+                         "@key": "filetype"},
+                        {"$": "true",
+                         "@key": "create spatial "
+                                 "index"},
+                        {"$": "true",
+                         "@key": "memory mapped "
+                                 "buffer"},
+                        {"$": "GMT",
+                         "@key": "timezone"},
+                        {"$": "true",
+                         "@key": "enable spatial "
+                                 "index"},
+                        {"$": "http://{}".format(datastore_name),
+                         "@key": "namespace"},
+                        {"$": "true",
+                         "@key": "cache and reuse "
+                                 "memory maps"},
+                        {"$": geoserver_datastore_path,
+                         "@key": "url"},
+                        {"$": "shape",
+                         "@key": "fstype"},
                     ]
                 },
             }
