@@ -62,6 +62,16 @@ class Catalog(Service, FSMonitor):
         :param filename: Relative filename of a new file
         """
         LOGGER.info("The following file [%s] has just been created", filename)
+        # TODO This is a first naive implementation. Needs to be revised and improved.
+        split_path = filename.split("/")
+        immediate_folder = split_path[-2]
+        if immediate_folder == "shapefile_datastore" and filename.endswith(".shp"):
+            LOGGER.info("Attempting to publish the following shapefile [%s]", filename)
+            shapefile_name = split_path[-1].replace(".shp", "")
+            workspace = split_path[-3]
+            from cowbird.services.service_factory import ServiceFactory
+            geoserver = ServiceFactory().get_service("Geoserver")
+            geoserver.publish_shapefile(workspace, shapefile_name)
 
     def on_deleted(self, filename):
         """
