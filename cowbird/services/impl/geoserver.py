@@ -106,7 +106,7 @@ class Geoserver(Service):
         """
         LOGGER.info("Creating datastore in geoserver")
 
-        datastore_name = "shapefile_datastore_{}".format(workspace_name)
+        datastore_name = self.get_datastore_name(workspace_name)
         creation_response = self._create_datastore_request(workspace_name=workspace_name, datastore_name=datastore_name)
         response_code = creation_response.status_code
         if response_code == 201:
@@ -134,10 +134,39 @@ class Geoserver(Service):
         else:
             LOGGER.error("There was an error configuring the following datastore: [%s]", datastore_name)
 
+    @staticmethod
+    def get_datastore_name(workspace_name):
+        return "shapefile_datastore_{}".format(workspace_name)
+
+    def publish_shapefile(self, workspace_name, filename):
+        datastore_name = self.get_datastore_name(workspace_name)
+        response = self._publish_shapefile_request(workspace_name=workspace_name,
+                                                   datastore_name=datastore_name,
+                                                   filename=filename)
+        response_code = response.status_code
+        if response_code == 201:
+            LOGGER.info("Shapefile [%s] has been successfully publish by Geoserver.", filename)
+        elif response_code == 401:
+            LOGGER.error("The request has not been applied because it lacks valid authentication credentials.")
+        elif response_code == 500:
+            LOGGER.error(response.text)
+        else:
+            LOGGER.error("There was an error publishing the following shapefile: [%s]", filename)
+
     #
     # Helper/request functions
     #
+    # The following requests were built using Geoserver's REST documentation
+    # https://docs.geoserver.org/master/en/user/rest/index.html
+    #
+    # As well as inspired by the following projects:
+    # - https://github.com/gicait/geoserver-rest
+    # - https://github.com/GeoNode/geoserver-restconfig
+    #
+    # While sometimes harder to get working, data payloads where written in json instead of xml as they are easier
+    # to parse and use without external libraries.
     def _create_workspace_request(self, workspace_name):
+        # type (Geoserver, str) -> Response
         request_url = "{}/workspaces/".format(self.api_url)
         payload = {"workspace": {"name": workspace_name, "isolated": "True"}}
         request = requests.post(url=request_url, json=payload, auth=self.auth, headers=self.headers)
@@ -230,6 +259,40 @@ class Geoserver(Service):
             }
         }
         request = requests.put(url=request_url, json=payload, auth=self.auth, headers=self.headers)
+        return request
+
+    def _publish_shapefile_request(self, workspace_name, datastore_name, filename):
+        request_url = "{}/workspaces/{}/datastores/{}/featuretypes".format(self.api_url,
+                                                                           workspace_name,
+                                                                           datastore_name)
+
+        # This is just a basic example. There are lots of other attributes that can be configured
+        # https://docs.geoserver.org/latest/en/api/#1.0.0/featuretypes.yaml
+        payload = {
+            "featureType": {
+                "name": filename,
+                "nativeCRS": """
+                                GEOGCS[
+                                    "WGS 84", 
+                                    DATUM[
+                                        "World Geodetic System 1984",
+                                        SPHEROID["WGS 84", 6378137.0, 298.257223563, AUTHORITY["EPSG","7030"]],
+                                        AUTHORITY["EPSG","6326"]
+                                    ],
+                                    PRIMEM["Greenwich", 0.0, AUTHORITY["EPSG","8901"]],
+                                    UNIT["degree", 0.017453292519943295],
+                                    AXIS["Geodetic longitude", EAST],
+                                    AXIS["Geodetic latitude", NORTH],
+                                    AUTHORITY["EPSG","4326"]
+                                ]
+                            """,
+                "srs": "EPSG:4326",
+                "projectionPolicy": "REPROJECT_TO_DECLARED",
+                "maxFeatures": 5000,
+                "numDecimals": 6,
+            }
+        }
+        request = requests.post(url=request_url, json=payload, auth=self.auth, headers=self.headers)
         return request
 
 
