@@ -1,13 +1,19 @@
 import os
+from typing import TYPE_CHECKING
 
 import requests
 from celery import chain, shared_task
 
 from cowbird.request_task import RequestTask
-from cowbird.services.service import (Service, SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM, SERVICE_ADMIN_USER,
-                                      SERVICE_ADMIN_PASSWORD)
+from cowbird.services.service import (
+    SERVICE_ADMIN_PASSWORD,
+    SERVICE_ADMIN_USER,
+    SERVICE_URL_PARAM,
+    SERVICE_WORKSPACE_DIR_PARAM,
+    Service
+)
 from cowbird.services.service_factory import ServiceFactory
-from cowbird.utils import get_logger, CONTENT_TYPE_JSON
+from cowbird.utils import CONTENT_TYPE_JSON, get_logger
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
@@ -30,7 +36,7 @@ class Geoserver(Service):
         @param settings: Cowbird settings for convenience
         @param name: Service name
         """
-        super(Geoserver, self).__init__(name, **kwargs)
+        super(Geoserver, self).__init__(settings, name, **kwargs)
         self.api_url = "{}/rest".format(self.url)
         self.auth = (self.admin_user, self.admin_password)
         self.headers = {"Content-type": CONTENT_TYPE_JSON}
