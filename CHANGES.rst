@@ -11,6 +11,8 @@ Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 
 * Add an ssl verification setting.
+* Add Geoserver workspace and datastore creation/removal linked to user creation/removal
+* Add automated publishing of shapefiles to Geoserver when new files are found.
 
 `0.4.0 <https://github.com/Ouranosinc/cowbird/tree/0.4.0>`_ (2021-08-05)
 ------------------------------------------------------------------------------------
