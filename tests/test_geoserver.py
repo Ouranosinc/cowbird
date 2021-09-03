@@ -1,7 +1,32 @@
 # pylint: disable=protected-access
+import os
+
 import pytest
-from cowbird.services import ServiceFactory
-from tests import utils
+import yaml
+
+from cowbird.constants import COWBIRD_ROOT
+from cowbird.services.impl.geoserver import Geoserver
+
+
+def get_geoserver_settings():
+    """
+    Setup basic parameters for an unmodified local test run (using the example files)
+    unless environment variables are set.
+    """
+    config_path = os.path.join(COWBIRD_ROOT, "config/config.example.yml")
+    settings_dictionary = yaml.safe_load(open(config_path, "r"))
+    geoserver_settings = settings_dictionary["services"]["Geoserver"]
+    if "${HOSTNAME}" in geoserver_settings["url"]:
+        hostname = os.getenv("HOSTNAME", "localhost")
+        geoserver_settings["url"] = geoserver_settings["url"].replace("${HOSTNAME}", hostname)
+    if "${WORKSPACE_DIR}" in geoserver_settings["workspace_dir"]:
+        workdir = os.getenv("WORKSPACE_DIR", "/tmp/test-datastore")
+        geoserver_settings["workspace_dir"] = geoserver_settings["workspace_dir"].replace("${WORKDIR}", workdir)
+    geoserver_settings["ssl_verify"] = os.getenv("COWBIRD_SSL_VERIFY", False)
+    return geoserver_settings
+
+
+GEOSERVER_SETTINGS = get_geoserver_settings()
 
 
 @pytest.mark.geoserver
@@ -18,12 +43,15 @@ class TestGeoserverRequests:
 
     @pytest.fixture
     def geoserver(self):
-        # TODO Using `ServiceFactory()` here creates a side effect in `TestSyncPermissions()`. Temp fix is in place
-        return ServiceFactory().get_service("Geoserver")
+        # Bypasses ServiceFactory() to prevent side effects in other tests.
+        geoserver = Geoserver(settings={}, name="Geoserver", **GEOSERVER_SETTINGS)
+        geoserver.ssl_verify = GEOSERVER_SETTINGS["ssl_verify"]
+        return geoserver
 
     def teardown_class(self):
         # Couldn't pass fixture to teardown function.
-        teardown_gs = ServiceFactory().get_service("Geoserver")
+        teardown_gs = Geoserver(settings={}, name="Geoserver", **GEOSERVER_SETTINGS)
+        teardown_gs.ssl_verify = GEOSERVER_SETTINGS["ssl_verify"]
         for _, workspace in self.workspaces.items():
             teardown_gs._remove_workspace_request(workspace_name=workspace)
 
