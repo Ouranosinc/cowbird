@@ -109,7 +109,7 @@ class TestRequestTask(unittest.TestCase):
 
     @patch("cowbird.services.impl.geoserver.Geoserver.create_workspace")
     @patch("cowbird.services.impl.geoserver.Geoserver.create_datastore")
-    def test_geoserver(self, create_datastore_mock, create_workspace_mock):
+    def test_geoserver_user_created(self, create_datastore_mock, create_workspace_mock):
         test_user_name = "test_user"
         geoserver = ServiceFactory().get_service("Geoserver")
 
@@ -121,3 +121,14 @@ class TestRequestTask(unittest.TestCase):
 
         create_workspace_mock.assert_called_with(test_user_name)
         create_datastore_mock.assert_called_with(test_user_name)
+
+    @patch("cowbird.services.impl.geoserver.Geoserver.remove_workspace")
+    def test_geoserver_user_deleted(self, remove_workspace_mock):
+        test_user_name = "test_user"
+        geoserver = ServiceFactory().get_service("Geoserver")
+        geoserver.user_deleted(test_user_name)
+
+        # current implementation doesn't give any handler on which we could wait
+        sleep(2)
+
+        remove_workspace_mock.assert_called_with(test_user_name)
