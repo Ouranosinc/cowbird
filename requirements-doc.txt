@@ -2,7 +2,7 @@
 # we actually need to install all requirements during docs build because of OpenAPI generation (see 'docs/conf.py')
 
 # sphinx-autoapi breaking with astroid==2.7 (https://github.com/readthedocs/sphinx-autoapi/issues/301)
-astroid>=2.6,!=2.7,<3
+astroid>=2.6,!=2.7.*,<3
 pycodestyle
 sphinx-autoapi>=1.7.0
 sphinx-paramlinks>=0.4.1
