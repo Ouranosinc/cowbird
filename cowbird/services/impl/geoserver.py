@@ -211,8 +211,8 @@ class Geoserver(Service):
         """
         request_url = "{}/workspaces/".format(self.api_url)
         payload = {"workspace": {"name": workspace_name, "isolated": "True"}}
-        request = requests.post(url=request_url, json=payload, auth=self.auth, headers=self.headers)
-        return request
+        response = requests.post(url=request_url, json=payload, auth=self.auth, headers=self.headers)
+        return response
 
     def _remove_workspace_request(self, workspace_name):
         # type (Geoserver, str) -> Response
@@ -223,8 +223,8 @@ class Geoserver(Service):
         @return: Request response
         """
         request_url = "{}/workspaces/{}?recurse=true".format(self.api_url, workspace_name)
-        request = requests.delete(url=request_url, auth=self.auth, headers=self.headers)
-        return request
+        response = requests.delete(url=request_url, auth=self.auth, headers=self.headers)
+        return response
 
     def _get_datastore_dir(self, workspace_name):
         # type (Geoserver, str) -> str
@@ -257,8 +257,8 @@ class Geoserver(Service):
                 },
             }
         }
-        request = requests.post(url=request_url, json=payload, auth=self.auth, headers=self.headers)
-        return request
+        response = requests.post(url=request_url, json=payload, auth=self.auth, headers=self.headers)
+        return response
 
     def _configure_datastore_request(self, workspace_name, datastore_name, datastore_path):
         # type (Geoserver, str, str, str) -> Response
@@ -308,8 +308,8 @@ class Geoserver(Service):
                 },
             }
         }
-        request = requests.put(url=request_url, json=payload, auth=self.auth, headers=self.headers)
-        return request
+        response = requests.put(url=request_url, json=payload, auth=self.auth, headers=self.headers)
+        return response
 
     def _publish_shapefile_request(self, workspace_name, datastore_name, filename):
         # type (Geoserver, str, str, str) -> Response
@@ -351,8 +351,8 @@ class Geoserver(Service):
                 "numDecimals": 6,
             }
         }
-        request = requests.post(url=request_url, json=payload, auth=self.auth, headers=self.headers)
-        return request
+        response = requests.post(url=request_url, json=payload, auth=self.auth, headers=self.headers)
+        return response
 
     def _remove_shapefile_request(self, workspace_name, datastore_name, filename):
         # type (Geoserver, str, str, str) -> Response
@@ -368,8 +368,8 @@ class Geoserver(Service):
                                                                                            workspace_name,
                                                                                            datastore_name,
                                                                                            filename)
-        request = requests.delete(url=request_url, auth=self.auth, headers=self.headers)
-        return request
+        response = requests.delete(url=request_url, auth=self.auth, headers=self.headers)
+        return response
 
 
 @shared_task(bind=True, base=RequestTask)
