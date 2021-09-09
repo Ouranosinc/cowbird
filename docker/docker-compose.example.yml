@@ -56,12 +56,12 @@ services:
       - "8765:8080"
     restart: on-failure
     volumes:
-      - /user_workspaces:/user_workspaces
+      - ./user_workspaces:/user_workspaces
     environment:
       - GEOSERVER_DATA_DIR=/opt/footprints_dir
       - GEOWEBCACHE_CACHE_DIR=/opt/geoserver/data_dir/gwc
-      - GEOSERVER_ADMIN_USER=admin
-      - GEOSERVER_ADMIN_PASSWORD=myawesomegeoserver
+      - GEOSERVER_ADMIN_USER=$GEOSERVER_ADMIN
+      - GEOSERVER_ADMIN_PASSWORD=$GEOSERVER_PASSWORD
       - INITIAL_MEMORY=2G
       - MAXIMUM_MEMORY=4G
     depends_on:
