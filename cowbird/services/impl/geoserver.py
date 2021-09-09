@@ -1,4 +1,6 @@
+import functools
 import os
+import re
 from typing import TYPE_CHECKING
 
 import requests
@@ -22,11 +24,46 @@ if TYPE_CHECKING:
 LOGGER = get_logger(__name__)
 
 
+def geoserver_response_handling(func):
+    """
+    Decorator for response and logging handling for the different Geoserver HTTP requests.
+
+    @param func : Function executing a http request to Geoserver
+    @return : Response object
+    """
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        response = func(*args, **kwargs)
+        operation = func.__name__
+        response_code = response.status_code
+        regex_to_find = "Workspace &#39;.*&#39; already exists"
+        if response_code == 200 or response_code == 201:
+            LOGGER.info("Operation [%s] was successful.", operation)
+        elif response_code == 401 and re.search(regex_to_find, response.text):
+            # This is done because Geoserver's reply/error code is misleading in this case and
+            # returns HTML content.
+            LOGGER.error("Geoserver workspace already exists")
+        elif response_code == 401:
+            LOGGER.error("Operation [%s] failed because it lacks valid authentication credentials.",
+                         operation)
+        elif response_code == 403 and operation == "_remove_workspace_request":
+            LOGGER.error(
+                "Geoserver workspace [%s] is not empty. Make sure `recurse` is set to `true` to delete workspace")
+        elif response_code == 500:
+            LOGGER.error("Operation [%s] failed : %s", operation, response.text)
+        else:
+            LOGGER.error("Operation [%s] failed with HTTP error code [%s]", operation, response_code)
+        return response
+
+    return wrapper
+
+
 class Geoserver(Service):
     """
     Keep Geoserver internal representation in sync with the platform.
     """
-    required_params = [SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM, SERVICE_ADMIN_USER, SERVICE_ADMIN_PASSWORD]
+    required_params = [SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM]
 
     def __init__(self, settings, name, **kwargs):
         # type: (SettingsType, str, dict) -> None
@@ -38,8 +75,10 @@ class Geoserver(Service):
         """
         super(Geoserver, self).__init__(settings, name, **kwargs)
         self.api_url = "{}/rest".format(self.url)
-        self.auth = (self.admin_user, self.admin_password)
         self.headers = {"Content-type": CONTENT_TYPE_JSON}
+        self.admin_user = kwargs.get(SERVICE_ADMIN_USER, None)
+        self.admin_password = kwargs.get(SERVICE_ADMIN_PASSWORD, None)
+        self.auth = (self.admin_user, self.admin_password)
 
     def get_resource_id(self, resource_full_name):
         # type (str) -> str
@@ -65,23 +104,9 @@ class Geoserver(Service):
 
         @param name: Workspace name
         """
-        LOGGER.info("Creating workspace in geoserver")
+        LOGGER.info("Attempting to create Geoserver workspace [%s]", name)
 
-        response = self._create_workspace_request(name)
-        response_code = response.status_code
-        string_to_find = "Workspace &#39;{}&#39; already exists".format(name)
-        if response_code == 201:
-            LOGGER.info("Geoserver workspace [%s] was successfully created.", name)
-        elif response_code == 401 and string_to_find in response.text:
-            # This is done because Geoserver's reply/error code is misleading in this case and
-            # returns HTML content.
-            LOGGER.error("The following Geoserver workspace already exists: [%s]", name)
-        elif response_code == 401:
-            LOGGER.error("The request has not been applied because it lacks valid authentication credentials.")
-        elif response_code == 500:
-            LOGGER.error(response.text)
-        else:
-            LOGGER.error("There was an error creating the workspace in Geoserver : %s", name)
+        self._create_workspace_request(name)
 
     def remove_workspace(self, name):
         # type (Geoserver, str) -> None
@@ -91,16 +116,8 @@ class Geoserver(Service):
 
         @param name: Workspace name
         """
-        LOGGER.info("Attempting to remove workspace in geoserver")
-        response = self._remove_workspace_request(name)
-        response_code = response.status_code
-        if response_code == 200:
-            LOGGER.info("Geoserver workspace [%s] was successfully removed.", name)
-        elif response_code == 403:
-            LOGGER.error(
-                "Geoserver workspace [%s] is not empty. Make sure `recurse` is set to `true` to delete workspace")
-        elif response_code == 404:
-            LOGGER.error("Geoserver workspace [%s] was not found.", name)
+        LOGGER.info("Attempting to remove Geoserver workspace [%s]", name)
+        self._remove_workspace_request(name)
 
     def create_datastore(self, workspace_name):
         # type (Geoserver, str) -> None
@@ -110,35 +127,16 @@ class Geoserver(Service):
         @param self: Geoserver instance
         @param workspace_name: Workspace name where the datastore must be created
         """
-        LOGGER.info("Creating datastore in geoserver")
 
         datastore_name = self.get_datastore_name(workspace_name)
-        creation_response = self._create_datastore_request(workspace_name=workspace_name, datastore_name=datastore_name)
-        response_code = creation_response.status_code
-        if response_code == 201:
-            LOGGER.info("Datastore [%s] has been successfully created.", datastore_name)
-        elif response_code == 401:
-            LOGGER.error("The request has not been applied because it lacks valid authentication credentials.")
-        elif response_code == 500:
-            LOGGER.error(creation_response.text)
-        else:
-            LOGGER.error("There was an error creating the following datastore: [%s]", datastore_name)
+        LOGGER.info("Creating datastore [%s] in geoserver workspace [%s]", datastore_name, workspace_name)
 
+        self._create_datastore_request(workspace_name=workspace_name, datastore_name=datastore_name)
         datastore_path = self._get_datastore_dir(workspace_name)
         self._create_datastore_dir(datastore_path)
-
-        configuration_response = self._configure_datastore_request(workspace_name=workspace_name,
-                                                                   datastore_name=datastore_name,
-                                                                   datastore_path=datastore_path)
-        response_code = configuration_response.status_code
-        if response_code == 200:
-            LOGGER.info("Datastore [%s] has been successfully configured.", datastore_name)
-        elif response_code == 401:
-            LOGGER.error("The request has not been applied because it lacks valid authentication credentials.")
-        elif response_code == 500:
-            LOGGER.error(configuration_response.text)
-        else:
-            LOGGER.error("There was an error configuring the following datastore: [%s]", datastore_name)
+        self._configure_datastore_request(workspace_name=workspace_name,
+                                          datastore_name=datastore_name,
+                                          datastore_path=datastore_path)
 
     @staticmethod
     def get_datastore_name(workspace_name):
@@ -154,18 +152,13 @@ class Geoserver(Service):
         @param filename: The shapefile's name, without file extension
         """
         datastore_name = self.get_datastore_name(workspace_name)
-        response = self._publish_shapefile_request(workspace_name=workspace_name,
-                                                   datastore_name=datastore_name,
-                                                   filename=filename)
-        response_code = response.status_code
-        if response_code == 201:
-            LOGGER.info("Shapefile [%s] has been successfully publish by Geoserver.", filename)
-        elif response_code == 401:
-            LOGGER.error("The request has not been applied because it lacks valid authentication credentials.")
-        elif response_code == 500:
-            LOGGER.error(response.text)
-        else:
-            LOGGER.error("There was an error publishing the following shapefile: [%s]", filename)
+        LOGGER.info("Attempting to publish shapefile [%s] to workspace:datastore [%s : %s]",
+                    filename,
+                    workspace_name,
+                    datastore_name)
+        self._publish_shapefile_request(workspace_name=workspace_name,
+                                        datastore_name=datastore_name,
+                                        filename=filename)
 
     def remove_shapefile(self, workspace_name, filename):
         # type (Geoserver, str, str) -> None
@@ -176,18 +169,13 @@ class Geoserver(Service):
         @param filename: The shapefile's name, without file extension
         """
         datastore_name = self.get_datastore_name(workspace_name)
-        response = self._remove_shapefile_request(workspace_name=workspace_name,
-                                                  datastore_name=datastore_name,
-                                                  filename=filename)
-        response_code = response.status_code
-        if response_code == 200:
-            LOGGER.info("Shapefile [%s] has been successfully publish by Geoserver.", filename)
-        elif response_code == 401:
-            LOGGER.error("The request has not been applied because it lacks valid authentication credentials.")
-        elif response_code == 500:
-            LOGGER.error(response.text)
-        else:
-            LOGGER.error("There was an error publishing the following shapefile: [%s]", filename)
+        LOGGER.info("Attempting to remove shapefile [%s] from workspace:datastore [%s : %s]",
+                    filename,
+                    workspace_name,
+                    datastore_name)
+        self._remove_shapefile_request(workspace_name=workspace_name,
+                                       datastore_name=datastore_name,
+                                       filename=filename)
 
     #
     # Helper/request functions
@@ -201,26 +189,28 @@ class Geoserver(Service):
     #
     # While sometimes harder to get working, data payloads where written in json instead of xml as they are easier
     # to parse and use without external libraries.
+    @geoserver_response_handling
     def _create_workspace_request(self, workspace_name):
         # type (Geoserver, str) -> Response
         """
         Request to create a new workspace.
 
         @param workspace_name: Name of workspace to be created
-        @return: Request response
+        @return: Response object
         """
         request_url = "{}/workspaces/".format(self.api_url)
         payload = {"workspace": {"name": workspace_name, "isolated": "True"}}
         response = requests.post(url=request_url, json=payload, auth=self.auth, headers=self.headers)
         return response
 
+    @geoserver_response_handling
     def _remove_workspace_request(self, workspace_name):
         # type (Geoserver, str) -> Response
         """
         Request to remove workspace and all associated datastores and layers.
 
         @param workspace_name: Name of workspace to remove
-        @return: Request response
+        @return: Response object
         """
         request_url = "{}/workspaces/{}?recurse=true".format(self.api_url, workspace_name)
         response = requests.delete(url=request_url, auth=self.auth, headers=self.headers)
@@ -238,6 +228,7 @@ class Geoserver(Service):
         except FileExistsError:
             LOGGER.info("User datastore directory already existing (skip creation): [%s]", datastore_path)
 
+    @geoserver_response_handling
     def _create_datastore_request(self, workspace_name, datastore_name):
         # type (Geoserver, str, str) -> Response
         """
@@ -245,7 +236,7 @@ class Geoserver(Service):
 
         @param workspace_name: Name of the workspace in which the datastore is created
         @param datastore_name: Name of the datastore that will be created
-        @return: Request response
+        @return: Response object
         """
         request_url = "{}/workspaces/{}/datastores".format(self.api_url, workspace_name)
         payload = {
@@ -260,6 +251,7 @@ class Geoserver(Service):
         response = requests.post(url=request_url, json=payload, auth=self.auth, headers=self.headers)
         return response
 
+    @geoserver_response_handling
     def _configure_datastore_request(self, workspace_name, datastore_name, datastore_path):
         # type (Geoserver, str, str, str) -> Response
         """
@@ -270,7 +262,7 @@ class Geoserver(Service):
 
         @param workspace_name: Name of the workspace in which the datastore is created
         @param datastore_name: Name of the datastore that will be created
-        @return: Request response
+        @return: Response object
         """
         geoserver_datastore_path = "file://{}".format(datastore_path)
         request_url = "{}/workspaces/{}/datastores/{}".format(self.api_url, workspace_name, datastore_name)
@@ -311,6 +303,7 @@ class Geoserver(Service):
         response = requests.put(url=request_url, json=payload, auth=self.auth, headers=self.headers)
         return response
 
+    @geoserver_response_handling
     def _publish_shapefile_request(self, workspace_name, datastore_name, filename):
         # type (Geoserver, str, str, str) -> Response
         """
@@ -319,7 +312,7 @@ class Geoserver(Service):
         @param workspace_name: Workspace where file will be published
         @param datastore_name: Datastore where file will be published
         @param filename: Name of the shapefile (with no extentions)
-        @return: Request response
+        @return: Response object
         """
         request_url = "{}/workspaces/{}/datastores/{}/featuretypes".format(self.api_url,
                                                                            workspace_name,
@@ -354,6 +347,7 @@ class Geoserver(Service):
         response = requests.post(url=request_url, json=payload, auth=self.auth, headers=self.headers)
         return response
 
+    @geoserver_response_handling
     def _remove_shapefile_request(self, workspace_name, datastore_name, filename):
         # type (Geoserver, str, str, str) -> Response
         """
@@ -362,7 +356,7 @@ class Geoserver(Service):
         @param workspace_name: Workspace where file is published
         @param datastore_name: Datastore where file is published
         @param filename: Name of the shapefile (with no extentions)
-        @return: Request response
+        @return: Response object
         """
         request_url = "{}/workspaces/{}/datastores/{}/featuretypes/{}?recurse=true".format(self.api_url,
                                                                                            workspace_name,
