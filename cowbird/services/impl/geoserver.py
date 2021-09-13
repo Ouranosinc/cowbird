@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 import requests
 from celery import chain, shared_task
 
+from cowbird.monitoring.fsmonitor import FSMonitor
+from cowbird.monitoring.monitoring import Monitoring
 from cowbird.request_task import RequestTask
 from cowbird.services.service import (
     SERVICE_ADMIN_PASSWORD,
@@ -38,7 +40,7 @@ def geoserver_response_handling(func):
         operation = func.__name__
         response_code = response.status_code
         regex_to_find = "Workspace &#39;.*&#39; already exists"
-        if response_code == 200 or response_code == 201:
+        if response_code in (200, 201):
             LOGGER.info("Operation [%s] was successful.", operation)
         elif response_code == 401 and re.search(regex_to_find, response.text):
             # This is done because Geoserver's reply/error code is misleading in this case and
@@ -59,7 +61,7 @@ def geoserver_response_handling(func):
     return wrapper
 
 
-class Geoserver(Service):
+class Geoserver(Service, FSMonitor):
     """
     Keep Geoserver internal representation in sync with the platform.
     """
@@ -80,16 +82,23 @@ class Geoserver(Service):
         self.admin_password = kwargs.get(SERVICE_ADMIN_PASSWORD, None)
         self.auth = (self.admin_user, self.admin_password)
 
+    #
+    # Implementation of parent classes' functions
+    #
+
+    # Service class functions
     def get_resource_id(self, resource_full_name):
-        # type (str) -> str
+        # type:(str) -> str
         raise NotImplementedError
 
     def user_created(self, user_name):
         res = chain(create_workspace.si(user_name) | create_datastore.si(user_name))
         res.delay()
+        Monitoring().register(self._shapefile_folder_dir(user_name), True, Geoserver)
 
     def user_deleted(self, user_name):
         remove_workspace.delay(user_name)
+        Monitoring().unregister(self._shapefile_folder_dir(user_name), self)
 
     def permission_created(self, permission):
         raise NotImplementedError
@@ -97,8 +106,52 @@ class Geoserver(Service):
     def permission_deleted(self, permission):
         raise NotImplementedError
 
+    # FSMonitor class functions
+    @staticmethod
+    def get_instance():
+        """
+        Return the Geoserver singleton instance from the class name used to retrieve the FSMonitor from the DB.
+        """
+        return ServiceFactory().get_service("Geoserver")
+
+    def on_created(self, filename):
+        """
+        Call when a new file is found.
+
+        :param filename: Relative filename of a new file
+        """
+        LOGGER.info("The following file [%s] has just been created", filename)
+        if filename.endswith(".shp"):
+            LOGGER.info("Attempting to publish the following shapefile [%s]", filename)
+            workspace, shapefile_name = self._get_shapefile_info(filename)
+            self.publish_shapefile(workspace, shapefile_name)
+
+    def on_deleted(self, filename):
+        """
+        Call when a file is deleted.
+
+        :param filename: Relative filename of the removed file
+        """
+        LOGGER.info("The following file [%s] has just been deleted", filename)
+        if filename.endswith(".shp"):
+            LOGGER.info("Attempting to remove the following shapefile [%s]", filename)
+            workspace, shapefile_name = self._get_shapefile_info(filename)
+            self.remove_shapefile(workspace, shapefile_name)
+
+    def on_modified(self, filename):
+        # type: (str) -> None
+        """
+        Call when a file is updated.
+
+        :param filename: Relative filename of the updated file
+        """
+        raise NotImplementedError
+
+    #
+    # Geoserver class specific functions
+    #
     def create_workspace(self, name):
-        # type (Geoserver, str) -> None
+        # type:(Geoserver, str) -> None
         """
         Create a new Geoserver workspace.
 
@@ -109,7 +162,7 @@ class Geoserver(Service):
         self._create_workspace_request(name)
 
     def remove_workspace(self, name):
-        # type (Geoserver, str) -> None
+        # type:(Geoserver, str) -> None
         """
         Removes a workspace from geoserver. Will also remove all datastores associated with
         the workspace.
@@ -120,7 +173,7 @@ class Geoserver(Service):
         self._remove_workspace_request(name)
 
     def create_datastore(self, workspace_name):
-        # type (Geoserver, str) -> None
+        # type:(Geoserver, str) -> None
         """
         Create a new Geoserver workspace.
 
@@ -128,30 +181,25 @@ class Geoserver(Service):
         @param workspace_name: Workspace name where the datastore must be created
         """
 
-        datastore_name = self.get_datastore_name(workspace_name)
+        datastore_name = self._get_datastore_name(workspace_name)
         LOGGER.info("Creating datastore [%s] in geoserver workspace [%s]", datastore_name, workspace_name)
 
         self._create_datastore_request(workspace_name=workspace_name, datastore_name=datastore_name)
-        datastore_path = self._get_datastore_dir(workspace_name)
+        datastore_path = self._shapefile_folder_dir(workspace_name)
         self._create_datastore_dir(datastore_path)
         self._configure_datastore_request(workspace_name=workspace_name,
                                           datastore_name=datastore_name,
                                           datastore_path=datastore_path)
 
-    @staticmethod
-    def get_datastore_name(workspace_name):
-        # type (str) -> str
-        return "shapefile_datastore_{}".format(workspace_name)
-
     def publish_shapefile(self, workspace_name, filename):
-        # type (Geoserver, str, str) -> None
+        # type:(Geoserver, str, str) -> None
         """
         Publish a shapefile in the specified workspace.
 
         @param workspace_name: Name of the workspace where shapefile will be published
         @param filename: The shapefile's name, without file extension
         """
-        datastore_name = self.get_datastore_name(workspace_name)
+        datastore_name = self._get_datastore_name(workspace_name)
         LOGGER.info("Attempting to publish shapefile [%s] to workspace:datastore [%s : %s]",
                     filename,
                     workspace_name,
@@ -161,14 +209,14 @@ class Geoserver(Service):
                                         filename=filename)
 
     def remove_shapefile(self, workspace_name, filename):
-        # type (Geoserver, str, str) -> None
+        # type:(Geoserver, str, str) -> None
         """
         Remove a shapefile from the specified workspace.
 
         @param workspace_name: Name of the workspace from which the shapefile will be removed
         @param filename: The shapefile's name, without file extension
         """
-        datastore_name = self.get_datastore_name(workspace_name)
+        datastore_name = self._get_datastore_name(workspace_name)
         LOGGER.info("Attempting to remove shapefile [%s] from workspace:datastore [%s : %s]",
                     filename,
                     workspace_name,
@@ -189,9 +237,30 @@ class Geoserver(Service):
     #
     # While sometimes harder to get working, data payloads where written in json instead of xml as they are easier
     # to parse and use without external libraries.
+    @staticmethod
+    def _get_shapefile_info(filename):
+        # type:(str) -> (str, str)
+        """
+        @param filename: Relative filename of a new file
+        @return: Workspace name (str) where file is located and shapefile name (str)
+        """
+        split_path = filename.split("/")
+        workspace = split_path[-3]
+        shapefile_name = split_path[-1].replace(".shp", "")
+
+        return workspace, shapefile_name
+
+    @staticmethod
+    def _get_datastore_name(workspace_name):
+        # type: (str) -> str
+        return "shapefile_datastore_{}".format(workspace_name)
+
+    def _shapefile_folder_dir(self, user_name):
+        return os.path.join(self.workspace_dir, user_name, "shapefile_datastore")
+
     @geoserver_response_handling
     def _create_workspace_request(self, workspace_name):
-        # type (Geoserver, str) -> Response
+        # type:(Geoserver, str) -> requests.Response
         """
         Request to create a new workspace.
 
@@ -205,7 +274,7 @@ class Geoserver(Service):
 
     @geoserver_response_handling
     def _remove_workspace_request(self, workspace_name):
-        # type (Geoserver, str) -> Response
+        # type:(Geoserver, str) -> requests.Response
         """
         Request to remove workspace and all associated datastores and layers.
 
@@ -216,13 +285,9 @@ class Geoserver(Service):
         response = requests.delete(url=request_url, auth=self.auth, headers=self.headers)
         return response
 
-    def _get_datastore_dir(self, workspace_name):
-        # type (Geoserver, str) -> str
-        return os.path.join(self.workspace_dir, workspace_name, "shapefile_datastore")
-
     @staticmethod
     def _create_datastore_dir(datastore_path):
-        # type (str) -> None
+        # type:(str) -> None
         try:
             os.mkdir(datastore_path)
         except FileExistsError:
@@ -230,7 +295,7 @@ class Geoserver(Service):
 
     @geoserver_response_handling
     def _create_datastore_request(self, workspace_name, datastore_name):
-        # type (Geoserver, str, str) -> Response
+        # type:(Geoserver, str, str) -> requests.Response
         """
         Initial creation of the datastore with no connection parameters.
 
@@ -253,7 +318,7 @@ class Geoserver(Service):
 
     @geoserver_response_handling
     def _configure_datastore_request(self, workspace_name, datastore_name, datastore_path):
-        # type (Geoserver, str, str, str) -> Response
+        # type:(Geoserver, str, str, str) -> requests.Response
         """
         Configures the connection parameters of the datastore.
 
@@ -305,7 +370,7 @@ class Geoserver(Service):
 
     @geoserver_response_handling
     def _publish_shapefile_request(self, workspace_name, datastore_name, filename):
-        # type (Geoserver, str, str, str) -> Response
+        # type:(Geoserver, str, str, str) -> requests.Response
         """
         Request to publish a shapefile in Geoserver. Does so by creating a `Feature type` in Geoserver.
 
@@ -349,7 +414,7 @@ class Geoserver(Service):
 
     @geoserver_response_handling
     def _remove_shapefile_request(self, workspace_name, datastore_name, filename):
-        # type (Geoserver, str, str, str) -> Response
+        # type:(Geoserver, str, str, str) -> requests.Response
         """
         Request to remove specified Geoserver `Feature type` and corresponding layer
 
@@ -368,20 +433,20 @@ class Geoserver(Service):
 
 @shared_task(bind=True, base=RequestTask)
 def create_workspace(self, name):
-    # type (str) -> None
+    # type:(str) -> None
     # Avoid any actual logic in celery task handler, only task related stuff should be done here
     return ServiceFactory().get_service("Geoserver").create_workspace(name)
 
 
 @shared_task(bind=True, base=RequestTask)
 def create_datastore(self, name):
-    # type (str) -> None
+    # type:(str) -> None
     # Avoid any actual logic in celery task handler, only task related stuff should be done here
     return ServiceFactory().get_service("Geoserver").create_datastore(name)
 
 
 @shared_task(bind=True, base=RequestTask)
 def remove_workspace(self, name):
-    # type (str) -> None
+    # type:(str) -> None
     # Avoid any actual logic in celery task handler, only task related stuff should be done here
     return ServiceFactory().get_service("Geoserver").remove_workspace(name)
