@@ -3,7 +3,7 @@ import abc
 
 class FSMonitor(abc.ABC):
     """
-    Interface being called when something chang on the filesystem.
+    Interface being called when something changes on the filesystem.
     """
 
     @staticmethod
