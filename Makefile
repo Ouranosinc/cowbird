@@ -602,15 +602,19 @@ test: test-all	## alias for 'test-all' target
 .PHONY: test-all
 test-all: install-dev install test-only  ## run all tests combinations
 
+.PHONY: test-all
+test-all: install-dev install test-only  ## run all tests combinations, except Geoserver requests
+
 .PHONY: test-only
 test-only:  ## run all tests, but without prior dependency check and installation
 	@echo "Running tests..."
-	@bash -c '$(CONDA_CMD) pytest tests -vv --junitxml "$(APP_ROOT)/tests/results.xml"'
+	@bash -c '$(CONDA_CMD) pytest tests -vv -m "not geoserver" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-api
 test-api: install-dev install		## run only API tests with the environment Python
 	@echo "Running local tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "api" --junitxml "$(APP_ROOT)/tests/results.xml"'
+
 
 .PHONY: test-cli
 test-cli: install-dev install		## run only CLI tests with the environment Python
@@ -618,7 +622,7 @@ test-cli: install-dev install		## run only CLI tests with the environment Python
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "cli" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-geoserver 
-test-geoserver: install-dev install		## run only Geoserver tests
+test-geoserver: install-dev install		## run Geoserver requests tests against a configured Geoserver instance
 	@echo "Running local tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "geoserver" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
