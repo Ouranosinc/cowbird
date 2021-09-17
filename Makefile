@@ -110,6 +110,13 @@ REPO_VERSION_TAG := $(DOCKER_REPO):$(APP_VERSION)
 WEBSVC_SUFFIX := -webservice
 WORKER_SUFFIX := -worker
 
+# docker-compose
+ifneq ("$(wildcard ./docker/.env)","")
+    DOCKER_COMPOSE_ENV_FILE := ./docker/.env
+else
+    DOCKER_COMPOSE_ENV_FILE := ./docker/.env.example
+endif
+
 .DEFAULT_GOAL := help
 
 ## --- Informative targets --- ##
@@ -394,36 +401,37 @@ docker-config:  ## update docker specific config from examples files
 	sed 's/mongodb:\/\/.*:/mongodb:\/\/mongodb:/g' config/celeryconfig.py > config/celeryconfig.docker.py
 	sed 's/mongodb:\/\/.*:/mongodb:\/\/mongodb:/g' config/cowbird.example.ini > config/cowbird.docker.ini
 
+DOCKER_COMPOSE_WITH_ENV := docker-compose --env-file $(DOCKER_COMPOSE_ENV_FILE)
 DOCKER_TEST_COMPOSES := -f "$(APP_ROOT)/tests/ci/docker-compose.smoke-test.yml"
 .PHONY: docker-test
 docker-test: docker-build	## execute a smoke test of the built Docker image (validate that it boots)
 	@echo "Smoke test of built application docker image"
-	docker-compose $(DOCKER_TEST_COMPOSES) up -d
+	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_TEST_COMPOSES) up -d
 	sleep 5
 	curl localhost:$(APP_PORT)/version | python -m json.tool | grep "version"
 	curl localhost:$(APP_PORT) | python -m json.tool | grep $(APP_NAME)
-	docker-compose $(DOCKER_TEST_COMPOSES) logs
-	docker-compose $(DOCKER_TEST_COMPOSES) stop
+	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_TEST_COMPOSES) logs
+	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_TEST_COMPOSES) stop
 
 .PHONY: docker-stat
 docker-stat:  ## query docker-compose images status (from 'docker-test')
-	docker-compose $(DOCKER_TEST_COMPOSES) ps
+	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_TEST_COMPOSES) ps
 
 DOCKER_COMPOSES := -f "$(APP_ROOT)/docker/docker-compose.example.yml" -f "$(APP_ROOT)/docker/docker-compose.override.example.yml"
 .PHONY: docker-up
 docker-up: docker-build docker-config   ## run all containers using compose
-	docker-compose $(DOCKER_COMPOSES) up
+	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_COMPOSES) up
 
 DOCKER_DEV_COMPOSES := -f "$(APP_ROOT)/docker/docker-compose.example.yml" -f "$(APP_ROOT)/docker/docker-compose.dev.example.yml"
 .PHONY: docker-up-dev
 docker-up-dev: docker-build   ## run all dependencies containers using compose ready to be used by a local cowbird
-	docker-compose $(DOCKER_DEV_COMPOSES) up
+	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_DEV_COMPOSES) up
 
 .PHONY: docker-down
 docker-down:  ## stop running containers and remove them
-	docker-compose $(DOCKER_TEST_COMPOSES) down || true
-	docker-compose $(DOCKER_DEV_COMPOSES) down || true
-	docker-compose $(DOCKER_COMPOSES) down --remove-orphans || true
+	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_TEST_COMPOSES) down || true
+	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_DEV_COMPOSES) down || true
+	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_COMPOSES) down --remove-orphans || true
 
 .PHONY: docker-clean
 docker-clean: docker-down  ## remove all built docker images (only matching current/latest versions)
