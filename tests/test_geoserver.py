@@ -1,4 +1,9 @@
 # pylint: disable=protected-access
+"""
+These tests require a working Geoserver instance. They are ignored by the `Make test` target and the CI, but are
+still useful for a developer working on the Geoserver requests. They can be run with the `Make test-geoserver` target.
+More integration tests should be in Jupyter Notebook format as is the case with Birdhouse-deploy / DACCS platform.
+"""
 import os
 
 import pytest
@@ -20,13 +25,17 @@ def get_geoserver_settings():
         hostname = os.getenv("HOSTNAME", "localhost")
         geoserver_settings["url"] = geoserver_settings["url"].replace("${HOSTNAME}", hostname)
     if "${WORKSPACE_DIR}" in geoserver_settings["workspace_dir"]:
-        workdir = os.getenv("WORKSPACE_DIR", "/tmp/test-datastore")
+        workdir = os.getenv("WORKSPACE_DIR", "/tmp/user_workspace")
         geoserver_settings["workspace_dir"] = geoserver_settings["workspace_dir"].replace("${WORKDIR}", workdir)
+    if "${GEOSERVER_ADMIN}" in geoserver_settings["admin_user"]:
+        workdir = os.getenv("GEOSERVER_ADMIN", "")
+        geoserver_settings["admin_user"] = geoserver_settings["admin_user"].replace("${GEOSERVER_ADMIN}", workdir)
+    if "${GEOSERVER_PASSWORD}" in geoserver_settings["admin_password"]:
+        workdir = os.getenv("GEOSERVER_PASSWORD", "")
+        geoserver_settings["admin_password"] = geoserver_settings["admin_password"].replace("${GEOSERVER_PASSWORD}",
+                                                                                            workdir)
     geoserver_settings["ssl_verify"] = os.getenv("COWBIRD_SSL_VERIFY", False)
     return geoserver_settings
-
-
-GEOSERVER_SETTINGS = get_geoserver_settings()
 
 
 @pytest.mark.geoserver
@@ -40,18 +49,19 @@ class TestGeoserverRequests:
         "datastore-config": "test-datastore-configuration",
         "datastore-duplicate": "test-duplicate-datastore"
     }
+    geoserver_settings = get_geoserver_settings()
 
     @pytest.fixture
     def geoserver(self):
         # Bypasses ServiceFactory() to prevent side effects in other tests.
-        geoserver = Geoserver(settings={}, name="Geoserver", **GEOSERVER_SETTINGS)
-        geoserver.ssl_verify = GEOSERVER_SETTINGS["ssl_verify"]
+        geoserver = Geoserver(settings={}, name="Geoserver", **self.geoserver_settings)
+        geoserver.ssl_verify = self.geoserver_settings["ssl_verify"]
         return geoserver
 
     def teardown_class(self):
         # Couldn't pass fixture to teardown function.
-        teardown_gs = Geoserver(settings={}, name="Geoserver", **GEOSERVER_SETTINGS)
-        teardown_gs.ssl_verify = GEOSERVER_SETTINGS["ssl_verify"]
+        teardown_gs = Geoserver(settings={}, name="Geoserver", **self.geoserver_settings)
+        teardown_gs.ssl_verify = self.geoserver_settings["ssl_verify"]
         for _, workspace in self.workspaces.items():
             teardown_gs._remove_workspace_request(workspace_name=workspace)
 
