@@ -17,7 +17,7 @@ services:
       - ../config/config.example.yml:/config.yml
       - ../config/cowbird.docker.ini:/opt/local/src/cowbird/config/cowbird.ini
       - ../config/celeryconfig.docker.py:/opt/local/src/cowbird/config/celeryconfig.py
-      - ./user_workspaces:/user_workspaces
+      - $WORKSPACE_DIR:/user_workspaces
     restart: always
 
   worker:
@@ -29,7 +29,7 @@ services:
       - ../config/config.example.yml:/config.yml
       - ../config/cowbird.docker.ini:/opt/local/src/cowbird/config/cowbird.ini
       - ../config/celeryconfig.docker.py:/opt/local/src/cowbird/config/celeryconfig.py
-      - ./user_workspaces:/user_workspaces
+      - $WORKSPACE_DIR:/user_workspaces
     env_file:
       - ./config/cowbird/cowbird.env
     restart: always

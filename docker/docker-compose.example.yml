@@ -56,7 +56,7 @@ services:
       - "8765:8080"
     restart: on-failure
     volumes:
-      - ./user_workspaces:/user_workspaces
+      - $WORKSPACE_DIR:/user_workspaces
     environment:
       - GEOSERVER_DATA_DIR=/opt/footprints_dir
       - GEOWEBCACHE_CACHE_DIR=/opt/geoserver/data_dir/gwc
