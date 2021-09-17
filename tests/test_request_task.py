@@ -109,7 +109,8 @@ class TestRequestTask(unittest.TestCase):
 
     @patch("cowbird.services.impl.geoserver.Geoserver.create_workspace")
     @patch("cowbird.services.impl.geoserver.Geoserver.create_datastore")
-    def test_geoserver_user_created(self, create_datastore_mock, create_workspace_mock):
+    @patch("cowbird.services.impl.geoserver.Geoserver._create_datastore_dir")
+    def test_geoserver_user_created(self, create_datastore_mock, create_workspace_mock, create_datastore_dir):
         test_user_name = "test_user"
         geoserver = ServiceFactory().get_service("Geoserver")
 
@@ -118,7 +119,7 @@ class TestRequestTask(unittest.TestCase):
 
         # current implementation doesn't give any handler on which we could wait
         sleep(2)
-
+        create_datastore_dir.assert_called_with(test_user_name)
         create_workspace_mock.assert_called_with(test_user_name)
         create_datastore_mock.assert_called_with(test_user_name)
 
@@ -132,3 +133,33 @@ class TestRequestTask(unittest.TestCase):
         sleep(2)
 
         remove_workspace_mock.assert_called_with(test_user_name)
+
+    @patch("cowbird.services.impl.geoserver.Geoserver.validate_shapefile")
+    @patch("cowbird.services.impl.geoserver.Geoserver.publish_shapefile")
+    def test_geoserver_file_creation(self, validate_shapefile, publish_shapefile):
+        test_user_name = "test_user"
+        shapefile_name = "test_shapefile"
+        test_file = f"/tmp/user_workspaces/{test_user_name}/shapefile_datastore/{shapefile_name}.shp"
+        geoserver = ServiceFactory().get_service("Geoserver")
+
+        # geoserver should call create_workspace and then create_datastore
+        geoserver.on_created(test_file)
+
+        # current implementation doesn't give any handler on which we could wait
+        sleep(2)
+        validate_shapefile.assert_called_with(test_user_name, shapefile_name)
+        publish_shapefile.assert_called_with(test_user_name, shapefile_name)
+
+    @patch("cowbird.services.impl.geoserver.Geoserver.remove_shapefile")
+    def test_geoserver_file_removal(self, remove_shapefile):
+        test_user_name = "test_user"
+        shapefile_name = "test_shapefile"
+        test_file = f"/tmp/user_workspaces/{test_user_name}/shapefile_datastore/{shapefile_name}.shp"
+        geoserver = ServiceFactory().get_service("Geoserver")
+
+        # geoserver should call create_workspace and then create_datastore
+        geoserver.on_deleted(test_file)
+
+        # current implementation doesn't give any handler on which we could wait
+        sleep(2)
+        remove_shapefile.assert_called_with(test_user_name, shapefile_name)

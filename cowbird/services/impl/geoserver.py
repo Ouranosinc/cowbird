@@ -1,7 +1,8 @@
 import functools
 import os
 import re
-from typing import TYPE_CHECKING
+from time import sleep
+from typing import TYPE_CHECKING, Tuple
 
 import requests
 from celery import chain, shared_task
@@ -92,12 +93,15 @@ class Geoserver(Service, FSMonitor):
         raise NotImplementedError
 
     def user_created(self, user_name):
-        res = chain(create_workspace.si(user_name) | create_datastore.si(user_name))
+        self._create_datastore_dir(user_name)
+        res = chain(create_workspace.si(user_name), create_datastore.si(user_name))
         res.delay()
+        LOGGER.info("Start monitoring datastore of created user [%s]", user_name)
         Monitoring().register(self._shapefile_folder_dir(user_name), True, Geoserver)
 
     def user_deleted(self, user_name):
         remove_workspace.delay(user_name)
+        LOGGER.info("Stop monitoring datastore of created user [%s]", user_name)
         Monitoring().unregister(self._shapefile_folder_dir(user_name), self)
 
     def permission_created(self, permission):
@@ -120,11 +124,14 @@ class Geoserver(Service, FSMonitor):
 
         :param filename: Relative filename of a new file
         """
-        LOGGER.info("The following file [%s] has just been created", filename)
         if filename.endswith(".shp"):
-            LOGGER.info("Attempting to publish the following shapefile [%s]", filename)
-            workspace, shapefile_name = self._get_shapefile_info(filename)
-            self.publish_shapefile(workspace, shapefile_name)
+            workspace_name, shapefile_name = self._get_shapefile_info(filename)
+            # Small wait time to prevent unnecessary failure since shapefile is a multi file format
+            sleep(1)
+            LOGGER.info("Starting Geoserver publishing process for [%s]", filename)
+            res = chain(validate_shapefile.si(workspace_name, shapefile_name),
+                        publish_shapefile.si(workspace_name, shapefile_name))
+            res.delay()
 
     def on_deleted(self, filename):
         """
@@ -132,11 +139,9 @@ class Geoserver(Service, FSMonitor):
 
         :param filename: Relative filename of the removed file
         """
-        LOGGER.info("The following file [%s] has just been deleted", filename)
         if filename.endswith(".shp"):
-            LOGGER.info("Attempting to remove the following shapefile [%s]", filename)
-            workspace, shapefile_name = self._get_shapefile_info(filename)
-            self.remove_shapefile(workspace, shapefile_name)
+            workspace_name, shapefile_name = self._get_shapefile_info(filename)
+            remove_shapefile.delay(workspace_name, shapefile_name)
 
     def on_modified(self, filename):
         # type: (str) -> None
@@ -145,7 +150,8 @@ class Geoserver(Service, FSMonitor):
 
         :param filename: Relative filename of the updated file
         """
-        raise NotImplementedError
+        # Nothing need to be done in this class as Catalog already logs file modifications.
+        # Still needed to implement since part of parent FSMonitor class
 
     #
     # Geoserver class specific functions
@@ -158,7 +164,6 @@ class Geoserver(Service, FSMonitor):
         @param name: Workspace name
         """
         LOGGER.info("Attempting to create Geoserver workspace [%s]", name)
-
         self._create_workspace_request(name)
 
     def remove_workspace(self, name):
@@ -185,28 +190,47 @@ class Geoserver(Service, FSMonitor):
         LOGGER.info("Creating datastore [%s] in geoserver workspace [%s]", datastore_name, workspace_name)
 
         self._create_datastore_request(workspace_name=workspace_name, datastore_name=datastore_name)
-        datastore_path = self._shapefile_folder_dir(workspace_name)
-        self._create_datastore_dir(datastore_path)
+        datastore_path = self._geoserver_user_datastore_dir(workspace_name)
         self._configure_datastore_request(workspace_name=workspace_name,
                                           datastore_name=datastore_name,
                                           datastore_path=datastore_path)
 
-    def publish_shapefile(self, workspace_name, filename):
+    def publish_shapefile(self, workspace_name, shapefile_name):
         # type:(Geoserver, str, str) -> None
         """
         Publish a shapefile in the specified workspace.
 
-        @param workspace_name: Name of the workspace where shapefile will be published
-        @param filename: The shapefile's name, without file extension
+        @param workspace_name: Name of the workspace from which the shapefile will be published
+        @param shapefile_name: The shapefile's name, without file extension
         """
+        LOGGER.info("Shapefile [%s] is valid", shapefile_name)
         datastore_name = self._get_datastore_name(workspace_name)
         LOGGER.info("Attempting to publish shapefile [%s] to workspace:datastore [%s : %s]",
-                    filename,
+                    shapefile_name,
                     workspace_name,
                     datastore_name)
         self._publish_shapefile_request(workspace_name=workspace_name,
                                         datastore_name=datastore_name,
-                                        filename=filename)
+                                        filename=shapefile_name)
+
+    def validate_shapefile(self, workspace_name, shapefile_name):
+        """
+        Validate shapefile. Will look for the three other files necessary for Geoserver
+        publishing (.prj, .dbf, .shx) and raise a FileNotFoundError exception if one is
+        missing.
+
+        @param workspace_name: Name of the workspace from which the shapefile will be published
+        @param shapefile_name: The shapefile's name, without file extension
+        """
+        shapefile_extensions = [".prj", ".dbf", ".shx"]
+        files_to_find = [
+            f"{self._shapefile_folder_dir(workspace_name)}/{shapefile_name}{ext}" for ext in shapefile_extensions
+        ]
+        for file in files_to_find:
+            if not os.path.isfile(file):
+                LOGGER.warning("Shapefile is incomplete: Missing [%s]", file)
+                raise FileNotFoundError
+        LOGGER.info("Shapefile [%s] is valid", shapefile_name)
 
     def remove_shapefile(self, workspace_name, filename):
         # type:(Geoserver, str, str) -> None
@@ -239,24 +263,42 @@ class Geoserver(Service, FSMonitor):
     # to parse and use without external libraries.
     @staticmethod
     def _get_shapefile_info(filename):
-        # type:(str) -> (str, str)
+        # type:(str) -> Tuple[str, str]
         """
         @param filename: Relative filename of a new file
         @return: Workspace name (str) where file is located and shapefile name (str)
         """
         split_path = filename.split("/")
         workspace = split_path[-3]
-        shapefile_name = split_path[-1].replace(".shp", "")
+        shapefile_name, _ = split_path[-1].split(".")
 
         return workspace, shapefile_name
 
     @staticmethod
     def _get_datastore_name(workspace_name):
         # type: (str) -> str
+        """
+        Return datastore name used to represent the datastore inside Geoserver.
+        To be used in the HTTP requests sent to Geoserver.
+        This name does not exist on the file system.
+        """
         return "shapefile_datastore_{}".format(workspace_name)
 
-    def _shapefile_folder_dir(self, user_name):
-        return os.path.join(self.workspace_dir, user_name, "shapefile_datastore")
+    def _shapefile_folder_dir(self, workspace_name):
+        # type: (str) -> str
+        """
+        Returns the path to the user's shapefile datastore inside the file system
+        """
+        return os.path.join(self.workspace_dir, workspace_name, "shapefile_datastore")
+
+    @staticmethod
+    def _geoserver_user_datastore_dir(user_name):
+        # type: (str) -> str
+        """
+        Returns the path to the user's shapefile datastore inside the Geoserver instance container, ie. where
+        the `WORKSPACE_DIR` env variable is mapped in the Geoserver container.
+        """
+        return os.path.join("/user_workspaces", user_name, "shapefile_datastore")
 
     @geoserver_response_handling
     def _create_workspace_request(self, workspace_name):
@@ -285,13 +327,13 @@ class Geoserver(Service, FSMonitor):
         response = requests.delete(url=request_url, auth=self.auth, headers=self.headers)
         return response
 
-    @staticmethod
-    def _create_datastore_dir(datastore_path):
+    def _create_datastore_dir(self, workspace_name):
         # type:(str) -> None
+        datastore_folder_path = self._shapefile_folder_dir(workspace_name)
         try:
-            os.mkdir(datastore_path)
+            os.mkdir(datastore_folder_path)
         except FileExistsError:
-            LOGGER.info("User datastore directory already existing (skip creation): [%s]", datastore_path)
+            LOGGER.info("User datastore directory already existing (skip creation): [%s]", datastore_folder_path)
 
     @geoserver_response_handling
     def _create_datastore_request(self, workspace_name, datastore_name):
@@ -432,21 +474,33 @@ class Geoserver(Service, FSMonitor):
 
 
 @shared_task(bind=True, base=RequestTask)
-def create_workspace(self, name):
-    # type:(str) -> None
+def create_workspace(self, user_name):
     # Avoid any actual logic in celery task handler, only task related stuff should be done here
-    return ServiceFactory().get_service("Geoserver").create_workspace(name)
+    return ServiceFactory().get_service("Geoserver").create_workspace(user_name)
 
 
 @shared_task(bind=True, base=RequestTask)
-def create_datastore(self, name):
-    # type:(str) -> None
+def create_datastore(self, datastore_name):
     # Avoid any actual logic in celery task handler, only task related stuff should be done here
-    return ServiceFactory().get_service("Geoserver").create_datastore(name)
+    return ServiceFactory().get_service("Geoserver").create_datastore(datastore_name)
 
 
 @shared_task(bind=True, base=RequestTask)
-def remove_workspace(self, name):
-    # type:(str) -> None
+def remove_workspace(self, workspace_name):
     # Avoid any actual logic in celery task handler, only task related stuff should be done here
-    return ServiceFactory().get_service("Geoserver").remove_workspace(name)
+    return ServiceFactory().get_service("Geoserver").remove_workspace(workspace_name)
+
+
+@shared_task(bind=True, autoretry_for=(FileNotFoundError,), retry_backoff=True, max_retries=8)
+def validate_shapefile(self, workspace_name, shapefile_name):
+    return ServiceFactory().get_service("Geoserver").validate_shapefile(workspace_name, shapefile_name)
+
+
+@shared_task(bind=True, base=RequestTask)
+def publish_shapefile(self, workspace_name, shapefile_name):
+    return ServiceFactory().get_service("Geoserver").publish_shapefile(workspace_name, shapefile_name)
+
+
+@shared_task(bind=True, base=RequestTask)
+def remove_shapefile(self, workspace_name, shapefile_name):
+    return ServiceFactory().get_service("Geoserver").remove_shapefile(workspace_name, shapefile_name)
