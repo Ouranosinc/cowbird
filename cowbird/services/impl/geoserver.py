@@ -169,8 +169,7 @@ class Geoserver(Service, FSMonitor):
     def remove_workspace(self, name):
         # type:(Geoserver, str) -> None
         """
-        Removes a workspace from geoserver. Will also remove all datastores associated with
-        the workspace.
+        Removes a workspace from geoserver. Will also remove all datastores associated with the workspace.
 
         @param name: Workspace name
         """
@@ -215,9 +214,8 @@ class Geoserver(Service, FSMonitor):
 
     def validate_shapefile(self, workspace_name, shapefile_name):
         """
-        Validate shapefile. Will look for the three other files necessary for Geoserver
-        publishing (.prj, .dbf, .shx) and raise a FileNotFoundError exception if one is
-        missing.
+        Validate shapefile. Will look for the three other files necessary for Geoserver publishing (.prj, .dbf, .shx)
+        and raise a FileNotFoundError exception if one is missing.
 
         @param workspace_name: Name of the workspace from which the shapefile will be published
         @param shapefile_name: The shapefile's name, without file extension
@@ -279,6 +277,7 @@ class Geoserver(Service, FSMonitor):
         # type: (str) -> str
         """
         Return datastore name used to represent the datastore inside Geoserver.
+
         To be used in the HTTP requests sent to Geoserver.
         This name does not exist on the file system.
         """
@@ -287,7 +286,7 @@ class Geoserver(Service, FSMonitor):
     def _shapefile_folder_dir(self, workspace_name):
         # type: (str) -> str
         """
-        Returns the path to the user's shapefile datastore inside the file system
+        Returns the path to the user's shapefile datastore inside the file system.
         """
         return os.path.join(self.workspace_dir, workspace_name, "shapefile_datastore")
 
@@ -295,8 +294,8 @@ class Geoserver(Service, FSMonitor):
     def _geoserver_user_datastore_dir(user_name):
         # type: (str) -> str
         """
-        Returns the path to the user's shapefile datastore inside the Geoserver instance container, ie. where
-        the `WORKSPACE_DIR` env variable is mapped in the Geoserver container.
+        Returns the path to the user's shapefile datastore inside the Geoserver instance container, ie.
+        where the `WORKSPACE_DIR` env variable is mapped in the Geoserver container.
         """
         return os.path.join("/user_workspaces", user_name, "shapefile_datastore")
 
@@ -458,7 +457,7 @@ class Geoserver(Service, FSMonitor):
     def _remove_shapefile_request(self, workspace_name, datastore_name, filename):
         # type:(Geoserver, str, str, str) -> requests.Response
         """
-        Request to remove specified Geoserver `Feature type` and corresponding layer
+        Request to remove specified Geoserver `Feature type` and corresponding layer.
 
         @param workspace_name: Workspace where file is published
         @param datastore_name: Datastore where file is published

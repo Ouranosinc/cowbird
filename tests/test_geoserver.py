@@ -1,6 +1,8 @@
 # pylint: disable=protected-access
 """
-These tests require a working Geoserver instance. They are ignored by the `Make test` target and the CI, but are
+These tests require a working Geoserver instance.
+
+They are ignored by the `Make test` target and the CI, but are
 still useful for a developer working on the Geoserver requests. They can be run with the `Make test-geoserver` target.
 More integration tests should be in Jupyter Notebook format as is the case with Birdhouse-deploy / DACCS platform.
 """
@@ -15,8 +17,8 @@ from cowbird.services.impl.geoserver import Geoserver
 
 def get_geoserver_settings():
     """
-    Setup basic parameters for an unmodified local test run (using the example files)
-    unless environment variables are set.
+    Setup basic parameters for an unmodified local test run (using the example files) unless environment variables are
+    set.
     """
     config_path = os.path.join(COWBIRD_ROOT, "config/config.example.yml")
     settings_dictionary = yaml.safe_load(open(config_path, "r"))
