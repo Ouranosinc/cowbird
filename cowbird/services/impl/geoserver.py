@@ -295,6 +295,7 @@ class Geoserver(Service, FSMonitor):
         # type: (str) -> str
         """
         Returns the path to the user's shapefile datastore inside the Geoserver instance container, ie.
+
         where the `WORKSPACE_DIR` env variable is mapped in the Geoserver container.
         """
         return os.path.join("/user_workspaces", user_name, "shapefile_datastore")

@@ -154,6 +154,9 @@ linkcheck_ignore = [
     "AUTHORS.rst",
     r"docs/\w+.rst",
 ]
+linkcheck_anchors_ignore = [
+    r".*issuecomment.*"   # github issue comment anchors not resolved
+]
 
 linkcheck_timeout = 20
 linkcheck_retries = 5

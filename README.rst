@@ -58,7 +58,7 @@ the resources under those services such that the complete ecosystem can seamless
 
 .. |github_latest| image:: https://img.shields.io/github/workflow/status/Ouranosinc/cowbird/Tests/master?label=master
     :alt: Github Actions CI Build Status (master branch)
-    :target: https://travis-ci.com/Ouranosinc/cowbird
+    :target: https://github.com/Ouranosinc/cowbird/actions?query=branch%3Amaster
 
 .. |github_tagged| image:: https://img.shields.io/github/workflow/status/Ouranosinc/cowbird/Tests/0.4.0?label=0.4.0
     :alt: Github Actions CI Build Status (latest tag)
