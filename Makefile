@@ -78,15 +78,31 @@ PIP_USE_FEATURE := `python -c '\
 	import pip; \
 	from distutils.version import LooseVersion; \
 	print(LooseVersion(pip.__version__) < LooseVersion("21.0"))'`
-ifeq ($(findstring "--use-feature=2020-resolver", "$(PIP_XARGS)"),)
+ifeq ($(findstring "--use-feature=2020-resolver",$(PIP_XARGS)),)
   # feature not specified, but needed
   ifeq ("$(PIP_USE_FEATURE)", "True")
     PIP_XARGS := --use-feature=2020-resolver $(PIP_XARGS)
+  else
+    # use faster legacy resolver
+    ifeq ($(subst "--use-deprecated=legacy-resolver",,$(PIP_XARGS)),)
+      PIP_XARGS := --use-deprecated=legacy-resolver $(PIP_XARGS)
+    endif
+    ifeq ($(findstring "--use-feature=fast-deps",$(PIP_XARGS)),)
+      PIP_XARGS := --use-feature=fast-deps $(PIP_XARGS)
+    endif
   endif
 else
   # feature was specified, but should not (not required anymore, default behavior)
   ifeq ("$(PIP_USE_FEATURE)", "True")
     PIP_XARGS := $(subst "--use-feature=2020-resolver",,"$(PIP_XARGS)")
+  else
+    # use faster legacy resolver
+    ifeq $(subst "--use-deprecated=legacy-resolver",,$(PIP_XARGS))
+      PIP_XARGS := --use-deprecated=legacy-resolver $(PIP_XARGS)
+    endif
+  	ifeq ($(findstring "--use-feature=fast-deps",$(PIP_XARGS)),)
+      PIP_XARGS := --use-feature=fast-deps $(PIP_XARGS)
+    endif
   endif
 endif
 
@@ -279,9 +295,13 @@ install: install-all	## alias for 'install-all' target
 .PHONY: install-all
 install-all: install-sys install-pkg install-dev install-docs	## install every dependency and package definition
 
+.PHONY: install-xargs
+install-xargs:
+	@echo "Using PIP_XARGS: $(PIP_XARGS)"
+
 # note: don't use PIP_XARGS for install system package as it could be upgrade of pip that doesn't yet have those options
 .PHONY: install-sys
-install-sys: clean conda-env	## install system dependencies and required installers/runners
+install-sys: clean conda-env install-xargs	## install system dependencies and required installers/runners
 	@echo "Installing system dependencies..."
 	@bash -c '$(CONDA_CMD) pip install --upgrade -r "$(APP_ROOT)/requirements-sys.txt"'
 	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) gunicorn'
@@ -293,17 +313,17 @@ install-pkg: install-sys	## install the package to the active Python's site-pack
 	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) --upgrade -e "$(APP_ROOT)" --no-cache'
 
 .PHONY: install-req
-install-req: conda-env	 ## install package base requirements without installing main package
+install-req: conda-env install-xargs	 ## install package base requirements without installing main package
 	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) -r "$(APP_ROOT)/requirements.txt"'
 	@echo "Successfully installed base requirements."
 
 .PHONY: install-docs
-install-docs: conda-env  ## install package requirements for documentation generation
+install-docs: conda-env install-xargs  ## install package requirements for documentation generation
 	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) -r "$(APP_ROOT)/requirements-doc.txt"'
 	@echo "Successfully installed docs requirements."
 
 .PHONY: install-dev
-install-dev: conda-env	## install package requirements for development and testing
+install-dev: conda-env install-xargs	## install package requirements for development and testing
 	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) -r "$(APP_ROOT)/requirements-dev.txt"'
 	@echo "Successfully installed dev requirements."
 
