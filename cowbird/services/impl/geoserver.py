@@ -37,6 +37,9 @@ def geoserver_response_handling(func):
 
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
+        # Geoserver responses are often full HTML pages for codes 400-499, so text/content is omitted from
+        # the logs. Error responses in the 500-599 range are usually concise, so their text/content were included
+        # in the logs to help eventual debugging.
         response = func(*args, **kwargs)
         operation = func.__name__
         response_code = response.status_code
