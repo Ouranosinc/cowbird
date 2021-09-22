@@ -3,7 +3,7 @@
 
 # sphinx-autoapi breaking with astroid==2.7 (https://github.com/readthedocs/sphinx-autoapi/issues/301)
 astroid>=2.6,!=2.7.*,<3
-pycodestyle==2.6.0; python_version >= "3.6"
+pycodestyle==2.6.0
 sphinx-autoapi>=1.7.0
 sphinx-paramlinks>=0.4.1
 sphinx>=3.1,<4
