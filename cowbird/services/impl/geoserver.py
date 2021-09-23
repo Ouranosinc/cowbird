@@ -22,6 +22,9 @@ if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from cowbird.typedefs import SettingsType
 
+SERVICE_ADMIN_USER = "admin_user"  # nosec: B105
+SERVICE_ADMIN_PASSWORD = "admin_password"  # nosec: B105
+
 LOGGER = get_logger(__name__)
 
 

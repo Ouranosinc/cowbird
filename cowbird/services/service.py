@@ -12,8 +12,6 @@ if TYPE_CHECKING:
 SERVICE_PRIORITY_PARAM = "priority"
 SERVICE_URL_PARAM = "url"
 SERVICE_WORKSPACE_DIR_PARAM = "workspace_dir"
-SERVICE_ADMIN_USER = "admin_user"  # nosec: B105
-SERVICE_ADMIN_PASSWORD = "admin_password"  # nosec: B105
 
 SERVICE_PARAMETERS = frozenset([
     SERVICE_PRIORITY_PARAM,
