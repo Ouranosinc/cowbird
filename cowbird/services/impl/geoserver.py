@@ -130,8 +130,6 @@ class Geoserver(Service, FSMonitor):
         """
         if filename.endswith(".shp"):
             workspace_name, shapefile_name = self._get_shapefile_info(filename)
-            # Small wait time to prevent unnecessary failure since shapefile is a multi file format
-            sleep(1)
             LOGGER.info("Starting Geoserver publishing process for [%s]", filename)
             res = chain(validate_shapefile.si(workspace_name, shapefile_name),
                         publish_shapefile.si(workspace_name, shapefile_name))
@@ -224,6 +222,8 @@ class Geoserver(Service, FSMonitor):
         @param workspace_name: Name of the workspace from which the shapefile will be published
         @param shapefile_name: The shapefile's name, without file extension
         """
+        # Small wait time to prevent unnecessary failure since shapefile is a multi file format
+        sleep(1)
         shapefile_extensions = [".prj", ".dbf", ".shx"]
         files_to_find = [
             f"{self._shapefile_folder_dir(workspace_name)}/{shapefile_name}{ext}" for ext in shapefile_extensions
