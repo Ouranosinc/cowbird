@@ -11,8 +11,6 @@ from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
 from cowbird.request_task import RequestTask
 from cowbird.services.service import (
-    SERVICE_ADMIN_PASSWORD,
-    SERVICE_ADMIN_USER,
     SERVICE_URL_PARAM,
     SERVICE_WORKSPACE_DIR_PARAM,
     Service
@@ -479,31 +477,31 @@ class Geoserver(Service, FSMonitor):
 @shared_task(bind=True, base=RequestTask)
 def create_workspace(self, user_name):
     # Avoid any actual logic in celery task handler, only task related stuff should be done here
-    return ServiceFactory().get_service("Geoserver").create_workspace(user_name)
+    return Geoserver.get_instance().create_workspace(user_name)
 
 
 @shared_task(bind=True, base=RequestTask)
 def create_datastore(self, datastore_name):
     # Avoid any actual logic in celery task handler, only task related stuff should be done here
-    return ServiceFactory().get_service("Geoserver").create_datastore(datastore_name)
+    return Geoserver.get_instance().create_datastore(datastore_name)
 
 
 @shared_task(bind=True, base=RequestTask)
 def remove_workspace(self, workspace_name):
     # Avoid any actual logic in celery task handler, only task related stuff should be done here
-    return ServiceFactory().get_service("Geoserver").remove_workspace(workspace_name)
+    return Geoserver.get_instance().remove_workspace(workspace_name)
 
 
 @shared_task(bind=True, autoretry_for=(FileNotFoundError,), retry_backoff=True, max_retries=8)
 def validate_shapefile(self, workspace_name, shapefile_name):
-    return ServiceFactory().get_service("Geoserver").validate_shapefile(workspace_name, shapefile_name)
+    return Geoserver.get_instance().validate_shapefile(workspace_name, shapefile_name)
 
 
 @shared_task(bind=True, base=RequestTask)
 def publish_shapefile(self, workspace_name, shapefile_name):
-    return ServiceFactory().get_service("Geoserver").publish_shapefile(workspace_name, shapefile_name)
+    return Geoserver.get_instance().publish_shapefile(workspace_name, shapefile_name)
 
 
 @shared_task(bind=True, base=RequestTask)
 def remove_shapefile(self, workspace_name, shapefile_name):
-    return ServiceFactory().get_service("Geoserver").remove_shapefile(workspace_name, shapefile_name)
+    return Geoserver.get_instance().remove_shapefile(workspace_name, shapefile_name)
