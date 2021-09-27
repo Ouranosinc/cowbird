@@ -12,7 +12,7 @@ import pytest
 import yaml
 
 from cowbird.constants import COWBIRD_ROOT
-from cowbird.services.impl.geoserver import Geoserver
+from cowbird.services.impl.geoserver import Geoserver, GeoserverError
 
 
 def get_geoserver_settings():
@@ -65,57 +65,64 @@ class TestGeoserverRequests:
         teardown_gs = Geoserver(settings={}, name="Geoserver", **self.geoserver_settings)
         teardown_gs.ssl_verify = self.geoserver_settings["ssl_verify"]
         for _, workspace in self.workspaces.items():
-            teardown_gs._remove_workspace_request(workspace_name=workspace)
+            try:
+                teardown_gs._remove_workspace_request(workspace_name=workspace)
+            except GeoserverError:
+                # Making sure all test workspaces are removed
+                pass
 
     def test_workspace_creation(self, geoserver):
-        request = geoserver._create_workspace_request(workspace_name=self.workspaces["creation"])
-        assert request.status_code == 201
+        response = geoserver._create_workspace_request(workspace_name=self.workspaces["creation"])
+        assert response.status_code == 201
 
     def test_empty_workspace_removal(self, geoserver):
         geoserver._create_workspace_request(self.workspaces["empty-remove"])
-        request = geoserver._remove_workspace_request(workspace_name=self.workspaces["empty-remove"])
-        assert request.status_code == 200
+        response = geoserver._remove_workspace_request(workspace_name=self.workspaces["empty-remove"])
+        assert response.status_code == 200
 
     def test_duplicate_workspace(self, geoserver):
-        request = geoserver._create_workspace_request(workspace_name=self.workspaces["creation-duplicate"])
-        assert request.status_code == 201
-        request = geoserver._create_workspace_request(workspace_name=self.workspaces["creation-duplicate"])
-        assert request.status_code == 401
+        response = geoserver._create_workspace_request(workspace_name=self.workspaces["creation-duplicate"])
+        assert response.status_code == 201
+        with pytest.raises(GeoserverError) as error:
+            geoserver._create_workspace_request(workspace_name=self.workspaces["creation-duplicate"])
+        assert "Geoserver workspace already exists" in str(error.value)
 
     def test_workspace_removal(self, geoserver):
         geoserver._create_workspace_request(workspace_name=self.workspaces["remove"])
         geoserver._create_datastore_request(workspace_name=self.workspaces["remove"],
                                             datastore_name="test-datastore")
-        request = geoserver._remove_workspace_request(workspace_name=self.workspaces["remove"])
-        assert request.status_code == 200
+        response = geoserver._remove_workspace_request(workspace_name=self.workspaces["remove"])
+        assert response.status_code == 200
 
     def test_datastore_creation(self, geoserver):
         geoserver._create_workspace_request(workspace_name=self.workspaces["datastore-create"])
-        request = geoserver._create_datastore_request(workspace_name=self.workspaces["datastore-create"],
-                                                      datastore_name="test-datastore")
-        assert request.status_code == 201
+        response = geoserver._create_datastore_request(workspace_name=self.workspaces["datastore-create"],
+                                                       datastore_name="test-datastore")
+        assert response.status_code == 201
 
     def test_datastore_creation_missing_workspace(self, geoserver):
-        request = geoserver._create_datastore_request(workspace_name="test-nonexistent-workspace",
-                                                      datastore_name="test-datastore")
-        assert request.status_code == 500
+        with pytest.raises(GeoserverError) as error:
+            geoserver._create_datastore_request(workspace_name="test-nonexistent-workspace",
+                                                datastore_name="test-datastore")
+        assert "Operation [_create_datastore_request] failed" in str(error.value)
 
     def test_datastore_configuration(self, geoserver):
         geoserver._create_workspace_request(workspace_name=self.workspaces["datastore-config"])
         geoserver._create_datastore_request(workspace_name=self.workspaces["datastore-config"],
                                             datastore_name="test-datastore")
 
-        request = geoserver._configure_datastore_request(workspace_name=self.workspaces["datastore-config"],
-                                                         datastore_name="test-datastore",
-                                                         datastore_path=geoserver.workspace_dir)
-        assert request.status_code == 200
+        response = geoserver._configure_datastore_request(workspace_name=self.workspaces["datastore-config"],
+                                                          datastore_name="test-datastore",
+                                                          datastore_path=geoserver.workspace_dir)
+        assert response.status_code == 200
 
     def test_duplicate_datastore(self, geoserver):
         geoserver._create_workspace_request(workspace_name=self.workspaces["datastore-duplicate"])
-        request = geoserver._create_datastore_request(workspace_name=self.workspaces["datastore-duplicate"],
-                                                      datastore_name="test-datastore")
-        assert request.status_code == 201
+        response = geoserver._create_datastore_request(workspace_name=self.workspaces["datastore-duplicate"],
+                                                       datastore_name="test-datastore")
+        assert response.status_code == 201
 
-        request = geoserver._create_datastore_request(workspace_name=self.workspaces["datastore-duplicate"],
-                                                      datastore_name="test-datastore")
-        assert request.status_code == 500
+        with pytest.raises(GeoserverError) as error:
+            geoserver._create_datastore_request(workspace_name=self.workspaces["datastore-duplicate"],
+                                                datastore_name="test-datastore")
+        assert "Operation [_create_datastore_request] failed" in str(error.value)

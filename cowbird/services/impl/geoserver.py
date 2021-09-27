@@ -37,26 +37,44 @@ def geoserver_response_handling(func):
         # Geoserver responses are often full HTML pages for codes 400-499, so text/content is omitted from
         # the logs. Error responses in the 500-599 range are usually concise, so their text/content were included
         # in the logs to help eventual debugging.
-        response = func(*args, **kwargs)
+
+        # This try/except is used to catch errors caused by an unavailable Geoserver instance.
+        # Since a connection error causes the requests library to raise an exception (RequestException),
+        # we can't rely on a response code and need to handle this case so it can be seen in the logs.
+        # Without this, the requests auto-retries as per RequestTask class's configurations, but
+        try:
+            response = func(*args, **kwargs)
+        except Exception as error:
+            LOGGER.error(error)
+            raise requests.RequestException("Connection to Geoserver failed")
+
         operation = func.__name__
         response_code = response.status_code
-        regex_to_find = "Workspace &#39;.*&#39; already exists"
+        regex_exists = "Workspace &#39;.*&#39; already exists"
+        regex_not_found = "Workspace &#39;.*&#39; not found"
+
         if response_code in (200, 201):
             LOGGER.info("Operation [%s] was successful.", operation)
-        elif response_code == 401 and re.search(regex_to_find, response.text):
+        elif response_code == 401 and re.search(regex_exists, response.text):
             # This is done because Geoserver's reply/error code is misleading in this case and
             # returns HTML content.
-            LOGGER.error("Geoserver workspace already exists")
+            raise GeoserverError("Geoserver workspace already exists")
         elif response_code == 401:
-            LOGGER.error("Operation [%s] failed because it lacks valid authentication credentials.",
-                         operation)
+            raise GeoserverError(f"Operation [{operation}] failed because it lacks valid authentication credentials.")
         elif response_code == 403 and operation == "_remove_workspace_request":
-            LOGGER.error(
-                "Geoserver workspace [%s] is not empty. Make sure `recurse` is set to `true` to delete workspace")
+            raise GeoserverError(
+                "Geoserver workspace is not empty. Make sure `recurse` is set to `true` to delete workspace")
+        elif response_code == 404 and re.search(regex_not_found, response.text):
+            raise GeoserverError("Geoserver workspace was not found")
+        elif response_code == 404 and "No such data store" in response.text:
+            raise GeoserverError("Geoserver datastore was not found")
+        elif response_code == 404 and "No such feature type" in response.text:
+            raise GeoserverError("Geoserver feature type was not found")
         elif response_code == 500:
-            LOGGER.error("Operation [%s] failed : %s", operation, response.text)
+            raise GeoserverError(f"Operation [{operation}] failed : {response.text}")
         else:
-            LOGGER.error("Operation [%s] failed with HTTP error code [%s]", operation, response_code)
+            raise requests.RequestException(f"Operation [{operation}] failed with HTTP error code [response_code]")
+
         return response
 
     return wrapper
@@ -504,3 +522,9 @@ def publish_shapefile(self, workspace_name, shapefile_name):
 @shared_task(bind=True, base=RequestTask)
 def remove_shapefile(self, workspace_name, shapefile_name):
     return Geoserver.get_instance().remove_shapefile(workspace_name, shapefile_name)
+
+
+class GeoserverError(Exception):
+    """
+    Generic Geoserver error used to break request chains.
+    """
