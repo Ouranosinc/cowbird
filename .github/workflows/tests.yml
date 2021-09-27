@@ -54,7 +54,7 @@ jobs:
         os: [ubuntu-latest]
         python-version: ["3.7", "3.8"]
         allow-failure: [false]
-        test-case: [test]  # add other test variations to run for every python/os/failure combinations
+        test-case: [test-github]  # add other test variations to run for every python/os/failure combinations
         # tests with single run
         include:
           # linter tests
@@ -76,7 +76,7 @@ jobs:
           - os: ubuntu-latest
             python-version: 3.9
             allow-failure: true
-            test-case: test
+            test-case: test-github
     steps:
       - uses: actions/checkout@v2
         with:
