@@ -10,11 +10,7 @@ from celery import chain, shared_task
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
 from cowbird.request_task import RequestTask
-from cowbird.services.service import (
-    SERVICE_URL_PARAM,
-    SERVICE_WORKSPACE_DIR_PARAM,
-    Service
-)
+from cowbird.services.service import SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM, Service
 from cowbird.services.service_factory import ServiceFactory
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger
 
