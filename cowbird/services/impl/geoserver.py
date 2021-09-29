@@ -50,6 +50,7 @@ def geoserver_response_handling(func):
 
         operation = func.__name__
         response_code = response.status_code
+        fail_msg_intro = f"Operation [{operation}] failed"
         regex_exists = "Workspace &#39;.*&#39; already exists"
         regex_not_found = "Workspace &#39;.*&#39; not found"
 
@@ -58,22 +59,23 @@ def geoserver_response_handling(func):
         elif response_code == 401 and re.search(regex_exists, response.text):
             # This is done because Geoserver's reply/error code is misleading in this case and
             # returns HTML content.
-            raise GeoserverError("Geoserver workspace already exists")
+            #
+            # LOGGER instead of GeoserverError because workspace existing should not block subsequent steps
+            LOGGER.warning("Operation [%s] failed :Geoserver workspace already exists", operation)
         elif response_code == 401:
-            raise GeoserverError(f"Operation [{operation}] failed because it lacks valid authentication credentials.")
+            raise GeoserverError(f"{fail_msg_intro} because it lacks valid authentication credentials.")
         elif response_code == 403 and operation == "_remove_workspace_request":
-            raise GeoserverError(
-                "Geoserver workspace is not empty. Make sure `recurse` is set to `true` to delete workspace")
+            raise GeoserverError(f"{fail_msg_intro} : Make sure `recurse` is set to `true` to delete workspace")
         elif response_code == 404 and re.search(regex_not_found, response.text):
-            raise GeoserverError("Geoserver workspace was not found")
+            raise GeoserverError(f"{fail_msg_intro}: Geoserver workspace was not found")
         elif response_code == 404 and "No such data store" in response.text:
-            raise GeoserverError("Geoserver datastore was not found")
+            raise GeoserverError(f"{fail_msg_intro} :Geoserver datastore was not found")
         elif response_code == 404 and "No such feature type" in response.text:
-            raise GeoserverError("Geoserver feature type was not found")
+            raise GeoserverError(f"{fail_msg_intro} :Geoserver feature type was not found")
         elif response_code == 500:
-            raise GeoserverError(f"Operation [{operation}] failed : {response.text}")
+            raise GeoserverError(f"{fail_msg_intro} : {response.text}")
         else:
-            raise requests.RequestException(f"Operation [{operation}] failed with HTTP error code [response_code]")
+            raise requests.RequestException(f"{fail_msg_intro} with HTTP error code [{response_code}]")
 
         return response
 
@@ -526,6 +528,6 @@ def remove_shapefile(self, workspace_name, shapefile_name):
 
 class GeoserverError(Exception):
     """
-    Generic Geoserver error used to break request chains, as RequestTask
-    only retries for specific exceptions (RequestExceptions).
+    Generic Geoserver error used to break request chains, as RequestTask only retries for a specific exception
+    (RequestException).
     """

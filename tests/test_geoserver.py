@@ -83,9 +83,8 @@ class TestGeoserverRequests:
     def test_duplicate_workspace(self, geoserver):
         response = geoserver._create_workspace_request(workspace_name=self.workspaces["creation-duplicate"])
         assert response.status_code == 201
-        with pytest.raises(GeoserverError) as error:
-            geoserver._create_workspace_request(workspace_name=self.workspaces["creation-duplicate"])
-        assert "Geoserver workspace already exists" in str(error.value)
+        response = geoserver._create_workspace_request(workspace_name=self.workspaces["creation-duplicate"])
+        assert response.status_code == 401
 
     def test_workspace_removal(self, geoserver):
         geoserver._create_workspace_request(workspace_name=self.workspaces["remove"])
