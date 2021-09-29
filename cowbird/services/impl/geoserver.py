@@ -526,5 +526,6 @@ def remove_shapefile(self, workspace_name, shapefile_name):
 
 class GeoserverError(Exception):
     """
-    Generic Geoserver error used to break request chains.
+    Generic Geoserver error used to break request chains, as RequestTask
+    only retries for specific exceptions (RequestExceptions).
     """
