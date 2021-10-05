@@ -30,7 +30,7 @@ def get_geoserver_settings():
         hostname = os.getenv("HOSTNAME", "localhost")
         geoserver_settings["url"] = geoserver_settings["url"].replace("${HOSTNAME}", hostname)
     if "${WORKSPACE_DIR}" in geoserver_settings["workspace_dir"]:
-        # Make sure the user running this test has write access to this directory and that this path 
+        # Make sure the user running this test has write access to this directory and that this path
         # is also the one used in the docker-compose environment file (docker/.env | docker/.env.example)
         value = os.getenv("WORKSPACE_DIR", "/tmp/user_workspace")
         geoserver_settings["workspace_dir"] = geoserver_settings["workspace_dir"].replace("${WORKSPACE_DIR}", value)
