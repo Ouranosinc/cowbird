@@ -642,14 +642,14 @@ test-cli: install-dev install		## run only CLI tests with the environment Python
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "cli" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-geoserver 
-test-geoserver: install-dev install		## run Geoserver requests tests against a configured Geoserver instance
+test-geoserver: install-dev install		## run Geoserver requests tests against a configured Geoserver instance. Most of these tests are "online" tests
 	@echo "Running local tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "geoserver" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-github
-test-github:  ## test target used by github's ci, runs all tests except Geoserver requests, without prior dependency check and installation
+test-github:  ## test target used by github's ci, runs all tests except online tests, without prior dependency check and installation
 	@echo "Running tests..."
-	@bash -c '$(CONDA_CMD) pytest tests -vv -m "not geoserver" --junitxml "$(APP_ROOT)/tests/results.xml"'
+	@bash -c '$(CONDA_CMD) pytest tests -vv -m "not online" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-custom
 test-custom: install-dev install	## run custom marker tests using SPEC="<marker-specification>"
