@@ -78,15 +78,31 @@ PIP_USE_FEATURE := `python -c '\
 	import pip; \
 	from distutils.version import LooseVersion; \
 	print(LooseVersion(pip.__version__) < LooseVersion("21.0"))'`
-ifeq ($(findstring "--use-feature=2020-resolver", "$(PIP_XARGS)"),)
+ifeq ($(findstring "--use-feature=2020-resolver",$(PIP_XARGS)),)
   # feature not specified, but needed
   ifeq ("$(PIP_USE_FEATURE)", "True")
     PIP_XARGS := --use-feature=2020-resolver $(PIP_XARGS)
+  else
+    # use faster legacy resolver
+    ifeq ($(subst "--use-deprecated=legacy-resolver",,$(PIP_XARGS)),)
+      PIP_XARGS := --use-deprecated=legacy-resolver $(PIP_XARGS)
+    endif
+    ifeq ($(findstring "--use-feature=fast-deps",$(PIP_XARGS)),)
+      PIP_XARGS := --use-feature=fast-deps $(PIP_XARGS)
+    endif
   endif
 else
   # feature was specified, but should not (not required anymore, default behavior)
   ifeq ("$(PIP_USE_FEATURE)", "True")
     PIP_XARGS := $(subst "--use-feature=2020-resolver",,"$(PIP_XARGS)")
+  else
+    # use faster legacy resolver
+    ifeq $(subst "--use-deprecated=legacy-resolver",,$(PIP_XARGS))
+      PIP_XARGS := --use-deprecated=legacy-resolver $(PIP_XARGS)
+    endif
+  	ifeq ($(findstring "--use-feature=fast-deps",$(PIP_XARGS)),)
+      PIP_XARGS := --use-feature=fast-deps $(PIP_XARGS)
+    endif
   endif
 endif
 
@@ -109,6 +125,13 @@ REPO_LATEST_TAG := $(DOCKER_REPO):latest
 REPO_VERSION_TAG := $(DOCKER_REPO):$(APP_VERSION)
 WEBSVC_SUFFIX := -webservice
 WORKER_SUFFIX := -worker
+
+# docker-compose
+ifneq ("$(wildcard ./docker/.env)","")
+    DOCKER_COMPOSE_ENV_FILE := ./docker/.env
+else
+    DOCKER_COMPOSE_ENV_FILE := ./docker/.env.example
+endif
 
 .DEFAULT_GOAL := help
 
@@ -272,9 +295,13 @@ install: install-all	## alias for 'install-all' target
 .PHONY: install-all
 install-all: install-sys install-pkg install-dev install-docs	## install every dependency and package definition
 
+.PHONY: install-xargs
+install-xargs:
+	@echo "Using PIP_XARGS: $(PIP_XARGS)"
+
 # note: don't use PIP_XARGS for install system package as it could be upgrade of pip that doesn't yet have those options
 .PHONY: install-sys
-install-sys: clean conda-env	## install system dependencies and required installers/runners
+install-sys: clean conda-env install-xargs	## install system dependencies and required installers/runners
 	@echo "Installing system dependencies..."
 	@bash -c '$(CONDA_CMD) pip install --upgrade -r "$(APP_ROOT)/requirements-sys.txt"'
 	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) gunicorn'
@@ -286,17 +313,17 @@ install-pkg: install-sys	## install the package to the active Python's site-pack
 	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) --upgrade -e "$(APP_ROOT)" --no-cache'
 
 .PHONY: install-req
-install-req: conda-env	 ## install package base requirements without installing main package
+install-req: conda-env install-xargs	 ## install package base requirements without installing main package
 	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) -r "$(APP_ROOT)/requirements.txt"'
 	@echo "Successfully installed base requirements."
 
 .PHONY: install-docs
-install-docs: conda-env  ## install package requirements for documentation generation
+install-docs: conda-env install-xargs  ## install package requirements for documentation generation
 	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) -r "$(APP_ROOT)/requirements-doc.txt"'
 	@echo "Successfully installed docs requirements."
 
 .PHONY: install-dev
-install-dev: conda-env	## install package requirements for development and testing
+install-dev: conda-env install-xargs	## install package requirements for development and testing
 	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) -r "$(APP_ROOT)/requirements-dev.txt"'
 	@echo "Successfully installed dev requirements."
 
@@ -394,36 +421,37 @@ docker-config:  ## update docker specific config from examples files
 	sed 's/mongodb:\/\/.*:/mongodb:\/\/mongodb:/g' config/celeryconfig.py > config/celeryconfig.docker.py
 	sed 's/mongodb:\/\/.*:/mongodb:\/\/mongodb:/g' config/cowbird.example.ini > config/cowbird.docker.ini
 
+DOCKER_COMPOSE_WITH_ENV := docker-compose --env-file $(DOCKER_COMPOSE_ENV_FILE)
 DOCKER_TEST_COMPOSES := -f "$(APP_ROOT)/tests/ci/docker-compose.smoke-test.yml"
 .PHONY: docker-test
 docker-test: docker-build	## execute a smoke test of the built Docker image (validate that it boots)
 	@echo "Smoke test of built application docker image"
-	docker-compose $(DOCKER_TEST_COMPOSES) up -d
+	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_TEST_COMPOSES) up -d
 	sleep 5
 	curl localhost:$(APP_PORT)/version | python -m json.tool | grep "version"
 	curl localhost:$(APP_PORT) | python -m json.tool | grep $(APP_NAME)
-	docker-compose $(DOCKER_TEST_COMPOSES) logs
-	docker-compose $(DOCKER_TEST_COMPOSES) stop
+	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_TEST_COMPOSES) logs
+	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_TEST_COMPOSES) stop
 
 .PHONY: docker-stat
 docker-stat:  ## query docker-compose images status (from 'docker-test')
-	docker-compose $(DOCKER_TEST_COMPOSES) ps
+	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_TEST_COMPOSES) ps
 
 DOCKER_COMPOSES := -f "$(APP_ROOT)/docker/docker-compose.example.yml" -f "$(APP_ROOT)/docker/docker-compose.override.example.yml"
 .PHONY: docker-up
 docker-up: docker-build docker-config   ## run all containers using compose
-	docker-compose $(DOCKER_COMPOSES) up
+	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_COMPOSES) up
 
 DOCKER_DEV_COMPOSES := -f "$(APP_ROOT)/docker/docker-compose.example.yml" -f "$(APP_ROOT)/docker/docker-compose.dev.example.yml"
 .PHONY: docker-up-dev
 docker-up-dev: docker-build   ## run all dependencies containers using compose ready to be used by a local cowbird
-	docker-compose $(DOCKER_DEV_COMPOSES) up
+	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_DEV_COMPOSES) up
 
 .PHONY: docker-down
 docker-down:  ## stop running containers and remove them
-	docker-compose $(DOCKER_TEST_COMPOSES) down || true
-	docker-compose $(DOCKER_DEV_COMPOSES) down || true
-	docker-compose $(DOCKER_COMPOSES) down --remove-orphans || true
+	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_TEST_COMPOSES) down || true
+	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_DEV_COMPOSES) down || true
+	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_COMPOSES) down --remove-orphans || true
 
 .PHONY: docker-clean
 docker-clean: docker-down  ## remove all built docker images (only matching current/latest versions)
@@ -594,6 +622,9 @@ test: test-all	## alias for 'test-all' target
 .PHONY: test-all
 test-all: install-dev install test-only  ## run all tests combinations
 
+.PHONY: test-all
+test-all: install-dev install test-only  ## run all tests combinations
+
 .PHONY: test-only
 test-only:  ## run all tests, but without prior dependency check and installation
 	@echo "Running tests..."
@@ -604,10 +635,21 @@ test-api: install-dev install		## run only API tests with the environment Python
 	@echo "Running local tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "api" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
+
 .PHONY: test-cli
 test-cli: install-dev install		## run only CLI tests with the environment Python
 	@echo "Running local tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "cli" --junitxml "$(APP_ROOT)/tests/results.xml"'
+
+.PHONY: test-geoserver 
+test-geoserver: install-dev install		## run Geoserver requests tests against a configured Geoserver instance. Most of these tests are "online" tests
+	@echo "Running local tests..."
+	@bash -c '$(CONDA_CMD) pytest tests -vv -m "geoserver" --junitxml "$(APP_ROOT)/tests/results.xml"'
+
+.PHONY: test-github
+test-github:  ## test target used by github's ci, runs all tests except online tests, without prior dependency check and installation
+	@echo "Running tests..."
+	@bash -c '$(CONDA_CMD) pytest tests -vv -m "not online" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-custom
 test-custom: install-dev install	## run custom marker tests using SPEC="<marker-specification>"

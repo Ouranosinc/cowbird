@@ -21,7 +21,7 @@ from celery.states import FAILURE, SUCCESS
 from requests.exceptions import RequestException
 
 from cowbird.request_task import AbortException, RequestTask
-from cowbird.services.service_factory import ServiceFactory
+from cowbird.services.impl.geoserver import Geoserver
 from tests import utils
 
 
@@ -36,7 +36,7 @@ def celery_config():
 class UnreliableRequestTask(RequestTask, ABC):
     retry_jitter = False  # Turn off RequestTask.jitter to get reliable result
     test_max_retries = 3  # Max retries to be used by the test task
-    invoke_time = []      # Log every call invocation
+    invoke_time = []  # Log every call invocation
 
     def __call__(self, *args, **kwargs):
         UnreliableRequestTask.invoke_time.append(datetime.now())
@@ -107,22 +107,108 @@ class TestRequestTask(unittest.TestCase):
             task.get(timeout=5)
         assert task.status == FAILURE
 
-    @patch("cowbird.services.impl.geoserver.Geoserver.create_workspace")
+    @pytest.mark.geoserver
+    @patch("cowbird.services.impl.geoserver.Geoserver._create_datastore_dir")
     @patch("cowbird.services.impl.geoserver.Geoserver.create_datastore")
-    def test_geoserver(self, create_datastore_mock, create_workspace_mock):
+    @patch("cowbird.services.impl.geoserver.Geoserver.create_workspace")
+    def test_geoserver_user_created(self, create_workspace_mock, create_datastore_mock, create_datastore_dir_mock):
         test_user_name = "test_user"
-        test_workspace_id = 1000
-        test_datastore_id = 1000
-        create_workspace_mock.return_value = test_workspace_id
-        create_datastore_mock.return_value = test_datastore_id
-        geoserver = ServiceFactory().get_service("Geoserver")
+        geoserver = Geoserver.get_instance()
 
         # geoserver should call create_workspace and then create_datastore
         geoserver.user_created(test_user_name)
 
         # current implementation doesn't give any handler on which we could wait
         sleep(2)
-
+        create_datastore_dir_mock.assert_called_with(test_user_name)
         create_workspace_mock.assert_called_with(test_user_name)
-        # TODO: hard-coded "default" datastore name is based on the current demo implementation. Must be improved.
-        create_datastore_mock.assert_called_with(test_workspace_id, "default")
+        create_datastore_mock.assert_called_with(test_user_name)
+
+    @pytest.mark.geoserver
+    @patch("cowbird.services.impl.geoserver.Geoserver._create_datastore_dir")
+    @patch("cowbird.services.impl.geoserver.Geoserver._configure_datastore_request")
+    @patch("cowbird.services.impl.geoserver.Geoserver._create_datastore_request")
+    @patch("cowbird.services.impl.geoserver.Geoserver._create_workspace_request")
+    def test_geoserver_workspace_datastore_created(self,
+                                                   create_workspace_request_mock,
+                                                   create_datastore_request_mock,
+                                                   configure_datastore_request_mock,
+                                                   create_datastore_dir_mock):
+        test_user_name = "test_user"
+        test_datastore_name = f"shapefile_datastore_{test_user_name}"
+        test_datastore_path = f"/user_workspaces/{test_user_name}/shapefile_datastore"
+        geoserver = Geoserver.get_instance()
+
+        # geoserver should call create_workspace and then create_datastore
+        geoserver.user_created(test_user_name)
+
+        # current implementation doesn't give any handler on which we could wait
+        sleep(2)
+        create_workspace_request_mock.assert_called_with(test_user_name)
+        create_datastore_request_mock.assert_called_with(workspace_name=test_user_name,
+                                                         datastore_name=test_datastore_name)
+        configure_datastore_request_mock.assert_called_with(workspace_name=test_user_name,
+                                                            datastore_name=test_datastore_name,
+                                                            datastore_path=test_datastore_path)
+
+    @pytest.mark.geoserver
+    @patch("cowbird.services.impl.geoserver.Geoserver.remove_workspace")
+    def test_geoserver_user_deleted(self, remove_workspace_mock):
+        test_user_name = "test_user"
+        geoserver = Geoserver.get_instance()
+        geoserver.user_deleted(test_user_name)
+
+        # current implementation doesn't give any handler on which we could wait
+        sleep(2)
+
+        remove_workspace_mock.assert_called_with(test_user_name)
+
+    @pytest.mark.geoserver
+    @patch("cowbird.services.impl.geoserver.Geoserver._remove_workspace_request")
+    def test_geoserver_workspace_removed(self, remove_workspace_request_mock):
+        test_user_name = "test_user"
+        geoserver = Geoserver.get_instance()
+        geoserver.user_deleted(test_user_name)
+
+        # current implementation doesn't give any handler on which we could wait
+        sleep(2)
+
+        remove_workspace_request_mock.assert_called_with(test_user_name)
+
+    @pytest.mark.geoserver
+    @patch("cowbird.services.impl.geoserver.Geoserver._publish_shapefile_request")
+    @patch("cowbird.services.impl.geoserver.Geoserver.validate_shapefile")
+    def test_geoserver_file_creation(self, validate_shapefile_mock, publish_shapefile_request_mock):
+        test_user_name = "test_user"
+        shapefile_name = "test_shapefile"
+        datastore_name = f"shapefile_datastore_{test_user_name}"
+        test_file = f"/tmp/user_workspaces/{test_user_name}/shapefile_datastore/{shapefile_name}.shp"
+        geoserver = Geoserver.get_instance()
+
+        # geoserver should call create_workspace and then create_datastore
+        geoserver.on_created(test_file)
+
+        # current implementation doesn't give any handler on which we could wait
+        sleep(2)
+        validate_shapefile_mock.assert_called_with(test_user_name, shapefile_name)
+        publish_shapefile_request_mock.assert_called_with(workspace_name=test_user_name,
+                                                          datastore_name=datastore_name,
+                                                          filename=shapefile_name)
+
+    @pytest.mark.geoserver
+    @patch("cowbird.services.impl.geoserver.Geoserver._remove_shapefile_request")
+    def test_geoserver_file_removal(self, remove_shapefile_request_mock):
+        test_user_name = "test_user"
+        shapefile_name = "test_shapefile"
+        datastore_name = f"shapefile_datastore_{test_user_name}"
+        test_file = f"/tmp/user_workspaces/{test_user_name}/shapefile_datastore/{shapefile_name}.shp"
+        geoserver = Geoserver.get_instance()
+
+        # geoserver should call create_workspace and then create_datastore
+        geoserver.on_deleted(test_file)
+
+        # current implementation doesn't give any handler on which we could wait
+        sleep(2)
+        remove_shapefile_request_mock.assert_called_with(workspace_name=test_user_name,
+                                                         datastore_name=datastore_name,
+                                                         filename=shapefile_name)

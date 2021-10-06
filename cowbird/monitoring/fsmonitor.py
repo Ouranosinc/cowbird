@@ -3,14 +3,14 @@ import abc
 
 class FSMonitor(abc.ABC):
     """
-    Interface being called when something chang on the filesystem.
+    Interface being called when something changes on the filesystem.
     """
 
     @staticmethod
     @abc.abstractmethod
     def get_instance():
         """
-        Must return a monitor instance.
+        Must return an instance of the class implementing FSMonitor.
         """
         raise NotImplementedError
 

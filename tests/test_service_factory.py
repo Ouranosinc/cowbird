@@ -21,7 +21,7 @@ class TestServiceFactory(unittest.TestCase):
         cls.test_data = {
             "services": {
                 "Catalog": {"active": False},
-                "Geoserver": {"active": True, "url": "", "workspace_dir": ""},
+                "Geoserver": {"active": True, "url": "", "workspace_dir": "", "admin_user": "", "admin_password": ""},
                 "Magpie": {"active": True, "url": ""},
                 "Nginx": {"active": True, "url": ""},
                 "Thredds": {"active": True, "url": ""}

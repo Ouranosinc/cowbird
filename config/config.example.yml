@@ -25,8 +25,10 @@ services:
     url: https://${HOSTNAME}/magpie
   Geoserver:
     active: true
-    url: https://${HOSTNAME}/twitcher/ows/proxy/geoserver
+    url: http://${HOSTNAME}:8765/geoserver
     workspace_dir: ${WORKSPACE_DIR}
+    admin_user: ${GEOSERVER_ADMIN}
+    admin_password: ${GEOSERVER_PASSWORD}
   Catalog:
     active: true
     url: https://${HOSTNAME}/twitcher/ows/proxy/catalog
