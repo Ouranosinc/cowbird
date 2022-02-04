@@ -118,13 +118,17 @@ class SyncPoint:
         @param permission Permission to synchronize with others services
         """
         res_common_part_idx = len(self.services[permission.service_name])
-        for svc, perm_name in self.find_match(permission):
+        for svc_name, perm_name in self.find_match(permission):
+            svc = ServiceFactory().get_service(svc_name)
+            if not svc:
+                raise ValueError("Invalid service found in the permission mappings. Check if the config.yml file is "
+                                 "configured correctly, and if all services found in permissions_mapping are active"
+                                 "and have valid service names.")
             new_permission = copy.copy(permission)
-            new_permission.service_name = svc
-            new_permission.resource_full_name = self.services[svc] + \
+            new_permission.service_name = svc_name
+            new_permission.resource_full_name = self.services[svc_name] + \
                 permission.resource_full_name[res_common_part_idx:]
-            new_permission.resource_id = ServiceFactory().get_service(svc).get_resource_id(
-                new_permission.resource_full_name)
+            new_permission.resource_id = svc.get_resource_id(new_permission.resource_full_name)
             new_permission.name = perm_name
             perm_operation(new_permission)
 

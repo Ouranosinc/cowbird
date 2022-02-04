@@ -1,11 +1,17 @@
+import requests
+from requests.cookies import RequestsCookieJar
 from typing import TYPE_CHECKING
 
 from cowbird.permissions_synchronizer import Permission, PermissionSynchronizer
 from cowbird.services.service import SERVICE_URL_PARAM, Service
+from cowbird.utils import CONTENT_TYPE_JSON
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from cowbird.typedefs import SettingsType
+
+MAGPIE_ADMIN_USER = "admin"
+MAGPIE_ADMIN_PASSWORD = "qwertyqwerty"
 
 
 class Magpie(Service):
@@ -29,6 +35,11 @@ class Magpie(Service):
         """
         super(Magpie, self).__init__(settings, name, **kwargs)
         self.permissions_synch = PermissionSynchronizer(self)
+
+        self.headers = {"Content-type": CONTENT_TYPE_JSON}
+        self.admin_user = MAGPIE_ADMIN_USER
+        self.admin_password = MAGPIE_ADMIN_PASSWORD
+        self.auth = (self.admin_user, self.admin_password)
 
     def get_resource_id(self, resource_full_name):
         # type (str) -> str
@@ -55,6 +66,29 @@ class Magpie(Service):
                   If the permission doesn't exist do a POST to create it
                   If the permission exists but is different do a PUT to update it
         """
+        cookies = self.login()
+
+        permission_data = {
+            "permission_name": "read",
+            "permission": {
+                "name": "read",
+                "access": "allow",
+                "scope": "recursive"
+            }
+        }
+        if permission.user:
+            resp = requests.post(
+
+                # TODO: Check if permission already exists + apply PUT if necessary
+                url=f"{self.url}/users/{permission.user}/resources/{permission.resource_id}/permissions",
+                headers=self.headers, cookies=cookies, json=permission_data
+            )
+            # TODO: check resp code
+            print(f"post permission response : {resp.status_code}")
+            print(f"magpie.py permission resource_id : {permission.resource_id}")
+        else:
+            # TODO: create group permission
+            pass
 
     def delete_permission(self, permission):
         # type: (Permission) -> None
@@ -62,3 +96,13 @@ class Magpie(Service):
         Remove the specified permission from Magpie if it exists.
         """
         # TODO: Post a DELETE request, handle error silently if the permission doesn't exist
+
+    def login(self):
+        # type: () -> RequestsCookieJar
+        """
+        Login to Magpie app using admin credentials.
+        """
+        data = {"user_name": self.admin_user, "password": self.admin_password,
+                "provider_name": "ziggurat"}  # ziggurat = magpie_default_provider
+        resp = requests.post("{}/signin".format(self.url), json=data)
+        return resp.cookies
