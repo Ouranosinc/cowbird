@@ -65,14 +65,16 @@ class TestMagpieRequests(unittest.TestCase):
                     "active": True,
                     "url": "http://localhost:2001/magpie"
                 },
-                "Thredds1": {"active": True},
-                "Thredds2": {"active": True}
+                "Thredds": {"active": True}
             },
                 "sync_permissions": {
                     "user_workspace": {
                         "services": {
-                            "Thredds1": "/catalog/workspaces1",
-                            "Thredds2": "/catalog/workspaces2"
+                            "Thredds": {
+                                "Catalog": "/catalog/",
+                                "Thredds1": "/catalog/workspaces1",
+                                "Thredds2": "/catalog/workspaces2"
+                            }
                         },
                         "permissions_mapping": [
                             {
@@ -145,7 +147,7 @@ class TestMagpieRequests(unittest.TestCase):
 
             data = {
                 "event": "created",
-                "service_name": "Thredds1",
+                "service_name": "Thredds",
                 "resource_id": str(test_resource_id),
                 "resource_full_name": f"/{test_service_name}/{test_resource_name}",
                 "name": "read",

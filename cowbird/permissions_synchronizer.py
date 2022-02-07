@@ -74,40 +74,41 @@ class SyncPoint:
         available_services = ServiceFactory().services_cfg.keys()
         # Make sure that only active services are used
         self.services = {svc: svc_cfg for svc, svc_cfg in services.items() if svc in available_services}
-        self.mapping = [{svc: perms for svc, perms in mapping_pt.items() if svc in available_services}
+        self.resource_roots = {res_key: res for svc in self.services.values() for res_key, res in svc.items()}
+        self.mapping = [{res_key: perms for res_key, perms in mapping_pt.items() if res_key in self.resource_roots.keys()}
                         for mapping_pt in mapping]
 
-    def resource_match(self, permission):
-        # type: (Permission) -> bool
+    def resource_match(self, permission, res_root_key):
+        # type: (Permission, String) -> bool
         """
         Define if the permission name is covered by this sync point.
         """
-        return permission.resource_full_name.startswith(self.services[permission.service_name])
+        return permission.resource_full_name.startswith(self.services[permission.service_name][res_root_key])
 
-    def find_match(self, permission):
-        # type: (Permission) -> Generator[Tuple[str, str], None, None]
+    def find_match(self, permission, res_root_key):
+        # type: (Permission, String) -> Generator[Tuple[str, str], None, None]
         """
         Search and yield for every match a (service, permission name) tuple that is mapped with this permission.
         """
         # check if the permission name is covered by this sync point
-        if not self.resource_match(permission):
+        if not self.resource_match(permission, res_root_key):
             return
 
         # For each permission mapping
         for mapping in self.mapping:
             # Does the current service has some mapped permissions?
-            if permission.service_name not in mapping:
+            if res_root_key not in mapping:
                 continue
             # Does the current permission access is covered?
-            if permission.name not in mapping[permission.service_name]:
+            if permission.name not in mapping[res_root_key]:
                 continue
             # This permission is mapped : yields matches
-            for svc, mapped_perm_name in mapping.items():
+            for res, mapped_perm_name in mapping.items():
                 # Don't synch with itself
-                if svc == permission.service_name:
+                if res == res_root_key:
                     continue
                 for perm_name in mapped_perm_name:
-                    yield svc, perm_name
+                    yield res, perm_name
 
     def sync(self, perm_operation, permission):
         # type: (Callable[Permission], Permission) -> None
@@ -117,8 +118,24 @@ class SyncPoint:
         @param perm_operation Magpie create_permission or delete_permission function
         @param permission Permission to synchronize with others services
         """
-        res_common_part_idx = len(self.services[permission.service_name])
-        for svc_name, perm_name in self.find_match(permission):
+        service_resources = self.services[permission.service_name]
+
+        # Find the config resource key associated with the incoming permission's resource full name
+        # Find all resource roots that are prefix to the resource full name
+        prefix_res_dict = {k: v for k, v in service_resources.items() if permission.resource_full_name.startswith(v)}
+        # Find the longest match
+        res_key = max(prefix_res_dict, key=lambda k: len(prefix_res_dict[k]))
+
+        res_common_part_idx = len(service_resources[res_key])
+        for new_res_key, perm_name in self.find_match(permission, res_key):
+            # Find which service is associated with the new permission
+            svc_list = [s for s in self.services if new_res_key in self.services[s]]
+            if not svc_list:
+                raise ValueError(f"The matched resource key {new_res_key} could not be associated with any services "
+                                 f"from the config.yml file.")
+            else:
+                # Assume the service is the first found with the resource key, since the resource keys should be unique.
+                svc_name = svc_list[0]
             svc = ServiceFactory().get_service(svc_name)
             if not svc:
                 raise ValueError("Invalid service found in the permission mappings. Check if the config.yml file is "
@@ -126,8 +143,9 @@ class SyncPoint:
                                  "and have valid service names.")
             new_permission = copy.copy(permission)
             new_permission.service_name = svc_name
-            new_permission.resource_full_name = self.services[svc_name] + \
-                permission.resource_full_name[res_common_part_idx:]
+            new_permission.resource_full_name = self.services[svc_name][new_res_key]
+            if res_common_part_idx < len(permission.resource_full_name):
+                new_permission.resource_full_name += permission.resource_full_name[res_common_part_idx:]
             new_permission.resource_id = svc.get_resource_id(new_permission.resource_full_name)
             new_permission.name = perm_name
             perm_operation(new_permission)
