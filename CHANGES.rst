@@ -10,12 +10,16 @@ Changes
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 
-* Add an ssl verification setting.
+* Add an SSL verification setting.
 * Add Geoserver workspace and datastore creation/removal linked to user creation/removal.
 * Add automated publishing of shapefiles to Geoserver when new files are found.
 * Use ``pip`` legacy and faster resolver as per
   `pypa/pip#9187 (comment) <https://github.com/pypa/pip/issues/9187#issuecomment-853091201>`_
   since current one is endlessly failing to resolve development packages (linting tools from ``check`` targets).
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Pin ``pymongo<4`` to work with pinned ``celery`` version.
 
 `0.4.0 <https://github.com/Ouranosinc/cowbird/tree/0.4.0>`_ (2021-08-05)
 ------------------------------------------------------------------------------------
