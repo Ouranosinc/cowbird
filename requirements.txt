@@ -8,6 +8,7 @@ gunicorn<20
 lxml>=3.7  # FIXME: if we need to parse some XML (?)
 paste
 pastedeploy
+pymongo<4  # required to work with pinned celery
 pyramid>=1.10.2,<2
 pyramid_mako>=1.0.2
 pyramid_celery
