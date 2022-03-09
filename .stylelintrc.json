@@ -8,6 +8,6 @@
     "color-hex-length": "long",
     "indentation": [4],
     "no-descending-specificity": null,
-    "value-no-vendor-prefix": null
+    "property-no-vendor-prefix": null
   }
 }
