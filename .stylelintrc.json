@@ -7,6 +7,7 @@
     "color-hex-case": "upper",
     "color-hex-length": "long",
     "indentation": [4],
-    "no-descending-specificity": null
+    "no-descending-specificity": null,
+    "property-no-vendor-prefix": null
   }
 }
