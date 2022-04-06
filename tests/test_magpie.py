@@ -71,9 +71,36 @@ class TestMagpieRequests(unittest.TestCase):
                     "user_workspace": {
                         "services": {
                             "Thredds": {
-                                "Catalog": "/catalog/",
-                                "Thredds1": "/catalog/workspaces1",
-                                "Thredds2": "/catalog/workspaces2"
+                                "Catalog": [
+                                    {
+                                        "name": "catalog",
+                                        "type": "service",
+                                    }
+                                ],
+                                "Thredds1": [
+                                    {
+                                        "name": "catalog",
+                                        "type": "service",
+                                    },
+                                    {
+                                        "name": "private",
+                                        "type": "directory"
+                                    },
+                                    {
+                                        "name": "workspace_file1",
+                                        "type": "file",
+                                    }
+                                ],
+                                "Thredds2": [
+                                    {
+                                        "name": "catalog",
+                                        "type": "service",
+                                    },
+                                    {
+                                        "name": "workspace_file2",
+                                        "type": "file",
+                                    }
+                                ]
                             }
                         },
                         "permissions_mapping": [
@@ -109,7 +136,6 @@ class TestMagpieRequests(unittest.TestCase):
             stack.enter_context(mock.patch("cowbird.services.impl.thredds.Thredds",
                                            side_effect=utils.MockAnyService))
 
-
             test_service_name = "catalog"
             # Create test service
             data = {
@@ -122,7 +148,7 @@ class TestMagpieRequests(unittest.TestCase):
             test_service_id = create_test_service(data, self.url, self.cookies)
 
             # Create test resource
-            test_resource_name = "workspaces1"
+            test_resource_name = "private"
             data = {
               "resource_name": test_resource_name,
               "resource_display_name": test_resource_name,
@@ -131,15 +157,25 @@ class TestMagpieRequests(unittest.TestCase):
             }
             test_resource_id = create_test_resource(data, self.url, self.cookies)
 
-            # Create the resource which should be synced to the above resource
-            synced_resource_name = "workspaces2"
+            # Create test resource
+            test_resource_name = "workspace_file1"
             data = {
-              "resource_name": synced_resource_name,
-              "resource_display_name": synced_resource_name,
-              "resource_type": "directory",
-              "parent_id": test_service_id
+              "resource_name": test_resource_name,
+              "resource_display_name": test_resource_name,
+              "resource_type": "file",
+              "parent_id": test_resource_id
             }
-            synced_resource_id = create_test_resource(data, self.url, self.cookies)
+            test_resource_id = create_test_resource(data, self.url, self.cookies)
+
+            # # Create the resource which should be synced to the above resource
+            # synced_resource_name = "workspaces2"
+            # data = {
+            #   "resource_name": synced_resource_name,
+            #   "resource_display_name": synced_resource_name,
+            #   "resource_type": "directory",
+            #   "parent_id": test_service_id
+            # }
+            # synced_resource_id = create_test_resource(data, self.url, self.cookies)
 
             resp = utils.test_request(self.url, "GET", "/resources", cookies=self.cookies)
             body = utils.check_response_basic_info(resp, 200, expected_method="GET")

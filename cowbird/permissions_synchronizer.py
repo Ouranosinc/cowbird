@@ -1,4 +1,5 @@
 import copy
+import re
 from typing import TYPE_CHECKING
 
 from cowbird.config import get_all_configs
@@ -78,22 +79,11 @@ class SyncPoint:
         self.mapping = [{res_key: perms for res_key, perms in mapping_pt.items() if res_key in self.resource_roots.keys()}
                         for mapping_pt in mapping]
 
-    def resource_match(self, permission, res_root_key):
-        # type: (Permission, String) -> bool
-        """
-        Define if the permission name is covered by this sync point.
-        """
-        return permission.resource_full_name.startswith(self.services[permission.service_name][res_root_key])
-
     def find_match(self, permission, res_root_key):
         # type: (Permission, String) -> Generator[Tuple[str, str], None, None]
         """
         Search and yield for every match a (service, permission name) tuple that is mapped with this permission.
         """
-        # check if the permission name is covered by this sync point
-        if not self.resource_match(permission, res_root_key):
-            return
-
         # For each permission mapping
         for mapping in self.mapping:
             # Does the current service has some mapped permissions?
@@ -110,24 +100,70 @@ class SyncPoint:
                 for perm_name in mapped_perm_name:
                     yield res, perm_name
 
-    def sync(self, perm_operation, permission):
-        # type: (Callable[Permission], Permission) -> None
+    def sync(self, perm_operation, permission, resource_tree):
+        # type: (Callable[[List[Dict]], None], Permission, List[Dict]) -> None
         """
         Create or delete the same permission on each service sharing the same resource.
 
         @param perm_operation Magpie create_permission or delete_permission function
         @param permission Permission to synchronize with others services
+        @param resource_tree Resource tree associated with the permission to synchronize
         """
         service_resources = self.services[permission.service_name]
+        resource_full_name_type = ""
+        for res in resource_tree:
+            resource_full_name_type += f"/{res['resource_name']}:{res['resource_type']}"
 
-        # Find the config resource key associated with the incoming permission's resource full name
-        # Find all resource roots that are prefix to the resource full name
-        prefix_res_dict = {k: v for k, v in service_resources.items() if permission.resource_full_name.startswith(v)}
+        # Find which resource from the config matches with the input permission's resource tree
+        # The length of a match is determined by the number of named segments matching the input resource.
+        # `**` name tokens can match the related type 0 to N times. They are ignored from the match length since it is
+        # ambiguous in the case of a 0 length match.
+        # `*` name tokens can match exactly 1 time only. They are ignored from the match length since we favor a match
+        # with specific names over another with `*` generic tokens.
+        matched_res_dict = {}
+        for res_key, res_segments in service_resources.items():
+            match_len = 0
+            res_regex = "^"
+            for i in range(len(res_segments)):
+                if res_segments[i]["name"] in ["*", "**"]:
+                    # loop over the rest of segments, making sure all of them contain * or **
+                    has_multi_token = False
+                    while i < len(res_segments):
+                        if res_segments[i]["name"] == "*":
+                            # match any name with specific type 1 time only
+                            res_regex += rf"/\w+:{res_segments[i]['type']}"
+                        elif res_segments[i]["name"] == "**":
+                            if has_multi_token:
+                                raise ValueError("Invalid config value. Only one `**` token is permitted per resource.")
+                            has_multi_token = True
+                            # match any name with specific type, 0 or more times
+                            res_regex += rf"(/\w+:{res_segments[i]['type']})*"
+                        else:
+                            raise ValueError("Invalid config value. After a first `**` or `*` value is found in the "
+                                             "resource path, only `**` or `*` values should follow but the name "
+                                             f"{res_segments[i]['name']} was found instead.")
+                        i += 1
+                else:
+                    # match name and type exactly
+                    res_regex += f"/{res_segments[i]['name']:}:{res_segments[i]['type']}"
+                    match_len += 1
+            res_regex += "$"
+            if re.match(res_regex, resource_full_name_type):
+                matched_res_dict[res_key] = match_len
+
         # Find the longest match
-        res_key = max(prefix_res_dict, key=lambda k: len(prefix_res_dict[k]))
+        max_matching_keys = [res for res, match_len in matched_res_dict.items()
+                             if match_len == max(matched_res_dict.values())]
+        if len(max_matching_keys) == 1:
+            src_res_key = max_matching_keys[0]
+        elif len(max_matching_keys) > 1:
+            raise ValueError("Found 2 matching resources of the same length in the config. Ambiguous config resources :"
+                             f" {max_matching_keys}")
+        else:
+            raise ValueError("No matching resources could be found in the config file.")
 
-        res_common_part_idx = len(service_resources[res_key])
-        for new_res_key, perm_name in self.find_match(permission, res_key):
+        src_common_part_idx = matched_res_dict[src_res_key]
+        for new_res_key, perm_name in self.find_match(permission, src_res_key):
             # Find which service is associated with the new permission
             svc_list = [s for s in self.services if new_res_key in self.services[s]]
             if not svc_list:
@@ -141,14 +177,61 @@ class SyncPoint:
                 raise ValueError("Invalid service found in the permission mappings. Check if the config.yml file is "
                                  "configured correctly, and if all services found in permissions_mapping are active"
                                  "and have valid service names.")
-            new_permission = copy.copy(permission)
-            new_permission.service_name = svc_name
-            new_permission.resource_full_name = self.services[svc_name][new_res_key]
-            if res_common_part_idx < len(permission.resource_full_name):
-                new_permission.resource_full_name += permission.resource_full_name[res_common_part_idx:]
-            new_permission.resource_id = svc.get_resource_id(new_permission.resource_full_name)
-            new_permission.name = perm_name
-            perm_operation(new_permission)
+
+            def find_tokens_fct(d):
+                return d["name"] in ["**", "*"]
+
+            target_res = self.services[svc_name][new_res_key]
+            if any(list(map(find_tokens_fct, service_resources[src_res_key]))) ^ \
+                    any(list(map(find_tokens_fct, target_res))):
+                raise ValueError(f"Either both source resource `{src_res_key}` and target resource `{new_res_key}` "
+                                 "should have `**` or `*` tokens or both should not use them.")
+
+            permissions_data = []
+            for i in range(len(target_res)):
+                if target_res[i]["name"] in ["*", "**"]:
+                    src_common_parts = ""
+                    for res in resource_tree[src_common_part_idx:]:
+                        src_common_parts += f"/{res['resource_name']}"
+
+                    # loop over the rest of segments, making sure all of them contain * or **
+                    has_multi_token = False
+                    suffix_regex = "^"
+                    while i < len(target_res):
+                        if target_res[i]["name"] == "*":
+                            # match 1 name only
+                            suffix_regex += r"(/\w+)"
+                        elif target_res[i]["name"] == "**":
+                            if has_multi_token:
+                                raise ValueError("Invalid config value. Only one `**` token is permitted per resource.")
+                            has_multi_token = True
+                            # match any name 0 or more times
+                            suffix_regex += rf"(/\w+)*"
+                        else:
+                            raise ValueError("Invalid config value. After a first `**` or `*` value is found in the "
+                                             "resource path, only `**` or `*` values should follow but the name "
+                                             f"{target_res[i]['name']} was found instead.")
+                        i += 1
+                    suffix_regex += "$"
+                    matched_groups = re.match(suffix_regex, src_common_parts)
+                    if matched_groups:
+                        # TODO: Loop over each token in config and create permissions with each matched groups
+                        # ** will have to split matched_groups and use same type for each part
+                        print("match")
+                    else:
+                        raise ValueError("Config mismatch between remaining resource_path "
+                                         "and tokenized target segments.")
+                else:
+                    permissions_data.append({
+                        "resource_name": target_res[i]["name"],
+                        "resource_type": target_res[i]["type"]
+                    })
+            # add permission details to last segment
+            permissions_data[-1]["permission"] = perm_name
+            permissions_data[-1]["user"] = permission.user
+            permissions_data[-1]["group"] = permission.group
+
+            perm_operation(permissions_data)
 
 
 class PermissionSynchronizer(object):
@@ -179,13 +262,15 @@ class PermissionSynchronizer(object):
         """
         Create the same permission on each service sharing the same resource.
         """
+        resource_tree = self.magpie_inst.get_resources_tree(permission.resource_id)
         for point in self.sync_point:
-            point.sync(self.magpie_inst.create_permission, permission)
+            point.sync(self.magpie_inst.create_permission, permission, resource_tree)
 
     def delete_permission(self, permission):
         # type: (Permission) -> None
         """
         Delete the same permission on each service sharing the same resource.
         """
+        resource_tree = self.magpie_inst.get_resources_tree(permission.resource_id)
         for point in self.sync_point:
-            point.sync(self.magpie_inst.delete_permission, permission)
+            point.sync(self.magpie_inst.delete_permission, permission, resource_tree)

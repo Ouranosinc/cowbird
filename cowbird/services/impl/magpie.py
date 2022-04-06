@@ -45,6 +45,20 @@ class Magpie(Service):
         # type (str) -> str
         raise NotImplementedError
 
+    def get_resources_tree(self, resource_id):
+        # type: (int) -> List
+        """
+        Returns the associated Magpie Resource object and all its parents in a list ordered from parent to child.
+        """
+        cookies = self.login()
+        data = {"parent": "true", "invert": "true", "flatten": "true"}
+        resp = requests.get(url=f"{self.url}/resources/{resource_id}",
+                            headers=self.headers, cookies=cookies, params=data)
+        if resp.status_code == 200:
+            return resp.json()["resources"]
+        else:
+            raise RuntimeError("Could not find the input resource's parent resources.")
+
     def user_created(self, user_name):
         raise NotImplementedError
 
@@ -57,45 +71,38 @@ class Magpie(Service):
     def permission_deleted(self, permission):
         self.permissions_synch.delete_permission(permission)
 
-    def create_permission(self, permission):
-        # type: (Permission) -> None
+    def create_permission(self, permissions_data):
+        # type: (list[dict]) -> None
         """
         Make sure that the specified permission exists on Magpie.
-
-        .. todo:: First need to check if the permission already exists
-                  If the permission doesn't exist do a POST to create it
-                  If the permission exists but is different do a PUT to update it
         """
         cookies = self.login()
 
-        permission_data = {
-            "permission_name": "read",
-            "permission": {
-                "name": "read",
-                "access": "allow",
-                "scope": "recursive"
-            }
-        }
-        if permission.user:
-            resp = requests.post(
+        # TODO: check if any permissions_data
+        permissions_data[-1]["action"] = "create"
 
-                # TODO: Check if permission already exists + apply PUT if necessary
-                url=f"{self.url}/users/{permission.user}/resources/{permission.resource_id}/permissions",
-                headers=self.headers, cookies=cookies, json=permission_data
-            )
-            # TODO: check resp code
-            print(f"post permission response : {resp.status_code}")
-            print(f"magpie.py permission resource_id : {permission.resource_id}")
-        else:
-            # TODO: create group permission
-            pass
+        resp = requests.patch(
+            url=f"{self.url}/permissions",
+            headers=self.headers, cookies=cookies, json={"permissions": permissions_data}
+        )
+        # TODO: check resp code
+        print(f"post permission response : {resp.status_code}")
 
-    def delete_permission(self, permission):
-        # type: (Permission) -> None
+    def delete_permission(self, permissions_data):
+        # type: (list[dict]) -> None
         """
         Remove the specified permission from Magpie if it exists.
         """
-        # TODO: Post a DELETE request, handle error silently if the permission doesn't exist
+        cookies = self.login()
+        # TODO: check if any permissions_data
+        permissions_data[-1]["action"] = "remove"
+
+        resp = requests.patch(
+            url=f"{self.url}/permissions",
+            headers=self.headers, cookies=cookies, json={"permissions": permissions_data}
+        )
+        # TODO: check resp code
+        print(f"post permission response : {resp.status_code}")
 
     def login(self):
         # type: () -> RequestsCookieJar
