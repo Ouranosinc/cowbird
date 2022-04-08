@@ -21,6 +21,18 @@ class ConfigError(RuntimeError):
     """
 
 
+class ConfigErrorInvalidTokens(ConfigError):
+    """
+    Config error specific to invalid `*` or `**` tokens.
+    """
+
+
+class ConfigErrorInvalidResourceKey(ConfigError):
+    """
+    Config error for invalid resource keys.
+    """
+
+
 def _load_config(path_or_dict, section, allow_missing=False):
     # type: (Union[str, ConfigDict], str, bool) -> ConfigDict
     """
@@ -97,3 +109,64 @@ def _expand_all(config):
         raise NotImplementedError("unknown parsing of config of type: {}".
                                   format(type(config)))
     return config
+
+
+def validate_sync_services_config(sync_cfg):
+    # type: (ConfigDict) -> None
+    # First check if all services use tokens properly
+    res_key_list = []
+    for svc, resources in sync_cfg["services"].items():
+        for res_key, segments in resources.items():
+            if res_key not in res_key_list:
+                res_key_list.append(res_key)
+            else:
+                raise ConfigErrorInvalidResourceKey(f"Found duplicate resource key {res_key} in config. Config resource"
+                                                    " keys should be unique even between different services.")
+            has_multi_token = False
+            for i in range(len(segments)):
+                if segments[i]["name"] in ["*", "**"]:
+                    while i < len(segments):
+                        if segments[i]["name"] == "**":
+                            if has_multi_token:
+                                raise ConfigErrorInvalidTokens(f"Invalid config value for resource key {res_key} "
+                                                               f"from service {svc}. Only one `**` token is permitted "
+                                                               "per resource.")
+                            has_multi_token = True
+                        elif segments[i]["name"] != "*":
+                            raise ConfigErrorInvalidTokens("Invalid config value. After a first `**` or `*` value is "
+                                                           "found in the resource path, only `**` or `*` values should "
+                                                           f"follow but the name {segments[i]['name']} was found "
+                                                           "instead.")
+                        i += 1
+
+
+def validate_sync_mapping_config(sync_cfg):
+    # type: (ConfigDict) -> None
+
+    def has_tokens(segment):
+        return segment["name"] in ["**", "*"]
+
+    # Check the mappings
+    for mapping in sync_cfg["permissions_mapping"]:
+        res_with_tokens = []
+        for res_key in mapping:
+            res_segments = []
+            for res_dict in sync_cfg["services"].values():
+                res_segments = res_dict.get(res_key, [])
+                if res_segments:
+                    break
+            if not res_segments:
+                raise ConfigErrorInvalidResourceKey(f"Invalid config mapping references resource {res_key} which is "
+                                                    "not defined in any service.")
+            if any([has_tokens(seg) for seg in res_segments]):
+                res_with_tokens.append(res_key)
+        if res_with_tokens and len(res_with_tokens) != len(mapping):
+            raise ConfigErrorInvalidTokens(f"Invalid permission mapping using resources {mapping.keys()}. "
+                                           "Either all mapped resources should have `**` or `*` tokens or "
+                                           "none should use them.")
+
+
+def validate_sync_config(sync_cfg):
+    # type: (ConfigDict) -> None
+    validate_sync_services_config(sync_cfg)
+    validate_sync_mapping_config(sync_cfg)

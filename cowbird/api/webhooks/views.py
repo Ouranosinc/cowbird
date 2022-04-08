@@ -93,12 +93,10 @@ def post_permission_webhook_view(request):
     name = ar.get_multiformat_body(request, "name")
     access = ar.get_multiformat_body(request, "access")
     scope = ar.get_multiformat_body(request, "scope")
-    user = ar.get_multiformat_body(request, "user")
-    group = None
-    if user:
-        ar.check_value(user, "user")
-    else:
-        group = ar.get_multiformat_body(request, "group")
+    user = ar.get_multiformat_body_raw(request, "user")
+    group = ar.get_multiformat_body_raw(request, "group")
+    ax.verify_param(bool(user or group), param_compare=True, is_true=True, http_error=HTTPBadRequest,
+                    msg_on_fail=s.PermissionWebhook_POST_BadRequestResponseSchema.description)
 
     permission = Permission(
         service_name=service_name,

@@ -2,7 +2,7 @@ import copy
 import re
 from typing import TYPE_CHECKING
 
-from cowbird.config import get_all_configs
+from cowbird.config import get_all_configs, validate_sync_config
 from cowbird.services.service_factory import ServiceFactory
 from cowbird.utils import get_config_path, get_logger
 
@@ -100,18 +100,18 @@ class SyncPoint:
                 for perm_name in mapped_perm_name:
                     yield res, perm_name
 
-    def sync(self, perm_operation, permission, resource_tree):
+    def sync(self, perm_operation, permission, src_resource_tree):
         # type: (Callable[[List[Dict]], None], Permission, List[Dict]) -> None
         """
         Create or delete the same permission on each service sharing the same resource.
 
         @param perm_operation Magpie create_permission or delete_permission function
         @param permission Permission to synchronize with others services
-        @param resource_tree Resource tree associated with the permission to synchronize
+        @param src_resource_tree Resource tree associated with the permission to synchronize
         """
         service_resources = self.services[permission.service_name]
         resource_full_name_type = ""
-        for res in resource_tree:
+        for res in src_resource_tree:
             resource_full_name_type += f"/{res['resource_name']}:{res['resource_type']}"
 
         # Find which resource from the config matches with the input permission's resource tree
@@ -125,24 +125,12 @@ class SyncPoint:
             match_len = 0
             res_regex = "^"
             for i in range(len(res_segments)):
-                if res_segments[i]["name"] in ["*", "**"]:
-                    # loop over the rest of segments, making sure all of them contain * or **
-                    has_multi_token = False
-                    while i < len(res_segments):
-                        if res_segments[i]["name"] == "*":
-                            # match any name with specific type 1 time only
-                            res_regex += rf"/\w+:{res_segments[i]['type']}"
-                        elif res_segments[i]["name"] == "**":
-                            if has_multi_token:
-                                raise ValueError("Invalid config value. Only one `**` token is permitted per resource.")
-                            has_multi_token = True
-                            # match any name with specific type, 0 or more times
-                            res_regex += rf"(/\w+:{res_segments[i]['type']})*"
-                        else:
-                            raise ValueError("Invalid config value. After a first `**` or `*` value is found in the "
-                                             "resource path, only `**` or `*` values should follow but the name "
-                                             f"{res_segments[i]['name']} was found instead.")
-                        i += 1
+                if res_segments[i]["name"] == "*":
+                    # match any name with specific type 1 time only
+                    res_regex += rf"/\w+:{res_segments[i]['type']}"
+                elif res_segments[i]["name"] == "**":
+                    # match any name with specific type, 0 or more times
+                    res_regex += rf"(/\w+:{res_segments[i]['type']})*"
                 else:
                     # match name and type exactly
                     res_regex += f"/{res_segments[i]['name']:}:{res_segments[i]['type']}"
@@ -166,60 +154,40 @@ class SyncPoint:
         for new_res_key, perm_name in self.find_match(permission, src_res_key):
             # Find which service is associated with the new permission
             svc_list = [s for s in self.services if new_res_key in self.services[s]]
-            if not svc_list:
-                raise ValueError(f"The matched resource key {new_res_key} could not be associated with any services "
-                                 f"from the config.yml file.")
-            else:
-                # Assume the service is the first found with the resource key, since the resource keys should be unique.
-                svc_name = svc_list[0]
+            # Assume the service is the first found with the resource key, since the resource keys should be unique.
+            svc_name = svc_list[0]
             svc = ServiceFactory().get_service(svc_name)
             if not svc:
                 raise ValueError("Invalid service found in the permission mappings. Check if the config.yml file is "
                                  "configured correctly, and if all services found in permissions_mapping are active"
                                  "and have valid service names.")
 
-            def find_tokens_fct(d):
-                return d["name"] in ["**", "*"]
-
             target_res = self.services[svc_name][new_res_key]
-            if any(list(map(find_tokens_fct, service_resources[src_res_key]))) ^ \
-                    any(list(map(find_tokens_fct, target_res))):
-                raise ValueError(f"Either both source resource `{src_res_key}` and target resource `{new_res_key}` "
-                                 "should have `**` or `*` tokens or both should not use them.")
-
             permissions_data = []
             for i in range(len(target_res)):
                 if target_res[i]["name"] in ["*", "**"]:
-                    src_common_parts = ""
-                    for res in resource_tree[src_common_part_idx:]:
-                        src_common_parts += f"/{res['resource_name']}"
-
                     # loop over the rest of segments, making sure all of them contain * or **
-                    has_multi_token = False
                     suffix_regex = "^"
                     while i < len(target_res):
                         if target_res[i]["name"] == "*":
                             # match 1 name only
                             suffix_regex += r"(/\w+)"
                         elif target_res[i]["name"] == "**":
-                            if has_multi_token:
-                                raise ValueError("Invalid config value. Only one `**` token is permitted per resource.")
-                            has_multi_token = True
                             # match any name 0 or more times
                             suffix_regex += rf"(/\w+)*"
-                        else:
-                            raise ValueError("Invalid config value. After a first `**` or `*` value is found in the "
-                                             "resource path, only `**` or `*` values should follow but the name "
-                                             f"{target_res[i]['name']} was found instead.")
                         i += 1
                     suffix_regex += "$"
+
+                    src_common_parts = ""
+                    for res in src_resource_tree[src_common_part_idx:]:
+                        src_common_parts += f"/{res['resource_name']}"
                     matched_groups = re.match(suffix_regex, src_common_parts)
                     if matched_groups:
                         # TODO: Loop over each token in config and create permissions with each matched groups
                         # ** will have to split matched_groups and use same type for each part
                         print("match")
                     else:
-                        raise ValueError("Config mismatch between remaining resource_path "
+                        raise ValueError(f"Config mismatch between remaining resource_path {src_common_parts} "
                                          "and tokenized target segments.")
                 else:
                     permissions_data.append({
@@ -254,6 +222,7 @@ class PermissionSynchronizer(object):
                 LOGGER.warning("Sync_permissions configuration is empty.")
                 continue
             for sync_cfg in sync_perm_config.values():
+                validate_sync_config(sync_cfg)
                 self.sync_point.append(SyncPoint(services=sync_cfg["services"],
                                                  mapping=sync_cfg["permissions_mapping"]))
 
