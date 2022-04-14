@@ -298,3 +298,141 @@ class TestMagpieRequests(unittest.TestCase):
             resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data, expect_errors=True)
             # Should create an error since resource tokenized `suffix` will not fit with the target resource path
             utils.check_response_basic_info(resp, 500, expected_method="POST")
+
+    def test_webhooks_invalid_multimatch(self):
+        self.data["sync_permissions"] = {
+            "user_workspace": {
+                "services": {
+                    "Thredds": {
+                        "Thredds_match1": [
+                            {"name": self.test_service_name, "type": "service"},
+                            {"name": "*", "type": "directory"}],
+                        "Thredds_match2": [
+                            {"name": self.test_service_name, "type": "service"},
+                            {"name": "**", "type": "directory"}]}},
+                "permissions_mapping": [
+                    {"Thredds_match1": ["read"], "Thredds_match2": ["read"]}]
+            }
+        }
+        with self.cfg_file as f:
+            f.write(yaml.safe_dump(self.data))
+        self.app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
+        # Recreate new magpie service instance with new config
+        ServiceFactory().create_service("Magpie")
+
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(mock.patch("cowbird.services.impl.thredds.Thredds",
+                                           side_effect=utils.MockAnyService))
+            # Create test resources
+            src_res_id = self.create_test_resource("dir", "directory", self.test_service_id)
+
+            data = {
+                "event": ValidOperations.CreateOperation.value,
+                "service_name": "Thredds",
+                "resource_id": str(src_res_id),
+                "resource_full_name": f"/{self.test_service_name}/dir",
+                "name": "read",
+                "access": "allow",
+                "scope": "recursive",
+                "user": self.usr,
+                "group": None
+            }
+
+            # Try creating permissions
+            resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data, expect_errors=True)
+            # Should create an error since input resource to synchronize can match with both resources in config
+            utils.check_response_basic_info(resp, 500, expected_method="POST")
+
+    def test_webhooks_no_match(self):
+        self.data["sync_permissions"] = {
+            "user_workspace": {
+                "services": {
+                    "Thredds": {
+                        "Thredds1": [
+                            {"name": self.test_service_name, "type": "service"},
+                            {"name": "*", "type": "directory"}],
+                        "Thredds2": [
+                            {"name": self.test_service_name, "type": "service"},
+                            {"name": "**", "type": "directory"}]}},
+                "permissions_mapping": [
+                    {"Thredds1": ["read"], "Thredds2": ["read"]}]
+            }
+        }
+        with self.cfg_file as f:
+            f.write(yaml.safe_dump(self.data))
+        self.app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
+        # Recreate new magpie service instance with new config
+        ServiceFactory().create_service("Magpie")
+
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(mock.patch("cowbird.services.impl.thredds.Thredds",
+                                           side_effect=utils.MockAnyService))
+            # Create test resources
+            src_res_id = self.create_test_resource("dir", "file", self.test_service_id)
+
+            data = {
+                "event": ValidOperations.CreateOperation.value,
+                "service_name": "Thredds",
+                "resource_id": str(src_res_id),
+                "resource_full_name": f"/{self.test_service_name}/dir",
+                "name": "read",
+                "access": "allow",
+                "scope": "recursive",
+                "user": self.usr,
+                "group": None
+            }
+
+            # Try creating permissions
+            resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data, expect_errors=True)
+            # Should create an error since input resource doesn't match the type of resources found in config
+            utils.check_response_basic_info(resp, 500, expected_method="POST")
+
+    def test_webhooks_invalid_service(self):
+        self.data["sync_permissions"] = {
+            "user_workspace": {
+                "services": {
+                    "Thredds": {
+                        "Thredds1": [
+                            {"name": self.test_service_name, "type": "service"},
+                            {"name": "*", "type": "directory"}]},
+                    "Invalid_Service": {
+                        "Invalid": [
+                            {"name": self.test_service_name, "type": "service"},
+                            {"name": "**", "type": "directory"}]}},
+                "permissions_mapping": [
+                    {"Thredds1": ["read"], "Invalid": ["read"]}]
+            }
+        }
+        with self.cfg_file as f:
+            f.write(yaml.safe_dump(self.data))
+        self.app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
+        # Recreate new magpie service instance with new config
+        ServiceFactory().create_service("Magpie")
+
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(mock.patch("cowbird.services.impl.thredds.Thredds",
+                                           side_effect=utils.MockAnyService))
+            # Create test resources
+            src_res_id = self.create_test_resource("dir", "directory", self.test_service_id)
+
+            data = {
+                "event": ValidOperations.CreateOperation.value,
+                "service_name": "Thredds",
+                "resource_id": str(src_res_id),
+                "resource_full_name": f"/{self.test_service_name}/dir",
+                "name": "read",
+                "access": "allow",
+                "scope": "recursive",
+                "user": self.usr,
+                "group": None
+            }
+
+            # Try creating permissions
+            resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
+            # Should not create an error, the invalid service should be ignored when reading the config
+            # It should have done nothing since no permissions to synchronize are found.
+            utils.check_response_basic_info(resp, 200, expected_method="POST")
+            # Check that only the valid service was included in the sync_point
+            magpie = ServiceFactory().get_service("Magpie")
+            assert len(magpie.permissions_synch.sync_point) == 1
+            assert len(magpie.permissions_synch.sync_point[0].services) == 1
