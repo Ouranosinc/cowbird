@@ -164,36 +164,48 @@ class SyncPoint:
 
             target_res = self.services[svc_name][new_res_key]
             permissions_data = []
+            suffix_target_res = []
             for i in range(len(target_res)):
                 if target_res[i]["name"] in ["*", "**"]:
-                    # loop over the rest of segments, making sure all of them contain * or **
-                    suffix_regex = "^"
-                    while i < len(target_res):
-                        if target_res[i]["name"] == "*":
-                            # match 1 name only
-                            suffix_regex += r"(/\w+)"
-                        elif target_res[i]["name"] == "**":
-                            # match any name 0 or more times
-                            suffix_regex += rf"(/\w+)*"
-                        i += 1
-                    suffix_regex += "$"
-
-                    src_common_parts = ""
-                    for res in src_resource_tree[src_common_part_idx:]:
-                        src_common_parts += f"/{res['resource_name']}"
-                    matched_groups = re.match(suffix_regex, src_common_parts)
-                    if matched_groups:
-                        # TODO: Loop over each token in config and create permissions with each matched groups
-                        # ** will have to split matched_groups and use same type for each part
-                        print("match")
-                    else:
-                        raise ValueError(f"Config mismatch between remaining resource_path {src_common_parts} "
-                                         "and tokenized target segments.")
+                    suffix_target_res = target_res[i:]
+                    break
                 else:
                     permissions_data.append({
                         "resource_name": target_res[i]["name"],
                         "resource_type": target_res[i]["type"]
                     })
+            if suffix_target_res:
+                suffix_regex = "^"
+                for i in range(len(suffix_target_res)):
+                    if suffix_target_res[i]["name"] == "*":
+                        # match 1 name only
+                        suffix_regex += r"(/\w+)"
+                    elif suffix_target_res[i]["name"] == "**":
+                        # match any name 0 or more times
+                        suffix_regex += rf"((?:/\w+)*)"
+                suffix_regex += "$"
+
+                src_common_parts = ""
+                for res in src_resource_tree[src_common_part_idx:]:
+                    src_common_parts += f"/{res['resource_name']}"
+                matched_groups = re.match(suffix_regex, src_common_parts)
+                if matched_groups:
+                    if len(matched_groups.groups()) != len(suffix_target_res):
+                        raise RuntimeError(f"Number of matched groups {matched_groups} do not correspond with the"
+                                           f"number of suffix config resource {suffix_target_res}.")
+                    for i in range(len(suffix_target_res)):
+                        match = matched_groups.groups()[i]
+                        for segment in match.split("/"):
+                            # ignore empty matches which can happen with multitokens with zero occurence
+                            if segment:
+                                permissions_data.append({
+                                    "resource_name": segment,
+                                    "resource_type": suffix_target_res[i]["type"]
+                                })
+                else:
+                    raise ValueError(f"Config mismatch between remaining resource_path {src_common_parts} "
+                                     "and tokenized target segments.")
+
             # add permission details to last segment
             permissions_data[-1]["permission"] = perm_name
             permissions_data[-1]["user"] = permission.user
