@@ -16,6 +16,10 @@ Features / Changes
 * Use ``pip`` legacy and faster resolver as per
   `pypa/pip#9187 (comment) <https://github.com/pypa/pip/issues/9187#issuecomment-853091201>`_
   since current one is endlessly failing to resolve development packages (linting tools from ``check`` targets).
+* Add synchronization of Magpie permissions between different services, when receiving incoming webhooks.
+* Reorganize `config.example.yml` to support more sync cases, provide info on the type of each segment of a resource
+  path and to use tokenized path.
+* Add some config verifications when starting cowbird app.
 
 `0.4.0 <https://github.com/Ouranosinc/cowbird/tree/0.4.0>`_ (2021-08-05)
 ------------------------------------------------------------------------------------

@@ -42,15 +42,33 @@ services:
     priority: 1
     workspace_dir: ${WORKSPACE_DIR}
 
-# [Required] This section defines how to synchronize permissions between services when they shared resources
+# [Required] This section defines how to synchronize permissions between services when they share resources
 sync_permissions:
   # Friendly name to identify a sync point (The value is not used by Cowbird so this can be any relevant keyword)
   user_workspace:
     # [Required] This section defines a list of services (referring to the service name of the 'services' section)
     # sharing resources
-    services: # Every service sharing the same resources can be added in this list
+    services: # Contains the different resources that can be synchronized, ordered by service
       Geoserver: # Service name, which should also be found in the services list at the top of this file
-        Geoserver_workspace: # <Resource root key> : <List of each segment of the resource path, with their name and type>
+        # Resource key (ex.: Geoserver_workspace): Custom name to represent a resource path.
+        # It should correspond to the names used in the `permission_mappings` section below.
+        # It contains the list of each segment of its resource path, with their corresponding name and type.
+        # The name of a segment can either contain a string name, a `SINGLE_TOKEN` `*` (to represent
+        # a single repetition of any name with the corresponding type) or a `MULTI_TOKEN` `**` (to
+        # represent any number (0 or more) of names that fit with the corresponding type). Note that tokens can
+        # only be found at the end of the path, so no named string should follow a token.
+        # Also, a MULTI_TOKEN can only be used one time in each list of path segments.
+        #
+        # The tokens are useful to know the types of any `suffix` path. A `suffix` path represents the segments
+        # at the end of a path that are not named in the config below. For example, with the config below, if we have
+        # an input resource path `/api/workspaces/private/dir1/dir2/file` that matches with the `Geoserver_workspace`
+        # resource key, we have a `suffix` path `/dir1/dir2/file`.
+        # Also, this key would need to sync permissions with the `Thredds_workspace` resource key, considering the
+        # `permission_mappings` defined below. The `Thredds_workspace` would use the path
+        # `/catalog/birdhouse/workspaces/private/` combined with the suffix `/dir1/dir2/file`.
+        # The types of each segment of the target resource path `/catalog/birdhouse/workspaces/private/dir1/dir2/file`
+        # would be deduced from the `Thredds_workspace` config below.
+        Geoserver_workspace:
           - name: api
             type: service
           - name: workspaces
