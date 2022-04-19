@@ -14,6 +14,9 @@ if TYPE_CHECKING:
 
 LOGGER = get_logger(__name__)
 
+SINGLE_TOKEN = "*"
+MULTI_TOKEN = "**"
+
 
 class ConfigError(RuntimeError):
     """
@@ -23,7 +26,7 @@ class ConfigError(RuntimeError):
 
 class ConfigErrorInvalidTokens(ConfigError):
     """
-    Config error specific to invalid `*` or `**` tokens.
+    Config error specific to invalid SINGLE_TOKEN or MULTI_TOKEN tokens.
     """
 
 
@@ -124,19 +127,19 @@ def validate_sync_services_config(sync_cfg):
                                                     " keys should be unique even between different services.")
             has_multi_token = False
             for i in range(len(segments)):
-                if segments[i]["name"] in ["*", "**"]:
+                if segments[i]["name"] in [SINGLE_TOKEN, MULTI_TOKEN]:
                     while i < len(segments):
-                        if segments[i]["name"] == "**":
+                        if segments[i]["name"] == MULTI_TOKEN:
                             if has_multi_token:
                                 raise ConfigErrorInvalidTokens(f"Invalid config value for resource key {res_key} "
-                                                               f"from service {svc}. Only one `**` token is permitted "
-                                                               "per resource.")
+                                                               f"from service {svc}. Only one `{MULTI_TOKEN}` token is "
+                                                               "permitted per resource.")
                             has_multi_token = True
-                        elif segments[i]["name"] != "*":
-                            raise ConfigErrorInvalidTokens("Invalid config value. After a first `**` or `*` value is "
-                                                           "found in the resource path, only `**` or `*` values should "
-                                                           f"follow but the name {segments[i]['name']} was found "
-                                                           "instead.")
+                        elif segments[i]["name"] != SINGLE_TOKEN:
+                            raise ConfigErrorInvalidTokens(f"Invalid config value. After a first `{MULTI_TOKEN}` or "
+                                                           f"`{SINGLE_TOKEN}` value is found in the resource path, only"
+                                                           " token values should follow but the name "
+                                                           f"{segments[i]['name']} was found instead.")
                         i += 1
 
 
@@ -144,7 +147,7 @@ def validate_sync_mapping_config(sync_cfg):
     # type: (ConfigDict) -> None
 
     def has_tokens(segment):
-        return segment["name"] in ["**", "*"]
+        return segment["name"] in [MULTI_TOKEN, SINGLE_TOKEN]
 
     # Check the mappings
     for mapping in sync_cfg["permissions_mapping"]:
@@ -162,8 +165,8 @@ def validate_sync_mapping_config(sync_cfg):
                 res_with_tokens.append(res_key)
         if res_with_tokens and len(res_with_tokens) != len(mapping):
             raise ConfigErrorInvalidTokens(f"Invalid permission mapping using resources {mapping.keys()}. "
-                                           "Either all mapped resources should have `**` or `*` tokens or "
-                                           "none should use them.")
+                                           f"Either all mapped resources should have `{MULTI_TOKEN}` or "
+                                           f"`{SINGLE_TOKEN}` tokens or none should use them.")
 
 
 def validate_sync_config(sync_cfg):

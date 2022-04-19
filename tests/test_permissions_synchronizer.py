@@ -7,7 +7,7 @@ import mock
 import pytest
 import yaml
 
-from cowbird.config import ConfigErrorInvalidResourceKey, ConfigErrorInvalidTokens
+from cowbird.config import ConfigErrorInvalidResourceKey, ConfigErrorInvalidTokens, MULTI_TOKEN, SINGLE_TOKEN
 from cowbird.permissions_synchronizer import Permission, PermissionSynchronizer
 from cowbird.services.service_factory import ServiceFactory
 from tests import utils
@@ -45,7 +45,7 @@ class TestSyncPermissionsConfig(unittest.TestCase):
                                 "type": "service",
                             },
                             {
-                                "name": "*",
+                                "name": SINGLE_TOKEN,
                                 "type": "directory"
                             },
                             {
@@ -71,11 +71,11 @@ class TestSyncPermissionsConfig(unittest.TestCase):
                                 "type": "service",
                             },
                             {
-                                "name": "**",
+                                "name": MULTI_TOKEN,
                                 "type": "directory"
                             },
                             {
-                                "name": "**",
+                                "name": MULTI_TOKEN,
                                 "type": "directory"
                             }
                         ]
@@ -120,7 +120,7 @@ class TestSyncPermissionsConfig(unittest.TestCase):
                                 "type": "service",
                             },
                             {
-                                "name": "**",
+                                "name": MULTI_TOKEN,
                                 "type": "directory"
                             }
                         ],

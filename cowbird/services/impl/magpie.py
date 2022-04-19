@@ -1,10 +1,11 @@
 import requests
+from pyramid.httpexceptions import HTTPError
 from requests.cookies import RequestsCookieJar
 from typing import TYPE_CHECKING
 
-from cowbird.permissions_synchronizer import Permission, PermissionSynchronizer
+from cowbird.permissions_synchronizer import PermissionSynchronizer
 from cowbird.services.service import SERVICE_URL_PARAM, Service
-from cowbird.utils import CONTENT_TYPE_JSON
+from cowbird.utils import CONTENT_TYPE_JSON, get_logger
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
@@ -12,6 +13,8 @@ if TYPE_CHECKING:
 
 MAGPIE_ADMIN_USER = "admin"
 MAGPIE_ADMIN_PASSWORD = "qwertyqwerty"
+
+LOGGER = get_logger(__name__)
 
 
 class Magpie(Service):
@@ -78,15 +81,19 @@ class Magpie(Service):
         """
         cookies = self.login()
 
-        # TODO: check if any permissions_data
-        permissions_data[-1]["action"] = "create"
+        if permissions_data:
+            permissions_data[-1]["action"] = "create"
 
-        resp = requests.patch(
-            url=f"{self.url}/permissions",
-            headers=self.headers, cookies=cookies, json={"permissions": permissions_data}
-        )
-        # TODO: check resp code
-        print(f"post permission response : {resp.status_code}")
+            resp = requests.patch(
+                url=f"{self.url}/permissions",
+                headers=self.headers, cookies=cookies, json={"permissions": permissions_data}
+            )
+            if resp.status_code == 200:
+                LOGGER.info("Permission creation was successful.")
+            else:
+                raise HTTPError(f"Failed to create permission : {resp.text}")
+        else:
+            LOGGER.warning("Empty permission data, no permissions to create.")
 
     def delete_permission(self, permissions_data):
         # type: (list[dict]) -> None
@@ -94,15 +101,19 @@ class Magpie(Service):
         Remove the specified permission from Magpie if it exists.
         """
         cookies = self.login()
-        # TODO: check if any permissions_data
-        permissions_data[-1]["action"] = "remove"
+        if permissions_data:
+            permissions_data[-1]["action"] = "remove"
 
-        resp = requests.patch(
-            url=f"{self.url}/permissions",
-            headers=self.headers, cookies=cookies, json={"permissions": permissions_data}
-        )
-        # TODO: check resp code
-        print(f"post permission response : {resp.status_code}")
+            resp = requests.patch(
+                url=f"{self.url}/permissions",
+                headers=self.headers, cookies=cookies, json={"permissions": permissions_data}
+            )
+            if resp.status_code == 200:
+                LOGGER.info("Permission removal was successful.")
+            else:
+                raise HTTPError(f"Failed to remove permission : {resp.text}")
+        else:
+            LOGGER.warning("Empty permission data, no permissions to remove.")
 
     def login(self):
         # type: () -> RequestsCookieJar

@@ -2,7 +2,7 @@ import copy
 import re
 from typing import TYPE_CHECKING
 
-from cowbird.config import get_all_configs, validate_sync_config
+from cowbird.config import get_all_configs, MULTI_TOKEN, SINGLE_TOKEN, validate_sync_config
 from cowbird.services.service_factory import ServiceFactory
 from cowbird.utils import get_config_path, get_logger
 
@@ -116,19 +116,19 @@ class SyncPoint:
 
         # Find which resource from the config matches with the input permission's resource tree
         # The length of a match is determined by the number of named segments matching the input resource.
-        # `**` name tokens can match the related type 0 to N times. They are ignored from the match length since it is
-        # ambiguous in the case of a 0 length match.
-        # `*` name tokens can match exactly 1 time only. They are ignored from the match length since we favor a match
-        # with specific names over another with `*` generic tokens.
+        # MULTI_TOKEN name tokens can match the related type 0 to N times. They are ignored from the match length since
+        # it is ambiguous in the case of a 0 length match.
+        # SINGLE_TOKEN name tokens can match exactly 1 time only. They are ignored from the match length since we favor
+        # a match with specific names over another with SINGLE_TOKEN generic tokens.
         matched_res_dict = {}
         for res_key, res_segments in service_resources.items():
             match_len = 0
             res_regex = "^"
             for i in range(len(res_segments)):
-                if res_segments[i]["name"] == "*":
+                if res_segments[i]["name"] == SINGLE_TOKEN:
                     # match any name with specific type 1 time only
                     res_regex += rf"/\w+:{res_segments[i]['type']}"
-                elif res_segments[i]["name"] == "**":
+                elif res_segments[i]["name"] == MULTI_TOKEN:
                     # match any name with specific type, 0 or more times
                     res_regex += rf"(/\w+:{res_segments[i]['type']})*"
                 else:
@@ -166,7 +166,7 @@ class SyncPoint:
             permissions_data = []
             suffix_target_res = []
             for i in range(len(target_res)):
-                if target_res[i]["name"] in ["*", "**"]:
+                if target_res[i]["name"] in [SINGLE_TOKEN, MULTI_TOKEN]:
                     suffix_target_res = target_res[i:]
                     break
                 else:
@@ -177,10 +177,10 @@ class SyncPoint:
             if suffix_target_res:
                 suffix_regex = "^"
                 for i in range(len(suffix_target_res)):
-                    if suffix_target_res[i]["name"] == "*":
+                    if suffix_target_res[i]["name"] == SINGLE_TOKEN:
                         # match 1 name only
                         suffix_regex += r"(/\w+)"
-                    elif suffix_target_res[i]["name"] == "**":
+                    elif suffix_target_res[i]["name"] == MULTI_TOKEN:
                         # match any name 0 or more times
                         suffix_regex += rf"((?:/\w+)*)"
                 suffix_regex += "$"
