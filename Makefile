@@ -128,9 +128,9 @@ WORKER_SUFFIX := -worker
 
 # docker-compose
 ifneq ("$(wildcard ./docker/.env)","")
-    DOCKER_COMPOSE_ENV_FILE := ./docker/.env
+    DOCKER_COMPOSE_ENV_FILE := $(APP_ROOT)/docker/.env
 else
-    DOCKER_COMPOSE_ENV_FILE := ./docker/.env.example
+    DOCKER_COMPOSE_ENV_FILE := $(APP_ROOT)/docker/.env.example
 endif
 
 .DEFAULT_GOAL := help

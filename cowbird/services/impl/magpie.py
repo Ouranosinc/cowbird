@@ -4,6 +4,7 @@ import requests
 from pyramid.httpexceptions import HTTPError
 from requests.cookies import RequestsCookieJar
 
+from cowbird.config import ConfigError
 from cowbird.permissions_synchronizer import PermissionSynchronizer
 from cowbird.services.service import SERVICE_URL_PARAM, Service
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger
@@ -13,8 +14,8 @@ if TYPE_CHECKING:
 
     from cowbird.typedefs import SettingsType
 
-MAGPIE_ADMIN_USER = "admin"
-MAGPIE_ADMIN_PASSWORD = "qwertyqwerty"
+MAGPIE_ADMIN_USER_TAG = "admin_user"
+MAGPIE_ADMIN_PASSWORD_TAG = "admin_password"
 
 LOGGER = get_logger(__name__)
 
@@ -42,8 +43,10 @@ class Magpie(Service):
         self.permissions_synch = PermissionSynchronizer(self)
 
         self.headers = {"Content-type": CONTENT_TYPE_JSON}
-        self.admin_user = MAGPIE_ADMIN_USER
-        self.admin_password = MAGPIE_ADMIN_PASSWORD
+        self.admin_user = kwargs.get(MAGPIE_ADMIN_USER_TAG, None)
+        self.admin_password = kwargs.get(MAGPIE_ADMIN_PASSWORD_TAG, None)
+        if not self.admin_user or not self.admin_password:
+            raise ConfigError("Missing Magpie credentials in config. Admin Magpie username and password are required.")
         self.auth = (self.admin_user, self.admin_password)
 
     def get_resource_id(self, resource_full_name):

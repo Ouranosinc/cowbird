@@ -23,6 +23,8 @@ services:
   Magpie:
     active: true
     url: https://${HOSTNAME}/magpie
+    admin_user: ${MAGPIE_ADMIN_USER}
+    admin_password: ${MAGPIE_ADMIN_PASSWORD}
   Geoserver:
     active: true
     url: http://${HOSTNAME}:8765/geoserver
