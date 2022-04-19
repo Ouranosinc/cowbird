@@ -40,21 +40,10 @@ class TestSyncPermissionsConfig(unittest.TestCase):
                 "services": {
                     "Thredds": {
                         "Invalid_name_after_token": [
-                            {
-                                "name": "catalog",
-                                "type": "service",
-                            },
-                            {
-                                "name": SINGLE_TOKEN,
-                                "type": "directory"
-                            },
-                            {
-                                "name": "invalid_name",
-                                "type": "file"
-                            }
-                        ]
-                    }
-                },
+                            {"name": "catalog", "type": "service"},
+                            {"name": SINGLE_TOKEN, "type": "directory"},
+                            {"name": "invalid_name", "type": "file"}
+                        ]}},
                 "permissions_mapping": []
             }
         }
@@ -66,21 +55,10 @@ class TestSyncPermissionsConfig(unittest.TestCase):
                 "services": {
                     "Thredds": {
                         "Invalid_multitoken": [
-                            {
-                                "name": "catalog",
-                                "type": "service",
-                            },
-                            {
-                                "name": MULTI_TOKEN,
-                                "type": "directory"
-                            },
-                            {
-                                "name": MULTI_TOKEN,
-                                "type": "directory"
-                            }
-                        ]
-                    }
-                },
+                            {"name": "catalog", "type": "service"},
+                            {"name": MULTI_TOKEN, "type": "directory"},
+                            {"name": MULTI_TOKEN, "type": "directory"}
+                        ]}},
                 "permissions_mapping": []
             }
         }
@@ -92,18 +70,10 @@ class TestSyncPermissionsConfig(unittest.TestCase):
                 "services": {
                     "Thredds": {
                         "ValidResource": [
-                            {
-                                "name": "catalog",
-                                "type": "service",
-                            }
-                        ]
-                    }
-                },
+                            {"name": "catalog", "type": "service"}
+                        ]}},
                 "permissions_mapping": [
-                    {
-                        "ValidResource": ["read"],
-                        "UnknownResource": ["read"]
-                    }
+                    {"ValidResource": ["read"], "UnknownResource": ["read"]}
                 ]
             }
         }
@@ -115,32 +85,14 @@ class TestSyncPermissionsConfig(unittest.TestCase):
                 "services": {
                     "Thredds": {
                         "TokenizedResource": [
-                            {
-                                "name": "catalog",
-                                "type": "service",
-                            },
-                            {
-                                "name": MULTI_TOKEN,
-                                "type": "directory"
-                            }
-                        ],
+                            {"name": "catalog", "type": "service"},
+                            {"name": MULTI_TOKEN, "type": "directory"}],
                         "UntokenizedResource": [
-                            {
-                                "name": "catalog",
-                                "type": "service",
-                            },
-                            {
-                                "name": "file",
-                                "type": "file"
-                            }
-                        ]
-                    }
-                },
+                            {"name": "catalog", "type": "service"},
+                            {"name": "file", "type": "file"}
+                        ]}},
                 "permissions_mapping": [
-                    {
-                        "TokenizedResource": ["read"],
-                        "UntokenizedResource": ["read"]
-                    }
+                    {"TokenizedResource": ["read"], "UntokenizedResource": ["read"]}
                 ]
             }
         }
