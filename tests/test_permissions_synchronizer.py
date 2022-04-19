@@ -6,7 +6,7 @@ import pytest
 import yaml
 
 from cowbird.config import MULTI_TOKEN, SINGLE_TOKEN, ConfigErrorInvalidResourceKey, ConfigErrorInvalidTokens
-from cowbird.services.impl.magpie import MAGPIE_ADMIN_USER_TAG, MAGPIE_ADMIN_PASSWORD_TAG
+from cowbird.services.impl.magpie import MAGPIE_ADMIN_PASSWORD_TAG, MAGPIE_ADMIN_USER_TAG
 from tests import utils
 
 
