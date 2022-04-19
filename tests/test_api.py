@@ -51,50 +51,6 @@ class TestAPI(unittest.TestCase):
         utils.check_val_is_in("documentation", body)
         utils.check_val_is_in("cowbird", body["name"])
 
-    def test_webhooks(self):
-        with contextlib.ExitStack() as stack:
-            stack.enter_context(mock.patch("cowbird.services.impl.magpie.Magpie",
-                                           side_effect=utils.MockMagpieService))
-            data = {
-                "event": "created",
-                "user_name": "test_user",
-                "callback_url": "http://magpie.domain.ca/tmp/109e1d0d-e27c-4601-9d45-984c9b61ebff"
-            }
-            resp = utils.test_request(self.app, "POST", "/webhooks/users", json=data)
-            utils.check_response_basic_info(resp, 200, expected_method="POST")
-            utils.check_response_basic_info(resp)
-            magpie = ServiceFactory().get_service("Magpie")
-            assert len(magpie.json()["event_users"]) == 1
-            assert magpie.json()["event_users"][0] == data["user_name"]
-
-            data["event"] = "deleted"
-            data.pop("callback_url")
-            resp = utils.test_request(self.app, "POST", "/webhooks/users", json=data)
-            utils.check_response_basic_info(resp, 200, expected_method="POST")
-            assert len(magpie.json()["event_users"]) == 0
-
-            data = {
-                "event": "created",
-                "service_name": "string",
-                "resource_id": "string",
-                "resource_full_name": "thredds/birdhouse/file.nc",
-                "name": "read",
-                "access": "allow",
-                "scope": "recursive",
-                "user": "string",
-                "group": "string"
-            }
-            resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
-            utils.check_response_basic_info(resp, 200, expected_method="POST")
-            magpie = ServiceFactory().get_service("Magpie")
-            assert len(magpie.json()["event_perms"]) == 1
-            assert magpie.json()["event_perms"][0] == data["resource_full_name"]
-
-            data["event"] = "deleted"
-            resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
-            utils.check_response_basic_info(resp, 200, expected_method="POST")
-            assert len(magpie.json()["event_perms"]) == 0
-
 
 @pytest.mark.api
 def test_response_metadata():

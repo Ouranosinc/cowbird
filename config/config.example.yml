@@ -48,20 +48,43 @@ sync_permissions:
   user_workspace:
     # [Required] This section defines a list of services (referring to the service name of the 'services' section)
     # sharing resources
-    services:
-      Geoserver: /api/workspaces/private/                # <Service name>:<Resource root matching with other services>
-      Thredds: /catalog/birdhouse/workspaces/private/    # Every service sharing the same resources can be added in this
-                                                         # list
+    services: # Every service sharing the same resources can be added in this list
+      Geoserver: # Service name, which should also be found in the services list at the top of this file
+        Geoserver_workspace: # <Resource root key> : <List of each segment of the resource path, with their name and type>
+          - name: api
+            type: service
+          - name: workspaces
+            type: workspace
+          - name: private
+            type: workspace
+          - name: "**"
+            type: workspace
+      Thredds:
+        Thredds_workspace:
+          - name: catalog
+            type: service
+          - name: birdhouse
+            type: folder
+          - name: workspaces
+            type: folder
+          - name: private
+            type: folder
+          - name: "**"
+            type: folder
+          - name: "*"
+            type: file
     # [Required] This section defines an array of permissions mapping between services
-    # In this example, for every Geoserver's `read` permission, a `read` and `browse` permissions will be created in
-    # Thredds. If a `browse` permission is created in Thredds a `read` permission will be added to `Geoserver`.
+    # In this example, for every Geoserver_workspace's `read` permission, a `read` and `browse`
+    # permissions will be created in Thredds_workspace.
+    # If a `browse` permission is created in Thredds_workspace a `read` permission
+    # will be added to `Geoserver_workspace`.
     permissions_mapping:
-      - Geoserver: # 1st mapping between Geoserver:[read] and Thredds:[read,browse]
+      - Geoserver_workspace: # 1st mapping between Geoserver_workspace:[read] and Thredds_workspace:[read,browse]
           - read
-        Thredds:
+        Thredds_workspace:
           - read
           - browse
-      - Geoserver: # 2nd mapping between Geoserver:[write] and Thredds:[execute]
+      - Geoserver_workspace: # 2nd mapping between Geoserver_workspace:[write] and Thredds_workspace:[execute]
           - write
-        Thredds:
+        Thredds_workspace:
           - execute
