@@ -1,8 +1,7 @@
-import copy
 import re
 from typing import TYPE_CHECKING
 
-from cowbird.config import get_all_configs, MULTI_TOKEN, SINGLE_TOKEN, validate_sync_config
+from cowbird.config import MULTI_TOKEN, SINGLE_TOKEN, get_all_configs, validate_sync_config
 from cowbird.services.service_factory import ServiceFactory
 from cowbird.utils import get_config_path, get_logger
 
@@ -76,11 +75,11 @@ class SyncPoint:
         # Make sure that only active services are used
         self.services = {svc: svc_cfg for svc, svc_cfg in services.items() if svc in available_services}
         self.resource_roots = {res_key: res for svc in self.services.values() for res_key, res in svc.items()}
-        self.mapping = [{res_key: perms for res_key, perms in mapping_pt.items() if res_key in self.resource_roots.keys()}
-                        for mapping_pt in mapping]
+        self.mapping = [{res_key: perms for res_key, perms in mapping_pt.items()
+                         if res_key in self.resource_roots.keys()} for mapping_pt in mapping]
 
     def find_permissions_to_sync(self, permission, res_root_key):
-        # type: (Permission, String) -> Generator[Tuple[str, str], None, None]
+        # type: (Permission, str) -> Generator[Tuple[str, str], None, None]
         """
         Search and yield for every match a (service, permission name) tuple that is mapped with this permission.
         """
@@ -122,16 +121,16 @@ class SyncPoint:
         for res_key, res_segments in service_resources.items():
             match_len = 0
             res_regex = "^"
-            for i in range(len(res_segments)):
-                if res_segments[i]["name"] == SINGLE_TOKEN:
+            for segment in res_segments:
+                if segment["name"] == SINGLE_TOKEN:
                     # match any name with specific type 1 time only
-                    res_regex += rf"/\w+:{res_segments[i]['type']}"
-                elif res_segments[i]["name"] == MULTI_TOKEN:
+                    res_regex += rf"/\w+:{segment['type']}"
+                elif segment["name"] == MULTI_TOKEN:
                     # match any name with specific type, 0 or more times
-                    res_regex += rf"(/\w+:{res_segments[i]['type']})*"
+                    res_regex += rf"(/\w+:{segment['type']})*"
                 else:
                     # match name and type exactly
-                    res_regex += f"/{res_segments[i]['name']:}:{res_segments[i]['type']}"
+                    res_regex += f"/{segment['name']:}:{segment['type']}"
                     match_len += 1
             res_regex += "$"
             if re.match(res_regex, resource_nametype_path):
@@ -150,13 +149,13 @@ class SyncPoint:
         return src_res_key, matched_res_dict[src_res_key]
 
     @staticmethod
-    def _create_res_data(target_res, src_resource_suffix):
+    def _create_res_data(target_segments, src_resource_suffix):
         # type: (List[Dict], List[Dict]) -> List[Dict]
         """
         Creates resource data used to update permissions. This data includes the name and type of each segments of
         a full resource path.
 
-        @param target_res List containing the name and type info of each segment of the target resource path.
+        @param target_segments List containing the name and type info of each segment of the target resource path.
         @param src_resource_suffix List similar to the `target_res` argument, but for the input source resource. This
                                    list contains only the suffix section of the resource path, which is the part that is
                                    common to both source and target resource paths.
@@ -164,26 +163,26 @@ class SyncPoint:
         permissions_data = []
         suffix_target_res = []
         # First add 'named' resource data
-        for i in range(len(target_res)):
-            if target_res[i]["name"] in [SINGLE_TOKEN, MULTI_TOKEN]:
-                suffix_target_res = target_res[i:]
+        for i, segment in enumerate(target_segments):
+            if segment["name"] in [SINGLE_TOKEN, MULTI_TOKEN]:  # pylint: disable=no-else-break
+                suffix_target_res = target_segments[i:]
                 break
             else:
                 permissions_data.append({
-                    "resource_name": target_res[i]["name"],
-                    "resource_type": target_res[i]["type"]
+                    "resource_name": segment["name"],
+                    "resource_type": segment["type"]
                 })
         # Then add 'tokenenized' resource data, if any
         if suffix_target_res:
             # Make regex for the tokenized part of the target resource
             suffix_regex = "^"
-            for i in range(len(suffix_target_res)):
-                if suffix_target_res[i]["name"] == SINGLE_TOKEN:
+            for segment in suffix_target_res:
+                if segment["name"] == SINGLE_TOKEN:
                     # match 1 name only
                     suffix_regex += r"(/\w+)"
-                elif suffix_target_res[i]["name"] == MULTI_TOKEN:
+                elif segment["name"] == MULTI_TOKEN:
                     # match any name 0 or more times
-                    suffix_regex += rf"((?:/\w+)*)"
+                    suffix_regex += r"((?:/\w+)*)"
             suffix_regex += "$"
 
             # Check if the source suffix matches the target regex
@@ -197,15 +196,15 @@ class SyncPoint:
                                        f"number of suffix config resource {suffix_target_res}.")
 
                 # Add each tokenized segment to the resulting data
-                for i in range(len(suffix_target_res)):
+                for i, suffix_segment in enumerate(suffix_target_res):
                     match = matched_groups.groups()[i]
                     # Loop on each segment of a match, since a multi_token can produce multiple segment in a match.
-                    for segment in match.split("/"):
+                    for match_segment in match.split("/"):
                         # ignore empty matches which can happen with multitokens with zero occurence
-                        if segment:
+                        if match_segment:
                             permissions_data.append({
-                                "resource_name": segment,
-                                "resource_type": suffix_target_res[i]["type"]
+                                "resource_name": match_segment,
+                                "resource_type": suffix_segment["type"]
                             })
             else:
                 raise ValueError(f"Config mismatch between remaining resource_path {src_common_parts} "
@@ -238,8 +237,8 @@ class SyncPoint:
                                  "configured correctly, and if all services found in permissions_mapping are active"
                                  "and have valid service names.")
 
-            target_res = self.services[svc_name][new_res_key]
-            permissions_data = SyncPoint._create_res_data(target_res, src_resource_tree[src_suffix_idx:])
+            target_segments = self.services[svc_name][new_res_key]
+            permissions_data = SyncPoint._create_res_data(target_segments, src_resource_tree[src_suffix_idx:])
 
             # add permission details to last segment
             permissions_data[-1]["permission"] = perm_name

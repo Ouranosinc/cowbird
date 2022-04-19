@@ -126,7 +126,7 @@ def validate_sync_services_config(sync_cfg):
                 raise ConfigErrorInvalidResourceKey(f"Found duplicate resource key {res_key} in config. Config resource"
                                                     " keys should be unique even between different services.")
             has_multi_token = False
-            for i in range(len(segments)):
+            for i in range(len(segments)):  # pylint: disable=consider-using-enumerate
                 if segments[i]["name"] in [SINGLE_TOKEN, MULTI_TOKEN]:
                     while i < len(segments):
                         if segments[i]["name"] == MULTI_TOKEN:
@@ -161,7 +161,7 @@ def validate_sync_mapping_config(sync_cfg):
             if not res_segments:
                 raise ConfigErrorInvalidResourceKey(f"Invalid config mapping references resource {res_key} which is "
                                                     "not defined in any service.")
-            if any([has_tokens(seg) for seg in res_segments]):
+            if any(has_tokens(seg) for seg in res_segments):
                 res_with_tokens.append(res_key)
         if res_with_tokens and len(res_with_tokens) != len(mapping):
             raise ConfigErrorInvalidTokens(f"Invalid permission mapping using resources {mapping.keys()}. "

@@ -1,15 +1,11 @@
-import contextlib
 import os
 import tempfile
 import unittest
 
-import mock
 import pytest
 import yaml
 
-from cowbird.config import ConfigErrorInvalidResourceKey, ConfigErrorInvalidTokens, MULTI_TOKEN, SINGLE_TOKEN
-from cowbird.permissions_synchronizer import Permission, PermissionSynchronizer
-from cowbird.services.service_factory import ServiceFactory
+from cowbird.config import MULTI_TOKEN, SINGLE_TOKEN, ConfigErrorInvalidResourceKey, ConfigErrorInvalidTokens
 from tests import utils
 
 
@@ -28,7 +24,8 @@ class TestSyncPermissionsConfig(unittest.TestCase):
     Test config for permissions synchronization
     """
     def setUp(self):
-        self.data = {"services": {
+        self.data = {
+            "services": {
                 "Magpie": {"active": True, "url": ""},
                 "Thredds": {"active": True}
             }

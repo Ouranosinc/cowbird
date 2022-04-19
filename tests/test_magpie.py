@@ -10,12 +10,12 @@ still useful for a developer working on the Magpie requests. They can be run wit
 
 import contextlib
 import os
-import requests
 import tempfile
 import unittest
 
 import mock
 import pytest
+import requests
 import yaml
 
 from cowbird.api.schemas import ValidOperations
@@ -51,7 +51,8 @@ class TestMagpieRequests(unittest.TestCase):
         self.test_service_id = self.reset_test_service()
 
         self.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)
-        self.data = {"services": {
+        self.data = {
+            "services": {
                 "Magpie": {
                     "active": True,
                     "url": "http://localhost:2001/magpie"
@@ -81,7 +82,7 @@ class TestMagpieRequests(unittest.TestCase):
         }
         resp = utils.test_request(self.url, "POST", "/services", cookies=self.cookies, json=data)
         body = utils.check_response_basic_info(resp, 201, expected_method="POST")
-        return body['service']['resource_id']
+        return body["service"]["resource_id"]
 
     def delete_test_service(self):
         # Delete test service if it exists
@@ -104,7 +105,7 @@ class TestMagpieRequests(unittest.TestCase):
         }
         resp = utils.test_request(self.url, "POST", "/resources", cookies=self.cookies, json=data)
         body = utils.check_response_basic_info(resp, 201, expected_method="POST")
-        return body['resource']['resource_id']
+        return body["resource"]["resource_id"]
 
     def check_user_permissions(self, resource_id, expected_permissions):
         resp = utils.test_request(self.url, "GET", f"/users/{self.usr}/resources/{resource_id}/permissions",
@@ -136,7 +137,7 @@ class TestMagpieRequests(unittest.TestCase):
         }
         with self.cfg_file as f:
             f.write(yaml.safe_dump(self.data))
-        self.app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
+        app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
         # Recreate new magpie service instance with new config
         ServiceFactory().create_service("Magpie")
 
@@ -161,7 +162,7 @@ class TestMagpieRequests(unittest.TestCase):
             }
 
             # Create permissions
-            resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
+            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
             utils.check_response_basic_info(resp, 200, expected_method="POST")
 
             # Check if permissions were created
@@ -170,7 +171,7 @@ class TestMagpieRequests(unittest.TestCase):
 
             # Delete permissions
             data["event"] = ValidOperations.DeleteOperation.value
-            resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
+            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
             utils.check_response_basic_info(resp, 200, expected_method="POST")
 
             # Check if permissions were deleted
@@ -205,7 +206,7 @@ class TestMagpieRequests(unittest.TestCase):
         }
         with self.cfg_file as f:
             f.write(yaml.safe_dump(self.data))
-        self.app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
+        app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
         # Recreate new magpie service instance with new config
         ServiceFactory().create_service("Magpie")
 
@@ -237,7 +238,7 @@ class TestMagpieRequests(unittest.TestCase):
             }
 
             # Create permissions
-            resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
+            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
             utils.check_response_basic_info(resp, 200, expected_method="POST")
 
             # Check if only corresponding permissions were created
@@ -248,7 +249,7 @@ class TestMagpieRequests(unittest.TestCase):
             data["resource_id"] = str(src2_res_id)
             data["resource_full_name"] = f"/{self.test_service_name}/private/dir1/dir2/workspace_file"
 
-            resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
+            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
             utils.check_response_basic_info(resp, 200, expected_method="POST")
             self.check_user_permissions(target2_res_id, ["read", "read-allow-recursive"])
 
@@ -271,7 +272,7 @@ class TestMagpieRequests(unittest.TestCase):
         }
         with self.cfg_file as f:
             f.write(yaml.safe_dump(self.data))
-        self.app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
+        app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
         # Recreate new magpie service instance with new config
         ServiceFactory().create_service("Magpie")
 
@@ -296,7 +297,7 @@ class TestMagpieRequests(unittest.TestCase):
             }
 
             # Try creating permissions
-            resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data, expect_errors=True)
+            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data, expect_errors=True)
             # Should create an error since resource tokenized `suffix` will not fit with the target resource path
             utils.check_response_basic_info(resp, 500, expected_method="POST")
 
@@ -317,7 +318,7 @@ class TestMagpieRequests(unittest.TestCase):
         }
         with self.cfg_file as f:
             f.write(yaml.safe_dump(self.data))
-        self.app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
+        app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
         # Recreate new magpie service instance with new config
         ServiceFactory().create_service("Magpie")
 
@@ -340,7 +341,7 @@ class TestMagpieRequests(unittest.TestCase):
             }
 
             # Try creating permissions
-            resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data, expect_errors=True)
+            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data, expect_errors=True)
             # Should create an error since input resource to synchronize can match with both resources in config
             utils.check_response_basic_info(resp, 500, expected_method="POST")
 
@@ -361,7 +362,7 @@ class TestMagpieRequests(unittest.TestCase):
         }
         with self.cfg_file as f:
             f.write(yaml.safe_dump(self.data))
-        self.app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
+        app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
         # Recreate new magpie service instance with new config
         ServiceFactory().create_service("Magpie")
 
@@ -384,7 +385,7 @@ class TestMagpieRequests(unittest.TestCase):
             }
 
             # Try creating permissions
-            resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data, expect_errors=True)
+            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data, expect_errors=True)
             # Should create an error since input resource doesn't match the type of resources found in config
             utils.check_response_basic_info(resp, 500, expected_method="POST")
 
@@ -406,7 +407,7 @@ class TestMagpieRequests(unittest.TestCase):
         }
         with self.cfg_file as f:
             f.write(yaml.safe_dump(self.data))
-        self.app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
+        app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
         # Recreate new magpie service instance with new config
         ServiceFactory().create_service("Magpie")
 
@@ -429,7 +430,7 @@ class TestMagpieRequests(unittest.TestCase):
             }
 
             # Try creating permissions
-            resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
+            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
             # Should not create an error, the invalid service should be ignored when reading the config
             # It should have done nothing since no permissions to synchronize are found.
             utils.check_response_basic_info(resp, 200, expected_method="POST")

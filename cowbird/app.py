@@ -8,7 +8,7 @@ import sys
 
 from cowbird.config import get_all_configs, validate_sync_config
 from cowbird.monitoring.monitoring import Monitoring
-from cowbird.utils import get_app_config, get_logger, print_log, get_config_path
+from cowbird.utils import get_app_config, get_config_path, get_logger, print_log
 
 LOGGER = get_logger(__name__)
 

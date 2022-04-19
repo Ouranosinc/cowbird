@@ -1,14 +1,16 @@
+from typing import TYPE_CHECKING
+
 import requests
 from pyramid.httpexceptions import HTTPError
 from requests.cookies import RequestsCookieJar
-from typing import TYPE_CHECKING
 
 from cowbird.permissions_synchronizer import PermissionSynchronizer
 from cowbird.services.service import SERVICE_URL_PARAM, Service
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger
 
 if TYPE_CHECKING:
-    # pylint: disable=W0611,unused-import
+    from typing import List
+
     from cowbird.typedefs import SettingsType
 
 MAGPIE_ADMIN_USER = "admin"
@@ -57,10 +59,9 @@ class Magpie(Service):
         data = {"parent": "true", "invert": "true", "flatten": "true"}
         resp = requests.get(url=f"{self.url}/resources/{resource_id}",
                             headers=self.headers, cookies=cookies, params=data)
-        if resp.status_code == 200:
-            return resp.json()["resources"]
-        else:
+        if resp.status_code != 200:
             raise RuntimeError("Could not find the input resource's parent resources.")
+        return resp.json()["resources"]
 
     def user_created(self, user_name):
         raise NotImplementedError
