@@ -79,7 +79,7 @@ class SyncPoint:
         self.mapping = [{res_key: perms for res_key, perms in mapping_pt.items() if res_key in self.resource_roots.keys()}
                         for mapping_pt in mapping]
 
-    def find_match(self, permission, res_root_key):
+    def find_permissions_to_sync(self, permission, res_root_key):
         # type: (Permission, String) -> Generator[Tuple[str, str], None, None]
         """
         Search and yield for every match a (service, permission name) tuple that is mapped with this permission.
@@ -100,20 +100,18 @@ class SyncPoint:
                 for perm_name in mapped_perm_name:
                     yield res, perm_name
 
-    def sync(self, perm_operation, permission, src_resource_tree):
-        # type: (Callable[[List[Dict]], None], Permission, List[Dict]) -> None
+    def _find_matching_res(self, service_name, resource_nametype_path):
+        # type: (str, str) -> (str, int)
         """
-        Create or delete the same permission on each service sharing the same resource.
+        Finds a resource key that matches the input resource path, in the sync_permissions config.
+        Note that it returns the longest match and only the named segments of the path are included in the length value.
+        Any tokenized segment is ignored in the length.
 
-        @param perm_operation Magpie create_permission or delete_permission function
-        @param permission Permission to synchronize with others services
-        @param src_resource_tree Resource tree associated with the permission to synchronize
+        @param service_name Name of the service associated with the input resource.
+        @param resource_nametype_path Full resource path name, which includes the type of each segment
+                                       (ex.: /name1:type1/name2:type2)
         """
-        service_resources = self.services[permission.service_name]
-        resource_full_name_type = ""
-        for res in src_resource_tree:
-            resource_full_name_type += f"/{res['resource_name']}:{res['resource_type']}"
-
+        service_resources = self.services[service_name]
         # Find which resource from the config matches with the input permission's resource tree
         # The length of a match is determined by the number of named segments matching the input resource.
         # MULTI_TOKEN name tokens can match the related type 0 to N times. They are ignored from the match length since
@@ -136,7 +134,7 @@ class SyncPoint:
                     res_regex += f"/{res_segments[i]['name']:}:{res_segments[i]['type']}"
                     match_len += 1
             res_regex += "$"
-            if re.match(res_regex, resource_full_name_type):
+            if re.match(res_regex, resource_nametype_path):
                 matched_res_dict[res_key] = match_len
 
         # Find the longest match
@@ -149,10 +147,88 @@ class SyncPoint:
                              f" {max_matching_keys}")
         else:
             raise ValueError("No matching resources could be found in the config file.")
+        return src_res_key, matched_res_dict[src_res_key]
 
-        src_common_part_idx = matched_res_dict[src_res_key]
-        for new_res_key, perm_name in self.find_match(permission, src_res_key):
-            # Find which service is associated with the new permission
+    @staticmethod
+    def _create_res_data(target_res, src_resource_suffix):
+        # type: (List[Dict], List[Dict]) -> List[Dict]
+        """
+        Creates resource data used to update permissions. This data includes the name and type of each segments of
+        a full resource path.
+
+        @param target_res List containing the name and type info of each segment of the target resource path.
+        @param src_resource_suffix List similar to the `target_res` argument, but for the input source resource. This
+                                   list contains only the suffix section of the resource path, which is the part that is
+                                   common to both source and target resource paths.
+        """
+        permissions_data = []
+        suffix_target_res = []
+        # First add 'named' resource data
+        for i in range(len(target_res)):
+            if target_res[i]["name"] in [SINGLE_TOKEN, MULTI_TOKEN]:
+                suffix_target_res = target_res[i:]
+                break
+            else:
+                permissions_data.append({
+                    "resource_name": target_res[i]["name"],
+                    "resource_type": target_res[i]["type"]
+                })
+        # Then add 'tokenenized' resource data, if any
+        if suffix_target_res:
+            # Make regex for the tokenized part of the target resource
+            suffix_regex = "^"
+            for i in range(len(suffix_target_res)):
+                if suffix_target_res[i]["name"] == SINGLE_TOKEN:
+                    # match 1 name only
+                    suffix_regex += r"(/\w+)"
+                elif suffix_target_res[i]["name"] == MULTI_TOKEN:
+                    # match any name 0 or more times
+                    suffix_regex += rf"((?:/\w+)*)"
+            suffix_regex += "$"
+
+            # Check if the source suffix matches the target regex
+            src_common_parts = ""
+            for res in src_resource_suffix:
+                src_common_parts += f"/{res['resource_name']}"
+            matched_groups = re.match(suffix_regex, src_common_parts)
+            if matched_groups:
+                if len(matched_groups.groups()) != len(suffix_target_res):
+                    raise RuntimeError(f"Number of matched groups {matched_groups} do not correspond with the"
+                                       f"number of suffix config resource {suffix_target_res}.")
+
+                # Add each tokenized segment to the resulting data
+                for i in range(len(suffix_target_res)):
+                    match = matched_groups.groups()[i]
+                    # Loop on each segment of a match, since a multi_token can produce multiple segment in a match.
+                    for segment in match.split("/"):
+                        # ignore empty matches which can happen with multitokens with zero occurence
+                        if segment:
+                            permissions_data.append({
+                                "resource_name": segment,
+                                "resource_type": suffix_target_res[i]["type"]
+                            })
+            else:
+                raise ValueError(f"Config mismatch between remaining resource_path {src_common_parts} "
+                                 "and tokenized target segments.")
+        return permissions_data
+
+    def sync(self, perm_operation, permission, src_resource_tree):
+        # type: (Callable[[List[Dict]], None], Permission, List[Dict]) -> None
+        """
+        Create or delete the same permission on each service sharing the same resource.
+
+        @param perm_operation Magpie create_permission or delete_permission function
+        @param permission Permission to synchronize with others services
+        @param src_resource_tree Resource tree associated with the permission to synchronize
+        """
+        resource_nametype_path = ""
+        for res in src_resource_tree:
+            resource_nametype_path += f"/{res['resource_name']}:{res['resource_type']}"
+
+        src_res_key, src_suffix_idx = self._find_matching_res(permission.service_name, resource_nametype_path)
+
+        for new_res_key, perm_name in self.find_permissions_to_sync(permission, src_res_key):
+            # Find which service is associated with the new permission, and check if it is valid
             svc_list = [s for s in self.services if new_res_key in self.services[s]]
             # Assume the service is the first found with the resource key, since the resource keys should be unique.
             svc_name = svc_list[0]
@@ -163,48 +239,7 @@ class SyncPoint:
                                  "and have valid service names.")
 
             target_res = self.services[svc_name][new_res_key]
-            permissions_data = []
-            suffix_target_res = []
-            for i in range(len(target_res)):
-                if target_res[i]["name"] in [SINGLE_TOKEN, MULTI_TOKEN]:
-                    suffix_target_res = target_res[i:]
-                    break
-                else:
-                    permissions_data.append({
-                        "resource_name": target_res[i]["name"],
-                        "resource_type": target_res[i]["type"]
-                    })
-            if suffix_target_res:
-                suffix_regex = "^"
-                for i in range(len(suffix_target_res)):
-                    if suffix_target_res[i]["name"] == SINGLE_TOKEN:
-                        # match 1 name only
-                        suffix_regex += r"(/\w+)"
-                    elif suffix_target_res[i]["name"] == MULTI_TOKEN:
-                        # match any name 0 or more times
-                        suffix_regex += rf"((?:/\w+)*)"
-                suffix_regex += "$"
-
-                src_common_parts = ""
-                for res in src_resource_tree[src_common_part_idx:]:
-                    src_common_parts += f"/{res['resource_name']}"
-                matched_groups = re.match(suffix_regex, src_common_parts)
-                if matched_groups:
-                    if len(matched_groups.groups()) != len(suffix_target_res):
-                        raise RuntimeError(f"Number of matched groups {matched_groups} do not correspond with the"
-                                           f"number of suffix config resource {suffix_target_res}.")
-                    for i in range(len(suffix_target_res)):
-                        match = matched_groups.groups()[i]
-                        for segment in match.split("/"):
-                            # ignore empty matches which can happen with multitokens with zero occurence
-                            if segment:
-                                permissions_data.append({
-                                    "resource_name": segment,
-                                    "resource_type": suffix_target_res[i]["type"]
-                                })
-                else:
-                    raise ValueError(f"Config mismatch between remaining resource_path {src_common_parts} "
-                                     "and tokenized target segments.")
+            permissions_data = SyncPoint._create_res_data(target_res, src_resource_tree[src_suffix_idx:])
 
             # add permission details to last segment
             permissions_data[-1]["permission"] = perm_name
