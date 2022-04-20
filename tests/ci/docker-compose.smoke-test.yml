@@ -31,7 +31,7 @@ services:
       - ../../config/celeryconfig.py:/opt/local/src/cowbird/config/celeryconfig.py
 
   mongodb:
-    image: mongo:3.4.0
+    image: mongo:3.6.0
     container_name: "mongodb-smoke-test"
     restart: "no"
       # make directly available to host for testing purpose only
