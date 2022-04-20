@@ -46,7 +46,7 @@ jobs:
           --health-retries 5
       # Label used to access the service container
       mongodb:
-        image: mongo:3.6.23  # DockerHub
+        image: mongo:3.4.23  # DockerHub
         ports:
           - "27017:27017"
     strategy:
