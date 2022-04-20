@@ -61,6 +61,7 @@ confidence=
 # no Warning level messages displayed, use "--disable=all --enable=classes
 # --disable=W".
 disable=C0111,missing-docstring,
+        C0209,consider-using-f-string,
         C0302,too-many-lines,
         C0330,bad-continuation,
         C0411,wrong-import-order,
@@ -78,6 +79,7 @@ disable=C0111,missing-docstring,
         R1710,inconsistent-return-statements,
         R1721,unnecessary-comprehension,
         R1725,super-with-arguments,
+        R1732,consider-using-with,
         W0108,unnecessary-lambda,
         W0143,comparison-with-callable,
         W0232,no-init,

@@ -63,7 +63,7 @@ def test_cowbird_helper_as_python():
 @pytest.mark.cli
 def test_cowbird_services_list_with_formats():
     override = {"COWBIRD_CONFIG_PATH": TEST_CFG_FILE}
-    cfg = yaml.safe_load(open(TEST_CFG_FILE, "r"))
+    cfg = yaml.safe_load(open(TEST_CFG_FILE, "r", encoding="utf-8"))
     with mock.patch.dict("os.environ", override):
         out_lines = run_and_get_output("cowbird services list -f yaml -c '{}'".format(TEST_INI_FILE))
         assert out_lines[0] == "services:"

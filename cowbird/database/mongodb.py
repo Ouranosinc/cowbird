@@ -48,7 +48,7 @@ class MongoDatabase(DatabaseInterface):
         super(MongoDatabase, self).__init__(container)
         self._database = get_mongodb_engine(container)
         self._settings = get_settings(container)
-        self._stores = dict()
+        self._stores = {}
 
     def reset_store(self, store_type):
         store_type = self._get_store_type(store_type)

@@ -365,7 +365,7 @@ def valid_http(http_success=HTTPOk,             # type: Union[Type[HTTPSuccessfu
     """
     global RAISE_RECURSIVE_SAFEGUARD_COUNT  # pylint: disable=W0603
 
-    content = dict() if content is None else content
+    content = {} if content is None else content
     detail = repr(detail) if not isinstance(detail, str) else detail
     content_type = CONTENT_TYPE_JSON if content_type == CONTENT_TYPE_ANY else content_type
     http_code, detail, content = validate_params(http_success, [HTTPSuccessful, HTTPRedirection],
@@ -404,7 +404,7 @@ def raise_http(http_error=HTTPInternalServerError,  # type: Type[HTTPError]
 
     # fail-fast if recursion generates too many calls
     # this would happen only if a major programming error occurred within this function
-    global RAISE_RECURSIVE_SAFEGUARD_MAX    # pylint: disable=W0603
+    global RAISE_RECURSIVE_SAFEGUARD_MAX    # pylint: disable=W0602,W0603
     global RAISE_RECURSIVE_SAFEGUARD_COUNT  # pylint: disable=W0603
     RAISE_RECURSIVE_SAFEGUARD_COUNT = RAISE_RECURSIVE_SAFEGUARD_COUNT + 1
     if RAISE_RECURSIVE_SAFEGUARD_COUNT > RAISE_RECURSIVE_SAFEGUARD_MAX:
@@ -445,7 +445,7 @@ def validate_params(http_class,     # type: Type[HTTPException]
     """
     # verify input arguments, raise `HTTPInternalServerError` with caller info if invalid
     # cannot be done within a try/except because it would always trigger with `raise_http`
-    content = dict() if content is None else content
+    content = {} if content is None else content
     detail = repr(detail) if not isinstance(detail, str) else detail
     caller = {"content": content, "type": content_type, "detail": detail, "code": 520}  # "unknown" code error
     verify_param(isclass(http_class), param_name="http_class", is_true=True,
@@ -551,7 +551,7 @@ def generate_response_http_format(http_class, http_kwargs, content, content_type
     content = str(content) if not isinstance(content, str) else content
 
     # adjust additional keyword arguments and try building the http response class with them
-    http_kwargs = dict() if http_kwargs is None else http_kwargs
+    http_kwargs = {} if http_kwargs is None else http_kwargs
     http_headers = http_kwargs.get("headers", {})
     # omit content-type and related headers that we override
     for header in dict(http_headers):

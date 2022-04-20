@@ -9,7 +9,7 @@ docformatter==1.4
 flake8>=3.8.3,<3.9
 isort>5.5
 mock>4
-pylint>=2.7,<2.8
+pylint>=2.13.0 # Use at least version 2.13.0 to avoid security vulnerabilities (https://github.com/PyCQA/pylint/issues/5322)
 pylint-quotes
 pytest
 pytest-celery

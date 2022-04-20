@@ -261,7 +261,7 @@ def mock_request(request_path_query="",     # type: str
     """
     parts = request_path_query.split("?")
     path = parts[0]
-    query = dict()
+    query = {}
     if len(parts) > 1 and parts[1]:
         for part in parts[1].split("&"):
             kv = part.split("=")  # handle trailing keyword query arguments without values

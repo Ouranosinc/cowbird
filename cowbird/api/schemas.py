@@ -225,8 +225,8 @@ class BaseResponseBodySchema(colander.MappingSchema):
         super(BaseResponseBodySchema, self).__init__(**kw)
         assert isinstance(code, int)         # nosec: B101
         assert isinstance(description, str)  # nosec: B101
-        self.__code = code
-        self.__desc = description
+        self.__code = code  # pylint: disable=W0238,unused-private-member
+        self.__desc = description  # pylint: disable=W0238,unused-private-member
 
         # update the values
         child_nodes = getattr(self, "children", [])

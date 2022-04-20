@@ -122,7 +122,7 @@ config = Configurator(settings={"cowbird.build_docs": True, "cowbird.ui_enabled"
 config.include("cowbird")  # actually need to include cowbird to apply decorators and parse routes
 api_spec_file = os.path.join(DOC_DIR_ROOT, "api.json")
 api_spec_json = generate_api_schema({"host": "example", "schemes": ["https"]})
-with open(api_spec_file, "w") as f:
+with open(api_spec_file, "w", encoding="utf-8") as f:
     json.dump(api_spec_json, f)
 
 redoc = [{

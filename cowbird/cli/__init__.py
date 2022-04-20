@@ -30,7 +30,7 @@ def main(args=None):
                                        description="Name of the helper to execute.")
     helpers_dir = os.path.dirname(__file__)
     helper_mods = os.listdir(helpers_dir)
-    helpers = dict()
+    helpers = {}
     log = get_logger_parser()
     for module_item in sorted(helper_mods):
         helper_path = os.path.join(helpers_dir, module_item)
