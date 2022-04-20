@@ -646,6 +646,11 @@ test-geoserver: install-dev install		## run Geoserver requests tests against a c
 	@echo "Running local tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "geoserver" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
+.PHONY: test-magpie
+test-magpie: install-dev install		## run Magpie requests tests against a configured Magpie instance. Most of these tests are "online" tests
+	@echo "Running local tests..."
+	@bash -c '$(CONDA_CMD) pytest tests -vv -m "magpie" --junitxml "$(APP_ROOT)/tests/results.xml"'
+
 .PHONY: test-github
 test-github:  ## test target used by github's ci, runs all tests except online tests, without prior dependency check and installation
 	@echo "Running tests..."
