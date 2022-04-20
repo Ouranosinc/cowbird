@@ -7,10 +7,15 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`0.4.1 <https://github.com/Ouranosinc/cowbird/tree/0.4.1>`_ (2022-03-09)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 
-* Add an ssl verification setting.
+* Add an SSL verification setting.
 * Add Geoserver workspace and datastore creation/removal linked to user creation/removal.
 * Add automated publishing of shapefiles to Geoserver when new files are found.
 * Use ``pip`` legacy and faster resolver as per
@@ -20,6 +25,10 @@ Features / Changes
 * Reorganize `config.example.yml` to support more sync cases, provide info on the type of each segment of a resource
   path and to use tokenized path.
 * Add some config verifications when starting cowbird app.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Pin ``pymongo<4`` to work with pinned ``celery`` version.
 
 `0.4.0 <https://github.com/Ouranosinc/cowbird/tree/0.4.0>`_ (2021-08-05)
 ------------------------------------------------------------------------------------
