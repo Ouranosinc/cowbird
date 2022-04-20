@@ -22,7 +22,7 @@ class TestServiceFactory(unittest.TestCase):
             "services": {
                 "Catalog": {"active": False},
                 "Geoserver": {"active": True, "url": "", "workspace_dir": "", "admin_user": "", "admin_password": ""},
-                "Magpie": {"active": True, "url": ""},
+                "Magpie": {"active": True, "url": "", "admin_user": "admin", "admin_password": "qwertyqwerty"},
                 "Nginx": {"active": True, "url": ""},
                 "Thredds": {"active": True, "url": ""}
             }

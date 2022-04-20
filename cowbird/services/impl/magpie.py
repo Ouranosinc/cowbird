@@ -14,8 +14,8 @@ if TYPE_CHECKING:
 
     from cowbird.typedefs import SettingsType
 
-MAGPIE_ADMIN_USER_TAG = "admin_user"
-MAGPIE_ADMIN_PASSWORD_TAG = "admin_password"
+MAGPIE_ADMIN_USER_TAG = "admin_user"  # nosec: B105
+MAGPIE_ADMIN_PASSWORD_TAG = "admin_password"  # nosec: B105
 
 LOGGER = get_logger(__name__)
 

@@ -14,8 +14,8 @@ if TYPE_CHECKING:
 
 LOGGER = get_logger(__name__)
 
-SINGLE_TOKEN = "*"
-MULTI_TOKEN = "**"
+SINGLE_TOKEN = "*"  # nosec: B105
+MULTI_TOKEN = "**"  # nosec: B105
 
 
 class ConfigError(RuntimeError):
