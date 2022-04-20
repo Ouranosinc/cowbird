@@ -95,7 +95,7 @@ class Magpie(Service):
             if resp.status_code == 200:
                 LOGGER.info("Permission creation was successful.")
             else:
-                raise HTTPError(f"Failed to create permission : {resp.text}")
+                raise HTTPError(f"Failed to create permissions : {resp.text}")
         else:
             LOGGER.warning("Empty permission data, no permissions to create.")
 
@@ -115,7 +115,7 @@ class Magpie(Service):
             if resp.status_code == 200:
                 LOGGER.info("Permission removal was successful.")
             else:
-                raise HTTPError(f"Failed to remove permission : {resp.text}")
+                raise HTTPError(f"Failed to remove permissions : {resp.text}")
         else:
             LOGGER.warning("Empty permission data, no permissions to remove.")
 

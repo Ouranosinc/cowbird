@@ -116,7 +116,9 @@ def _expand_all(config):
 
 def validate_sync_services_config(sync_cfg):
     # type: (ConfigDict) -> None
-    # First check if all services use tokens properly
+    """
+    Validates if services in the config have valid resource keys and use tokens properly.
+    """
     res_key_list = []
     for svc, resources in sync_cfg["services"].items():
         for res_key, segments in resources.items():
@@ -145,11 +147,13 @@ def validate_sync_services_config(sync_cfg):
 
 def validate_sync_mapping_config(sync_cfg):
     # type: (ConfigDict) -> None
+    """
+    Validates if mappings in the config have valid resource keys and use tokens properly.
+    """
 
     def has_tokens(segment):
         return segment["name"] in [MULTI_TOKEN, SINGLE_TOKEN]
 
-    # Check the mappings
     for mapping in sync_cfg["permissions_mapping"]:
         res_with_tokens = []
         for res_key in mapping:

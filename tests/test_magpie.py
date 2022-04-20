@@ -5,7 +5,7 @@
 These tests require a working Magpie instance.
 
 They are ignored by the CI, but are
-still useful for a developer working on the Magpie requests. They can be run with the `Make test-magpie` target.
+still useful for a developer working on the Magpie requests. They can be run with the `make test-magpie` target.
 """
 
 import contextlib

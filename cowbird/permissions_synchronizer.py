@@ -74,9 +74,9 @@ class SyncPoint:
         available_services = ServiceFactory().services_cfg.keys()
         # Make sure that only active services are used
         self.services = {svc: svc_cfg for svc, svc_cfg in services.items() if svc in available_services}
-        self.resource_roots = {res_key: res for svc in self.services.values() for res_key, res in svc.items()}
+        self.resource_keys = {res_key: res for svc in self.services.values() for res_key, res in svc.items()}
         self.mapping = [{res_key: perms for res_key, perms in mapping_pt.items()
-                         if res_key in self.resource_roots.keys()} for mapping_pt in mapping]
+                         if res_key in self.resource_keys.keys()} for mapping_pt in mapping]
 
     def find_permissions_to_sync(self, permission, res_root_key):
         # type: (Permission, str) -> Generator[Tuple[str, str], None, None]
@@ -161,11 +161,11 @@ class SyncPoint:
                                    common to both source and target resource paths.
         """
         permissions_data = []
-        suffix_target_res = []
+        suffix_target_segments = []
         # First add 'named' resource data
         for i, segment in enumerate(target_segments):
             if segment["name"] in [SINGLE_TOKEN, MULTI_TOKEN]:  # pylint: disable=no-else-break
-                suffix_target_res = target_segments[i:]
+                suffix_target_segments = target_segments[i:]
                 break
             else:
                 permissions_data.append({
@@ -173,10 +173,10 @@ class SyncPoint:
                     "resource_type": segment["type"]
                 })
         # Then add 'tokenenized' resource data, if any
-        if suffix_target_res:
+        if suffix_target_segments:
             # Make regex for the tokenized part of the target resource
             suffix_regex = "^"
-            for segment in suffix_target_res:
+            for segment in suffix_target_segments:
                 if segment["name"] == SINGLE_TOKEN:
                     # match 1 name only
                     suffix_regex += r"(/\w+)"
@@ -191,12 +191,12 @@ class SyncPoint:
                 src_common_parts += f"/{res['resource_name']}"
             matched_groups = re.match(suffix_regex, src_common_parts)
             if matched_groups:
-                if len(matched_groups.groups()) != len(suffix_target_res):
+                if len(matched_groups.groups()) != len(suffix_target_segments):
                     raise RuntimeError(f"Number of matched groups {matched_groups} do not correspond with the"
-                                       f"number of suffix config resource {suffix_target_res}.")
+                                       f"number of suffix config resource {suffix_target_segments}.")
 
                 # Add each tokenized segment to the resulting data
-                for i, suffix_segment in enumerate(suffix_target_res):
+                for i, suffix_segment in enumerate(suffix_target_segments):
                     match = matched_groups.groups()[i]
                     # Loop on each segment of a match, since a multi_token can produce multiple segment in a match.
                     for match_segment in match.split("/"):
