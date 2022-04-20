@@ -7,7 +7,17 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* Add synchronization of Magpie permissions between different services, when receiving incoming webhooks.
+* Reorganize `config.example.yml` to support more sync cases, provide info on the type of each segment of a resource
+  path and to use tokenized path.
+* Add some config verifications when starting cowbird app.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+n/a
 
 `0.4.1 <https://github.com/Ouranosinc/cowbird/tree/0.4.1>`_ (2022-03-09)
 ------------------------------------------------------------------------------------
@@ -21,10 +31,6 @@ Features / Changes
 * Use ``pip`` legacy and faster resolver as per
   `pypa/pip#9187 (comment) <https://github.com/pypa/pip/issues/9187#issuecomment-853091201>`_
   since current one is endlessly failing to resolve development packages (linting tools from ``check`` targets).
-* Add synchronization of Magpie permissions between different services, when receiving incoming webhooks.
-* Reorganize `config.example.yml` to support more sync cases, provide info on the type of each segment of a resource
-  path and to use tokenized path.
-* Add some config verifications when starting cowbird app.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
