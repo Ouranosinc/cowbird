@@ -18,8 +18,8 @@ class Nginx(Service):
         """
         Create the nginx instance.
 
-        @param settings: Cowbird settings for convenience
-        @param name: Service name
+        :param settings: Cowbird settings for convenience
+        :param name: Service name
         """
         super(Nginx, self).__init__(settings, name, **kwargs)
 

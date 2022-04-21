@@ -23,8 +23,8 @@ class Catalog(Service, FSMonitor):
         """
         Create the catalog instance.
 
-        @param settings: Cowbird settings for convenience
-        @param name: Service name
+        :param settings: Cowbird settings for convenience
+        :param name: Service name
         """
         super(Catalog, self).__init__(settings, name, **kwargs)
         # TODO: Need to monitor data directory

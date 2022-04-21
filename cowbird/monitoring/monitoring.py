@@ -29,7 +29,7 @@ class Monitoring(metaclass=SingletonMeta):
         """
         Initialize the monitoring instance from configured application settings.
 
-        @param config: AnySettingsContainer object from which the db can be retrieved.
+        :param config: AnySettingsContainer object from which the db can be retrieved.
                        The default value of None is only there to disable pylint E1120. The singleton instance
                        must be initialized with a proper config and after that the init function should not be hit.
         """
@@ -56,12 +56,12 @@ class Monitoring(metaclass=SingletonMeta):
         the `recursive` flag is now true, this one take precedence and the monitor is updated accordingly. If the
         `recursive` flag was true and now it is false it has no effect.
 
-        @param path: Path to monitor
-        @param recursive: Monitor subdirectory recursively?
-        @param cb_monitor: FSMonitor for which an instance is created and events are sent
+        :param path: Path to monitor
+        :param recursive: Monitor subdirectory recursively?
+        :param cb_monitor: FSMonitor for which an instance is created and events are sent
                            Can be an object, a class type implementing FSMonitor or a string containing module and class
                            name.
-        @return The monitor registered or already existing for the specific path/cb_monitor combination.
+        :returns: The monitor registered or already existing for the specific path/cb_monitor combination.
         """
         try:
             callback = Monitor.get_qualified_class_name(Monitor.get_fsmonitor_instance(cb_monitor))
@@ -90,11 +90,11 @@ class Monitoring(metaclass=SingletonMeta):
         """
         Stop a monitor and unregister it.
 
-        @param path: Path used by the monitor
-        @param cb_monitor: FSMonitor object to remove
+        :param path: Path used by the monitor
+        :param cb_monitor: FSMonitor object to remove
                            Can be an object, a class type implementing FSMonitor or a string containing module and class
                            name.
-        @return: True if the monitor is found and successfully stopped, False otherwise
+        :returns: True if the monitor is found and successfully stopped, False otherwise
         """
         if path in self.monitors:
             try:

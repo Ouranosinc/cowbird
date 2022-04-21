@@ -68,8 +68,8 @@ class SyncPoint:
         Init the sync point, holding services with their respective resources root and how access are mapped between
         them.
 
-        @param services: Dict, where the service is the key and its resources root is the value
-        @param permissions_mapping_list: List of dict where the service is the key and an access list is the value
+        :param services: Dict, where the service is the key and its resources root is the value
+        :param permissions_mapping_list: List of dict where the service is the key and an access list is the value
         """
         available_services = ServiceFactory().services_cfg.keys()
         # Make sure that only active services are used
@@ -107,8 +107,8 @@ class SyncPoint:
         Note that it returns the longest match and only the named segments of the path are included in the length value.
         Any tokenized segment is ignored in the length.
 
-        @param service_name Name of the service associated with the input resource.
-        @param resource_nametype_path Full resource path name, which includes the type of each segment
+        :param service_name: Name of the service associated with the input resource.
+        :param resource_nametype_path: Full resource path name, which includes the type of each segment
                                        (ex.: /name1:type1/name2:type2)
         """
         service_resources = self.services[service_name]
@@ -156,8 +156,8 @@ class SyncPoint:
         Creates resource data used to update permissions. This data includes the name and type of each segments of
         a full resource path.
 
-        @param target_segments List containing the name and type info of each segment of the target resource path.
-        @param src_resource_suffix List similar to the `target_res` argument, but for the input source resource. This
+        :param target_segments: List containing the name and type info of each segment of the target resource path.
+        :param src_resource_suffix: List similar to the `target_res` argument, but for the input source resource. This
                                    list contains only the suffix section of the resource path, which is the part that is
                                    common to both source and target resource paths.
         """
@@ -217,9 +217,9 @@ class SyncPoint:
         """
         Create or delete the same permission on each service sharing the same resource.
 
-        @param perm_operation Magpie create_permission or delete_permission function
-        @param permission Permission to synchronize with others services
-        @param src_resource_tree Resource tree associated with the permission to synchronize
+        :param perm_operation: Magpie create_permission or delete_permission function
+        :param permission: Permission to synchronize with others services
+        :param src_resource_tree: Resource tree associated with the permission to synchronize
         """
         resource_nametype_path = ""
         for res in src_resource_tree:

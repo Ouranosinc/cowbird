@@ -373,7 +373,7 @@ def get_settings(container, app=False):
 
     :param container: supported container with an handle to application settings.
     :param app: allow retrieving from current thread registry if no container was defined.
-    :return: found application settings dictionary.
+    :returns: found application settings dictionary.
     :raise TypeError: when no application settings could be found or unsupported container.
     """
     if isinstance(container, (Configurator, Request)):

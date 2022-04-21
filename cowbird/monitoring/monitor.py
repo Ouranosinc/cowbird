@@ -43,9 +43,9 @@ class Monitor(FileSystemEventHandler):
         """
         Initialize the path monitoring and ready to be started.
 
-        @param path: Path to monitor
-        @param recursive: Monitor subdirectory recursively?
-        @param callback: Events are sent to this FSMonitor.
+        :param path: Path to monitor
+        :param recursive: Monitor subdirectory recursively?
+        :param callback: Events are sent to this FSMonitor.
                          Can be an object, a class type implementing :class:`FSMonitor` or a string containing module
                          and class name. The class type or string is used to instantiate an object using the class
                          method :meth:`FSMonitor.get_instance()`
@@ -163,7 +163,7 @@ class Monitor(FileSystemEventHandler):
         """
         Called when a file or a directory is moved or renamed.
 
-        @param event: Event representing file/directory movement.
+        :param event: Event representing file/directory movement.
         """
         self.__callback.on_deleted(event.src_path)
         # If moved outside of __src_path don't send a create event
@@ -180,7 +180,7 @@ class Monitor(FileSystemEventHandler):
         """
         Called when a file or directory is created.
 
-        @param event: Event representing file/directory creation.
+        :param event: Event representing file/directory creation.
         """
         self.__callback.on_created(event.src_path)
 
@@ -189,7 +189,7 @@ class Monitor(FileSystemEventHandler):
         """
         Called when a file or directory is deleted.
 
-        @param event: Event representing file/directory deletion.
+        :param event: Event representing file/directory deletion.
         """
         self.__callback.on_deleted(event.src_path)
 
@@ -198,6 +198,6 @@ class Monitor(FileSystemEventHandler):
         """
         Called when a file or directory is modified.
 
-        @param event: Event representing file/directory modification.
+        :param event: Event representing file/directory modification.
         """
         self.__callback.on_modified(event.src_path)

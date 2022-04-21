@@ -28,7 +28,7 @@ def check_value(value, param_name, check_type=str, pattern=ax.PARAM_REGEX, http_
     :param http_error: derived exception to raise on check failure (default: :class:`HTTPUnprocessableEntity`)
     :param msg_on_fail: message details to return in HTTP exception if check failed
         (default: description message of :class:`UnprocessableEntityResponseSchema`).
-    :return: None.
+    :returns: None.
     :raises HTTPError: if the key is not an applicable path variable for this request.
     """
     if not http_error:
@@ -86,7 +86,7 @@ def get_multiformat_body(request, key, default=None, check_type=str, pattern=ax.
     :param http_error: derived exception to raise on check failure (default: :class:`HTTPUnprocessableEntity`)
     :param msg_on_fail: message details to return in HTTP exception if check failed
         (default: description message of :class:`UnprocessableEntityResponseSchema`).
-    :return: matched path variable value.
+    :returns: matched path variable value.
     :raises HTTPBadRequest: if the key could not be retrieved from the request body and has no provided default value.
     :raises HTTPUnprocessableEntity: if the retrieved value from the key is invalid for this request.
 
@@ -111,7 +111,7 @@ def get_path_param(request, key, check_type=str, pattern=ax.PARAM_REGEX, http_er
     :param http_error: derived exception to raise on check failure (default: :class:`HTTPUnprocessableEntity`)
     :param msg_on_fail: message details to return in HTTP exception if check failed
         (default: description message of :class:`UnprocessableEntityResponseSchema`).
-    :return: matched path variable value.
+    :returns: matched path variable value.
     :raises HTTPError: if the key is not an applicable path variable for this request.
     """
     val = request.matchdict.get(key)

@@ -47,9 +47,9 @@ class Service(abc.ABC):
     def __init__(self, settings, name, **kwargs):
         # type: (SettingsType, str, dict) -> None
         """
-        @param settings: Cowbird settings for convenience
-        @param name: Service name
-        @param kwargs: The base class handle, but doesn't require the following variables:
+        :param settings: Cowbird settings for convenience
+        :param name: Service name
+        :param kwargs: The base class handle, but doesn't require the following variables:
                         param `priority`: Relative priority between services while handling events
                                           (lower value has higher priority, default value is last)
                         param `url`: Location of the web service represented by the cowbird service

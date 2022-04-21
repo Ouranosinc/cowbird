@@ -36,8 +36,8 @@ class Magpie(Service):
         """
         Create the magpie instance and instantiate the permission synchronizer that will handle the permission events.
 
-        @param settings: Cowbird settings for convenience
-        @param name: Service name
+        :param settings: Cowbird settings for convenience
+        :param name: Service name
         """
         super(Magpie, self).__init__(settings, name, **kwargs)
         self.permissions_synch = PermissionSynchronizer(self)

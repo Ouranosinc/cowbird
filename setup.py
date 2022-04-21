@@ -75,7 +75,7 @@ def _split_requirement(requirement, version=False, python=False, merge=False):
         a single string (if any version part), but without the python version part (if any).
         If both :paramref:`version` and :paramref:`python` are ``True`` combines back the part after ``;`` to form
         the python version specifier.
-    :return: Extracted requirement part(s). Emtpy strings if parts cannot be found.
+    :returns: Extracted requirement part(s). Emtpy strings if parts cannot be found.
     """
     idx_pyv = -1 if python else 0
     if python and "python_version" not in requirement:

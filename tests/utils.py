@@ -336,7 +336,7 @@ def test_request(test_item,             # type: AnyTestItemType
     :param allow_redirects:
         Passed down to :mod:`requests` when using URL, handled manually for same behaviour when using :class:`TestApp`.
     :param kwargs: any additional keywords that will be forwarded to the request call.
-    :return: response of the request
+    :returns: response of the request
     """
     method = method.upper()
     status = kwargs.pop("status", None)
@@ -544,7 +544,7 @@ def check_response_basic_info(response,                         # type: AnyRespo
     :param expected_type: Content-Type to validate from the response.
     :param expected_method: method 'GET', 'POST', etc. to validate from the response if an error.
     :param extra_message: additional message to append to every specific test message if provided.
-    :return: json body of the response for convenience.
+    :returns: json body of the response for convenience.
     """
     def _(_msg):
         return _msg + " " + extra_message if extra_message else _msg

@@ -114,7 +114,7 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
     :param matches: test that :paramref:`param` matches the regex specified by :paramref:`param_compare` value
     :raises HTTPError: if tests fail, specified exception is raised (default: :class:`HTTPBadRequest`)
     :raises HTTPInternalServerError: for evaluation error
-    :return: nothing if all tests passed
+    :returns: nothing if all tests passed
     """
     content = {} if content is None else content
     needs_compare = is_type or is_in or not_in or is_equal or not_equal or matches
@@ -313,7 +313,7 @@ def evaluate_call(call,                                 # type: Callable[[], Any
     :param content_type: format in which to return the exception (one of `cowbird.common.SUPPORTED_ACCEPT_TYPES`)
     :raises http_error: on `call` failure
     :raises `HTTPInternalServerError`: on `fallback` failure
-    :return: whichever return value `call` might have if no exception occurred
+    :returns: whichever return value `call` might have if no exception occurred
     """
     msg_on_fail = str(msg_on_fail) if isinstance(msg_on_fail, str) else repr(msg_on_fail)
     content_repr = repr(content) if content is not None else content
@@ -538,7 +538,7 @@ def generate_response_http_format(http_class, http_kwargs, content, content_type
     :param content: formatted JSON content or literal string content providing additional details for the response
     :param content_type: one of `cowbird.utils.SUPPORTED_ACCEPT_TYPES` (default: `cowbird.utils.CONTENT_TYPE_PLAIN`)
     :param metadata: request metadata to add to the response body. (see: :func:`cowbird.api.requests.get_request_info`)
-    :return: `http_class` instance with requested information and content type if creation succeeds
+    :returns: `http_class` instance with requested information and content type if creation succeeds
     :raises: `HTTPInternalServerError` instance details about requested information and content type if creation fails
     """
     # content body is added manually to avoid auto-format and suppression of fields by `HTTPException`

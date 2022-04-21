@@ -23,8 +23,8 @@ class FileSystem(Service):
         """
         Create the file system instance.
 
-        @param settings: Cowbird settings for convenience
-        @param name: Service name
+        :param settings: Cowbird settings for convenience
+        :param name: Service name
         """
         super(FileSystem, self).__init__(settings, name, **kwargs)
 
