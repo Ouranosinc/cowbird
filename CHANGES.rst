@@ -11,7 +11,7 @@ Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 
 * Add synchronization of Magpie permissions between different services, when receiving incoming webhooks.
-* Reorganize `config.example.yml` to support more sync cases, provide info on the type of each segment of a resource
+* Reorganize ``config.example.yml`` to support more sync cases, provide info on the type of each segment of a resource
   path and to use tokenized path.
 * Add some config verifications when starting cowbird app.
 

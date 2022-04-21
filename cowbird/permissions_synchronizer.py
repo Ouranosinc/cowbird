@@ -61,22 +61,23 @@ class SyncPoint:
     """
 
     def __init__(self,
-                 services,    # type: SyncPointServicesType
-                 mapping      # type: SyncPointMappingType
-                 ):           # type: (...) -> None
+                 services,                 # type: SyncPointServicesType
+                 permissions_mapping_list  # type: SyncPointMappingType
+                 ):                        # type: (...) -> None
         """
         Init the sync point, holding services with their respective resources root and how access are mapped between
         them.
 
         @param services: Dict, where the service is the key and its resources root is the value
-        @param mapping: List of dict where the service is the key and an access list is the value
+        @param permissions_mapping_list: List of dict where the service is the key and an access list is the value
         """
         available_services = ServiceFactory().services_cfg.keys()
         # Make sure that only active services are used
         self.services = {svc: svc_cfg for svc, svc_cfg in services.items() if svc in available_services}
         self.resource_keys = {res_key: res for svc in self.services.values() for res_key, res in svc.items()}
-        self.mapping = [{res_key: perms for res_key, perms in mapping_pt.items()
-                         if res_key in self.resource_keys.keys()} for mapping_pt in mapping]
+        self.permissions_mapping = [{res_key: perms for res_key, perms in permissions_mapping.items()
+                                    if res_key in self.resource_keys.keys()}
+                                    for permissions_mapping in permissions_mapping_list]
 
     def find_permissions_to_sync(self, permission, res_root_key):
         # type: (Permission, str) -> Generator[Tuple[str, str], None, None]
@@ -84,7 +85,7 @@ class SyncPoint:
         Search and yield for every match a (service, permission name) tuple that is mapped with this permission.
         """
         # For each permission mapping
-        for mapping in self.mapping:
+        for mapping in self.permissions_mapping:
             # Does the current service has some mapped permissions?
             if res_root_key not in mapping:
                 continue
@@ -270,7 +271,7 @@ class PermissionSynchronizer(object):
             for sync_cfg in sync_perm_config.values():
                 validate_sync_config(sync_cfg)
                 self.sync_point.append(SyncPoint(services=sync_cfg["services"],
-                                                 mapping=sync_cfg["permissions_mapping"]))
+                                                 permissions_mapping_list=sync_cfg["permissions_mapping"]))
 
     def create_permission(self, permission):
         # type: (Permission) -> None

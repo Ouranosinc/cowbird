@@ -8,6 +8,9 @@
 #   [Required] Definition of managed services by Cowbird. Each service is provided as string that must match an actual
 #   implementation in Cowbird. Each service must be further configured with one or more of the following parameters. If
 #   a required parameter is missing for a service it will throw a `ServiceConfigurationException` exception.
+#   For more details on available services on Magpie, refer to these pages :
+#     - https://pavics-magpie.readthedocs.io/en/latest/services.html#available-services
+#     - https://pavics-magpie.readthedocs.io/en/latest/autoapi/magpie/services/index.html
 #
 #   service:
 #     active:             [optional, default=False] bool allowing to deactivate a service and stop managing it

@@ -95,7 +95,7 @@ def post_permission_webhook_view(request):
     scope = ar.get_multiformat_body(request, "scope")
     user = ar.get_multiformat_body_raw(request, "user")
     group = ar.get_multiformat_body_raw(request, "group")
-    ax.verify_param(bool(user or group), param_compare=True, is_true=True, http_error=HTTPBadRequest,
+    ax.verify_param(bool(user or group), is_true=True, http_error=HTTPBadRequest,
                     msg_on_fail=s.PermissionWebhook_POST_BadRequestResponseSchema.description)
 
     permission = Permission(
