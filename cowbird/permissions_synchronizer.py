@@ -121,7 +121,7 @@ class SyncPoint:
         matched_res_dict = {}
         for res_key, res_segments in service_resources.items():
             match_len = 0
-            res_regex = "^"
+            res_regex = r"^"
             for segment in res_segments:
                 if segment["name"] == SINGLE_TOKEN:
                     # match any name with specific type 1 time only
@@ -131,9 +131,9 @@ class SyncPoint:
                     res_regex += rf"(/\w+:{segment['type']})*"
                 else:
                     # match name and type exactly
-                    res_regex += f"/{segment['name']:}:{segment['type']}"
+                    res_regex += rf"/{segment['name']:}:{segment['type']}"
                     match_len += 1
-            res_regex += "$"
+            res_regex += r"$"
             if re.match(res_regex, resource_nametype_path):
                 matched_res_dict[res_key] = match_len
 
@@ -176,7 +176,7 @@ class SyncPoint:
         # Then add 'tokenenized' resource data, if any
         if suffix_target_segments:
             # Make regex for the tokenized part of the target resource
-            suffix_regex = "^"
+            suffix_regex = r"^"
             for segment in suffix_target_segments:
                 if segment["name"] == SINGLE_TOKEN:
                     # match 1 name only
@@ -184,7 +184,7 @@ class SyncPoint:
                 elif segment["name"] == MULTI_TOKEN:
                     # match any name 0 or more times
                     suffix_regex += r"((?:/\w+)*)"
-            suffix_regex += "$"
+            suffix_regex += r"$"
 
             # Check if the source suffix matches the target regex
             src_common_parts = ""
