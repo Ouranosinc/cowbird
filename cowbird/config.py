@@ -3,6 +3,7 @@ import os
 from typing import TYPE_CHECKING
 
 import yaml
+from schema import Optional, Schema
 
 from cowbird.utils import get_logger, print_log, raise_log
 
@@ -112,6 +113,42 @@ def _expand_all(config):
     else:
         raise NotImplementedError(f"unknown parsing of config of type: {type(config)}")
     return config
+
+
+def validate_services_config_schema(services_cfg):
+    """
+    Validates the schema of the `services` section found in the config.
+    """
+    schema = Schema({
+        str: {
+            Optional("active"): bool,
+            Optional("priority"): int,
+            Optional("url"): str,
+            Optional("workspace_dir"): str,
+        }
+    }, ignore_extra_keys=True)
+    schema.validate(services_cfg)
+
+
+def validate_sync_perm_config_schema(sync_cfg):
+    """
+    Validates the schema of the `sync_permissions` section found in the config.
+    """
+    schema = Schema({
+        str: {
+            "services": {
+                str: {
+                    str: [
+                        {"name": str, "type": str}
+                    ]
+                }
+            },
+            "permissions_mapping": [
+                {str: [str]}
+            ]
+        }
+    })
+    schema.validate(sync_cfg)
 
 
 def validate_sync_services_config(sync_cfg):

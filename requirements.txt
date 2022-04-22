@@ -15,6 +15,7 @@ pyramid_celery
 pyyaml>=5.1
 requests
 requests_file
+schema
 simplejson
 threddsclient>=0.4.1
 watchdog
