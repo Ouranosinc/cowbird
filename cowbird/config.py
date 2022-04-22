@@ -135,7 +135,7 @@ def validate_sync_perm_config_schema(sync_cfg):
     Validates the schema of the `sync_permissions` section found in the config.
     """
     schema = Schema({
-        str: {
+        Optional(str): {
             "services": {
                 str: {
                     str: [
