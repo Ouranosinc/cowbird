@@ -7,6 +7,7 @@ coverage==5.5,<5.6
 doc8>=0.8
 docformatter==1.4
 flake8>=3.8.3,<3.9
+flynt
 isort>5.5
 mock>4
 pylint>=2.13.0 # Use at least version 2.13.0 to avoid security vulnerabilities (https://github.com/PyCQA/pylint/issues/5322)

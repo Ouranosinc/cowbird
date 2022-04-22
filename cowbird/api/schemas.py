@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 # ignore naming style of tags
 # pylint: disable=C0103,invalid-name
 
-TitleAPI = "{} REST API".format(__meta__.__title__)
+TitleAPI = f"{__meta__.__title__} REST API"
 InfoAPI = {
     "description": __meta__.__description__,
     "contact": {"name": __meta__.__maintainer__, "email": __meta__.__email__, "url": __meta__.__url__}
@@ -120,7 +120,7 @@ SwaggerGenerator = Service(
 SwaggerAPI = Service(
     path="/api",
     name="swagger_schema_ui",
-    description="{} documentation".format(TitleAPI))
+    description=f"{TitleAPI} documentation")
 VersionAPI = Service(
     path="/version",
     name="Version")
@@ -163,10 +163,10 @@ ServicesTag = "Service"
 TAG_DESCRIPTIONS = {
     APITag: "General information about the API.",
     WebhooksTag:
-        "Webhooks that are managed by {}.\n\n".format(__meta__.__title__) +
+        f"Webhooks that are managed by {__meta__.__title__}.\n\n" +
         "Each of the managed webhook provides specific functionalities against specific services of the stack.",
     ServicesTag:
-        "Services that are managed by {}.\n\n".format(__meta__.__title__) +
+        f"Services that are managed by {__meta__.__title__}.\n\n" +
         "Each service defines information such as endpoint and configuration details for running webhooks.",
 }
 

@@ -564,7 +564,7 @@ check-css: mkdir-reports install-npm
 		--output-file "$(REPORTS_DIR)/fixed-css.txt" \
 		"$(APP_ROOT)/**/*.css"
 
-FIXES := imports lint docf css
+FIXES := imports lint docf fstring css
 FIXES := $(addprefix fix-, $(FIXES))
 
 .PHONY: fix
@@ -604,6 +604,14 @@ fix-docf: install-dev	## fix some PEP8 code documentation style problems automat
 			--recursive \
 			$(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/fixed-docf.txt")'
+
+.PHONY: fix-fstring
+fix-fstring: mkdir-reports install-dev    ## fix code string formats substitutions to f-string definitions automatically
+	@echo "Fixing code string formats substitutions to f-string definitions..."
+	@-rm -f "$(REPORTS_DIR)/fixed-fstring.txt"
+	@bash -c '$(CONDA_CMD) \
+		flynt $(FLYNT_FLAGS) "$(APP_ROOT)" \
+		1> >(tee "$(REPORTS_DIR)/fixed-fstring.txt")'
 
 .PHONY: fix-css
 fix-css: mkdir-reports install-npm		## fix CSS styles problems automatically

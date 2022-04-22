@@ -218,7 +218,7 @@ def json_msg(json_body, msg=null):
     """
     json_str = json_pkg.dumps(json_body, indent=4, ensure_ascii=False)
     if msg is not null:
-        return "{}\n{}".format(msg, json_str)
+        return f"{msg}\n{json_str}"
     return json_str
 
 
@@ -358,7 +358,7 @@ def test_request(test_item,             # type: AnyTestItemType
 
         # update path with query parameters since TestApp does not have an explicit argument when not using GET
         if params:
-            path += "?" + "&".join("{!s}={!s}".format(k, v) for k, v in params.items() if v is not None)
+            path += "?" + "&".join(f"{k!s}={v!s}" for k, v in params.items() if v is not None)
 
         kwargs.update({
             "params": _body,  # TestApp uses 'params' for the body during POST (these are not the query parameters)
@@ -383,7 +383,7 @@ def test_request(test_item,             # type: AnyTestItemType
             err_msg = str(exc) + str(getattr(exc, "exception", ""))
         except Exception as exc:
             err_code = 500
-            err_msg = "Unknown: {!s}".format(exc)
+            err_msg = f"Unknown: {exc!s}"
         finally:
             if err_code:
                 info = json_msg({"path": path, "method": method, "body": _body, "headers": kwargs["headers"]})
@@ -406,7 +406,7 @@ def test_request(test_item,             # type: AnyTestItemType
         kwargs["json"] = _body
     elif data or body:
         kwargs["data"] = _body
-    url = "{url}{path}".format(url=app_or_url, path=path)
+    url = f"{app_or_url}{path}"
     while True:
         try:
             return requests.request(method, url, params=params, headers=headers, cookies=cookies,
@@ -424,16 +424,16 @@ def visual_repr(item):
             return json_pkg.dumps(item, indent=4, ensure_ascii=False)
     except Exception:  # noqa
         pass
-    return "'{}'".format(repr(item))
+    return f"'{repr(item)}'"
 
 
 def format_test_val_ref(val, ref, pre="Fail", msg=None):
     if is_null(msg):
-        _msg = "({}) Failed condition between test and reference values.".format(pre)
+        _msg = f"({pre}) Failed condition between test and reference values."
     else:
-        _msg = "({}) Test value: {}, Reference value: {}".format(pre, visual_repr(val), visual_repr(ref))
+        _msg = f"({pre}) Test value: {visual_repr(val)}, Reference value: {visual_repr(ref)}"
         if isinstance(msg, str):
-            _msg = "{}\n{}".format(msg, _msg)
+            _msg = f"{msg}\n{_msg}"
     return _msg
 
 
@@ -501,7 +501,7 @@ def check_raises(func, exception_type, msg=None):
     :raise AssertionError: on failing exception check or missing raised exception.
     :returns: raised exception of expected type if it was raised.
     """
-    msg = ": {}".format(msg) if msg else "."
+    msg = f": {msg}" if msg else "."
     try:
         func()
     except Exception as exc:  # pylint: disable=W0703
@@ -509,7 +509,7 @@ def check_raises(func, exception_type, msg=None):
               .format(type(exc).__name__, exception_type.__name__, msg)
         assert isinstance(exc, exception_type), msg
         return exc
-    raise AssertionError("Exception [{!s}] was not raised{}".format(exception_type.__name__, msg))
+    raise AssertionError(f"Exception [{exception_type.__name__!s}] was not raised{msg}")
 
 
 def check_no_raise(func, msg=None):
@@ -522,8 +522,8 @@ def check_no_raise(func, msg=None):
     try:
         return func()
     except Exception as exc:  # pylint: disable=W0703
-        msg = ": {}".format(msg) if msg else "."
-        raise AssertionError("Exception [{!r}] was raised when none is expected{}".format(type(exc).__name__, msg))
+        msg = f": {msg}" if msg else "."
+        raise AssertionError(f"Exception [{type(exc).__name__!r}] was raised when none is expected{msg}")
 
 
 def check_response_basic_info(response,                         # type: AnyResponseType
@@ -555,7 +555,7 @@ def check_response_basic_info(response,                         # type: AnyRespo
     code_message = "Response doesn't match expected HTTP status code."
     if expected_type == CONTENT_TYPE_JSON:
         # provide more details about mismatching code since to help debug cause of error
-        code_message += "\nReason:\n{}".format(json_msg(get_json_body(response)))
+        code_message += f"\nReason:\n{json_msg(get_json_body(response))}"
     check_val_equal(response.status_code, expected_code, msg=_(code_message))
 
     if expected_type == CONTENT_TYPE_JSON:

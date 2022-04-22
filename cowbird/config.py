@@ -48,13 +48,13 @@ def _load_config(path_or_dict, section, allow_missing=False):
             cfg = path_or_dict
         return _expand_all(cfg[section])
     except KeyError:
-        msg = "Config file section [{!s}] not found.".format(section)
+        msg = f"Config file section [{section!s}] not found."
         if allow_missing:
             print_log(msg, level=logging.WARNING, logger=LOGGER)
             return {}
         raise_log(msg, exception=ConfigError, logger=LOGGER)
     except Exception as exc:
-        raise_log("Invalid config file [{!r}]".format(exc),
+        raise_log(f"Invalid config file [{exc!r}]",
                   exception=ConfigError, logger=LOGGER)
 
 
@@ -109,8 +109,7 @@ def _expand_all(config):
     elif isinstance(config, (int, bool, float, type(None))):
         pass
     else:
-        raise NotImplementedError("unknown parsing of config of type: {}".
-                                  format(type(config)))
+        raise NotImplementedError(f"unknown parsing of config of type: {type(config)}")
     return config
 
 

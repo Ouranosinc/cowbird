@@ -26,7 +26,7 @@ def run_and_get_output(command, trim=True):
         command = " ".join(command)
     proc = subprocess.Popen(command, shell=True, universal_newlines=True, stdout=subprocess.PIPE)  # nosec
     out, err = proc.communicate()
-    assert not err, "process returned with error code {}".format(err)
+    assert not err, f"process returned with error code {err}"
     # when no output is present, it is either because CLI was not installed correctly, or caused by some other error
     assert out != "", "process did not execute as expected, no output available"
     out_lines = [line for line in out.splitlines() if not trim or (line and not line.startswith(" "))]
@@ -55,7 +55,7 @@ def test_cowbird_helper_as_python():
         except SystemExit as exc:
             assert exc.code == 0, "success output expected, non-zero or not None are errors"
         except Exception as exc:
-            raise AssertionError("unexpected error raised instead of success exit code: [{!s}]".format(exc))
+            raise AssertionError(f"unexpected error raised instead of success exit code: [{exc!s}]")
         else:
             raise AssertionError("expected exit code on help call not raised")
 
@@ -65,12 +65,12 @@ def test_cowbird_services_list_with_formats():
     override = {"COWBIRD_CONFIG_PATH": TEST_CFG_FILE}
     cfg = yaml.safe_load(open(TEST_CFG_FILE, "r", encoding="utf-8"))
     with mock.patch.dict("os.environ", override):
-        out_lines = run_and_get_output("cowbird services list -f yaml -c '{}'".format(TEST_INI_FILE))
+        out_lines = run_and_get_output(f"cowbird services list -f yaml -c '{TEST_INI_FILE}'")
         assert out_lines[0] == "services:"
-        out_lines = run_and_get_output("cowbird services list -f json -c '{}'".format(TEST_INI_FILE), trim=False)
+        out_lines = run_and_get_output(f"cowbird services list -f json -c '{TEST_INI_FILE}'", trim=False)
         assert out_lines[0] == "{"
         assert '"services": [' in out_lines[1]  # pylint: disable=C4001
-        out_lines = run_and_get_output("cowbird services list -f table -c '{}'".format(TEST_INI_FILE))
+        out_lines = run_and_get_output(f"cowbird services list -f table -c '{TEST_INI_FILE}'")
         assert "+---" in out_lines[0]
         assert "| services" in out_lines[1]
         assert "+===" in out_lines[2]

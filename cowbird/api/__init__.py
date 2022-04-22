@@ -17,4 +17,4 @@ def includeme(config):
         mod_path = os.path.join(cur_dir, mod_name)
         mod_init = os.path.join(mod_path, "__init__.py")
         if os.path.isdir(mod_path) and os.path.isfile(mod_init):
-            config.include("cowbird.api.{}".format(mod_name))
+            config.include(f"cowbird.api.{mod_name}")

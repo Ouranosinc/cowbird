@@ -77,8 +77,8 @@ class Monitor(FileSystemEventHandler):
                 cls = getattr(module, class_name)
                 return cls.get_instance()
             except (AttributeError, ValueError):
-                raise MonitorException("Cannot instantiate the following FSMonitor callback : {}".format(callback))
-        raise TypeError("Unsupported callback type : [{}] ({})".format(callback, type(callback)))
+                raise MonitorException(f"Cannot instantiate the following FSMonitor callback : {callback}")
+        raise TypeError(f"Unsupported callback type : [{callback}] ({type(callback)})")
 
     @staticmethod
     def get_qualified_class_name(monitor):

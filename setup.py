@@ -95,9 +95,9 @@ def _split_requirement(requirement, version=False, python=False, merge=False):
         requirement = ""
     parts = (op_str, requirement.strip())
     if merge and python:
-        return "python_version {} \"{}\"".format(parts[0], parts[1])
+        return f"python_version {parts[0]} \"{parts[1]}\""
     if merge and version:
-        return "{}{}{}".format(pkg_name, parts[0], parts[1])
+        return f"{pkg_name}{parts[0]}{parts[1]}"
     return parts
 
 
@@ -202,7 +202,7 @@ setup(
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
-        "License :: OSI Approved :: {} License".format(__meta__.__license__),
+        f"License :: OSI Approved :: {__meta__.__license__} License",
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",

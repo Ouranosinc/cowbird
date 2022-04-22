@@ -41,7 +41,7 @@ class TestMagpieRequests(unittest.TestCase):
 
         data = {"user_name": cls.usr, "password": cls.pwd,
                 "provider_name": "ziggurat"}  # ziggurat = magpie_default_provider
-        resp = requests.post("{}/signin".format(cls.url), json=data)
+        resp = requests.post(f"{cls.url}/signin", json=data)
         utils.check_response_basic_info(resp, 200, expected_method="POST")
         cls.cookies = resp.cookies
 

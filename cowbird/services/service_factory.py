@@ -35,7 +35,7 @@ class ServiceFactory(metaclass=SingletonMeta):
                 else:
                     self.services_cfg[name] = cfg
         self.services = {}
-        LOGGER.info("Services config : [%s]", ", ".join(["{0} [{1}]".format(name, cfg.get("active", False))
+        LOGGER.info("Services config : [%s]", ", ".join([f"{name} [{cfg.get('active', False)}]"
                                                          for name, cfg in self.services_cfg.items()]))
 
     def create_service(self, name):

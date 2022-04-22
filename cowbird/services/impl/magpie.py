@@ -125,5 +125,5 @@ class Magpie(Service):
         Login to Magpie app using admin credentials.
         """
         data = {"user_name": self.admin_user, "password": self.admin_password}
-        resp = requests.post("{}/signin".format(self.url), json=data)
+        resp = requests.post(f"{self.url}/signin", json=data)
         return resp.cookies

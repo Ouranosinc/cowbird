@@ -106,13 +106,13 @@ doc_redirect_extensions = [
 ]
 # references to RST files in 'docs' dir redirect to corresponding HTML
 doc_redirect_map = {
-    "docs/{}".format(file_name): file_name
+    f"docs/{file_name}": file_name
     for file_name in os.listdir(DOC_DIR_ROOT)
     if doc_redirect_include(file_name)
 }
 # references to RST files in repo root (README/CHANGES) redirect to their equivalent HTML in 'docs' dir
 doc_redirect_map.update({
-    file_name: "docs/{}".format(file_name.lower())
+    file_name: f"docs/{file_name.lower()}"
     for file_name in os.listdir(PROJECT_ROOT)
     if doc_redirect_include(file_name)
 })
@@ -177,7 +177,7 @@ master_doc = "index"
 
 # General information about the project.
 project = __meta__.__title__
-copyright = "2021, {}".format(__meta__.__author__)  # pylint: disable=W0622,redefined-builtin
+copyright = f"2021, {__meta__.__author__}"  # pylint: disable=W0622,redefined-builtin
 
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout
@@ -334,13 +334,13 @@ latex_elements = {
     # "preamble": "",
 }
 
-doc_title = "{} Documentation".format(__meta__.__title__)
+doc_title = f"{__meta__.__title__} Documentation"
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, "{}.tex".format(__meta__.__package__), doc_title, __meta__.__author__, "manual"),
+    (master_doc, f"{__meta__.__package__}.tex", doc_title, __meta__.__author__, "manual"),
 ]
 
 # The name of an image file (relative to this directory) to place at

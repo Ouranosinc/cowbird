@@ -34,7 +34,7 @@ COWBIRD_CONFIG_DIR = os.getenv(
     "COWBIRD_CONFIG_DIR", os.path.join(COWBIRD_ROOT, "config"))
 COWBIRD_CONFIG_PATH = os.getenv("COWBIRD_CONFIG_PATH")  # default None, require explicit specification
 COWBIRD_INI_FILE_PATH = os.getenv(
-    "COWBIRD_INI_FILE_PATH", "{}/cowbird.ini".format(COWBIRD_CONFIG_DIR))
+    "COWBIRD_INI_FILE_PATH", f"{COWBIRD_CONFIG_DIR}/cowbird.ini")
 
 
 def _get_default_log_level():
@@ -103,8 +103,8 @@ def get_constant_setting_name(name):
     """
     name = re.sub(_REGEX_ASCII_ONLY, "_", name.strip().lower())
     for prefix in _SETTING_SECTION_PREFIXES:
-        known_prefix = "{}_".format(prefix)
-        dotted_prefix = "{}.".format(prefix)
+        known_prefix = f"{prefix}_"
+        dotted_prefix = f"{prefix}."
         if name.startswith(known_prefix):
             return name.replace(known_prefix, dotted_prefix, 1)
     return name
@@ -161,35 +161,35 @@ def get_constant(constant_name,             # type: str
         missing = False
         cowbird_value = settings.get(constant_name)
         if cowbird_value is not None:
-            print_log("Constant found in settings with: {}".format(constant_name), level=logging.DEBUG)
+            print_log(f"Constant found in settings with: {constant_name}", level=logging.DEBUG)
             return cowbird_value
     if not settings_name:
         settings_name = get_constant_setting_name(constant_name)
-        print_log("Constant alternate search: {}".format(settings_name), level=logging.DEBUG)
+        print_log(f"Constant alternate search: {settings_name}", level=logging.DEBUG)
     if settings and settings_name and settings_name in settings:  # pylint: disable=E1135
         missing = False
         cowbird_value = settings.get(settings_name)
         if cowbird_value is not None:
-            print_log("Constant found in settings with: {}".format(settings_name), level=logging.DEBUG)
+            print_log(f"Constant found in settings with: {settings_name}", level=logging.DEBUG)
             return cowbird_value
     cowbird_globals = globals()
     if constant_name in cowbird_globals:
         missing = False
         cowbird_value = cowbird_globals.get(constant_name)
         if cowbird_value is not None:
-            print_log("Constant found in definitions with: {}".format(constant_name), level=logging.DEBUG)
+            print_log(f"Constant found in definitions with: {constant_name}", level=logging.DEBUG)
             return cowbird_value
     if constant_name in os.environ:
         missing = False
         cowbird_value = os.environ.get(constant_name)
         if cowbird_value is not None:
-            print_log("Constant found in environment with: {}".format(constant_name), level=logging.DEBUG)
+            print_log(f"Constant found in environment with: {constant_name}", level=logging.DEBUG)
             return cowbird_value
     if not missing and raise_not_set:
-        raise_log("Constant was found but was not set: {}".format(constant_name),
+        raise_log(f"Constant was found but was not set: {constant_name}",
                   level=logging.ERROR, exception=ValueError)
     if missing and raise_missing:
-        raise_log("Constant could not be found: {}".format(constant_name),
+        raise_log(f"Constant could not be found: {constant_name}",
                   level=logging.ERROR, exception=LookupError)
     if missing and print_missing:
         print_log("Constant could not be found: {} (using default: {})"

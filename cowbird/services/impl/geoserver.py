@@ -97,7 +97,7 @@ class Geoserver(Service, FSMonitor):
         :param name: Service name
         """
         super(Geoserver, self).__init__(settings, name, **kwargs)
-        self.api_url = "{}/rest".format(self.url)
+        self.api_url = f"{self.url}/rest"
         self.headers = {"Content-type": CONTENT_TYPE_JSON}
         self.admin_user = kwargs.get(SERVICE_ADMIN_USER, None)
         self.admin_password = kwargs.get(SERVICE_ADMIN_PASSWORD, None)
@@ -301,7 +301,7 @@ class Geoserver(Service, FSMonitor):
         To be used in the HTTP requests sent to Geoserver.
         This name does not exist on the file system.
         """
-        return "shapefile_datastore_{}".format(workspace_name)
+        return f"shapefile_datastore_{workspace_name}"
 
     def _shapefile_folder_dir(self, workspace_name):
         # type: (str) -> str
@@ -329,7 +329,7 @@ class Geoserver(Service, FSMonitor):
         :param workspace_name: Name of workspace to be created
         :returns: Response object
         """
-        request_url = "{}/workspaces/".format(self.api_url)
+        request_url = f"{self.api_url}/workspaces/"
         payload = {"workspace": {"name": workspace_name, "isolated": "True"}}
         response = requests.post(url=request_url, json=payload, auth=self.auth, headers=self.headers)
         return response
@@ -343,7 +343,7 @@ class Geoserver(Service, FSMonitor):
         :param workspace_name: Name of workspace to remove
         :returns: Response object
         """
-        request_url = "{}/workspaces/{}?recurse=true".format(self.api_url, workspace_name)
+        request_url = f"{self.api_url}/workspaces/{workspace_name}?recurse=true"
         response = requests.delete(url=request_url, auth=self.auth, headers=self.headers)
         return response
 
@@ -365,7 +365,7 @@ class Geoserver(Service, FSMonitor):
         :param datastore_name: Name of the datastore that will be created
         :returns: Response object
         """
-        request_url = "{}/workspaces/{}/datastores".format(self.api_url, workspace_name)
+        request_url = f"{self.api_url}/workspaces/{workspace_name}/datastores"
         payload = {
             "dataStore": {
                 "name": datastore_name,
@@ -391,8 +391,8 @@ class Geoserver(Service, FSMonitor):
         :param datastore_name: Name of the datastore that will be created
         :returns: Response object
         """
-        geoserver_datastore_path = "file://{}".format(datastore_path)
-        request_url = "{}/workspaces/{}/datastores/{}".format(self.api_url, workspace_name, datastore_name)
+        geoserver_datastore_path = f"file://{datastore_path}"
+        request_url = f"{self.api_url}/workspaces/{workspace_name}/datastores/{datastore_name}"
         payload = {
             "dataStore": {
                 "name": datastore_name,
@@ -414,7 +414,7 @@ class Geoserver(Service, FSMonitor):
                         {"$": "true",
                          "@key": "enable spatial "
                                  "index"},
-                        {"$": "http://{}".format(datastore_name),
+                        {"$": f"http://{datastore_name}",
                          "@key": "namespace"},
                         {"$": "true",
                          "@key": "cache and reuse "

@@ -87,7 +87,7 @@ def print_format(data, fmt, section=None):
     elif fmt == "flat":
         if isinstance(data, dict):
             for field, value in data.items():
-                print("{}: {}".format(field, value))
+                print(f"{field}: {value}")
         else:
             for value in data:
                 print(value)
@@ -99,10 +99,10 @@ def print_format(data, fmt, section=None):
                 widths[1] = max(widths[1], len(value))
             separator = "+" + "-" * (widths[0] + 2) + "+" + "-" * (widths[1] + 2) + "+"
             print(separator)
-            print("| {} | {} |".format("Fields".ljust(widths[0]), "Values".ljust(widths[1])))
+            print(f"| {'Fields'.ljust(widths[0])} | {'Values'.ljust(widths[1])} |")
             print(separator.replace("-", "="))
             for field, value in data.items():
-                print("| {} | {} |".format(field.ljust(widths[0]), value.ljust(widths[1])))
+                print(f"| {field.ljust(widths[0])} | {value.ljust(widths[1])} |")
             print(separator)
         else:
             width = max(8, len(section or ""))
@@ -111,10 +111,10 @@ def print_format(data, fmt, section=None):
             separator = "+" + "-" * (width + 2) + "+"
             print(separator)
             if section:
-                print("| {} |".format(section.ljust(width)))
+                print(f"| {section.ljust(width)} |")
                 print(separator.replace("-", "="))
             for item in data:
-                print("| {} |".format(item.ljust(width)))
+                print(f"| {item.ljust(width)} |")
             print(separator)
     else:
-        raise ValueError("unknown format [{}]".format(fmt))
+        raise ValueError(f"unknown format [{fmt}]")

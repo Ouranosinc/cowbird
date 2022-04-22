@@ -66,7 +66,7 @@ def generate_redirects(app):
 
     if not isinstance(app.builder, builders.StandaloneHTMLBuilder):
         ext = os.path.split(__file__)[-1].split(".")[0]
-        LOGGER.warning("Extension '{}' is only supported by the 'html' builder. Skipping...".format(ext))
+        LOGGER.warning(f"Extension '{ext}' is only supported by the 'html' builder. Skipping...")
         return
     if not isinstance(app.config.doc_redirect_map, dict) and len(app.config.doc_redirect_map):
         LOGGER.info("Could not find doc redirect map")
@@ -82,19 +82,19 @@ def generate_redirects(app):
         in_suffix = ".rst"
 
     for from_path, to_path in app.config.doc_redirect_map.items():
-        LOGGER.debug("Redirecting [%s] -> [%s]" % (from_path, to_path))
+        LOGGER.debug(f"Redirecting [{from_path}] -> [{to_path}]")
 
         rst_path = from_path
         if not rst_path.endswith(in_suffix) and not os.path.splitext(rst_path)[-1]:
             rst_path = rst_path + in_suffix
         html_path = from_path.replace(in_suffix, ".html")
-        to_path_prefix = "..%s" % os.path.sep * (
+        to_path_prefix = f"..{os.path.sep}" * (
             len(html_path.split(os.path.sep)) - 1)
         to_path = to_path_prefix + to_path.replace(in_suffix, ".html")
         if not to_path.endswith(".html"):
             to_path = to_path + ".html"
-        LOGGER.debug("RST  [%s] -> [%s]" % (rst_path, to_path))
-        LOGGER.debug("HTML [%s] -> [%s]" % (html_path, to_path))
+        LOGGER.debug(f"RST  [{rst_path}] -> [{to_path}]")
+        LOGGER.debug(f"HTML [{html_path}] -> [{to_path}]")
 
         redirected_rst_file = os.path.join(app.builder.outdir, rst_path)
         redirected_html_file = os.path.join(app.builder.outdir, html_path)

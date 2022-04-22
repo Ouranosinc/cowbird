@@ -265,7 +265,7 @@ def apply_param_content(content,                # type: JSON
             if needs_iterable or is_type:
                 param_compare = str if param_compare == str else param_compare
                 param_compare = getattr(param_compare, "__name__", str(param_compare))
-                param_compare = "Type[{}]".format(param_compare) if is_type else param_compare
+                param_compare = f"Type[{param_compare}]" if is_type else param_compare
             content["param"]["compare"] = str(param_compare)
         if isinstance(param_content, dict):
             content["param"].update(param_content)
@@ -486,7 +486,7 @@ def format_content_json_str(http_code, detail, content, content_type):
         content["type"] = content_type
         json_body = json.dumps(content)
     except Exception as exc:  # pylint: disable=W0703
-        msg = "Dumping json content '{!s}' resulted in exception '{!r}'.".format(content, exc)
+        msg = f"Dumping json content '{content!s}' resulted in exception '{exc!r}'."
         raise_http(http_error=HTTPInternalServerError, detail=msg,
                    content_type=CONTENT_TYPE_JSON,
                    content={"traceback": repr(exc_info()),
@@ -561,7 +561,7 @@ def generate_response_http_format(http_class, http_kwargs, content, content_type
     try:
         # directly output json
         if content_type == CONTENT_TYPE_JSON:
-            content_type = "{}; charset=UTF-8".format(CONTENT_TYPE_JSON)
+            content_type = f"{CONTENT_TYPE_JSON}; charset=UTF-8"
             http_response = http_class(body=content, content_type=content_type, **http_kwargs)
 
         # otherwise json is contained within the html <body> section
@@ -572,9 +572,9 @@ def generate_response_http_format(http_class, http_kwargs, content, content_type
                 http_class.explanation = http_class.title  # some don't have any defined
             # add preformat <pre> section to output as is within the <body> section
             html_status = "Exception" if http_class.code >= 400 else "Response"
-            html_header = "{}<br><h2>{} Details</h2>".format(http_class.explanation, html_status)
+            html_header = f"{http_class.explanation}<br><h2>{html_status} Details</h2>"
             html_template = "<pre style='word-wrap: break-word; white-space: pre-wrap;'>{}</pre>"
-            content_type = "{}; charset=UTF-8".format(CONTENT_TYPE_HTML)
+            content_type = f"{CONTENT_TYPE_HTML}; charset=UTF-8"
             if json_content:
                 html_body = html_template.format(json.dumps(json_content, indent=True, ensure_ascii=False))
             else:

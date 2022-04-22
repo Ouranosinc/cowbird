@@ -66,7 +66,7 @@ class Service(abc.ABC):
         self.ssl_verify = get_ssl_verify(self.settings)
         for required_param in self.required_params:  # pylint: disable=E1101,no-member
             if required_param not in SERVICE_PARAMETERS:
-                raise Exception("Invalid service parameter : {}".format(required_param))
+                raise Exception(f"Invalid service parameter : {required_param}")
             if getattr(self, required_param) is None:
                 error_msg = "{} service requires the following missing configuration parameter : [{}]".format(
                     self.__class__.__name__,

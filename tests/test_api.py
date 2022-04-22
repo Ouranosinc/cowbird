@@ -84,7 +84,7 @@ def test_response_metadata():
             kwargs.pop("headers", None)
             resp = utils.test_request(app, method, path, expect_errors=True, headers=headers, **kwargs)
             # following util check validates all expected request metadata in response body
-            msg = "\n[Test: #{}, Code: {}]".format(i, code)
+            msg = f"\n[Test: #{i}, Code: {code}]"
             utils.check_response_basic_info(resp, expected_code=code, expected_method=method, extra_message=msg)
 
 

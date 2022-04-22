@@ -271,12 +271,12 @@ def get_settings_from_config_ini(config_ini_path, section=None):
     if len(result) != 1 or not os.path.isfile(result[0]):
         if result:
             result = result[0] or os.path.abspath(str(config_ini_path))  # in case not found, use expected location
-            message = "Cannot find INI configuration file [{}] resolved as [{}]".format(config_ini_path, result)
+            message = f"Cannot find INI configuration file [{config_ini_path}] resolved as [{result}]"
         else:
-            message = "Cannot find INI configuration file [{}]".format(config_ini_path)
+            message = f"Cannot find INI configuration file [{config_ini_path}]"
         raise ValueError(message)
     if section is None:
-        section = "app:{}_app".format(__meta__.__package__)
+        section = f"app:{__meta__.__package__}_app"
     return dict(parser.items(section=section))
 
 
@@ -293,7 +293,7 @@ def get_registry(container, nothrow=False):
         return container
     if nothrow:
         return None
-    raise TypeError("Could not retrieve registry from container object of type [{}].".format(type(container)))
+    raise TypeError(f"Could not retrieve registry from container object of type [{type(container)}].")
 
 
 def get_json(response):
@@ -386,7 +386,7 @@ def get_settings(container, app=False):
         print_log("Using settings from local thread.", level=logging.DEBUG)
         registry = get_current_registry()
         return registry.settings
-    raise TypeError("Could not retrieve settings from container object [{}]".format(type(container)))
+    raise TypeError(f"Could not retrieve settings from container object [{type(container)}]")
 
 
 def fully_qualified_name(obj):
@@ -400,7 +400,7 @@ def fully_qualified_name(obj):
 
 def log_request_format(request):
     # type: (Request) -> str
-    return "{!s} {!s} {!s}".format(request.method, request.host, request.path)
+    return f"{request.method!s} {request.host!s} {request.path!s}"
 
 
 def log_request(event):
@@ -412,7 +412,7 @@ def log_request(event):
     LOGGER.info("Request: [%s]", log_request_format(request))
     if LOGGER.isEnabledFor(logging.DEBUG):
         def items_str(items):
-            return "\n  ".join(["{!s}: {!s}".format(h, items[h]) for h in items]) if len(items) else "-"
+            return "\n  ".join([f"{h!s}: {items[h]!s}" for h in items]) if len(items) else "-"
 
         header_str = items_str(request.headers)
         params_str = items_str(request.params)

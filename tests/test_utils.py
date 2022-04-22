@@ -35,7 +35,7 @@ class TestUtils(unittest.TestCase):
         cls.version = __meta__.__version__  # only local test
 
     def test_get_header_split(self):
-        headers = {"Content-Type": "{}; charset=UTF-8".format(CONTENT_TYPE_JSON)}
+        headers = {"Content-Type": f"{CONTENT_TYPE_JSON}; charset=UTF-8"}
         for name in ["content_type", "content-type", "Content_Type", "Content-Type", "CONTENT_TYPE", "CONTENT-TYPE"]:
             for split in [";,", ",;", ";", (",", ";"), [";", ","]]:
                 utils.check_val_equal(get_header(name, headers, split=split), CONTENT_TYPE_JSON)
@@ -144,7 +144,7 @@ class TestUtils(unittest.TestCase):
         for flag in ["not_none", "not_empty", "not_in", "not_equal", "is_none", "is_empty", "is_in", "is_equal",
                      "is_true", "is_false", "is_type", "matches"]:
             utils.check_raises(lambda: ax.verify_param("x", **{flag: 1}),
-                               HTTPInternalServerError, msg="invalid flag '{}' type should be caught".format(flag))
+                               HTTPInternalServerError, msg=f"invalid flag '{flag}' type should be caught")
 
     def test_verify_param_compare_types(self):
         """
@@ -248,7 +248,7 @@ class TestUtils(unittest.TestCase):
             # raised directly instead of usual TestResponse returned. That error is again re-raised as 'AssertionError'
             pass
         except Exception as exc:
-            self.fail("unexpected error during request creation should not raise: {}".format(exc))
+            self.fail(f"unexpected error during request creation should not raise: {exc}")
 
         # if our counter reached higher than the MAX (i.e.: 2*MAX from mock), the safeguard did not do its job
         # if it did not get called at least more than once, use cases did not really get tested
