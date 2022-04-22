@@ -58,11 +58,21 @@ sync_permissions:
         # Resource key (ex.: Geoserver_workspace): Custom name to represent a resource path.
         # It should correspond to the names used in the `permission_mappings` section below.
         # It contains the list of each segment of its resource path, with their corresponding name and type.
-        # The name of a segment can either contain a string name, a `SINGLE_TOKEN` `*` (to represent
-        # a single repetition of any name with the corresponding type) or a `MULTI_TOKEN` `**` (to
-        # represent any number (0 or more) of names that fit with the corresponding type). Note that tokens can
-        # only be found at the end of the path, so no named string should follow a token.
-        # Also, a MULTI_TOKEN can only be used one time in each list of path segments.
+        #
+        # The name of a segment can either contain a string name, a `SINGLE_TOKEN` `*` or a `MULTI_TOKEN` `**`.
+        # Note that string names should be at the beginning of a path, and tokens can only be found
+        # at the end of the path. This means that no named string should follow a token.
+        #
+        # SINGLE_TOKEN represent a single repetition of any name with the corresponding type. These tokens can be used
+        # any number of time in a resource path.
+        #
+        # MULTI_TOKEN represent any number (0 or more) of names that fit with the corresponding type.
+        # Also, the MULTI_TOKEN can only be used one time in each list of path segments. This is to avoid ambiguous
+        # cases that would result with using multiple MULTI_TOKENs, since multiple ways of matching the resource path
+        # would then be possible. For example with a tokenized path `**/**` and an input resource `seg1/seg2/seg3`,
+        # multiple choices of matching appear when we try to match a suffix (mentioned below). We could match `seg1/seg2`
+        # with the first token, and `seg3` with the second token, we could also match `seg1` with the first token, and
+        # `seg2/seg3` with the second token, etc.
         #
         # The tokens are useful to know the types of any `suffix` path. A `suffix` path represents the segments
         # at the end of a path that are not named in the config below. For example, with the config below, if we have
