@@ -34,6 +34,9 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         }
 
     def test_name_after_token(self):
+        """
+        Tests an invalid config where a 'named' resource segment is found after a tokenized resource segment.
+        """
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
@@ -49,6 +52,9 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         check_config_raises(self.data, ConfigErrorInvalidTokens)
 
     def test_not_unique_multitoken(self):
+        """
+        Tests an invalid config where more than one `MULTI_TOKEN` is used in a single resource.
+        """
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
@@ -64,6 +70,9 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         check_config_raises(self.data, ConfigErrorInvalidTokens)
 
     def test_unknown_res_key(self):
+        """
+        Tests an invalid config where an unknown resource key is found in the permissions_mapping.
+        """
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
@@ -79,6 +88,9 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         check_config_raises(self.data, ConfigErrorInvalidResourceKey)
 
     def test_tokenized_res_with_untokenized_res(self):
+        """
+        Tests an invalid config where a tokenized resource path is mapped with a resource path without tokens.
+        """
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {

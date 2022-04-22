@@ -88,7 +88,9 @@ class TestMagpieRequests(unittest.TestCase):
         return body["service"]["resource_id"]
 
     def delete_test_service(self):
-        # Delete test service if it exists
+        """
+        Deletes the test service if it exists.
+        """
         resp = utils.test_request(self.url, "GET", "/services/" + self.test_service_name, cookies=self.cookies)
         if resp.status_code == 200:
             resp = utils.test_request(self.url, "DELETE", "/services/" + self.test_service_name, cookies=self.cookies)
@@ -111,18 +113,27 @@ class TestMagpieRequests(unittest.TestCase):
         return body["resource"]["resource_id"]
 
     def check_user_permissions(self, resource_id, expected_permissions):
+        """
+        Checks if the test user has the `expected_permissions` on the `resource_id`.
+        """
         resp = utils.test_request(self.url, "GET", f"/users/{self.usr}/resources/{resource_id}/permissions",
                                   cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         assert body["permission_names"] == expected_permissions
 
     def check_group_permissions(self, resource_id, expected_permissions):
+        """
+        Checks if the test group has the `expected_permissions` on the `resource_id`.
+        """
         resp = utils.test_request(self.url, "GET", f"/groups/{self.grp}/resources/{resource_id}/permissions",
                                   cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
         assert body["permission_names"] == expected_permissions
 
     def test_webhooks_no_tokens(self):
+        """
+        Tests the permissions synchronization of resources that don't use any tokens in the config.
+        """
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
@@ -182,6 +193,9 @@ class TestMagpieRequests(unittest.TestCase):
             self.check_group_permissions(target_res_id, [])
 
     def test_webhooks_valid_tokens(self):
+        """
+        Tests the permissions synchronization of resources that all use valid tokens in the config.
+        """
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
@@ -257,6 +271,9 @@ class TestMagpieRequests(unittest.TestCase):
             self.check_user_permissions(target2_res_id, ["read", "read-allow-recursive"])
 
     def test_webhooks_tokens_invalid_suffix(self):
+        """
+        Tests the invalid case where the resources to be synchronized use tokens that do not match.
+        """
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
@@ -305,6 +322,9 @@ class TestMagpieRequests(unittest.TestCase):
             utils.check_response_basic_info(resp, 500, expected_method="POST")
 
     def test_webhooks_invalid_multimatch(self):
+        """
+        Tests the invalid case where a resource found in the incoming webhook match multiple cases in the config.
+        """
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
@@ -349,6 +369,9 @@ class TestMagpieRequests(unittest.TestCase):
             utils.check_response_basic_info(resp, 500, expected_method="POST")
 
     def test_webhooks_no_match(self):
+        """
+        Tests the invalid case where a resource found in the incoming webhook finds no match in the config.
+        """
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
@@ -393,6 +416,9 @@ class TestMagpieRequests(unittest.TestCase):
             utils.check_response_basic_info(resp, 500, expected_method="POST")
 
     def test_webhooks_invalid_service(self):
+        """
+        Tests the cases where a service used in the `sync_permissions` section of the config is not defined and invalid.
+        """
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
