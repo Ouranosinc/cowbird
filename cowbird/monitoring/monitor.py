@@ -51,8 +51,8 @@ class Monitor(FileSystemEventHandler):
                          method :meth:`FSMonitor.get_instance()`
         """
         if not os.path.exists(path):
-            raise MonitorException("Cannot monitor the following file or directory [{}]: No such file or directory"
-                                   .format(path))
+            raise MonitorException(f"Cannot monitor the following file or directory [{path}]: "
+                                   "No such file or directory")
         self.__src_path = path
         self.__recursive = recursive
         self.__callback = self.get_fsmonitor_instance(callback)
@@ -136,8 +136,7 @@ class Monitor(FileSystemEventHandler):
         Start the monitoring so that events can be fired.
         """
         if self.__event_observer:
-            msg = "This monitor [path={}, callback={}] is already started".format(self.path,
-                                                                                  self.callback)
+            msg = f"This monitor [path={self.path}, callback={self.callback}] is already started"
             LOGGER.error(msg)
             raise MonitorException(msg)
         self.__event_observer = Observer()

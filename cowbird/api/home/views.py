@@ -48,8 +48,8 @@ def get_version(request):  # noqa: W0212
         worker_version = None
         worker_detail = "unknown"
     api_version = __meta__.__version__
-    detail = "Web service version : [{0}], worker version : [{1}]. Any mismatch can cause misbehavior.".format(
-        api_version, worker_detail)
+    detail = f"Web service version : [{api_version}], worker version : [{worker_detail}]. " \
+             "Any mismatch can cause misbehavior."
     version = {
         "version": api_version,
         "worker_version": worker_version,

@@ -135,7 +135,7 @@ def get_test_app(settings=None):
     config.registry.settings["cowbird.url"] = "http://localhost:80"
     config.registry.settings["cowbird.ini_file_path"] = TEST_INI_FILE
     config.registry.settings["cowbird.config_path"] = TEST_CFG_FILE
-    config.registry.settings["mongo_uri"] = "mongodb://{host}:{port}/{db_name}".format(
+    config.registry.settings["mongo_uri"] = "mongodb://{host}:{port}/{db_name}".format(  # pylint: disable=C0209
         host=os.getenv("COWBIRD_TEST_DB_HOST", "127.0.0.1"),
         port=os.getenv("COWBIRD_TEST_DB_PORT", "27017"),
         db_name=os.getenv("COWBIRD_TEST_DB_NAME", "cowbird-test")
@@ -505,8 +505,7 @@ def check_raises(func, exception_type, msg=None):
     try:
         func()
     except Exception as exc:  # pylint: disable=W0703
-        msg = "Wrong exception [{!s}] raised instead of [{!s}]{}" \
-              .format(type(exc).__name__, exception_type.__name__, msg)
+        msg = f"Wrong exception [{type(exc).__name__!s}] raised instead of [{exception_type.__name__!s}]{msg}"
         assert isinstance(exc, exception_type), msg
         return exc
     raise AssertionError(f"Exception [{exception_type.__name__!s}] was not raised{msg}")

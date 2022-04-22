@@ -192,8 +192,7 @@ def get_constant(constant_name,             # type: str
         raise_log(f"Constant could not be found: {constant_name}",
                   level=logging.ERROR, exception=LookupError)
     if missing and print_missing:
-        print_log("Constant could not be found: {} (using default: {})"
-                  .format(constant_name, default_value), level=logging.WARN)
+        print_log(f"Constant could not be found: {constant_name} (using default: {default_value})", level=logging.WARN)
     return cowbird_value or default_value
 
 

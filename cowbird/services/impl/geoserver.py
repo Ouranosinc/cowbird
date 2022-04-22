@@ -441,9 +441,7 @@ class Geoserver(Service, FSMonitor):
         :param filename: Name of the shapefile (with no extentions)
         :returns: Response object
         """
-        request_url = "{}/workspaces/{}/datastores/{}/featuretypes".format(self.api_url,
-                                                                           workspace_name,
-                                                                           datastore_name)
+        request_url = f"{self.api_url}/workspaces/{workspace_name}/datastores/{datastore_name}/featuretypes"
 
         # This is just a basic example. There are lots of other attributes that can be configured
         # https://docs.geoserver.org/latest/en/api/#1.0.0/featuretypes.yaml
@@ -485,10 +483,8 @@ class Geoserver(Service, FSMonitor):
         :param filename: Name of the shapefile (with no extentions)
         :returns: Response object
         """
-        request_url = "{}/workspaces/{}/datastores/{}/featuretypes/{}?recurse=true".format(self.api_url,
-                                                                                           workspace_name,
-                                                                                           datastore_name,
-                                                                                           filename)
+        request_url = f"{self.api_url}/workspaces/{workspace_name}/datastores/{datastore_name}" \
+                      f"/featuretypes/{filename}?recurse=true"
         response = requests.delete(url=request_url, auth=self.auth, headers=self.headers)
         return response
 

@@ -56,8 +56,7 @@ def get_multiformat_body_raw(request, key, default=None):
     .. seealso::
         - :func:`get_multiformat_body`
     """
-    msg = "Key '{key}' could not be extracted from '{method}' of type '{type}'" \
-          .format(key=repr(key), method=request.method, type=request.content_type)
+    msg = f"Key '{repr(key)}' could not be extracted from '{request.method}' of type '{request.content_type}'"
     if request.content_type == CONTENT_TYPE_JSON:
         # avoid json parse error if body is empty
         if not len(request.body):

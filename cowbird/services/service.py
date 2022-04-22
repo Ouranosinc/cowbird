@@ -68,10 +68,8 @@ class Service(abc.ABC):
             if required_param not in SERVICE_PARAMETERS:
                 raise Exception(f"Invalid service parameter : {required_param}")
             if getattr(self, required_param) is None:
-                error_msg = "{} service requires the following missing configuration parameter : [{}]".format(
-                    self.__class__.__name__,
-                    required_param
-                )
+                error_msg = f"{self.__class__.__name__} service requires the following missing configuration " \
+                            f"parameter : [{required_param}]"
                 LOGGER.error(error_msg)
                 raise ServiceConfigurationException(error_msg)
 
