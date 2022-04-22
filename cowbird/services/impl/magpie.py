@@ -10,7 +10,7 @@ from cowbird.services.service import SERVICE_URL_PARAM, Service
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger
 
 if TYPE_CHECKING:
-    from typing import List
+    from typing import Dict, List
 
     from cowbird.typedefs import SettingsType
 
@@ -32,7 +32,7 @@ class Magpie(Service):
     required_params = [SERVICE_URL_PARAM]
 
     def __init__(self, settings, name, **kwargs):
-        # type: (SettingsType, str, dict) -> None
+        # type: (SettingsType, str, Dict) -> None
         """
         Create the magpie instance and instantiate the permission synchronizer that will handle the permission events.
 
@@ -79,7 +79,7 @@ class Magpie(Service):
         self.permissions_synch.delete_permission(permission)
 
     def create_permission(self, permissions_data):
-        # type: (list[dict]) -> None
+        # type: (List[Dict[str,str]]) -> None
         """
         Make sure that the specified permission exists on Magpie.
         """
@@ -100,7 +100,7 @@ class Magpie(Service):
             LOGGER.warning("Empty permission data, no permissions to create.")
 
     def delete_permission(self, permissions_data):
-        # type: (list[dict]) -> None
+        # type: (List[Dict[str,str]]) -> None
         """
         Remove the specified permission from Magpie if it exists.
         """
@@ -124,7 +124,6 @@ class Magpie(Service):
         """
         Login to Magpie app using admin credentials.
         """
-        data = {"user_name": self.admin_user, "password": self.admin_password,
-                "provider_name": "ziggurat"}  # ziggurat = magpie_default_provider
+        data = {"user_name": self.admin_user, "password": self.admin_password}
         resp = requests.post("{}/signin".format(self.url), json=data)
         return resp.cookies

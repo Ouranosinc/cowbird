@@ -157,22 +157,21 @@ class SyncPoint:
         a full resource path.
 
         :param target_segments: List containing the name and type info of each segment of the target resource path.
-        :param src_resource_suffix: List similar to the `target_res` argument, but for the input source resource. This
-                                   list contains only the suffix section of the resource path, which is the part that is
-                                   common to both source and target resource paths.
+        :param src_resource_suffix: List similar to the `target_segments` argument, but for the input source resource.
+                                    This list contains only the suffix section of the resource path, which is the part
+                                    that is common to both source and target resource paths.
         """
         permissions_data = []
         suffix_target_segments = []
         # First add 'named' resource data
         for i, segment in enumerate(target_segments):
-            if segment["name"] in [SINGLE_TOKEN, MULTI_TOKEN]:  # pylint: disable=no-else-break
+            if segment["name"] in [SINGLE_TOKEN, MULTI_TOKEN]:
                 suffix_target_segments = target_segments[i:]
                 break
-            else:
-                permissions_data.append({
-                    "resource_name": segment["name"],
-                    "resource_type": segment["type"]
-                })
+            permissions_data.append({
+                "resource_name": segment["name"],
+                "resource_type": segment["type"]
+            })
         # Then add 'tokenenized' resource data, if any
         if suffix_target_segments:
             # Make regex for the tokenized part of the target resource
