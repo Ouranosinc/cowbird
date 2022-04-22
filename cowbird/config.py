@@ -43,7 +43,8 @@ def _load_config(path_or_dict, section, allow_missing=False):
     """
     try:
         if isinstance(path_or_dict, str):
-            cfg = yaml.safe_load(open(path_or_dict, "r", encoding="utf-8"))
+            with open(path_or_dict, "r", encoding="utf-8") as f:
+                cfg = yaml.safe_load(f)
         else:
             cfg = path_or_dict
         return _expand_all(cfg[section])

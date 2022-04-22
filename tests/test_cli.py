@@ -24,8 +24,8 @@ KNOWN_HELPERS = [
 def run_and_get_output(command, trim=True):
     if isinstance(command, (list, tuple)):
         command = " ".join(command)
-    proc = subprocess.Popen(command, shell=True, universal_newlines=True, stdout=subprocess.PIPE)  # nosec
-    out, err = proc.communicate()
+    with subprocess.Popen(command, shell=True, universal_newlines=True, stdout=subprocess.PIPE) as proc:  # nosec
+        out, err = proc.communicate()
     assert not err, f"process returned with error code {err}"
     # when no output is present, it is either because CLI was not installed correctly, or caused by some other error
     assert out != "", "process did not execute as expected, no output available"
@@ -63,7 +63,8 @@ def test_cowbird_helper_as_python():
 @pytest.mark.cli
 def test_cowbird_services_list_with_formats():
     override = {"COWBIRD_CONFIG_PATH": TEST_CFG_FILE}
-    cfg = yaml.safe_load(open(TEST_CFG_FILE, "r", encoding="utf-8"))
+    with open(TEST_CFG_FILE, "r", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f)
     with mock.patch.dict("os.environ", override):
         out_lines = run_and_get_output(f"cowbird services list -f yaml -c '{TEST_INI_FILE}'")
         assert out_lines[0] == "services:"

@@ -30,7 +30,7 @@ class TestAPI(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)
+        cls.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)  # pylint: disable=R1732
         with cls.cfg_file as f:
             f.write(yaml.safe_dump({"services": {"Magpie": {"active": True}}}))
         cls.app = utils.get_test_app(settings={"cowbird.config_path": cls.cfg_file.name})

@@ -51,7 +51,7 @@ class TestMagpieRequests(unittest.TestCase):
         # Create test service
         self.test_service_id = self.reset_test_service()
 
-        self.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)
+        self.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)  # pylint: disable=R1732
         self.data = {
             "services": {
                 "Magpie": {

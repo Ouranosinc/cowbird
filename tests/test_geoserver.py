@@ -24,7 +24,8 @@ def get_geoserver_settings():
     set.
     """
     config_path = os.path.join(COWBIRD_ROOT, "config/config.example.yml")
-    settings_dictionary = yaml.safe_load(open(config_path, "r", encoding="utf-8"))
+    with open(config_path, "r", encoding="utf-8") as f:
+        settings_dictionary = yaml.safe_load(f)
     geoserver_settings = settings_dictionary["services"]["Geoserver"]
     if "${HOSTNAME}" in geoserver_settings["url"]:
         hostname = os.getenv("HOSTNAME", "localhost")

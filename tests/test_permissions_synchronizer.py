@@ -24,6 +24,7 @@ class TestSyncPermissionsConfig(unittest.TestCase):
     """
     Test config for permissions synchronization
     """
+
     def setUp(self):
         self.data = {
             "services": {
