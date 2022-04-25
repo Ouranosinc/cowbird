@@ -76,10 +76,9 @@ class SyncPoint:
         available_services = ServiceFactory().services_cfg.keys()
         # Make sure that only active services are used
         self.services = {svc: svc_cfg for svc, svc_cfg in services.items() if svc in available_services}
-        self.resource_keys = {res_key: res for svc in self.services.values() for res_key, res in svc.items()}
+        self.resources = {res_key: res for svc in self.services.values() for res_key, res in svc.items()}
         self.permissions_mapping = [{res_key: perms for res_key, perms in permissions_mapping.items()
-                                    if res_key in self.resource_keys.keys()}
-                                    for permissions_mapping in permissions_mapping_list]
+                                     if res_key in self.resources} for permissions_mapping in permissions_mapping_list]
 
     def find_permissions_to_sync(self, permission, res_root_key):
         # type: (Permission, str) -> Generator[Tuple[str, str], None, None]
