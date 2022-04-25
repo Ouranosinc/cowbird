@@ -109,3 +109,29 @@ class TestSyncPermissionsConfig(unittest.TestCase):
             }
         }
         check_config_raises(self.data, ConfigErrorInvalidTokens)
+
+    def test_duplicate_resource_key(self):
+        """
+        Tests an invalid config where the same resource key is used for different resources.
+        """
+        self.data["sync_permissions"] = {
+            "user_workspace": {
+                "services": {
+                    "Thredds": {
+                        "DuplicateResource": [
+                            {"name": "catalog", "type": "service"},
+                            {"name": "dir", "type": "directory"}],
+                        "OtherResource": [
+                            {"name": "catalog", "type": "service"},
+                            {"name": "file", "type": "file"}]},
+                    "Geoserver": {
+                        "DuplicateResource": [
+                            {"name": "catalog", "type": "workspace"},
+                            {"name": "dir", "type": "workspace"}]}
+                },
+                "permissions_mapping": [
+                    {"DuplicateResource": ["read"], "OtherResource": ["read"]}
+                ]
+            }
+        }
+        check_config_raises(self.data, ConfigErrorInvalidResourceKey)
