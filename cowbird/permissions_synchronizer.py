@@ -15,6 +15,8 @@ if TYPE_CHECKING:
 
 LOGGER = get_logger(__name__)
 
+SEGMENT_NAME_REGEX = r"[\w:-]+"
+
 
 class Permission:
     """
@@ -109,7 +111,7 @@ class SyncPoint:
 
         :param service_name: Name of the service associated with the input resource.
         :param resource_nametype_path: Full resource path name, which includes the type of each segment
-                                       (ex.: /name1:type1/name2:type2)
+                                       (ex.: /name1::type1/name2::type2)
         """
         service_resources = self.services[service_name]
         # Find which resource from the config matches with the input permission's resource tree
@@ -125,13 +127,13 @@ class SyncPoint:
             for segment in res_segments:
                 if segment["name"] == SINGLE_TOKEN:
                     # match any name with specific type 1 time only
-                    res_regex += rf"/\w+:{segment['type']}"
+                    res_regex += rf"/{SEGMENT_NAME_REGEX}::{segment['type']}"
                 elif segment["name"] == MULTI_TOKEN:
                     # match any name with specific type, 0 or more times
-                    res_regex += rf"(/\w+:{segment['type']})*"
+                    res_regex += rf"(/{SEGMENT_NAME_REGEX}::{segment['type']})*"
                 else:
                     # match name and type exactly
-                    res_regex += rf"/{segment['name']:}:{segment['type']}"
+                    res_regex += rf"/{segment['name']}::{segment['type']}"
                     match_len += 1
             res_regex += r"$"
             if re.match(res_regex, resource_nametype_path):
@@ -179,10 +181,10 @@ class SyncPoint:
             for segment in suffix_target_segments:
                 if segment["name"] == SINGLE_TOKEN:
                     # match 1 name only
-                    suffix_regex += r"(/\w+)"
+                    suffix_regex += rf"(/{SEGMENT_NAME_REGEX})"
                 elif segment["name"] == MULTI_TOKEN:
                     # match any name 0 or more times
-                    suffix_regex += r"((?:/\w+)*)"
+                    suffix_regex += rf"((?:/{SEGMENT_NAME_REGEX})*)"
             suffix_regex += r"$"
 
             # Check if the source suffix matches the target regex
@@ -222,7 +224,7 @@ class SyncPoint:
         """
         resource_nametype_path = ""
         for res in src_resource_tree:
-            resource_nametype_path += f"/{res['resource_name']}:{res['resource_type']}"
+            resource_nametype_path += f"/{res['resource_name']}::{res['resource_type']}"
 
         src_res_key, src_suffix_idx = self._find_matching_res(permission.service_name, resource_nametype_path)
 

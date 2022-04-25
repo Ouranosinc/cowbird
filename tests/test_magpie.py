@@ -140,11 +140,11 @@ class TestMagpieRequests(unittest.TestCase):
                     "Thredds": {
                         "Thredds1": [
                             {"name": self.test_service_name, "type": "service"},
-                            {"name": "private", "type": "directory"},
-                            {"name": "workspace_file1", "type": "file"}],
+                            {"name": "private-dir", "type": "directory"},
+                            {"name": "workspace:file1", "type": "file"}],
                         "Thredds2": [
                             {"name": self.test_service_name, "type": "service"},
-                            {"name": "workspace_file2", "type": "file"}]}},
+                            {"name": "workspace:file2", "type": "file"}]}},
                 "permissions_mapping": [
                     {"Thredds1": ["read"], "Thredds2": ["read"]}]
             }
@@ -159,15 +159,15 @@ class TestMagpieRequests(unittest.TestCase):
             stack.enter_context(mock.patch("cowbird.services.impl.thredds.Thredds",
                                            side_effect=utils.MockAnyService))
             # Create test resources
-            parent_res_id = self.create_test_resource("private", "directory", self.test_service_id)
-            src_res_id = self.create_test_resource("workspace_file1", "file", parent_res_id)
-            target_res_id = self.create_test_resource("workspace_file2", "directory", self.test_service_id)
+            parent_res_id = self.create_test_resource("private-dir", "directory", self.test_service_id)
+            src_res_id = self.create_test_resource("workspace:file1", "file", parent_res_id)
+            target_res_id = self.create_test_resource("workspace:file2", "directory", self.test_service_id)
 
             data = {
                 "event": ValidOperations.CreateOperation.value,
                 "service_name": "Thredds",
                 "resource_id": str(src_res_id),
-                "resource_full_name": f"/{self.test_service_name}/private/workspace_file1",
+                "resource_full_name": f"/{self.test_service_name}/private-dir/workspace:file1",
                 "name": "read",
                 "access": "allow",
                 "scope": "recursive",
