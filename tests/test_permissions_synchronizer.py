@@ -5,17 +5,23 @@ import unittest
 import pytest
 import yaml
 
-from cowbird.config import MULTI_TOKEN, SINGLE_TOKEN, ConfigErrorInvalidResourceKey, ConfigErrorInvalidTokens
+from cowbird.config import MULTI_TOKEN, ConfigErrorInvalidResourceKey, ConfigErrorInvalidTokens
 from cowbird.services.impl.magpie import MAGPIE_ADMIN_PASSWORD_TAG, MAGPIE_ADMIN_USER_TAG
 from tests import utils
 
 
-def check_config_raises(config_data, exception_type):
+def check_config(config_data, expected_exception_type=None):
+    """
+    Checks if the config loads without error, or if it triggers the expected exception in the case of an invalid config.
+    """
     cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)
     with cfg_file as f:
         f.write(yaml.safe_dump(config_data))
-    utils.check_raises(lambda: utils.get_test_app(settings={"cowbird.config_path": f.name}),
-                       exception_type, msg="invalid config file should raise")
+    if expected_exception_type:
+        utils.check_raises(lambda: utils.get_test_app(settings={"cowbird.config_path": f.name}),
+                           expected_exception_type, msg="invalid config file should raise")
+    else:
+        utils.get_test_app(settings={"cowbird.config_path": f.name})
     os.unlink(cfg_file.name)
 
 
@@ -34,28 +40,23 @@ class TestSyncPermissionsConfig(unittest.TestCase):
             }
         }
 
-    def test_name_after_token(self):
+    def test_not_unique_multitoken(self):
         """
-        Tests an invalid config where a 'named' resource segment is found after a tokenized resource segment.
+        Tests if config respects the constraint of using maximum one `MULTI_TOKEN` in a single resource.
         """
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
                     "Thredds": {
-                        "Invalid_name_after_token": [
+                        "Valid_multitoken": [
                             {"name": "catalog", "type": "service"},
-                            {"name": SINGLE_TOKEN, "type": "directory"},
-                            {"name": "invalid_name", "type": "file"}
+                            {"name": MULTI_TOKEN, "type": "directory"}
                         ]}},
                 "permissions_mapping": []
             }
         }
-        check_config_raises(self.data, ConfigErrorInvalidTokens)
+        check_config(self.data)
 
-    def test_not_unique_multitoken(self):
-        """
-        Tests an invalid config where more than one `MULTI_TOKEN` is used in a single resource.
-        """
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
@@ -68,7 +69,25 @@ class TestSyncPermissionsConfig(unittest.TestCase):
                 "permissions_mapping": []
             }
         }
-        check_config_raises(self.data, ConfigErrorInvalidTokens)
+        check_config(self.data, ConfigErrorInvalidTokens)
+
+    def test_not_unique_named_token(self):
+        """
+        Tests an invalid config where duplicate named tokens are used in a single resource.
+        """
+        self.data["sync_permissions"] = {
+            "user_workspace": {
+                "services": {
+                    "Thredds": {
+                        "Invalid_multitoken": [
+                            {"name": "catalog", "type": "service"},
+                            {"name": "{dir_var}", "type": "directory"},
+                            {"name": "{dir_var}", "type": "directory"}
+                        ]}},
+                "permissions_mapping": []
+            }
+        }
+        check_config(self.data, ConfigErrorInvalidTokens)
 
     def test_unknown_res_key(self):
         """
@@ -81,34 +100,10 @@ class TestSyncPermissionsConfig(unittest.TestCase):
                         "ValidResource": [
                             {"name": "catalog", "type": "service"}
                         ]}},
-                "permissions_mapping": [
-                    {"ValidResource": ["read"], "UnknownResource": ["read"]}
-                ]
+                "permissions_mapping": ["ValidResource : read <-> UnknownResource : read"]
             }
         }
-        check_config_raises(self.data, ConfigErrorInvalidResourceKey)
-
-    def test_tokenized_res_with_untokenized_res(self):
-        """
-        Tests an invalid config where a tokenized resource path is mapped with a resource path without tokens.
-        """
-        self.data["sync_permissions"] = {
-            "user_workspace": {
-                "services": {
-                    "Thredds": {
-                        "TokenizedResource": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": MULTI_TOKEN, "type": "directory"}],
-                        "UntokenizedResource": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": "file", "type": "file"}
-                        ]}},
-                "permissions_mapping": [
-                    {"TokenizedResource": ["read"], "UntokenizedResource": ["read"]}
-                ]
-            }
-        }
-        check_config_raises(self.data, ConfigErrorInvalidTokens)
+        check_config(self.data, ConfigErrorInvalidResourceKey)
 
     def test_duplicate_resource_key(self):
         """
@@ -129,9 +124,151 @@ class TestSyncPermissionsConfig(unittest.TestCase):
                             {"name": "catalog", "type": "workspace"},
                             {"name": "dir", "type": "workspace"}]}
                 },
-                "permissions_mapping": [
-                    {"DuplicateResource": ["read"], "OtherResource": ["read"]}
-                ]
+                "permissions_mapping": ["DuplicateResource : read <-> OtherResource : read"]
             }
         }
-        check_config_raises(self.data, ConfigErrorInvalidResourceKey)
+        check_config(self.data, ConfigErrorInvalidResourceKey)
+
+    def test_multi_token_bidirectional(self):
+        """
+        Tests the usage of MULTI_TOKEN in a bidirectional mapping.
+        """
+        self.data["sync_permissions"] = {
+            "user_workspace": {
+                "services": {
+                    "Thredds": {
+                        "TokenizedResource": [
+                            {"name": "catalog", "type": "service"},
+                            {"name": MULTI_TOKEN, "type": "directory"}],
+                        "UntokenizedResource": [
+                            {"name": "catalog", "type": "service"},
+                            {"name": MULTI_TOKEN, "type": "directory"},
+                            {"name": "file", "type": "file"}
+                        ]}},
+                "permissions_mapping": ["TokenizedResource : read <-> UntokenizedResource : read"]
+            }
+        }
+        check_config(self.data)
+
+        self.data["sync_permissions"] = {
+            "user_workspace": {
+                "services": {
+                    "Thredds": {
+                        "TokenizedResource": [
+                            {"name": "catalog", "type": "service"},
+                            {"name": MULTI_TOKEN, "type": "directory"}],
+                        "UntokenizedResource": [
+                            {"name": "catalog", "type": "service"},
+                            {"name": "file", "type": "file"}
+                        ]}},
+                "permissions_mapping": ["TokenizedResource : read <-> UntokenizedResource : read"]
+            }
+        }
+        check_config(self.data, ConfigErrorInvalidTokens)
+
+    def test_unidirectional_multi_token(self):
+        """
+        Tests the usage of MULTI_TOKEN in a unidirectional mapping.
+        """
+        self.data["sync_permissions"] = {
+            "user_workspace": {
+                "services": {
+                    "Thredds": {
+                        "TokenizedResource": [
+                            {"name": "catalog", "type": "service"},
+                            {"name": MULTI_TOKEN, "type": "directory"}],
+                        "UntokenizedResource": [
+                            {"name": "catalog", "type": "service"},
+                            {"name": "file", "type": "file"}
+                        ]}},
+                "permissions_mapping": ["TokenizedResource : read -> UntokenizedResource : read"]
+            }
+        }
+        check_config(self.data)
+
+        self.data["sync_permissions"]["user_workspace"]["permissions_mapping"] = \
+            ["UntokenizedResource : read -> TokenizedResource : read"]
+        check_config(self.data, ConfigErrorInvalidTokens)
+
+        self.data["sync_permissions"]["user_workspace"]["permissions_mapping"] = \
+            ["TokenizedResource : read <- UntokenizedResource : read"]
+        check_config(self.data, ConfigErrorInvalidTokens)
+
+        self.data["sync_permissions"]["user_workspace"]["permissions_mapping"] = \
+            ["UntokenizedResource : read <- TokenizedResource : read"]
+        check_config(self.data)
+
+    def test_bidirectional_named_tokens(self):
+        """
+        Tests config with a bidirectional mapping that uses named tokens.
+        """
+        self.data["sync_permissions"] = {
+            "user_workspace": {
+                "services": {
+                    "Thredds": {
+                        "Resource1": [
+                            {"name": "catalog", "type": "service"},
+                            {"name": "{dir1_var}", "type": "directory"},
+                            {"name": "{dir2_var}", "type": "directory"}],
+                        "Resource2": [
+                            {"name": "catalog", "type": "service"},
+                            {"name": "{dir2_var}", "type": "directory"},
+                            {"name": "{dir1_var}", "type": "directory"},
+                            {"name": "dir2", "type": "directory"}
+                        ]}},
+                "permissions_mapping": ["Resource1 : read <-> Resource2 : read"]
+            }
+        }
+        check_config(self.data)
+
+        self.data["sync_permissions"] = {
+            "user_workspace": {
+                "services": {
+                    "Thredds": {
+                        "Resource1": [
+                            {"name": "catalog", "type": "service"},
+                            {"name": "{dir1_var}", "type": "directory"},
+                            {"name": "{dir2_var}", "type": "directory"}],
+                        "Resource2": [
+                            {"name": "catalog", "type": "service"},
+                            {"name": "{dir1_var}", "type": "directory"},
+                            {"name": "dir2", "type": "directory"}
+                        ]}},
+                "permissions_mapping": ["Resource1 : read <-> Resource2 : read"]
+            }
+        }
+        check_config(self.data, ConfigErrorInvalidTokens)
+
+    def test_unidirectional_named_tokens(self):
+        """
+        Tests config with a unidirectional mapping that uses named tokens.
+        """
+        self.data["sync_permissions"] = {
+            "user_workspace": {
+                "services": {
+                    "Thredds": {
+                        "Resource1": [
+                            {"name": "catalog", "type": "service"},
+                            {"name": "{dir1_var}", "type": "directory"},
+                            {"name": "{dir2_var}", "type": "directory"}],
+                        "Resource2": [
+                            {"name": "catalog", "type": "service"},
+                            {"name": "{dir1_var}", "type": "directory"},
+                            {"name": "dir2", "type": "directory"}
+                        ]}},
+                "permissions_mapping": ["Resource1 : read -> Resource2 : read"]
+            }
+        }
+        check_config(self.data)
+
+        self.data["sync_permissions"]["user_workspace"]["permissions_mapping"] = \
+            ["Resource2 : read -> Resource1 : read"]
+        check_config(self.data, ConfigErrorInvalidTokens)
+
+        self.data["sync_permissions"]["user_workspace"]["permissions_mapping"] = \
+            ["Resource1 : read <- Resource2 : read"]
+        check_config(self.data, ConfigErrorInvalidTokens)
+
+        self.data["sync_permissions"]["user_workspace"]["permissions_mapping"] = \
+            ["Resource2 : read <- Resource1 : read"]
+        check_config(self.data)
