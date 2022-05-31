@@ -66,6 +66,30 @@ class Magpie(Service):
             raise RuntimeError("Could not find the input resource's parent resources.")
         return resp.json()["resources"]
 
+    def get_user_permissions(self, user):
+        # type: (str) -> bool
+        """
+        Gets all user resource permissions.
+        """
+        cookies = self.login()
+        resp = requests.get(url=f"{self.url}/users/{user}/resources",
+                            headers=self.headers, cookies=cookies)
+        if resp.status_code != 200:
+            raise RuntimeError(f"Could not find the user's resource permissions.")
+        return resp.json()["resources"]
+
+    def get_group_permissions(self, grp):
+        # type: (str) -> bool
+        """
+        Gets all group resource permissions.
+        """
+        cookies = self.login()
+        resp = requests.get(url=f"{self.url}/groups/{grp}/resources",
+                            headers=self.headers, cookies=cookies)
+        if resp.status_code != 200:
+            raise RuntimeError(f"Could not find the group's resource permissions.")
+        return resp.json()["resources"]
+
     def user_created(self, user_name):
         raise NotImplementedError
 

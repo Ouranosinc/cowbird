@@ -16,11 +16,14 @@ if TYPE_CHECKING:
 
 LOGGER = get_logger(__name__)
 
-SINGLE_TOKEN = "*"  # nosec: B105
 MULTI_TOKEN = "**"  # nosec: B105
 
-PERMISSION_REGEX = r"(?:\w+|\[\s*\w+(?:\s*,\s*\w+)*\s*\])"  # Either a single word, or a list of words in array
-DIRECTION_REGEX = r"(<->|<-|->)"
+BIDIRECTIONAL_ARROW = "<->"
+RIGHT_ARROW = "->"
+LEFT_ARROW = "<-"
+
+PERMISSION_REGEX = r"(\w+|\[\s*\w+(?:\s*,\s*\w+)*\s*\])"  # Either a single word, or a list of words in array
+DIRECTION_REGEX = rf"({BIDIRECTIONAL_ARROW}|{LEFT_ARROW}|{RIGHT_ARROW})"
 # Mapping format
 # <res_key1> : <permission(s)> <direction> <res_key2> : <permission(s)>
 MAPPING_REGEX = r"(\w+)\s*:\s*" + PERMISSION_REGEX + r"\s*" + DIRECTION_REGEX + \
@@ -224,6 +227,32 @@ def validate_unidirectional_mapping(mapping, src_info, tgt_info):
                                        f"missing from the source.")
 
 
+def get_mapping_info(mapping):
+    # type: (str) -> tuple
+    """
+    Obtain the different info found in a mapping string from the config.
+    Returns the following matching groups :
+    (res_key1, permission1, direction, res_key2, permission2) 
+    """
+    matched_groups = re.match(MAPPING_REGEX, mapping)
+    if not matched_groups or len(matched_groups.groups()) != 5:
+        raise ConfigError(f"Error parsing mapping `{mapping}`. "
+                          "Couldn't find all mapping info because of invalid format.")
+    return matched_groups.groups()
+
+
+def get_permissions_from_str(permissions):
+    # type: (str) -> list
+    """
+    Returns a tuple of all permissions found in a string. Used for permission strings found in the config, which
+    can either be a single permission or a list of permissions.
+    """
+    matched_groups = re.findall(r"\w+", permissions)
+    if not matched_groups:
+        raise ConfigError("Couldn't find permission, invalid format.")
+    return matched_groups
+
+
 def validate_sync_mapping_config(sync_cfg, res_info):
     # type: (ConfigDict, dict[str, dict[str, Union[bool, set]]]) -> None
     """
@@ -231,21 +260,17 @@ def validate_sync_mapping_config(sync_cfg, res_info):
     """
 
     for mapping in sync_cfg["permissions_mapping"]:
-        matched_groups = re.match(MAPPING_REGEX, mapping)
-        if not matched_groups or len(matched_groups.groups()) != 3:
-            raise ConfigError(f"Error parsing mapping `{mapping}`. "
-                              "Couldn't find both resource keys and the direction token because of invalid format.")
-        res_key1, direction, res_key2 = matched_groups.groups()
+        res_key1, _, direction, res_key2, _ = get_mapping_info(mapping)
 
         for res_key in [res_key1, res_key2]:
             if res_key not in res_info:
                 raise ConfigErrorInvalidResourceKey(f"Invalid config mapping references resource {res_key} which is "
                                                     "not defined in any service.")
 
-        if direction == "<->":
+        if direction == BIDIRECTIONAL_ARROW:
             validate_bidirectional_mapping(mapping, res_info, res_key1, res_key2)
         else:
-            if direction == "->":
+            if direction == RIGHT_ARROW:
                 validate_unidirectional_mapping(mapping, src_info=res_info[res_key1], tgt_info=res_info[res_key2])
             else:
                 validate_unidirectional_mapping(mapping, src_info=res_info[res_key2], tgt_info=res_info[res_key1])

@@ -19,7 +19,7 @@ import requests
 import yaml
 
 from cowbird.api.schemas import ValidOperations
-from cowbird.config import MULTI_TOKEN, SINGLE_TOKEN
+from cowbird.config import MULTI_TOKEN
 from cowbird.services import ServiceFactory
 from cowbird.services.impl.magpie import MAGPIE_ADMIN_PASSWORD_TAG, MAGPIE_ADMIN_USER_TAG
 from tests import utils
@@ -144,9 +144,14 @@ class TestMagpieRequests(unittest.TestCase):
                             {"name": "workspace:file1", "type": "file"}],
                         "Thredds2": [
                             {"name": self.test_service_name, "type": "service"},
-                            {"name": "workspace:file2", "type": "file"}]}},
-                "permissions_mapping": [
-                    {"Thredds1": ["read"], "Thredds2": ["read"]}]
+                            {"name": "private-dir", "type": "directory"},
+                            {"name": "workspace:file2", "type": "file"}],
+                        "Thredds3": [
+                            {"name": self.test_service_name, "type": "service"},
+                            {"name": "private-dir", "type": "directory"},
+                            {"name": "workspace:file3", "type": "file"}]}},
+                "permissions_mapping": ["Thredds1 : read <-> Thredds2 : read",
+                                        "Thredds3 : read -> Thredds2 : read"]
             }
         }
         with self.cfg_file as f:
@@ -161,10 +166,11 @@ class TestMagpieRequests(unittest.TestCase):
             # Create test resources
             parent_res_id = self.create_test_resource("private-dir", "directory", self.test_service_id)
             src_res_id = self.create_test_resource("workspace:file1", "file", parent_res_id)
-            target_res_id = self.create_test_resource("workspace:file2", "directory", self.test_service_id)
+            target_res_id = self.create_test_resource("workspace:file2", "directory", parent_res_id)
+            self.create_test_resource("workspace:file3", "directory", self.test_service_id)
 
             data = {
-                "event": ValidOperations.CreateOperation.value,
+                "event": ValidOperations.CreateOperation.value, #ValidOperations.DeleteOperation.value,
                 "service_name": "Thredds",
                 "resource_id": str(src_res_id),
                 "resource_full_name": f"/{self.test_service_name}/private-dir/workspace:file1",
@@ -204,11 +210,11 @@ class TestMagpieRequests(unittest.TestCase):
                             {"name": self.test_service_name, "type": "service"},
                             {"name": "private", "type": "directory"},
                             {"name": MULTI_TOKEN, "type": "directory"},
-                            {"name": SINGLE_TOKEN, "type": "file"}],
+                            {"name": '*', "type": "file"}],
                         "Thredds_file_target": [
                             {"name": self.test_service_name, "type": "service"},
                             {"name": MULTI_TOKEN, "type": "directory"},
-                            {"name": SINGLE_TOKEN, "type": "file"}],
+                            {"name": '*', "type": "file"}],
                         "Thredds_dir_src": [
                             {"name": self.test_service_name, "type": "service"},
                             {"name": "private", "type": "directory"},
@@ -281,11 +287,11 @@ class TestMagpieRequests(unittest.TestCase):
                         "Thredds_src": [
                             {"name": self.test_service_name, "type": "service"},
                             {"name": "private", "type": "directory"},
-                            {"name": SINGLE_TOKEN, "type": "directory"},
-                            {"name": SINGLE_TOKEN, "type": "file"}],
+                            {"name": '*', "type": "directory"},
+                            {"name": '*', "type": "file"}],
                         "Thredds_target": [
                             {"name": self.test_service_name, "type": "service"},
-                            {"name": SINGLE_TOKEN, "type": "directory"}]}},
+                            {"name": '*', "type": "directory"}]}},
                 "permissions_mapping": [
                     {"Thredds_src": ["read"], "Thredds_target": ["read"]}]
             }
@@ -331,7 +337,7 @@ class TestMagpieRequests(unittest.TestCase):
                     "Thredds": {
                         "Thredds_match1": [
                             {"name": self.test_service_name, "type": "service"},
-                            {"name": SINGLE_TOKEN, "type": "directory"}],
+                            {"name": '*', "type": "directory"}],
                         "Thredds_match2": [
                             {"name": self.test_service_name, "type": "service"},
                             {"name": MULTI_TOKEN, "type": "directory"}]}},
@@ -378,7 +384,7 @@ class TestMagpieRequests(unittest.TestCase):
                     "Thredds": {
                         "Thredds1": [
                             {"name": self.test_service_name, "type": "service"},
-                            {"name": SINGLE_TOKEN, "type": "directory"}],
+                            {"name": '*', "type": "directory"}],
                         "Thredds2": [
                             {"name": self.test_service_name, "type": "service"},
                             {"name": MULTI_TOKEN, "type": "directory"}]}},
@@ -425,7 +431,7 @@ class TestMagpieRequests(unittest.TestCase):
                     "Thredds": {
                         "Thredds1": [
                             {"name": self.test_service_name, "type": "service"},
-                            {"name": SINGLE_TOKEN, "type": "directory"}]},
+                            {"name": '*', "type": "directory"}]},
                     "Invalid_Service": {
                         "Invalid": [
                             {"name": self.test_service_name, "type": "service"},
