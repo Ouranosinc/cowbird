@@ -46,6 +46,10 @@ services:
     active: true
     priority: 1
     workspace_dir: ${WORKSPACE_DIR}
+  Weaver:
+    active: true
+  Wps-Outputs:
+    active: true
 
 # [Required] This section defines how to synchronize permissions between services when they share resources
 sync_permissions:
@@ -54,17 +58,18 @@ sync_permissions:
     # [Required] This section defines a list of services (referring to the service name of the 'services' section)
     # sharing resources
     services: # Contains the different resources that can be synchronized, ordered by service
-      Geoserver: # Service name, which should also be found in the services list at the top of this file
-        # Resource key (ex.: Geoserver_workspace): Custom name to represent a resource path.
+      Nginx: # Service name, which should also be found in the services list at the top of this file
+        # Resource key (ex.: nginx_workspace): Custom name to represent a resource path.
         # It should correspond to the names used in the `permission_mappings` section below.
         # It contains the list of each segment of its resource path, with their corresponding name and type.
         #
-        # The name of a segment can either contain a string name, a `SINGLE_TOKEN` `*` or a `MULTI_TOKEN` `**`.
-        # Note that string names should be at the beginning of a path, and tokens can only be found
-        # at the end of the path. This means that no named string should follow a token.
+        # The name of a segment can either be a string name, a variable or a `MULTI_TOKEN` (`**`).
         #
-        # SINGLE_TOKEN represent a single repetition of any name with the corresponding type. These tokens can be used
-        # any number of time in a resource path.
+        # Variables are indicated by a name written between braces (ex.: {variable_name}). This represents a single
+        # repetition of any segment name with the corresponding type. These variables can be used any number of time in
+        # a resource path. They are useful to indicate the corresponding location of the resource segment in a mapped
+        # permission. Note that all variables found in a target resource path should also be included in the source
+        # resource path.
         #
         # MULTI_TOKEN represent any number (0 or more) of names that fit with the corresponding type.
         # Also, the MULTI_TOKEN can only be used one time in each list of path segments. This is to avoid ambiguous
@@ -74,50 +79,108 @@ sync_permissions:
         # with the first token, and `seg3` with the second token, we could also match `seg1` with the first token, and
         # `seg2/seg3` with the second token, etc.
         #
-        # The tokens are useful to know the types of any `suffix` path. A `suffix` path represents the segments
-        # at the end of a path that are not named in the config below. For example, with the config below, if we have
-        # an input resource path `/api/workspaces/private/dir1/dir2/file` that matches with the `Geoserver_workspace`
-        # resource key, we have a `suffix` path `/dir1/dir2/file`.
-        # Also, this key would need to sync permissions with the `Thredds_workspace` resource key, considering the
-        # `permission_mappings` defined below. The `Thredds_workspace` would use the path
-        # `/catalog/birdhouse/workspaces/private/` combined with the suffix `/dir1/dir2/file`.
-        # The types of each segment of the target resource path `/catalog/birdhouse/workspaces/private/dir1/dir2/file`
-        # would be deduced from the `Thredds_workspace` config below.
-        Geoserver_workspace:
-          - name: api
+        # The variables and tokens are useful to know the type of any segments that is not named. For example, with the
+        # config below, if we have an input resource path `/nginx/workspaces/user_xyz/dir1/dir2/file_abc` that matches with
+        # the `nginx_workspace` resource key, the `user` variable name would be matched with `user_xyz` and `synched_file`, with `file_abc`.
+        # Also, this key would need to sync permissions with the `thredds_workspace` resource key, considering the
+        # `permission_mappings` defined below. The `thredds_workspace` would be deduced to the resource path
+        # `/catalog/workspaces/user_xyz/dir1/dir2/subdir/file_abc`.
+        # The types of each segment of this target resource path  would be deduced from the `thredds_workspace` config below.
+        nginx_workspace:
+          - name: nginx
             type: service
           - name: workspaces
-            type: workspace
-          - name: private
-            type: workspace
+            type: folder
+          - name: {user}
+            type: folder
           - name: "**"
-            type: workspace
+            type: folder
+          - name: {synched_file}
+            type: file
       Thredds:
-        Thredds_workspace:
+        thredds_workspace:
           - name: catalog
             type: service
-          - name: birdhouse
-            type: folder
           - name: workspaces
             type: folder
-          - name: private
+          - name: {user}
             type: folder
           - name: "**"
             type: folder
-          - name: "*"
+          - name: subdir
+            type: folder
+          - name: {synched_file}
             type: file
     # [Required] This section defines an array of permissions mapping between services
-    # In this example, for every Geoserver_workspace's `read` permission, a `read` and `browse`
-    # permissions will be created in Thredds_workspace.
-    # If a `browse` permission is created in Thredds_workspace a `read` permission
-    # will be added to `Geoserver_workspace`.
+    # Each item found in the `permissions_mapping` use the following format :
+    #     resource_key1 : permission(s) (-> or <- or <->) resource_key2 : permission(s)
+    # The arrows between the 2 resources indicate the direction of the synchronization, and which resources can be a
+    # `source` or `target` resource.
+    # In the case of `<->` arrow, the synchronization of permissions can be done in either direction. Also, it is
+    # important to note that in thise case, both mapped resources should matching `variable` names if any, and if one
+    # of the resource uses the `**` MULTI_TOKEN, the other resource should also include it in its path, to know how to
+    # match the segments.
+    # In the case of `->` or `<-` arrow, the synchronization is only done one way. In this case, the `source` resource
+    # path should include every `variable` names found in the `target` resource, but it can have more `variables` that
+    # just won't be used in the `target` path. Also, if the `target` resource uses the MULTI_TOKEN `**`, the `source`
+    # resource should have one too. The `source` can also use the `**` token even if the `target` doesn't include one.
     permissions_mapping:
-      - Geoserver_workspace: # 1st mapping between Geoserver_workspace:[read] and Thredds_workspace:[read,browse]
-          - read
-        Thredds_workspace:
-          - read
-          - browse
-      - Geoserver_workspace: # 2nd mapping between Geoserver_workspace:[write] and Thredds_workspace:[execute]
-          - write
-        Thredds_workspace:
-          - execute
+      # A read permission for nginx_workspace creates/deletes both read and browse permissions in
+      # thredds_workspace. And a read or a browse permission on thredds_workspace creates/deletes a read
+      # permission on nginx_workspace.
+      - "nginx_workspace : read <-> thredds_workspace : [read,browse]"
+      # A write permission on nginx_workspace creates/deletes a write permission on thredds_workspace, and vice
+      # versa.
+      - "nginx_workspace : write <-> thredds_workspace : write"
+  weaver_outputs:
+    services:
+      weaver:
+        process_description:
+          - name: processes
+            type: route
+          - name: "{processID}"
+            type: route
+        process_job_status:
+          - name: processes
+            type: route
+          - name: "{processID}"
+            type: route
+          - name: jobs
+            type: route
+          - name: "{jobID}"
+            type: route
+        job_status:
+          - name: jobs
+            type: route
+          - name: "{jobID}"
+            type: route
+        job_outputs:
+          - name: jobs
+            type: route
+          - name: "{jobID}"
+            type: route
+          - name: outputs
+            type: route
+      wps-outputs:
+        weaver_wps_outputs:
+          - name: weaver
+            type: route
+          - name: "{jobID}"
+            type: route
+    permissions_mapping:
+      # When user is granted access to an output (either side),
+      # output retrieval is allowed from both endpoints (wps-outputs/weaver).
+      - "weaver_wps_outputs : read <-> job_outputs : read"
+      # When output can be retrieved, access to details about the process and
+      # the job are also provided (to understand what each output represents),
+      # but getting read access to a process description should not grant
+      # access to all possible outputs of every underlying job of that process
+      # (eg: different users running the same process = differnt job access,
+      # but same process description visible).
+      - "weaver_wps_outputs : read -> job_status : read"
+      # process-prefixed items can be only one-way since wps-outputs does not
+      # encode the 'processID' information ('jobID' directly the top-level dir)
+      - "process_job_status : read -> weaver_wps_outputs : read"
+      - "process_job_status : read -> job_status : read"
+      # different permission (match), otherwise all jobs/outputs become available.
+      - "process_job_status : read -> process_description : read-match"
