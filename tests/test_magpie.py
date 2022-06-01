@@ -170,7 +170,7 @@ class TestMagpieRequests(unittest.TestCase):
             self.create_test_resource("workspace:file3", "directory", self.test_service_id)
 
             data = {
-                "event": ValidOperations.CreateOperation.value, #ValidOperations.DeleteOperation.value,
+                "event": ValidOperations.CreateOperation.value,
                 "service_name": "Thredds",
                 "resource_id": str(src_res_id),
                 "resource_full_name": f"/{self.test_service_name}/private-dir/workspace:file1",
