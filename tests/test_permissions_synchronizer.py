@@ -5,7 +5,8 @@ import unittest
 import pytest
 import yaml
 
-from cowbird.config import MULTI_TOKEN, ConfigErrorInvalidResourceKey, ConfigErrorInvalidTokens
+from cowbird.config import MULTI_TOKEN, ConfigErrorInvalidResourceKey, ConfigErrorInvalidServiceKey, \
+    ConfigErrorInvalidTokens, ConfigError
 from cowbird.services.impl.magpie import MAGPIE_ADMIN_PASSWORD_TAG, MAGPIE_ADMIN_USER_TAG
 from tests import utils
 
@@ -36,7 +37,8 @@ class TestSyncPermissionsConfig(unittest.TestCase):
             "services": {
                 "Magpie": {"active": True, "url": "",
                            MAGPIE_ADMIN_USER_TAG: "admin", MAGPIE_ADMIN_PASSWORD_TAG: "qwertyqwerty"},
-                "Thredds": {"active": True}
+                "Thredds": {"active": True},
+                "Geoserver": {"active": True}
             }
         }
 
@@ -79,7 +81,7 @@ class TestSyncPermissionsConfig(unittest.TestCase):
             "user_workspace": {
                 "services": {
                     "Thredds": {
-                        "Invalid_multitoken": [
+                        "Duplicate_tokens": [
                             {"name": "catalog", "type": "service"},
                             {"name": "{dir_var}", "type": "directory"},
                             {"name": "{dir_var}", "type": "directory"}
@@ -88,6 +90,22 @@ class TestSyncPermissionsConfig(unittest.TestCase):
             }
         }
         check_config(self.data, ConfigErrorInvalidTokens)
+
+    def test_webhooks_invalid_service(self):
+        """
+        Tests the cases where a service used in the `sync_permissions` section of the config is not defined and invalid.
+        """
+        self.data["sync_permissions"] = {
+            "user_workspace": {
+                "services": {
+                    "Invalid_Service": {
+                        "Invalid": [
+                            {"name": "catalog", "type": "service"},
+                            {"name": "dir", "type": "directory"}]}},
+                "permissions_mapping": []
+            }
+        }
+        check_config(self.data, ConfigErrorInvalidServiceKey)
 
     def test_unknown_res_key(self):
         """
@@ -128,6 +146,25 @@ class TestSyncPermissionsConfig(unittest.TestCase):
             }
         }
         check_config(self.data, ConfigErrorInvalidResourceKey)
+
+    def test_invalid_mapping_format(self):
+        """
+        Tests an invalid config where a permissions_mapping uses an invalid format.
+        """
+        self.data["sync_permissions"] = {
+            "user_workspace": {
+                "services": {
+                    "Thredds": {
+                        "ValidResource": [
+                            {"name": "catalog", "type": "service"}
+                        ],
+                        "ValidResource2": [
+                            {"name": "catalog", "type": "service"}
+                        ]}},
+                "permissions_mapping": ["ValidResource : read <-> Invalid-format"]
+            }
+        }
+        check_config(self.data, ConfigError)
 
     def test_multi_token_bidirectional(self):
         """

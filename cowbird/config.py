@@ -10,7 +10,7 @@ from cowbird.utils import get_logger, print_log, raise_log
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import List, Union
+    from typing import List, Set, Union
 
     from cowbird.typedefs import ConfigDict
 
@@ -40,6 +40,12 @@ class ConfigError(RuntimeError):
 class ConfigErrorInvalidTokens(ConfigError):
     """
     Config error specific to invalid SINGLE_TOKEN or MULTI_TOKEN tokens.
+    """
+
+
+class ConfigErrorInvalidServiceKey(ConfigError):
+    """
+    Config error for invalid service keys.
     """
 
 
@@ -276,12 +282,14 @@ def validate_sync_mapping_config(sync_cfg, res_info):
                 validate_unidirectional_mapping(mapping, src_info=res_info[res_key2], tgt_info=res_info[res_key1])
 
 
-def validate_sync_config(sync_cfg):
-    # type: (ConfigDict) -> None
+def validate_sync_config(sync_cfg, valid_service_names):
+    # type: (ConfigDict, Set) -> None
 
     # validate and get all resources info
     res_info = {}
     for svc, resources in sync_cfg["services"].items():
+        if svc not in valid_service_names:
+            raise ConfigErrorInvalidServiceKey(f"Invalid service name `{svc}` used in the config.")
         for res_key in resources:
             if res_key in res_info:
                 raise ConfigErrorInvalidResourceKey(f"Found duplicate resource key {res_key} in config. Config resource"
