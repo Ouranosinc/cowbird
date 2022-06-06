@@ -282,14 +282,12 @@ def validate_sync_mapping_config(sync_cfg, res_info):
                 validate_unidirectional_mapping(mapping, src_info=res_info[res_key2], tgt_info=res_info[res_key1])
 
 
-def validate_sync_config(sync_cfg, valid_service_names):
-    # type: (ConfigDict, Set) -> None
+def validate_sync_config(sync_cfg):
+    # type: (ConfigDict) -> None
 
     # validate and get all resources info
     res_info = {}
     for svc, resources in sync_cfg["services"].items():
-        if svc not in valid_service_names:
-            raise ConfigErrorInvalidServiceKey(f"Invalid service name `{svc}` used in the config.")
         for res_key in resources:
             if res_key in res_info:
                 raise ConfigErrorInvalidResourceKey(f"Found duplicate resource key {res_key} in config. Config resource"
@@ -297,3 +295,16 @@ def validate_sync_config(sync_cfg, valid_service_names):
             res_info[res_key] = validate_and_get_resource_info(res_key, resources[res_key])
 
     validate_sync_mapping_config(sync_cfg, res_info)
+
+
+def validate_sync_config_services(sync_cfg, available_services):
+    # type: (ConfigDict, List) -> None
+    """
+    Validates if all services used in the sync config are actual available services. Those should correspond to
+    services available in Magpie.
+    """
+
+    for svc in sync_cfg["services"]:
+        if svc not in available_services:
+            raise ConfigError(f"Service `{svc}` used in sync config is not valid since it was not found in Magpie "
+                              f"services ({available_services}).")

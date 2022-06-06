@@ -29,9 +29,7 @@ def get_app(global_config=None, **settings):
     config = get_app_config(global_config)
 
     services_cfgs = get_all_configs(get_config_path(), "services", allow_missing=True)
-    service_names = set()
     for services_cfg in services_cfgs:
-        service_names.update(services_cfg.keys())
         validate_services_config_schema(services_cfg)
 
     sync_perm_cfgs = get_all_configs(get_config_path(), "sync_permissions", allow_missing=True)
@@ -39,7 +37,7 @@ def get_app(global_config=None, **settings):
     for sync_perm_config in sync_perm_cfgs:
         validate_sync_perm_config_schema(sync_perm_config)
         for sync_cfg in sync_perm_config.values():
-            validate_sync_config(sync_cfg, service_names)
+            validate_sync_config(sync_cfg)
 
     print_log("Starting Cowbird app...", LOGGER)
     wsgi_app = config.make_wsgi_app()

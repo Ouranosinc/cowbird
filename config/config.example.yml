@@ -22,6 +22,8 @@
 #     workspace_dir:      [optional, default=None] Location of the users workspace root.
 #                         Required for the following services : FileSystem, Catalog and Geoserver
 #
+# TODO: rename 'services' section here to 'handlers' and refactor all related 'services' in code, will be done in another PR
+# since services is used everywhere (services folder, ServiceFactory, services api, services cli, tests ...)
 services:
   Magpie:
     active: true
@@ -52,13 +54,13 @@ services:
     active: true
 
 # [Required] This section defines how to synchronize permissions between services when they share resources
+# This is used only for the synchronization of permissions between Magpie services/resources.
 sync_permissions:
   # Friendly name to identify a sync point (The value is not used by Cowbird so this can be any relevant keyword)
   user_workspace:
-    # [Required] This section defines a list of services (referring to the service name of the 'services' section)
-    # sharing resources
+    # [Required] This section defines a list of services and resources that exists in Magpie.
     services: # Contains the different resources that can be synchronized, ordered by service
-      Nginx: # Service name, which should also be found in the services list at the top of this file
+      thredds: # Service name, which should also exists in Magpie
         # Resource key (ex.: nginx_workspace): Custom name to represent a resource path.
         # It should correspond to the names used in the `permission_mappings` section below.
         # It contains the list of each segment of its resource path, with their corresponding name and type.
@@ -97,7 +99,6 @@ sync_permissions:
             type: folder
           - name: {synched_file}
             type: file
-      Thredds:
         thredds_workspace:
           - name: catalog
             type: service
@@ -161,7 +162,7 @@ sync_permissions:
             type: route
           - name: outputs
             type: route
-      wps-outputs:
+      wps:
         weaver_wps_outputs:
           - name: weaver
             type: route

@@ -3,7 +3,8 @@ import re
 from typing import TYPE_CHECKING
 
 from cowbird.config import BIDIRECTIONAL_ARROW, LEFT_ARROW, MULTI_TOKEN, RIGHT_ARROW, \
-    get_all_configs, get_mapping_info, get_permissions_from_str, validate_sync_config, NAMED_TOKEN_REGEX
+    get_all_configs, get_mapping_info, get_permissions_from_str, validate_sync_config, NAMED_TOKEN_REGEX, \
+    validate_sync_config_services
 from cowbird.services.service_factory import ServiceFactory
 from cowbird.utils import get_config_path, get_logger
 
@@ -18,6 +19,8 @@ if TYPE_CHECKING:
 LOGGER = get_logger(__name__)
 
 SEGMENT_NAME_REGEX = r"[\w:-]+"
+
+RES_NAMETYPE_SEPARATOR = "::"
 
 
 class Permission:
@@ -75,9 +78,7 @@ class SyncPoint:
         :param services: Dict, where the service is the key and its resources root is the value
         :param permissions_mapping_list: List of dict where the service is the key and an access list is the value
         """
-        available_services = ServiceFactory().services_cfg.keys()
-        # Make sure that only active services are used
-        self.services = {svc: svc_cfg for svc, svc_cfg in services.items() if svc in available_services}
+        self.services = {svc: svc_cfg for svc, svc_cfg in services.items()}
         self.resources = {res_key: res for svc in self.services.values() for res_key, res in svc.items()}
 
         # Save mapping config using this format:
@@ -124,13 +125,14 @@ class SyncPoint:
             matched_groups = re.match(NAMED_TOKEN_REGEX, segment["name"])
             if matched_groups:
                 # match any name with specific type 1 time only
-                res_regex += rf"/(?P<{matched_groups.groups()[0]}>{SEGMENT_NAME_REGEX})::{segment['type']}"
+                res_regex += rf"/(?P<{matched_groups.groups()[0]}>{SEGMENT_NAME_REGEX})" \
+                             rf"{RES_NAMETYPE_SEPARATOR}{segment['type']}"
             elif segment["name"] == MULTI_TOKEN:
                 # match any name with specific type, 0 or more times
-                res_regex += rf"(?P<multi_token>(?:/{SEGMENT_NAME_REGEX}::{segment['type']})*)"
+                res_regex += rf"(?P<multi_token>(?:/{SEGMENT_NAME_REGEX}{RES_NAMETYPE_SEPARATOR}{segment['type']})*)"
             else:
                 # match name and type exactly
-                res_regex += rf"/{segment['name']}::{segment['type']}"
+                res_regex += rf"/{segment['name']}{RES_NAMETYPE_SEPARATOR}{segment['type']}"
                 named_segments_count += 1
         res_regex += r"$"
         return res_regex, named_segments_count
@@ -140,8 +142,7 @@ class SyncPoint:
         formatted_path = ""
         for segment in nametype_path.split("/"):
             if segment:
-                # TODO: put :: in constant ?
-                formatted_path += "/" + segment.split("::")[0]
+                formatted_path += "/" + segment.split(RES_NAMETYPE_SEPARATOR)[0]
         return formatted_path
 
     def _find_matching_res(self, service_name, resource_nametype_path):
@@ -226,7 +227,7 @@ class SyncPoint:
         # Assume the service is the first found with the resource key, since the resource keys should be unique.
         svc_name = svc_list[0]
         target_segments = self.services[svc_name][res_key]
-        return svc_name.lower(), SyncPoint._create_res_data(target_segments, matched_groups)
+        return svc_name, SyncPoint._create_res_data(target_segments, matched_groups)
 
     def _get_src_permissions(self):
         # type: () -> Generator[Tuple[str, str]]
@@ -289,9 +290,6 @@ class SyncPoint:
                                                                   self._get_resource_full_name_and_type(src_res_key, src_matched_groups))
                             # Save resource data if needed for other iterations
                             res_data[src_res_key] = (svc_name, src_res_data)
-                            # TODO: fix usage of svc_name, how to know in what service is the resource,
-                            #  do cowbird config service name correspond to magpie svc names --
-                            #  No, do we add a field in the services config to know the mapping with Magpie?
                             if target_permission in user_targets[target_res_key] and \
                                     SyncPoint._is_in_permissions(src_perm_name, svc_name, src_res_data, user_permissions):
                                 # remove from user_targets
@@ -377,7 +375,7 @@ class SyncPoint:
         """
         resource_nametype_path = ""
         for res in src_resource_tree:
-            resource_nametype_path += f"/{res['resource_name']}::{res['resource_type']}"
+            resource_nametype_path += f"/{res['resource_name']}{RES_NAMETYPE_SEPARATOR}{res['resource_type']}"
 
         src_res_key, src_matched_groups = self._find_matching_res(permission.service_name, resource_nametype_path)
         target_permissions = self._find_permissions_to_sync(src_res_key, src_matched_groups, permission, perm_operation)
@@ -414,7 +412,12 @@ class PermissionSynchronizer(object):
                 continue
             for sync_cfg in sync_perm_config.values():
                 # Config should already be validated at cowbird startup, revalidate here since config gets reloaded
-                validate_sync_config(sync_cfg, ServiceFactory().services_cfg.keys())
+                validate_sync_config(sync_cfg)
+
+                # Validate config services, only done here, since Magpie instance is not available at cowbird startup.
+                available_services = self.magpie_inst.get_service_names()
+                validate_sync_config_services(sync_cfg, available_services)
+
                 self.sync_point.append(SyncPoint(services=sync_cfg["services"],
                                                  permissions_mapping_list=sync_cfg["permissions_mapping"]))
 

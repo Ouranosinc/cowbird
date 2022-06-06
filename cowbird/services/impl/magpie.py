@@ -40,7 +40,6 @@ class Magpie(Service):
         :param name: Service name
         """
         super(Magpie, self).__init__(settings, name, **kwargs)
-        self.permissions_synch = PermissionSynchronizer(self)
 
         self.headers = {"Content-type": CONTENT_TYPE_JSON}
         self.admin_user = kwargs.get(MAGPIE_ADMIN_USER_TAG, None)
@@ -48,6 +47,19 @@ class Magpie(Service):
         if not self.admin_user or not self.admin_password:
             raise ConfigError("Missing Magpie credentials in config. Admin Magpie username and password are required.")
         self.auth = (self.admin_user, self.admin_password)
+
+        self.permissions_synch = PermissionSynchronizer(self)
+
+    def get_service_names(self):
+        # type: () -> List
+        """
+        Returns the list of service names available on Magpie.
+        """
+        cookies = self.login()
+        resp = requests.get(url=f"{self.url}/services", headers=self.headers, cookies=cookies)
+        if resp.status_code != 200:
+            raise RuntimeError("Could not get Magpie's services.")
+        return list(resp.json()["services"].keys())
 
     def get_resource_id(self, resource_full_name):
         # type (str) -> str

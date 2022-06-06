@@ -7,6 +7,7 @@ import yaml
 
 from cowbird.config import MULTI_TOKEN, ConfigErrorInvalidResourceKey, ConfigErrorInvalidServiceKey, \
     ConfigErrorInvalidTokens, ConfigError
+from cowbird.services import ServiceFactory
 from cowbird.services.impl.magpie import MAGPIE_ADMIN_PASSWORD_TAG, MAGPIE_ADMIN_USER_TAG
 from tests import utils
 
@@ -49,7 +50,7 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "Thredds": {
+                    "thredds": {
                         "Valid_multitoken": [
                             {"name": "catalog", "type": "service"},
                             {"name": MULTI_TOKEN, "type": "directory"}
@@ -62,7 +63,7 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "Thredds": {
+                    "thredds": {
                         "Invalid_multitoken": [
                             {"name": "catalog", "type": "service"},
                             {"name": MULTI_TOKEN, "type": "directory"},
@@ -80,7 +81,7 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "Thredds": {
+                    "thredds": {
                         "Duplicate_tokens": [
                             {"name": "catalog", "type": "service"},
                             {"name": "{dir_var}", "type": "directory"},
@@ -105,7 +106,16 @@ class TestSyncPermissionsConfig(unittest.TestCase):
                 "permissions_mapping": []
             }
         }
-        check_config(self.data, ConfigErrorInvalidServiceKey)
+        cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)
+        with cfg_file as f:
+            f.write(yaml.safe_dump(self.data))
+
+        utils.get_test_app(settings={"cowbird.config_path": f.name})
+
+        ServiceFactory().create_service("Magpie")
+        # TODO: re-add mocking
+        # TODO: check if creating Permissions_Synchronizer, triggers a ConfigError
+        os.unlink(cfg_file.name)
 
     def test_unknown_res_key(self):
         """
@@ -114,7 +124,7 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "Thredds": {
+                    "thredds": {
                         "ValidResource": [
                             {"name": "catalog", "type": "service"}
                         ]}},
@@ -130,14 +140,14 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "Thredds": {
+                    "thredds": {
                         "DuplicateResource": [
                             {"name": "catalog", "type": "service"},
                             {"name": "dir", "type": "directory"}],
                         "OtherResource": [
                             {"name": "catalog", "type": "service"},
                             {"name": "file", "type": "file"}]},
-                    "Geoserver": {
+                    "geoserver": {
                         "DuplicateResource": [
                             {"name": "catalog", "type": "workspace"},
                             {"name": "dir", "type": "workspace"}]}
@@ -154,7 +164,7 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "Thredds": {
+                    "thredds": {
                         "ValidResource": [
                             {"name": "catalog", "type": "service"}
                         ],
@@ -173,7 +183,7 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "Thredds": {
+                    "thredds": {
                         "TokenizedResource": [
                             {"name": "catalog", "type": "service"},
                             {"name": MULTI_TOKEN, "type": "directory"}],
@@ -190,7 +200,7 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "Thredds": {
+                    "thredds": {
                         "TokenizedResource": [
                             {"name": "catalog", "type": "service"},
                             {"name": MULTI_TOKEN, "type": "directory"}],
@@ -210,7 +220,7 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "Thredds": {
+                    "thredds": {
                         "TokenizedResource": [
                             {"name": "catalog", "type": "service"},
                             {"name": MULTI_TOKEN, "type": "directory"}],
@@ -242,7 +252,7 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "Thredds": {
+                    "thredds": {
                         "Resource1": [
                             {"name": "catalog", "type": "service"},
                             {"name": "{dir1_var}", "type": "directory"},
@@ -261,7 +271,7 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "Thredds": {
+                    "thredds": {
                         "Resource1": [
                             {"name": "catalog", "type": "service"},
                             {"name": "{dir1_var}", "type": "directory"},
@@ -283,7 +293,7 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "Thredds": {
+                    "thredds": {
                         "Resource1": [
                             {"name": "catalog", "type": "service"},
                             {"name": "{dir1_var}", "type": "directory"},

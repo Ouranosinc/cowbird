@@ -165,7 +165,7 @@ class TestMagpieRequests(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "Thredds": {
+                    "thredds": {
                         "Thredds0": [
                             {"name": self.test_service_name, "type": "service"},
                             {"name": "private-dir", "type": "directory"},
@@ -216,7 +216,7 @@ class TestMagpieRequests(unittest.TestCase):
 
             data = {
                 "event": ValidOperations.CreateOperation.value,
-                "service_name": "Thredds",
+                "service_name": "thredds",
                 "resource_id": str(res_ids[0]),
                 "resource_full_name": f"/{self.test_service_name}/private-dir/workspace:file0",
                 "name": "read",
@@ -299,7 +299,7 @@ class TestMagpieRequests(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "Thredds": {
+                    "thredds": {
                         "Thredds_file_src": [
                             {"name": self.test_service_name, "type": "service"},
                             {"name": "private", "type": "directory"},
@@ -361,7 +361,7 @@ class TestMagpieRequests(unittest.TestCase):
 
             data = {
                 "event": ValidOperations.CreateOperation.value,
-                "service_name": "Thredds",
+                "service_name": "thredds",
                 "resource_id": str(src1_res_id),
                 "resource_full_name": f"/{self.test_service_name}/private",
                 "name": "read",
@@ -402,7 +402,7 @@ class TestMagpieRequests(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "Thredds": {
+                    "thredds": {
                         "Thredds_match1": [
                             {"name": self.test_service_name, "type": "service"},
                             {"name": "{dir1}", "type": "directory"},
@@ -429,7 +429,7 @@ class TestMagpieRequests(unittest.TestCase):
 
             data = {
                 "event": ValidOperations.CreateOperation.value,
-                "service_name": "Thredds",
+                "service_name": "thredds",
                 "resource_id": str(src_res_id),
                 "resource_full_name": f"/{self.test_service_name}/dir1/dir2",
                 "name": "read",
@@ -451,7 +451,7 @@ class TestMagpieRequests(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "Thredds": {
+                    "thredds": {
                         "Thredds_match1": [
                             {"name": self.test_service_name, "type": "service"},
                             {"name": MULTI_TOKEN, "type": "directory"}],
@@ -476,7 +476,7 @@ class TestMagpieRequests(unittest.TestCase):
 
             data = {
                 "event": ValidOperations.CreateOperation.value,
-                "service_name": "Thredds",
+                "service_name": "thredds",
                 "resource_id": str(src_res_id),
                 "resource_full_name": f"/{self.test_service_name}/dir",
                 "name": "read",
