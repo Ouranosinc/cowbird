@@ -91,6 +91,46 @@ class TestVersion(LooseVersion):
         return super(TestVersion, self)._cmp(other)
 
 
+class MockMagpieService(Service):
+    required_params = []
+
+    def __init__(self, settings, name, **kwargs):
+        super(MockMagpieService, self).__init__(settings, name, **kwargs)
+        self.event_users = []
+        self.event_perms = []
+        self.outbound_perms = []
+
+    def json(self):
+        return {"name": self.name,
+                "event_users": self.event_users,
+                "event_perms": self.event_perms,
+                "outbound_perms": self.outbound_perms}
+
+    def get_resource_id(self, resource_full_name):
+        pass
+
+    def user_created(self, user_name):
+        self.event_users.append(user_name)
+
+    def user_deleted(self, user_name):
+        self.event_users.remove(user_name)
+
+    def permission_created(self, permission):
+        self.event_perms.append(permission.resource_full_name)
+
+    def permission_deleted(self, permission):
+        self.event_perms.remove(permission.resource_full_name)
+
+    def create_permission(self, permission):
+        self.outbound_perms.append(permission)
+
+    def delete_permission(self, permission):
+        for perm in self.outbound_perms:
+            if perm == permission:
+                self.outbound_perms.remove(perm)
+                return
+
+
 class MockAnyServiceBase(Service):
     ResourceId = 1000
 
