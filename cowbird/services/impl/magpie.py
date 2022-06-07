@@ -87,7 +87,7 @@ class Magpie(Service):
         resp = requests.get(url=f"{self.url}/users/{user}/resources",
                             headers=self.headers, cookies=cookies)
         if resp.status_code != 200:
-            raise RuntimeError(f"Could not find the user's resource permissions.")
+            raise RuntimeError(f"Could not find the user `{user}` resource permissions.")
         return resp.json()["resources"]
 
     def get_group_permissions(self, grp):
@@ -99,7 +99,7 @@ class Magpie(Service):
         resp = requests.get(url=f"{self.url}/groups/{grp}/resources",
                             headers=self.headers, cookies=cookies)
         if resp.status_code != 200:
-            raise RuntimeError(f"Could not find the group's resource permissions.")
+            raise RuntimeError(f"Could not find the group `{grp}` resource permissions.")
         return resp.json()["resources"]
 
     def user_created(self, user_name):
