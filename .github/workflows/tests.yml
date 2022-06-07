@@ -103,7 +103,7 @@ jobs:
           env | sort
       - name: Run Tests
         run: | 
-          docker ps
+          docker ps -a
           make docker-up-dev-logs
           make stop ${{ matrix.test-case }}
       - name: Upload coverage report
