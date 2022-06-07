@@ -161,5 +161,11 @@ class Magpie(Service):
         Login to Magpie app using admin credentials.
         """
         data = {"user_name": self.admin_user, "password": self.admin_password}
-        resp = requests.post(f"{self.url}/signin", json=data)
+        try:
+            resp = requests.post(f"{self.url}/signin", json=data)
+        except Exception as e:
+            # TODO: remove temporary logger info
+            raise RuntimeError(f"Failed to sign in to Magpie (url: `{self.url}`) with user `{self.admin_user}` and "
+                               f"password `{self.admin_password}`. Exception : {e}")
+
         return resp.cookies

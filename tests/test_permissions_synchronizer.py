@@ -709,6 +709,7 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         }
         check_config(self.data, ConfigErrorInvalidTokens)
 
+    @pytest.mark.skip(reason="test not finished yet")
     def test_webhooks_invalid_service(self):
         """
         Tests the cases where a service used in the `sync_permissions` section of the config is not defined and invalid.
