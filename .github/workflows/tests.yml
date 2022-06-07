@@ -88,7 +88,7 @@ jobs:
 #      - name: Start Magpie instance for magpie tests
 #        run: docker-compose --env-file ./docker/.env.example -f ./docker/docker-compose.example.yml -f ./docker/docker-compose.dev.example.yml up magpie
       - name: Docker-Compose up
-        run: make docker-up-dev
+        run: make docker-up-dev-bg
       - name: Install Dependencies
         run: make install-pkg install-dev version
       - name: Display Packages

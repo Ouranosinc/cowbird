@@ -447,6 +447,10 @@ DOCKER_DEV_COMPOSES := -f "$(APP_ROOT)/docker/docker-compose.example.yml" -f "$(
 docker-up-dev: docker-build   ## run all dependencies containers using compose ready to be used by a local cowbird
 	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_DEV_COMPOSES) up
 
+.PHONY: docker-up-dev-bg
+docker-up-dev-bg: docker-build   ## run all dependencies containers in background, using compose ready to be used by a local cowbird
+	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_DEV_COMPOSES) up -d
+
 .PHONY: docker-down
 docker-down:  ## stop running containers and remove them
 	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_TEST_COMPOSES) down || true
