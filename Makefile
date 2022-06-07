@@ -452,7 +452,7 @@ docker-up-dev-bg: docker-build   ## run all dependencies containers in backgroun
 	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_DEV_COMPOSES) up -d
 
 .PHONY: docker-up-dev-logs
-docker-up-dev-bg:   ## run all dependencies containers in background, using compose ready to be used by a local cowbird
+docker-up-dev-logs:   ## run all dependencies containers in background, using compose ready to be used by a local cowbird
 	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_DEV_COMPOSES) logs
 
 .PHONY: docker-down
