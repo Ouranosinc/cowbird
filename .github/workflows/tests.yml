@@ -52,8 +52,8 @@ jobs:
       magpie:
         image: pavics/magpie:latest
         volumes:
-          - docker/config/magpie/magpie.ini:/opt/local/src/magpie/config/magpie.ini
-          - docker/config/magpie/config.dev.yml:/config.yml
+          - ${{ github.workspace }}/docker/config/magpie/magpie.ini:/opt/local/src/magpie/config/magpie.ini
+          - ${{ github.workspace }}/docker/config/magpie/config.dev.yml:/config.yml
         env:
           FORWARDED_ALLOW_IPS: "*"
           MAGPIE_CONFIG_PATH: /config.yml
