@@ -103,6 +103,7 @@ jobs:
           env | sort
       - name: Run Tests
         run: | 
+          curl -X GET "http://localhost:2001/version"
           docker ps -a
           make docker-up-dev-logs
           make stop ${{ matrix.test-case }}
