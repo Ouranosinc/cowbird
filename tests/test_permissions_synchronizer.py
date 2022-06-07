@@ -5,8 +5,10 @@ import unittest
 
 import mock
 import pytest
+import requests
 import yaml
 
+from cowbird.api.schemas import ValidOperations
 from cowbird.config import MULTI_TOKEN, ConfigErrorInvalidResourceKey, ConfigErrorInvalidServiceKey, \
     ConfigErrorInvalidTokens, ConfigError
 from cowbird.permissions_synchronizer import Permission, PermissionSynchronizer
@@ -14,117 +16,617 @@ from cowbird.services import ServiceFactory
 from cowbird.services.impl.magpie import MAGPIE_ADMIN_PASSWORD_TAG, MAGPIE_ADMIN_USER_TAG
 from tests import utils
 
+# service1 = "Geoserver"
+# service2 = "Thredds"
+# cls.test_services = [service1, service2]
+# cls.res_root = {service1: "/api/workspaces/private/",
+#                 service2: "/catalog/birdhouse/workspaces/private/"}
+# cls.sync_perm_name = {service1: ["read"],
+#                       service2: ["read", "browse"]}
+# mapping_point_1 = "mapping_point_1"
+# cls.mapped_service = {service1: service2,
+#                       service2: service1}
+# data = {
+# service1: {"active": True},
+# service2: {"active": True}
+# },
+# "sync_permissions": {
+# mapping_point_1: {
+#     "services": {
+#         service1: cls.res_root[service1],
+#         service2: cls.res_root[service2]
+#     },
+#     "permissions_mapping": [
+#         {
+#             service1: cls.sync_perm_name[service1],
+#             service2: cls.sync_perm_name[service2]
+#         }
+#     ]
+# }
+# def test_sync(self):
+#     with contextlib.ExitStack() as stack:
+#         stack.enter_context(mock.patch("cowbird.services.impl.magpie.Magpie",
+#                                        side_effect=utils.MockMagpieService))
+#         stack.enter_context(mock.patch("cowbird.services.impl.geoserver.Geoserver",
+#                                        side_effect=utils.MockAnyService))
+#         stack.enter_context(mock.patch("cowbird.services.impl.thredds.Thredds",
+#                                        side_effect=utils.MockAnyService))
+#
+#         magpie = ServiceFactory().get_service("Magpie")
+#
+#         resource_name = "resource1"
+#         # Loop over every service having a permission that must be synchronized to another one
+#         for svc in self.test_services:
+#             for perm_name in self.sync_perm_name[svc]:
+#                 # Create the permission for this service that would be provided by `Magpie` as a hook
+#                 permission = Permission(
+#                     service_name=svc,
+#                     resource_id="0",
+#                     resource_full_name=self.res_root[svc] + resource_name,
+#                     name=perm_name,
+#                     access="string1",
+#                     scope="string2",
+#                     user="string3")
+#
+#                 # Apply this permission to the synchronizer (this is the function that is tested!)
+#                 PermissionSynchronizer(magpie).create_permission(permission)
+#
+#                 # `magpie`, which is mocked, will store every permission request that should have been done to the
+#                 # Magpie service in the `outbound_perms` dict.
+#                 assert len(magpie.json()["outbound_perms"]) == len(self.sync_perm_name[self.mapped_service[svc]])
+#
+#                 # Validate that the mocked `magpie` instance has received a permission request for every mapped
+#                 # permission
+#                 for idx, mapped_perm_name in enumerate(self.sync_perm_name[self.mapped_service[svc]]):
+# Geoserver/Thredds, [read, write, ...]
+#                     outbound_perm = magpie.json()["outbound_perms"][idx]
+#                     assert outbound_perm.service_name == self.mapped_service[svc]
+#                     assert outbound_perm.resource_id == utils.MockAnyService.ResourceId
+#                     assert outbound_perm.resource_full_name == \
+#                         self.res_root[self.mapped_service[svc]] + resource_name
+#                     assert outbound_perm.name == mapped_perm_name
+#                     assert outbound_perm.access == permission.access
+#                     assert outbound_perm.scope == permission.scope
+#                     assert outbound_perm.user == permission.user
+#
+#                 # This is the second function being tested which should make remove permission requests to `magpie`
+#                 # for every mapped permission
+#                 PermissionSynchronizer(magpie).delete_permission(permission)
+#
+#                 # Again the mocked `magpie` instance should remove every permission from its `outbound_perms` rather
+#                 # than making the remove permission request to the Magpie service.
+#                 assert len(magpie.json()["outbound_perms"]) == 0
 
-@pytest.mark.permissions
+# Summary of above : MockMagpie.outbound_perms = [Permission]
+#           Permission (object) contains all the info, check that all is valid
+# For all permissions found in the sync_config, trigger a create_permission, with that permission, and check that all synched permission exists after
+#      Then, delete the same permission, and check that no permission are left in MockMagpie
+
+# New method :
+# Instead of doing the for, call each create_permission manually, to have more control on what happens, and verify info
+# TODO: Adapt format of outbound_perm, since before it received the permission to create (the target), but now it receives a full
+#       list of segments, with the type of each, and the permission for the last one
+
+
+# @pytest.mark.permissions
+@pytest.mark.magpie
+#@pytest.mark.online
 class TestSyncPermissions(unittest.TestCase):
     """
     Test permissions synchronization.
+
+    These tests parse the sync config and checks that when a permission is created/deleted in the
+    `PermissionSynchronizer` the proper permissions are created/deleted for every synchronized service.
+    The tests use a mocked version of Magpie.
     """
+
+    # @classmethod
+    # def setUpClass(cls):
+    #     cls.grp = "administrators"
+    #     cls.usr = "admin"
+    #     cls.test_service_name = "catalog"
+    #
+    # @classmethod
+    # def tearDownClass(cls):
+    #     utils.clear_services_instances()
+    #
+    # def setUp(self):
+    #     # Create test service
+    #     self.test_service_id = self.reset_test_service()
+    #
+    #     self.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)  # pylint: disable=R1732
+    #     self.data = {
+    #         "services": {
+    #             "Magpie": {"active": True, "url": ""},
+    #             "Thredds": {"active": True}
+    #         }
+    #     }
+    #
+    # def tearDown(self):
+    #     os.unlink(self.cfg_file.name)
+    #     self.delete_test_service()
+    #
+    # def reset_test_service(self):
+    #     """
+    #     Generates a new test service in Magpie app.
+    #     """
+    #     # First delete the service if it already exists, so it can be recreated
+    #     self.delete_test_service()
+    #
+    #     # Create service
+    #     data = {
+    #         "service_name": self.test_service_name,
+    #         "service_type": "thredds",
+    #         "service_sync_type": "thredds",
+    #         "service_url": f"http://localhost:9000/{self.test_service_name}",
+    #         "configuration": {}
+    #     }
+    #     resp = utils.test_request(self.url, "POST", "/services", cookies=self.cookies, json=data)
+    #     body = utils.check_response_basic_info(resp, 201, expected_method="POST")
+    #     return body["service"]["resource_id"]
 
     @classmethod
     def setUpClass(cls):
-        service1 = "Geoserver"
-        service2 = "Thredds"
-        cls.test_services = [service1, service2]
-        cls.res_root = {service1: "/api/workspaces/private/",
-                        service2: "/catalog/birdhouse/workspaces/private/"}
-        cls.sync_perm_name = {service1: ["read"],
-                              service2: ["read", "browse"]}
-        mapping_point_1 = "mapping_point_1"
-        cls.mapped_service = {service1: service2,
-                              service2: service1}
-        data = {
+        cls.grp = "administrators"
+        cls.usr = "admin"
+        cls.pwd = "qwertyqwerty"
+        cls.url = "http://localhost:2001/magpie"
+
+        data = {"user_name": cls.usr, "password": cls.pwd,
+                "provider_name": "ziggurat"}  # ziggurat = magpie_default_provider
+        resp = requests.post(f"{cls.url}/signin", json=data)
+        utils.check_response_basic_info(resp, 200, expected_method="POST")
+        cls.cookies = resp.cookies
+
+        cls.test_service_name = "catalog"
+
+    def setUp(self):
+        # Create test service
+        self.test_service_id = self.reset_test_service()
+
+        self.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)  # pylint: disable=R1732
+        self.data = {
             "services": {
-                "Magpie": {"active": True, "url": ""},
-                service1: {"active": True},
-                service2: {"active": True}
-            },
-            "sync_permissions": {
-                mapping_point_1: {
-                    "services": {
-                        service1: cls.res_root[service1],
-                        service2: cls.res_root[service2]
-                    },
-                    "permissions_mapping": [
-                        {
-                            service1: cls.sync_perm_name[service1],
-                            service2: cls.sync_perm_name[service2]
-                        }
-                    ]
-                }
+                "Magpie": {
+                    "active": True,
+                    "url": "http://localhost:2001/magpie",
+                    MAGPIE_ADMIN_USER_TAG: self.usr,
+                    MAGPIE_ADMIN_PASSWORD_TAG: self.pwd
+                },
+                "Thredds": {"active": True}
+            }
+        }
+
+    def tearDown(self):
+        os.unlink(self.cfg_file.name)
+        self.delete_test_service()
+
+    def reset_test_service(self):
+        """
+        Generates a new test service in Magpie app.
+        """
+        # First delete the service if it already exists, so it can be recreated
+        self.delete_test_service()
+
+        # Create service
+        data = {
+            "service_name": self.test_service_name,
+            "service_type": "thredds",
+            "service_sync_type": "thredds",
+            "service_url": f"http://localhost:9000/{self.test_service_name}",
+            "configuration": {}
+        }
+        resp = utils.test_request(self.url, "POST", "/services", cookies=self.cookies, json=data)
+        body = utils.check_response_basic_info(resp, 201, expected_method="POST")
+        return body["service"]["resource_id"]
+
+    def delete_test_service(self):
+        """
+        Deletes the test service if it exists.
+        """
+        resp = utils.test_request(self.url, "GET", "/services/" + self.test_service_name, cookies=self.cookies)
+        if resp.status_code == 200:
+            resp = utils.test_request(self.url, "DELETE", "/services/" + self.test_service_name, cookies=self.cookies)
+            utils.check_response_basic_info(resp, 200, expected_method="DELETE")
+        else:
+            utils.check_response_basic_info(resp, 404, expected_method="GET")
+
+    def create_test_resource(self, resource_name, resource_type, parent_id):
+        """
+        Creates a test resource in Magpie app.
+        """
+        data = {
+            "resource_name": resource_name,
+            "resource_display_name": resource_name,
+            "resource_type": resource_type,
+            "parent_id": parent_id
+        }
+        resp = utils.test_request(self.url, "POST", "/resources", cookies=self.cookies, json=data)
+        body = utils.check_response_basic_info(resp, 201, expected_method="POST")
+        return body["resource"]["resource_id"]
+
+    def create_test_permission(self, resource_id, permission, user_name, group_name):
+        """
+        Creates a test permission in Magpie app.
+        """
+        data = {"permission": permission}
+        if user_name:
+            resp = utils.test_request(self.url, "POST", f"/users/{user_name}/resources/{resource_id}/permissions",
+                                      cookies=self.cookies, json=data)
+            utils.check_response_basic_info(resp, 201, expected_method="POST")
+        if group_name:
+            resp = utils.test_request(self.url, "POST", f"/groups/{group_name}/resources/{resource_id}/permissions",
+                                      cookies=self.cookies, json=data)
+            utils.check_response_basic_info(resp, 201, expected_method="POST")
+
+    def delete_test_permission(self, resource_id, permission, user_name, group_name):
+        """
+        Creates a test permission in Magpie app.
+        """
+        data = {"permission": permission}
+        if user_name:
+            resp = utils.test_request(self.url, "DELETE", f"/users/{user_name}/resources/{resource_id}/permissions",
+                                      cookies=self.cookies, json=data)
+            utils.check_response_basic_info(resp, 200, expected_method="DELETE")
+        if group_name:
+            resp = utils.test_request(self.url, "DELETE", f"/groups/{group_name}/resources/{resource_id}/permissions",
+                                      cookies=self.cookies, json=data)
+            utils.check_response_basic_info(resp, 200, expected_method="DELETE")
+
+    def check_user_permissions(self, resource_id, expected_permissions):
+        """
+        Checks if the test user has the `expected_permissions` on the `resource_id`.
+        """
+        resp = utils.test_request(self.url, "GET", f"/users/{self.usr}/resources/{resource_id}/permissions",
+                                  cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        assert body["permission_names"] == expected_permissions
+
+    def check_group_permissions(self, resource_id, expected_permissions):
+        """
+        Checks if the test group has the `expected_permissions` on the `resource_id`.
+        """
+        resp = utils.test_request(self.url, "GET", f"/groups/{self.grp}/resources/{resource_id}/permissions",
+                                  cookies=self.cookies)
+        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
+        assert body["permission_names"] == expected_permissions
+
+    def test_webhooks_no_tokens(self):
+        """
+        Tests the permissions synchronization of resources that don't use any tokens in the config.
+        """
+        self.data["sync_permissions"] = {
+            "user_workspace": {
+                "services": {
+                    "thredds": {
+                        "Thredds0": [
+                            {"name": self.test_service_name, "type": "service"},
+                            {"name": "private-dir", "type": "directory"},
+                            {"name": "workspace:file0", "type": "file"}],
+                        "Thredds1": [
+                            {"name": self.test_service_name, "type": "service"},
+                            {"name": "private-dir", "type": "directory"},
+                            {"name": "workspace:file1", "type": "file"}],
+                        "Thredds2": [
+                            {"name": self.test_service_name, "type": "service"},
+                            {"name": "workspace:file2", "type": "file"}],
+                        "Thredds3": [
+                            {"name": self.test_service_name, "type": "service"},
+                            {"name": "workspace:file3", "type": "file"}],
+                        "Thredds4": [
+                            {"name": self.test_service_name, "type": "service"},
+                            {"name": "workspace:file4", "type": "file"}]}},
+                "permissions_mapping": ["Thredds0 : read <-> Thredds1 : [read, write]",
+                                        # partial duplicate with previous line, should still work
+                                        "Thredds0 : read -> Thredds1 : write",
+                                        "Thredds1 : [read, write] -> Thredds2 : read",
+                                        "Thredds3 : read <- Thredds2 : read",
+                                        "Thredds4 : read -> Thredds1 : [write]"]
+            }
+        }
+        with self.cfg_file as f:
+            f.write(yaml.safe_dump(self.data))
+        app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
+        # Recreate new magpie service instance with new config
+        ServiceFactory().create_service("Magpie")
+
+        with contextlib.ExitStack() as stack:
+            # stack.enter_context(mock.patch("cowbird.services.impl.magpie.Magpie",
+            #                                side_effect=utils.MockMagpieService))
+            stack.enter_context(mock.patch("cowbird.services.impl.thredds.Thredds",
+                                           side_effect=utils.MockAnyService))
+            # magpie = ServiceFactory().get_service("Magpie")
+
+            # Create test resources
+            private_dir_res_id = self.create_test_resource("private-dir", "directory", self.test_service_id)
+            res_ids = [self.create_test_resource(f"workspace:file{i}", "file", private_dir_res_id) for i in range(2)]
+            res_ids += [self.create_test_resource(f"workspace:file{i}", "file", self.test_service_id)
+                        for i in range(2, 5)]
+
+            expected_read_permission = ["read", "read-allow-recursive"]
+            expected_write_permission = ["write", "write-allow-recursive"]
+            expected_full_permission = expected_read_permission + expected_write_permission
+
+            for i in range(5):
+                self.check_user_permissions(res_ids[i], [])
+                self.check_group_permissions(res_ids[i], [])
+
+            data = {
+                "event": ValidOperations.CreateOperation.value,
+                "service_name": "thredds",
+                "resource_id": str(res_ids[0]),
+                "resource_full_name": f"/{self.test_service_name}/private-dir/workspace:file0",
+                "name": "read",
+                "access": "allow",
+                "scope": "recursive",
+                "user": self.usr,
+                "group": self.grp
             }
 
+            # Check create permissions (0 <-> 1 towards right)
+            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
+            utils.check_response_basic_info(resp, 200, expected_method="POST")
+            self.check_user_permissions(res_ids[1], expected_full_permission)
+            self.check_group_permissions(res_ids[1], expected_full_permission)
+
+            # Check create permissions (0 <-> 1 towards left, and 1 -> 2)
+            data["resource_id"] = str(res_ids[1])
+            data["resource_full_name"] = f"/{self.test_service_name}/private-dir/workspace:file1"
+            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
+            utils.check_response_basic_info(resp, 200, expected_method="POST")
+            for i in [0, 2]:
+                self.check_user_permissions(res_ids[i], expected_read_permission)
+                self.check_group_permissions(res_ids[i], expected_read_permission)
+
+            # Check create permissions (3 <- 2)
+            data["resource_id"] = str(res_ids[2])
+            data["resource_full_name"] = f"/{self.test_service_name}/private-dir/workspace:file2"
+            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
+            utils.check_response_basic_info(resp, 200, expected_method="POST")
+            self.check_user_permissions(res_ids[3], expected_read_permission)
+            self.check_group_permissions(res_ids[3], expected_read_permission)
+
+            # Force create the permission 4, required for the following test.
+            self.create_test_permission(res_ids[4], {"name": "read", "access": "allow", "scope": "recursive"},
+                                        self.usr, self.grp)
+
+            # Delete permissions
+            data["event"] = ValidOperations.DeleteOperation.value
+
+            # Check delete permissions (0 <-> 1 towards right), read permission 1 only should be deleted and
+            # write permission 1 should not be deleted, since there is also the mapping 4 -> 1(write),
+            # and the permission 4 still exists.
+            data["resource_id"] = str(res_ids[0])
+            data["resource_full_name"] = f"/{self.test_service_name}/private-dir/workspace:file0"
+            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
+            utils.check_response_basic_info(resp, 200, expected_method="POST")
+            self.check_user_permissions(res_ids[1], expected_write_permission)
+            self.check_group_permissions(res_ids[1], expected_write_permission)
+
+            # Force delete the permission 4.
+            self.delete_test_permission(res_ids[4], {"name": "read", "access": "allow", "scope": "recursive"},
+                                        self.usr, self.grp)
+            # Check delete permissions (0 <-> 1 towards right), which should now work, since permission 4 was deleted.
+            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
+            utils.check_response_basic_info(resp, 200, expected_method="POST")
+            self.check_user_permissions(res_ids[1], [])
+            self.check_group_permissions(res_ids[1], [])
+
+            # Check delete permissions (0 <-> 1 towards left and 1 -> 2)
+            data["resource_id"] = str(res_ids[1])
+            data["resource_full_name"] = f"/{self.test_service_name}/private-dir/workspace:file1"
+            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
+            utils.check_response_basic_info(resp, 200, expected_method="POST")
+            for i in [0, 2]:
+                self.check_user_permissions(res_ids[i], [])
+                self.check_group_permissions(res_ids[i], [])
+
+            # Check delete permissions (3 <- 2)
+            data["resource_id"] = str(res_ids[2])
+            data["resource_full_name"] = f"/{self.test_service_name}/private-dir/workspace:file2"
+            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
+            utils.check_response_basic_info(resp, 200, expected_method="POST")
+            self.check_user_permissions(res_ids[3], [])
+            self.check_group_permissions(res_ids[3], [])
+
+    def test_webhooks_valid_tokens(self):
+        """
+        Tests the permissions synchronization of resources that all use valid tokens in the config.
+        """
+        self.data["sync_permissions"] = {
+            "user_workspace": {
+                "services": {
+                    "thredds": {
+                        "Thredds_file_src": [
+                            {"name": self.test_service_name, "type": "service"},
+                            {"name": "private", "type": "directory"},
+                            {"name": MULTI_TOKEN, "type": "directory"},
+                            {"name": '{file}', "type": "file"}],
+                        "Thredds_file_target": [
+                            {"name": self.test_service_name, "type": "service"},
+                            {"name": MULTI_TOKEN, "type": "directory"},
+                            {"name": '{file}', "type": "file"}],
+                        "Thredds_dir_src": [
+                            {"name": self.test_service_name, "type": "service"},
+                            {"name": "private", "type": "directory"},
+                            {"name": MULTI_TOKEN, "type": "directory"}],
+                        "Thredds_dir_target": [
+                            {"name": self.test_service_name, "type": "service"},
+                            {"name": MULTI_TOKEN, "type": "directory"}],
+                        "Thredds_named_dir_src": [
+                            {"name": self.test_service_name, "type": "service"},
+                            {"name": "named_dir1", "type": "directory"},
+                            {"name": "{dir1}", "type": "directory"},
+                            {"name": "{dir2}", "type": "directory"}],
+                        "Thredds_named_dir_target": [
+                            {"name": self.test_service_name, "type": "service"},
+                            {"name": "named_dir2", "type": "directory"},
+                            {"name": "{dir2}", "type": "directory"},
+                            {"name": "{dir1}", "type": "directory"}]}},
+                "permissions_mapping": ["Thredds_file_src : read <-> Thredds_file_target : read",
+                                        "Thredds_dir_src : read <-> Thredds_dir_target : read",
+                                        "Thredds_named_dir_src : read <-> Thredds_named_dir_target : read"]
+            }
         }
-        cls.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)
-        with cls.cfg_file as f:
-            f.write(yaml.safe_dump(data))
-        cls.app = utils.get_test_app(settings={"cowbird.config_path": cls.cfg_file.name})
+        with self.cfg_file as f:
+            f.write(yaml.safe_dump(self.data))
+        app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
+        # Recreate new magpie service instance with new config
+        ServiceFactory().create_service("Magpie")
 
-    @classmethod
-    def tearDownClass(cls):
-        utils.clear_services_instances()
-        os.unlink(cls.cfg_file.name)
-
-    def test_sync(self):
-        """
-        This test parses the sync config and checks that when a permission is created in the `PermissionSynchronizer`
-        the proper permission is created for every synchronized service.
-        The `PermissionSynchronizer` `create_permission` function will first find if the applied permission exists in
-        the config. Then for every configured service it will obtain the equivalent permission for this service and
-        apply it to the mocked Magpie service. The `outbound_perm` dict of the mocked Magpie service is then checked
-        to validate that every permission that should have been created in Magpie exists.
-        """
         with contextlib.ExitStack() as stack:
-            stack.enter_context(mock.patch("cowbird.services.impl.magpie.Magpie",
-                                           side_effect=utils.MockMagpieService))
-            stack.enter_context(mock.patch("cowbird.services.impl.geoserver.Geoserver",
-                                           side_effect=utils.MockAnyService))
             stack.enter_context(mock.patch("cowbird.services.impl.thredds.Thredds",
                                            side_effect=utils.MockAnyService))
 
-            magpie = ServiceFactory().get_service("Magpie")
+            # Create test resources
+            src1_res_id = self.create_test_resource("private", "directory", self.test_service_id)
+            parent_res_id = self.create_test_resource("dir1", "directory", src1_res_id)
+            parent_res_id = self.create_test_resource("dir2", "directory", parent_res_id)
+            src2_res_id = self.create_test_resource("workspace_file", "file", parent_res_id)
 
-            resource_name = "resource1"
-            # Loop over every service having a permission that must be synchronized to another one
-            for svc in self.test_services:
-                for perm_name in self.sync_perm_name[svc]:
-                    # Create the permission for this service that would be provided by `Magpie` as a hook
-                    permission = Permission(
-                        service_name=svc,
-                        resource_id="0",
-                        resource_full_name=self.res_root[svc] + resource_name,
-                        name=perm_name,
-                        access="string1",
-                        scope="string2",
-                        user="string3")
+            target1_res_id = self.test_service_id
+            parent_res_id = self.create_test_resource("dir1", "directory", self.test_service_id)
+            parent_res_id = self.create_test_resource("dir2", "directory", parent_res_id)
+            target2_res_id = self.create_test_resource("workspace_file", "file", parent_res_id)
 
-                    # Apply this permission to the synchronizer (this is the function that is tested!)
-                    PermissionSynchronizer(magpie).create_permission(permission)
+            parent_res_id = self.create_test_resource("named_dir1", "directory", self.test_service_id)
+            parent_res_id = self.create_test_resource("dir1", "directory", parent_res_id)
+            src3_res_id = self.create_test_resource("dir2", "directory", parent_res_id)
+            parent_res_id = self.create_test_resource("named_dir2", "directory", self.test_service_id)
+            parent_res_id = self.create_test_resource("dir2", "directory", parent_res_id)
+            target3_res_id = self.create_test_resource("dir1", "directory", parent_res_id)
 
-                    # `magpie`, which is mocked, will store every permission request that should have been done to the
-                    # Magpie service in the `outbound_perms` dict.
-                    assert len(magpie.json()["outbound_perms"]) == len(self.sync_perm_name[self.mapped_service[svc]])
+            data = {
+                "event": ValidOperations.CreateOperation.value,
+                "service_name": "thredds",
+                "resource_id": str(src1_res_id),
+                "resource_full_name": f"/{self.test_service_name}/private",
+                "name": "read",
+                "access": "allow",
+                "scope": "recursive",
+                "user": self.usr,
+                "group": None
+            }
 
-                    # Validate that the mocked `magpie` instance has received a permission request for every mapped
-                    # permission
-                    for idx, mapped_perm_name in enumerate(self.sync_perm_name[self.mapped_service[svc]]):
-                        outbound_perm = magpie.json()["outbound_perms"][idx]
-                        assert outbound_perm.service_name == self.mapped_service[svc]
-                        assert outbound_perm.resource_id == utils.MockAnyService.ResourceId
-                        assert outbound_perm.resource_full_name == \
-                            self.res_root[self.mapped_service[svc]] + resource_name
-                        assert outbound_perm.name == mapped_perm_name
-                        assert outbound_perm.access == permission.access
-                        assert outbound_perm.scope == permission.scope
-                        assert outbound_perm.user == permission.user
+            # Create permissions
+            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
+            utils.check_response_basic_info(resp, 200, expected_method="POST")
 
-                    # This is the second function being tested which should make remove permission requests to `magpie`
-                    # for every mapped permission
-                    PermissionSynchronizer(magpie).delete_permission(permission)
+            # Check if only corresponding permissions were created
+            self.check_user_permissions(target1_res_id, ["read", "read-allow-recursive"])
+            self.check_user_permissions(target2_res_id, [])
 
-                    # Again the mocked `magpie` instance should remove every permission from its `outbound_perms` rather
-                    # than making the remove permission request to the Magpie service.
-                    assert len(magpie.json()["outbound_perms"]) == 0
+            # Create and check permissions with 2nd mapping case
+            data["resource_id"] = str(src2_res_id)
+            data["resource_full_name"] = f"/{self.test_service_name}/private/dir1/dir2/workspace_file"
+
+            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
+            utils.check_response_basic_info(resp, 200, expected_method="POST")
+            self.check_user_permissions(target2_res_id, ["read", "read-allow-recursive"])
+
+            # Create and check permissions with 3rd mapping case
+            data["resource_id"] = str(src3_res_id)
+            data["resource_full_name"] = f"/{self.test_service_name}/named_dir1/dir1/dir2"
+
+            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
+            utils.check_response_basic_info(resp, 200, expected_method="POST")
+            self.check_user_permissions(target3_res_id, ["read", "read-allow-recursive"])
+
+    def test_webhooks_invalid_multimatch(self):
+        """
+        Tests the invalid case where a resource in the incoming webhook matches multiple resource keys in the config.
+        """
+        self.data["sync_permissions"] = {
+            "user_workspace": {
+                "services": {
+                    "thredds": {
+                        "Thredds_match1": [
+                            {"name": self.test_service_name, "type": "service"},
+                            {"name": "{dir1}", "type": "directory"},
+                            {"name": "{dir2}", "type": "directory"}],
+                        "Thredds_match2": [
+                            {"name": self.test_service_name, "type": "service"},
+                            {"name": "{dir2}", "type": "directory"},
+                            {"name": "{dir1}", "type": "directory"}]}},
+                "permissions_mapping": ["Thredds_match1 : read -> Thredds_match2 : read"]
+            }
+        }
+        with self.cfg_file as f:
+            f.write(yaml.safe_dump(self.data))
+        app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
+        # Recreate new magpie service instance with new config
+        ServiceFactory().create_service("Magpie")
+
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(mock.patch("cowbird.services.impl.thredds.Thredds",
+                                           side_effect=utils.MockAnyService))
+            # Create test resources
+            parent_id = self.create_test_resource("dir1", "directory", self.test_service_id)
+            src_res_id = self.create_test_resource("dir2", "directory", parent_id)
+
+            data = {
+                "event": ValidOperations.CreateOperation.value,
+                "service_name": "thredds",
+                "resource_id": str(src_res_id),
+                "resource_full_name": f"/{self.test_service_name}/dir1/dir2",
+                "name": "read",
+                "access": "allow",
+                "scope": "recursive",
+                "user": self.usr,
+                "group": None
+            }
+
+            # Try creating permissions
+            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data, expect_errors=True)
+            # Should create an error since input resource to synchronize can match with both resources in config
+            utils.check_response_basic_info(resp, 500, expected_method="POST")
+
+    def test_webhooks_no_match(self):
+        """
+        Tests the invalid case where a resource found in the incoming webhook finds no match in the config.
+        """
+        self.data["sync_permissions"] = {
+            "user_workspace": {
+                "services": {
+                    "thredds": {
+                        "Thredds_match1": [
+                            {"name": self.test_service_name, "type": "service"},
+                            {"name": MULTI_TOKEN, "type": "directory"}],
+                        "Thredds_match2": [
+                            {"name": self.test_service_name, "type": "service"},
+                            {"name": "dir", "type": "directory"},
+                            {"name": MULTI_TOKEN, "type": "directory"}]}},
+                "permissions_mapping": ["Thredds_match1 : read -> Thredds_match2 : read"]
+            }
+        }
+        with self.cfg_file as f:
+            f.write(yaml.safe_dump(self.data))
+        app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
+        # Recreate new magpie service instance with new config
+        ServiceFactory().create_service("Magpie")
+
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(mock.patch("cowbird.services.impl.thredds.Thredds",
+                                           side_effect=utils.MockAnyService))
+            # Create test resources
+            src_res_id = self.create_test_resource("dir", "file", self.test_service_id)
+
+            data = {
+                "event": ValidOperations.CreateOperation.value,
+                "service_name": "thredds",
+                "resource_id": str(src_res_id),
+                "resource_full_name": f"/{self.test_service_name}/dir",
+                "name": "read",
+                "access": "allow",
+                "scope": "recursive",
+                "user": self.usr,
+                "group": None
+            }
+
+            # Try creating permissions
+            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data, expect_errors=True)
+            # Should create an error since input resource doesn't match the type of resources found in config
+            utils.check_response_basic_info(resp, 500, expected_method="POST")
 
 
 def check_config(config_data, expected_exception_type=None):

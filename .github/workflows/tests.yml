@@ -49,6 +49,36 @@ jobs:
         image: mongo:3.4.23  # DockerHub
         ports:
           - "27017:27017"
+      magpie:
+        image: pavics/magpie:latest
+        volumes:
+          - docker/config/magpie/magpie.ini:/opt/local/src/magpie/config/magpie.ini
+          - docker/config/magpie/config.dev.yml:/config.yml
+        env:
+          FORWARDED_ALLOW_IPS: "*"
+          MAGPIE_CONFIG_PATH: /config.yml
+          # Need to comment the magpie.url in the magpie ini file as it has precedence over this variable
+          MAGPIE_SECRET: itzaseekrit
+          MAGPIE_ADMIN_GROUP: administrators
+          MAGPIE_ADMIN_USER: $MAGPIE_ADMIN_USER
+          MAGPIE_ADMIN_PASSWORD: $MAGPIE_ADMIN_PASSWORD
+          MAGPIE_USER_GROUP: users
+          MAGPIE_ANONYMOUS_USER: anonymous
+          MAGPIE_PORT: 2001
+          MAGPIE_LOG_LEVEL: INFO
+          TWITCHER_PROTECTED_PATH: /twitcher/ows/proxy
+          POSTGRES_USER: magpie
+          POSTGRES_PASSWORD: qwerty
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: magpie
+          MAGPIE_POSTGRES_USERNAME: magpie
+          MAGPIE_POSTGRES_PASSWORD: qwerty
+          MAGPIE_POSTGRES_DB: magpie
+          MAGPIE_POSTGRES_PORT: 5432
+          HOSTNAME: 0.0.0.0
+          MAGPIE_URL: http://0.0.0.0:2001/magpie  # change this url depending of your setup
+          POSTGRES_HOST: 0.0.0.0
+          MAGPIE_POSTGRES_HOST: 0.0.0.0
     strategy:
       matrix:
         os: [ubuntu-latest]
