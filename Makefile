@@ -451,6 +451,10 @@ docker-up-dev: docker-build   ## run all dependencies containers using compose r
 docker-up-dev-bg: docker-build   ## run all dependencies containers in background, using compose ready to be used by a local cowbird
 	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_DEV_COMPOSES) up -d
 
+.PHONY: docker-up-dev-logs
+docker-up-dev-bg:   ## run all dependencies containers in background, using compose ready to be used by a local cowbird
+	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_DEV_COMPOSES) logs
+
 .PHONY: docker-down
 docker-down:  ## stop running containers and remove them
 	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_TEST_COMPOSES) down || true
