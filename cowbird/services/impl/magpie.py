@@ -165,7 +165,13 @@ class Magpie(Service):
             resp = requests.post(f"{self.url}/signin", json=data)
         except Exception as e:
             # TODO: remove temporary logger info
-            raise RuntimeError(f"Failed to sign in to Magpie (url: `{self.url}`) with user `{self.admin_user}` and "
-                               f"password `{self.admin_password}`. Exception : {e}")
+            from cowbird.config import get_all_configs
+            from cowbird.utils import get_config_path
+            config_path = get_config_path()
+            svcs_configs = get_all_configs(config_path, "services", allow_missing=True)
+            raise RuntimeError(f"Failed to sign in to Magpie (url: `{self.url}`) with user `{self.admin_user}`. "
+                               f"Exception : {e}. "
+                               f"config_path : {config_path}"
+                               f" Configs : {svcs_configs}")
 
         return resp.cookies
