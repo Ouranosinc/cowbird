@@ -34,6 +34,11 @@ class ServiceFactory(metaclass=SingletonMeta):
                     LOGGER.warning("Ignoring a duplicate service configuration for [%s].", name)
                 else:
                     self.services_cfg[name] = cfg
+
+        raise RuntimeError(f"ServiceFactory exception "
+                           f"config_path : {config_path}"
+                           f" Configs : {svcs_configs} "
+                           f"self.services_cfg : {self.services_cfg}")
         self.services = {}
         LOGGER.info("Services config : [%s]", ", ".join([f"{name} [{cfg.get('active', False)}]"
                                                          for name, cfg in self.services_cfg.items()]))
