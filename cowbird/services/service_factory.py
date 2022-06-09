@@ -34,11 +34,6 @@ class ServiceFactory(metaclass=SingletonMeta):
                     LOGGER.warning("Ignoring a duplicate service configuration for [%s].", name)
                 else:
                     self.services_cfg[name] = cfg
-
-        raise RuntimeError(f"ServiceFactory exception "
-                           f"config_path : {config_path}"
-                           f" Configs : {svcs_configs} "
-                           f"self.services_cfg : {self.services_cfg}")
         self.services = {}
         LOGGER.info("Services config : [%s]", ", ".join([f"{name} [{cfg.get('active', False)}]"
                                                          for name, cfg in self.services_cfg.items()]))
@@ -54,7 +49,14 @@ class ServiceFactory(metaclass=SingletonMeta):
            self.services_cfg[name].get("active", False):
             module = importlib.import_module(".".join(["cowbird.services.impl", name.lower()]))
             cls = getattr(module, name)
+
+            if name == "Magpie":
+                raise RuntimeError(f"ServiceFactory exception for {name} "
+                                   f"settings : {self.settings}\n"
+                                   f" kwargs : {dict(**self.services_cfg[name])} ")
+
             svc = cls(settings=self.settings, name=name, **self.services_cfg[name])
+
         self.services[name] = svc
         return svc
 
