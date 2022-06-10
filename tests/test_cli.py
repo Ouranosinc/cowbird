@@ -14,6 +14,7 @@ import pytest
 import yaml
 
 from cowbird.cli import main as cowbird_cli
+from cowbird.config import get_all_configs
 from tests.utils import TEST_CFG_FILE, TEST_INI_FILE
 
 KNOWN_HELPERS = [
@@ -63,8 +64,12 @@ def test_cowbird_helper_as_python():
 @pytest.mark.cli
 def test_cowbird_services_list_with_formats():
     override = {"COWBIRD_CONFIG_PATH": TEST_CFG_FILE}
-    with open(TEST_CFG_FILE, "r", encoding="utf-8") as f:
-        cfg = yaml.safe_load(f)
+    # with open(TEST_CFG_FILE, "r", encoding="utf-8") as f:
+    #     cfg = yaml.safe_load(f)
+    svcs_config = get_all_configs(TEST_CFG_FILE, "services")[0]
+    # TODO: Voir comment setter les variables d<environnement (utiliser python-dotenv + .env.example?)
+    #   woud probably work, but maybe check if cowbird works in general, or if those variables are also never set
+    #   if cowbird fails too, maybe do it elsewhere?
     with mock.patch.dict("os.environ", override):
         out_lines = run_and_get_output(f"cowbird services list -f yaml -c '{TEST_INI_FILE}'")
         assert out_lines[0] == "services:"
@@ -80,10 +85,10 @@ def test_cowbird_services_list_with_formats():
         active_services = [line.strip("|").strip(" ") for line in out_lines[3:-1]]
         # Every active service should be in test data
         for service in active_services:
-            assert service in cfg["services"]
-            assert cfg["services"][service]["active"]
+            assert service in svcs_config
+            assert svcs_config[service]["active"]
         # Every activated test service should be in the active services
-        for test_service, config in cfg["services"].items():
+        for test_service, config in svcs_config.items():
             if config["active"]:
                 assert test_service in active_services
             else:

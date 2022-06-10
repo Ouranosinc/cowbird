@@ -180,6 +180,9 @@ class TestSyncPermissions(unittest.TestCase):
 
         cls.test_service_name = "catalog"
 
+        # Reset services instances in case any is left from other test cases
+        utils.clear_services_instances()
+
     def setUp(self):
         # Create test service
         self.test_service_id = self.reset_test_service()
@@ -198,6 +201,7 @@ class TestSyncPermissions(unittest.TestCase):
         }
 
     def tearDown(self):
+        utils.clear_services_instances()
         os.unlink(self.cfg_file.name)
         self.delete_test_service()
 

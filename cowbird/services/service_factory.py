@@ -49,14 +49,7 @@ class ServiceFactory(metaclass=SingletonMeta):
            self.services_cfg[name].get("active", False):
             module = importlib.import_module(".".join(["cowbird.services.impl", name.lower()]))
             cls = getattr(module, name)
-
-            if name == "Magpie":
-                raise RuntimeError(f"ServiceFactory exception for {name} "
-                                   f"settings : {self.settings}\n"
-                                   f" kwargs : {dict(**self.services_cfg[name])} ")
-
             svc = cls(settings=self.settings, name=name, **self.services_cfg[name])
-
         self.services[name] = svc
         return svc
 
