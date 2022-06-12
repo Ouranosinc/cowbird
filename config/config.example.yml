@@ -48,10 +48,6 @@ services:
     active: true
     priority: 1
     workspace_dir: ${WORKSPACE_DIR}
-  Weaver:
-    active: true
-  Wps-Outputs:
-    active: true
 
 # [Required] This section defines how to synchronize permissions between services when they share resources
 # This is used only for the synchronization of permissions between Magpie services/resources.
@@ -135,7 +131,7 @@ sync_permissions:
       - "nginx_workspace : write <-> thredds_workspace : write"
   weaver_outputs:
     services:
-      weaver:
+      wps:
         process_description:
           - name: processes
             type: route
@@ -162,7 +158,6 @@ sync_permissions:
             type: route
           - name: outputs
             type: route
-      wps:
         weaver_wps_outputs:
           - name: weaver
             type: route
