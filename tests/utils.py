@@ -98,16 +98,7 @@ class MockMagpieService(Service):
         super(MockMagpieService, self).__init__(settings, name, **kwargs)
         self.event_users = []
         self.event_perms = []
-        # TODO: outbound_perms only used in upcoming permissions_synchronizer tests
-        # Figure out how to adapt it, it should use the data sent by the PATCH /permissions request
-        # get_user/group_permissions() shoudl return some of the data from PATCH /permissions, filtered by user/grp
         self.outbound_perms = []
-
-        # TODO: Figure out if Mocking is relevant
-        #  we have to reimplement a structure that holds all services and their resources, and
-        #  get_resources_tree() + get_user_permissions() + get_group_permissions() that to return the same format as the
-        #  actual format returned by Magpie
-        # Should we then use a webapp magpie...???
 
     def json(self):
         return {"name": self.name,

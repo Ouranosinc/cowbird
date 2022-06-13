@@ -11,159 +11,21 @@ import yaml
 from cowbird.api.schemas import ValidOperations
 from cowbird.config import MULTI_TOKEN, ConfigErrorInvalidResourceKey, ConfigErrorInvalidServiceKey, \
     ConfigErrorInvalidTokens, ConfigError
-from cowbird.permissions_synchronizer import Permission, PermissionSynchronizer
 from cowbird.services import ServiceFactory
 from cowbird.services.impl.magpie import MAGPIE_ADMIN_PASSWORD_TAG, MAGPIE_ADMIN_USER_TAG
 from tests import utils
 
-# service1 = "Geoserver"
-# service2 = "Thredds"
-# cls.test_services = [service1, service2]
-# cls.res_root = {service1: "/api/workspaces/private/",
-#                 service2: "/catalog/birdhouse/workspaces/private/"}
-# cls.sync_perm_name = {service1: ["read"],
-#                       service2: ["read", "browse"]}
-# mapping_point_1 = "mapping_point_1"
-# cls.mapped_service = {service1: service2,
-#                       service2: service1}
-# data = {
-# service1: {"active": True},
-# service2: {"active": True}
-# },
-# "sync_permissions": {
-# mapping_point_1: {
-#     "services": {
-#         service1: cls.res_root[service1],
-#         service2: cls.res_root[service2]
-#     },
-#     "permissions_mapping": [
-#         {
-#             service1: cls.sync_perm_name[service1],
-#             service2: cls.sync_perm_name[service2]
-#         }
-#     ]
-# }
-# def test_sync(self):
-#     with contextlib.ExitStack() as stack:
-#         stack.enter_context(mock.patch("cowbird.services.impl.magpie.Magpie",
-#                                        side_effect=utils.MockMagpieService))
-#         stack.enter_context(mock.patch("cowbird.services.impl.geoserver.Geoserver",
-#                                        side_effect=utils.MockAnyService))
-#         stack.enter_context(mock.patch("cowbird.services.impl.thredds.Thredds",
-#                                        side_effect=utils.MockAnyService))
-#
-#         magpie = ServiceFactory().get_service("Magpie")
-#
-#         resource_name = "resource1"
-#         # Loop over every service having a permission that must be synchronized to another one
-#         for svc in self.test_services:
-#             for perm_name in self.sync_perm_name[svc]:
-#                 # Create the permission for this service that would be provided by `Magpie` as a hook
-#                 permission = Permission(
-#                     service_name=svc,
-#                     resource_id="0",
-#                     resource_full_name=self.res_root[svc] + resource_name,
-#                     name=perm_name,
-#                     access="string1",
-#                     scope="string2",
-#                     user="string3")
-#
-#                 # Apply this permission to the synchronizer (this is the function that is tested!)
-#                 PermissionSynchronizer(magpie).create_permission(permission)
-#
-#                 # `magpie`, which is mocked, will store every permission request that should have been done to the
-#                 # Magpie service in the `outbound_perms` dict.
-#                 assert len(magpie.json()["outbound_perms"]) == len(self.sync_perm_name[self.mapped_service[svc]])
-#
-#                 # Validate that the mocked `magpie` instance has received a permission request for every mapped
-#                 # permission
-#                 for idx, mapped_perm_name in enumerate(self.sync_perm_name[self.mapped_service[svc]]):
-# Geoserver/Thredds, [read, write, ...]
-#                     outbound_perm = magpie.json()["outbound_perms"][idx]
-#                     assert outbound_perm.service_name == self.mapped_service[svc]
-#                     assert outbound_perm.resource_id == utils.MockAnyService.ResourceId
-#                     assert outbound_perm.resource_full_name == \
-#                         self.res_root[self.mapped_service[svc]] + resource_name
-#                     assert outbound_perm.name == mapped_perm_name
-#                     assert outbound_perm.access == permission.access
-#                     assert outbound_perm.scope == permission.scope
-#                     assert outbound_perm.user == permission.user
-#
-#                 # This is the second function being tested which should make remove permission requests to `magpie`
-#                 # for every mapped permission
-#                 PermissionSynchronizer(magpie).delete_permission(permission)
-#
-#                 # Again the mocked `magpie` instance should remove every permission from its `outbound_perms` rather
-#                 # than making the remove permission request to the Magpie service.
-#                 assert len(magpie.json()["outbound_perms"]) == 0
 
-# Summary of above : MockMagpie.outbound_perms = [Permission]
-#           Permission (object) contains all the info, check that all is valid
-# For all permissions found in the sync_config, trigger a create_permission, with that permission, and check that all synched permission exists after
-#      Then, delete the same permission, and check that no permission are left in MockMagpie
-
-# New method :
-# Instead of doing the for, call each create_permission manually, to have more control on what happens, and verify info
-# TODO: Adapt format of outbound_perm, since before it received the permission to create (the target), but now it receives a full
-#       list of segments, with the type of each, and the permission for the last one
-
-
-# @pytest.mark.permissions
+@pytest.mark.permissions
 @pytest.mark.magpie
-#@pytest.mark.online
 class TestSyncPermissions(unittest.TestCase):
     """
     Test permissions synchronization.
 
     These tests parse the sync config and checks that when a permission is created/deleted in the
     `PermissionSynchronizer` the proper permissions are created/deleted for every synchronized service.
-    The tests use a mocked version of Magpie.
+    These tests require a running instance of Magpie.
     """
-
-    # @classmethod
-    # def setUpClass(cls):
-    #     cls.grp = "administrators"
-    #     cls.usr = "admin"
-    #     cls.test_service_name = "catalog"
-    #
-    # @classmethod
-    # def tearDownClass(cls):
-    #     utils.clear_services_instances()
-    #
-    # def setUp(self):
-    #     # Create test service
-    #     self.test_service_id = self.reset_test_service()
-    #
-    #     self.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)  # pylint: disable=R1732
-    #     self.data = {
-    #         "services": {
-    #             "Magpie": {"active": True, "url": ""},
-    #             "Thredds": {"active": True}
-    #         }
-    #     }
-    #
-    # def tearDown(self):
-    #     os.unlink(self.cfg_file.name)
-    #     self.delete_test_service()
-    #
-    # def reset_test_service(self):
-    #     """
-    #     Generates a new test service in Magpie app.
-    #     """
-    #     # First delete the service if it already exists, so it can be recreated
-    #     self.delete_test_service()
-    #
-    #     # Create service
-    #     data = {
-    #         "service_name": self.test_service_name,
-    #         "service_type": "thredds",
-    #         "service_sync_type": "thredds",
-    #         "service_url": f"http://localhost:9000/{self.test_service_name}",
-    #         "configuration": {}
-    #     }
-    #     resp = utils.test_request(self.url, "POST", "/services", cookies=self.cookies, json=data)
-    #     body = utils.check_response_basic_info(resp, 201, expected_method="POST")
-    #     return body["service"]["resource_id"]
 
     @classmethod
     def setUpClass(cls):

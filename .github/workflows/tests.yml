@@ -29,26 +29,6 @@ jobs:
     env:
       # override make command to install directly in active python
       CONDA_COMMAND: ""
-#    services:
-#      # Label used to access the service container
-#      postgres:
-#        image: postgres  # DockerHub
-#        env:
-#          POSTGRES_USER: postgres
-#          POSTGRES_PASSWORD: qwerty
-#        ports:
-#          - "5432:5432"
-#        # Set health checks to wait until postgres has started
-#        options: >-
-#          --health-cmd pg_isready
-#          --health-interval 10s
-#          --health-timeout 5s
-#          --health-retries 5
-#      # Label used to access the service container
-#      mongodb:
-#        image: mongo:3.4.23  # DockerHub
-#        ports:
-#          - "27017:27017"
     strategy:
       matrix:
         os: [ubuntu-latest]
@@ -85,10 +65,8 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-#      - name: Start Magpie instance for magpie tests
-#        run: docker-compose --env-file ./docker/.env.example -f ./docker/docker-compose.example.yml -f ./docker/docker-compose.dev.example.yml up magpie
       - name: Start containers
-        run: make docker-up-dev-bg
+        run: make docker-up-test
       - name: Install Dependencies
         run: make install-pkg install-dev version
       - name: Display Packages
@@ -102,10 +80,7 @@ jobs:
           hash -r
           env | sort
       - name: Run Tests
-        run: | 
-          curl -X GET "http://localhost:2001/version"
-          docker ps -a
-          make docker-up-dev-logs
+        run: |
           make stop ${{ matrix.test-case }}
       - name: Upload coverage report
         uses: codecov/codecov-action@v1
