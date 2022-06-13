@@ -306,5 +306,5 @@ def validate_sync_config_services(sync_cfg, available_services):
 
     for svc in sync_cfg["services"]:
         if svc not in available_services:
-            raise ConfigError(f"Service `{svc}` used in sync config is not valid since it was not found in Magpie "
-                              f"services ({available_services}).")
+            raise ConfigErrorInvalidServiceKey(f"Service `{svc}` used in sync config is not valid since it was not "
+                                               f"found in Magpie services ({available_services}).")

@@ -632,6 +632,28 @@ class TestSyncPermissions(unittest.TestCase):
             # Should create an error since input resource doesn't match the type of resources found in config
             utils.check_response_basic_info(resp, 500, expected_method="POST")
 
+    def test_webhooks_invalid_service(self):
+        """
+        Tests the case where a service used in the `sync_permissions` section of the config is invalid.
+        """
+        self.data["sync_permissions"] = {
+            "user_workspace": {
+                "services": {
+                    "NotAMagpieService": {
+                        "Invalid": [
+                            {"name": "catalog", "type": "service"},
+                            {"name": "dir", "type": "directory"}]}},
+                "permissions_mapping": []
+            }
+        }
+        with self.cfg_file as f:
+            f.write(yaml.safe_dump(self.data))
+
+        utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
+        # Try creating Magpie handler with invalid config
+        utils.check_raises(lambda: ServiceFactory().create_service("Magpie"),
+                           ConfigErrorInvalidServiceKey, msg="invalid config file should raise")
+
 
 def check_config(config_data, expected_exception_type=None):
     """
@@ -712,32 +734,6 @@ class TestSyncPermissionsConfig(unittest.TestCase):
             }
         }
         check_config(self.data, ConfigErrorInvalidTokens)
-
-    @pytest.mark.skip(reason="test not finished yet")
-    def test_webhooks_invalid_service(self):
-        """
-        Tests the cases where a service used in the `sync_permissions` section of the config is not defined and invalid.
-        """
-        self.data["sync_permissions"] = {
-            "user_workspace": {
-                "services": {
-                    "Invalid_Service": {
-                        "Invalid": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": "dir", "type": "directory"}]}},
-                "permissions_mapping": []
-            }
-        }
-        cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)
-        with cfg_file as f:
-            f.write(yaml.safe_dump(self.data))
-
-        utils.get_test_app(settings={"cowbird.config_path": f.name})
-
-        ServiceFactory().create_service("Magpie")
-        # TODO: re-add mocking
-        # TODO: check if creating Permissions_Synchronizer, triggers a ConfigError
-        os.unlink(cfg_file.name)
 
     def test_unknown_res_key(self):
         """
