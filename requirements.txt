@@ -12,7 +12,6 @@ pymongo[srv]<4  # required to work with pinned celery
 pyramid>=1.10.2,<2
 pyramid_mako>=1.0.2
 pyramid_celery
-python-dotenv
 pyyaml>=5.1
 requests
 requests_file

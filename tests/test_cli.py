@@ -7,17 +7,17 @@ test_cli
 
 Tests for :mod:`cowbird.cli` module.
 """
+from io import StringIO
 from pathlib import Path
 import subprocess
 
+import contextlib
 import mock
 import pytest
-from dotenv import load_dotenv
-import yaml
 
 from cowbird.cli import main as cowbird_cli
 from cowbird.config import get_all_configs
-from tests.utils import TEST_CFG_FILE, TEST_INI_FILE
+from tests.utils import MockMagpieService, TEST_CFG_FILE, TEST_INI_FILE
 
 KNOWN_HELPERS = [
     "services",
@@ -68,22 +68,36 @@ def test_cowbird_helper_as_python():
 @pytest.mark.cli
 def test_cowbird_services_list_with_formats():
     override = {"COWBIRD_CONFIG_PATH": TEST_CFG_FILE}
-    load_dotenv(CURR_DIR / "../docker/.env.example")  # Load env variables, used in the config
     svcs_config = get_all_configs(TEST_CFG_FILE, "services")[0]
 
-    with mock.patch.dict("os.environ", override):
-        out_lines = run_and_get_output(f"cowbird services list -f yaml -c '{TEST_INI_FILE}'")
-        assert out_lines[0] == "services:"
-        out_lines = run_and_get_output(f"cowbird services list -f json -c '{TEST_INI_FILE}'", trim=False)
-        assert out_lines[0] == "{"
-        assert '"services": [' in out_lines[1]  # pylint: disable=C4001
-        out_lines = run_and_get_output(f"cowbird services list -f table -c '{TEST_INI_FILE}'")
-        assert "+---" in out_lines[0]
-        assert "| services" in out_lines[1]
-        assert "+===" in out_lines[2]
+    with mock.patch.dict("os.environ", override), contextlib.ExitStack() as stack:
+        # Mocked Magpie required since config is validated when calling cli, and config validation relies
+        # on a Magpie instance.
+        stack.enter_context(mock.patch("cowbird.services.impl.magpie.Magpie", side_effect=MockMagpieService))
+
+        f = StringIO()
+        with contextlib.redirect_stdout(f):
+            cowbird_cli(["services", "list", "-f", "yaml", "-c", TEST_INI_FILE])
+        output_yaml = f.getvalue().split("\n")
+        assert output_yaml[0] == "services:"
+
+        f = StringIO()
+        with contextlib.redirect_stdout(f):
+            cowbird_cli(["services", "list", "-f", "json", "-c", TEST_INI_FILE])
+        output_json = f.getvalue().split("\n")
+        assert output_json[0] == "{"
+        assert '"services": [' in output_json[1]
+
+        f = StringIO()
+        with contextlib.redirect_stdout(f):
+            cowbird_cli(["services", "list", "-f", "table", "-c", TEST_INI_FILE])
+        output_table = f.getvalue().split("\n")
+        assert "+---" in output_table[0]
+        assert "| services" in output_table[1]
+        assert "+===" in output_table[2]
 
         # Test services config
-        active_services = [line.strip("|").strip(" ") for line in out_lines[3:-1]]
+        active_services = [line.strip("|").strip(" ") for line in output_table[3:-2]]
         # Every active service should be in test data
         for service in active_services:
             assert service in svcs_config

@@ -139,53 +139,14 @@ class MockMagpieService(Service):
                 self.outbound_perms.remove(perm)
                 return
 
-    # def get_service_names(self):
-    #     # type: () -> List
-    #     """
-    #     Returns the list of service names available on Magpie.
-    #     """
-    #     # Hardcoded listed of currently available services on Magpie.
-    #     return ['access', 'api', 'geoserver', 'geoserverwfs', 'geoserverwms', 'geoserverwps', 'ncwms', 'thredds',
-    #             'wfs', 'wps']
-    #
-    # def get_resources_tree(self, resource_id):
-    #     # TODO: ADAPT IT????
-    #     #  Should MockMagpie have create_resource functions? which return an id?
-    #     # type: (int) -> List
-    #     """
-    #     Returns the associated Magpie Resource object and all its parents in a list ordered from parent to child.
-    #     """
-    #     cookies = self.login()
-    #     data = {"parent": "true", "invert": "true", "flatten": "true"}
-    #     resp = requests.get(url=f"{self.url}/resources/{resource_id}",
-    #                         headers=self.headers, cookies=cookies, params=data)
-    #     if resp.status_code != 200:
-    #         raise RuntimeError("Could not find the input resource's parent resources.")
-    #     return resp.json()["resources"]
-    #
-    # def get_user_permissions(self, user):
-    #     # type: (str) -> bool
-    #     """
-    #     Gets all user resource permissions.
-    #     """
-    #     cookies = self.login()
-    #     resp = requests.get(url=f"{self.url}/users/{user}/resources",
-    #                         headers=self.headers, cookies=cookies)
-    #     if resp.status_code != 200:
-    #         raise RuntimeError(f"Could not find the user's resource permissions.")
-    #     return resp.json()["resources"]
-    #
-    # def get_group_permissions(self, grp):
-    #     # type: (str) -> bool
-    #     """
-    #     Gets all group resource permissions.
-    #     """
-    #     cookies = self.login()
-    #     resp = requests.get(url=f"{self.url}/groups/{grp}/resources",
-    #                         headers=self.headers, cookies=cookies)
-    #     if resp.status_code != 200:
-    #         raise RuntimeError(f"Could not find the group's resource permissions.")
-    #     return resp.json()["resources"]
+    def get_service_names(self):
+        # type: () -> List
+        """
+        Returns the list of service names available on Magpie.
+        """
+        # Hardcoded listed of currently available services on Magpie.
+        return ['access', 'api', 'geoserver', 'geoserverwfs', 'geoserverwms', 'geoserverwps', 'ncwms', 'thredds',
+                'wfs', 'wps']
 
 
 class MockAnyServiceBase(Service):
