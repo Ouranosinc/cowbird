@@ -79,7 +79,7 @@ class Magpie(Service):
         return resp.json()["resources"]
 
     def get_user_permissions(self, user):
-        # type: (str) -> bool
+        # type: (str) -> Dict
         """
         Gets all user resource permissions.
         """
@@ -91,7 +91,7 @@ class Magpie(Service):
         return resp.json()["resources"]
 
     def get_group_permissions(self, grp):
-        # type: (str) -> bool
+        # type: (str) -> Dict
         """
         Gets all group resource permissions.
         """

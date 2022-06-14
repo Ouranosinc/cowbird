@@ -1,6 +1,7 @@
 import contextlib
 import os
 import tempfile
+from typing import TYPE_CHECKING
 import unittest
 
 import mock
@@ -14,6 +15,9 @@ from cowbird.config import MULTI_TOKEN, ConfigErrorInvalidResourceKey, ConfigErr
 from cowbird.services import ServiceFactory
 from cowbird.services.impl.magpie import MAGPIE_ADMIN_PASSWORD_TAG, MAGPIE_ADMIN_USER_TAG
 from tests import utils
+
+if TYPE_CHECKING:
+    from typing import Dict, List, Type
 
 
 @pytest.mark.permissions
@@ -34,15 +38,14 @@ class TestSyncPermissions(unittest.TestCase):
         cls.pwd = "qwertyqwerty"
         cls.url = "http://localhost:2001/magpie"
 
-        data = {"user_name": cls.usr, "password": cls.pwd,
-                "provider_name": "ziggurat"}  # ziggurat = magpie_default_provider
+        data = {"user_name": cls.usr, "password": cls.pwd}
         resp = requests.post(f"{cls.url}/signin", json=data)
         utils.check_response_basic_info(resp, 200, expected_method="POST")
         cls.cookies = resp.cookies
 
         cls.test_service_name = "catalog"
 
-        # Reset services instances in case any is left from other test cases
+        # Reset services instances in case any are left from other test cases
         utils.clear_services_instances()
 
     def setUp(self):
@@ -98,6 +101,7 @@ class TestSyncPermissions(unittest.TestCase):
             utils.check_response_basic_info(resp, 404, expected_method="GET")
 
     def create_test_resource(self, resource_name, resource_type, parent_id):
+        # type: (str, str, int) -> int
         """
         Creates a test resource in Magpie app.
         """
@@ -112,6 +116,7 @@ class TestSyncPermissions(unittest.TestCase):
         return body["resource"]["resource_id"]
 
     def create_test_permission(self, resource_id, permission, user_name, group_name):
+        # type: (int, Dict, str, str) -> None
         """
         Creates a test permission in Magpie app.
         """
@@ -126,6 +131,7 @@ class TestSyncPermissions(unittest.TestCase):
             utils.check_response_basic_info(resp, 201, expected_method="POST")
 
     def delete_test_permission(self, resource_id, permission, user_name, group_name):
+        # type: (int, Dict, str, str) -> None
         """
         Creates a test permission in Magpie app.
         """
@@ -140,6 +146,7 @@ class TestSyncPermissions(unittest.TestCase):
             utils.check_response_basic_info(resp, 200, expected_method="DELETE")
 
     def check_user_permissions(self, resource_id, expected_permissions):
+        # type: (int, List) -> None
         """
         Checks if the test user has the `expected_permissions` on the `resource_id`.
         """
@@ -149,6 +156,7 @@ class TestSyncPermissions(unittest.TestCase):
         assert body["permission_names"] == expected_permissions
 
     def check_group_permissions(self, resource_id, expected_permissions):
+        # type: (int, List) -> None
         """
         Checks if the test group has the `expected_permissions` on the `resource_id`.
         """
@@ -197,11 +205,8 @@ class TestSyncPermissions(unittest.TestCase):
         ServiceFactory().create_service("Magpie")
 
         with contextlib.ExitStack() as stack:
-            # stack.enter_context(mock.patch("cowbird.services.impl.magpie.Magpie",
-            #                                side_effect=utils.MockMagpieService))
             stack.enter_context(mock.patch("cowbird.services.impl.thredds.Thredds",
                                            side_effect=utils.MockAnyService))
-            # magpie = ServiceFactory().get_service("Magpie")
 
             # Create test resources
             private_dir_res_id = self.create_test_resource("private-dir", "directory", self.test_service_id)
@@ -297,7 +302,7 @@ class TestSyncPermissions(unittest.TestCase):
 
     def test_webhooks_valid_tokens(self):
         """
-        Tests the permissions synchronization of resources that all use valid tokens in the config.
+        Tests the permissions synchronization of resources that use valid tokens in the config.
         """
         self.data["sync_permissions"] = {
             "user_workspace": {
@@ -518,6 +523,7 @@ class TestSyncPermissions(unittest.TestCase):
 
 
 def check_config(config_data, expected_exception_type=None):
+    # type: (Dict, Type[ConfigError]) -> None
     """
     Checks if the config loads without error, or if it triggers the expected exception in the case of an invalid config.
     """
@@ -535,7 +541,7 @@ def check_config(config_data, expected_exception_type=None):
 @pytest.mark.permissions
 class TestSyncPermissionsConfig(unittest.TestCase):
     """
-    Test config for permissions synchronization
+    Tests different config setups for permissions synchronization.
     """
 
     def setUp(self):

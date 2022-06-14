@@ -52,6 +52,9 @@ class TestAPI(unittest.TestCase):
         utils.check_val_is_in("cowbird", body["name"])
 
     def test_webhooks(self):
+        """
+        Test that sends a webhook request from Magpie to cowbird.
+        """
         with contextlib.ExitStack() as stack:
             stack.enter_context(mock.patch("cowbird.services.impl.magpie.Magpie",
                                            side_effect=utils.MockMagpieService))
