@@ -111,6 +111,10 @@ sync_permissions:
     # [Required] This section defines an array of permissions mapping between services
     # Each item found in the `permissions_mapping` use the following format :
     #     resource_key1 : permission(s) (-> or <- or <->) resource_key2 : permission(s)
+    # The permissions can either be a single permission or a list of permissions. Each of those permissions can either
+    # use an implicit format (`<name>` or `<name>-match`) or an explicit format (`<name>-<access>-<scope>`).
+    # When using an implicit format, if the access and/or scope are not specified, it will use the default
+    # access `allow` and/or the default scope `recursive`.
     # The arrows between the 2 resources indicate the direction of the synchronization, and which resources can be a
     # `source` or `target` resource.
     # In the case of `<->` arrow, the synchronization of permissions can be done in either direction. Also, it is

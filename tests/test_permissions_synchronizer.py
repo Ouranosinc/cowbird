@@ -1,6 +1,7 @@
 import contextlib
 import os
 import tempfile
+from collections import Counter
 from typing import TYPE_CHECKING
 import unittest
 
@@ -153,7 +154,7 @@ class TestSyncPermissions(unittest.TestCase):
         resp = utils.test_request(self.url, "GET", f"/users/{self.usr}/resources/{resource_id}/permissions",
                                   cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        assert body["permission_names"] == expected_permissions
+        assert Counter(body["permission_names"]) == Counter(expected_permissions)
 
     def check_group_permissions(self, resource_id, expected_permissions):
         # type: (int, List) -> None
@@ -163,7 +164,7 @@ class TestSyncPermissions(unittest.TestCase):
         resp = utils.test_request(self.url, "GET", f"/groups/{self.grp}/resources/{resource_id}/permissions",
                                   cookies=self.cookies)
         body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        assert body["permission_names"] == expected_permissions
+        assert Counter(body["permission_names"]) == Counter(expected_permissions)
 
     def test_webhooks_no_tokens(self):
         """
@@ -190,11 +191,12 @@ class TestSyncPermissions(unittest.TestCase):
                         "Thredds4": [
                             {"name": self.test_service_name, "type": "service"},
                             {"name": "workspace:file4", "type": "file"}]}},
-                "permissions_mapping": ["Thredds0 : read <-> Thredds1 : [read, write]",
+                "permissions_mapping": ["Thredds0 : read <-> Thredds1 : [read-match, write]",  # test implicit formats
                                         # partial duplicate with previous line, should still work
                                         "Thredds0 : read -> Thredds1 : write",
-                                        "Thredds1 : [read, write] -> Thredds2 : read",
-                                        "Thredds3 : read <- Thredds2 : read",
+                                        # test explicit permission format in Thredds 2
+                                        "Thredds1 : [read-match, write] -> Thredds2 : read-deny-match",
+                                        "Thredds3 : read <- Thredds2 : read-deny-match",
                                         "Thredds4 : read -> Thredds1 : [write]"]
             }
         }
@@ -214,9 +216,8 @@ class TestSyncPermissions(unittest.TestCase):
             res_ids += [self.create_test_resource(f"workspace:file{i}", "file", self.test_service_id)
                         for i in range(2, 5)]
 
-            expected_read_permission = ["read", "read-allow-recursive"]
-            expected_write_permission = ["write", "write-allow-recursive"]
-            expected_full_permission = expected_read_permission + expected_write_permission
+            default_read_permission = ["read", "read-allow-recursive"]
+            default_write_permission = ["write", "write-allow-recursive"]
 
             for i in range(5):
                 self.check_user_permissions(res_ids[i], [])
@@ -237,25 +238,29 @@ class TestSyncPermissions(unittest.TestCase):
             # Check create permissions (0 <-> 1 towards right)
             resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
             utils.check_response_basic_info(resp, 200, expected_method="POST")
-            self.check_user_permissions(res_ids[1], expected_full_permission)
-            self.check_group_permissions(res_ids[1], expected_full_permission)
+            self.check_user_permissions(res_ids[1], default_write_permission + ["read-match", "read-allow-match"])
+            self.check_group_permissions(res_ids[1], default_write_permission + ["read-match", "read-allow-match"])
 
             # Check create permissions (0 <-> 1 towards left, and 1 -> 2)
             data["resource_id"] = str(res_ids[1])
             data["resource_full_name"] = f"/{self.test_service_name}/private-dir/workspace:file1"
+            data["scope"] = "match"
             resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
             utils.check_response_basic_info(resp, 200, expected_method="POST")
-            for i in [0, 2]:
-                self.check_user_permissions(res_ids[i], expected_read_permission)
-                self.check_group_permissions(res_ids[i], expected_read_permission)
+            self.check_user_permissions(res_ids[0], default_read_permission)
+            self.check_group_permissions(res_ids[0], default_read_permission)
+            self.check_user_permissions(res_ids[2], ["read-deny-match"])
+            self.check_group_permissions(res_ids[2], ["read-deny-match"])
 
             # Check create permissions (3 <- 2)
             data["resource_id"] = str(res_ids[2])
             data["resource_full_name"] = f"/{self.test_service_name}/private-dir/workspace:file2"
+            data["access"] = "deny"
+            data["scope"] = "match"
             resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
             utils.check_response_basic_info(resp, 200, expected_method="POST")
-            self.check_user_permissions(res_ids[3], expected_read_permission)
-            self.check_group_permissions(res_ids[3], expected_read_permission)
+            self.check_user_permissions(res_ids[3], default_read_permission)
+            self.check_group_permissions(res_ids[3], default_read_permission)
 
             # Force create the permission 4, required for the following test.
             self.create_test_permission(res_ids[4], {"name": "read", "access": "allow", "scope": "recursive"},
@@ -269,10 +274,12 @@ class TestSyncPermissions(unittest.TestCase):
             # and the permission 4 still exists.
             data["resource_id"] = str(res_ids[0])
             data["resource_full_name"] = f"/{self.test_service_name}/private-dir/workspace:file0"
+            data["access"] = "allow"
+            data["scope"] = "recursive"
             resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
             utils.check_response_basic_info(resp, 200, expected_method="POST")
-            self.check_user_permissions(res_ids[1], expected_write_permission)
-            self.check_group_permissions(res_ids[1], expected_write_permission)
+            self.check_user_permissions(res_ids[1], default_write_permission)
+            self.check_group_permissions(res_ids[1], default_write_permission)
 
             # Force delete the permission 4.
             self.delete_test_permission(res_ids[4], {"name": "read", "access": "allow", "scope": "recursive"},
@@ -286,6 +293,7 @@ class TestSyncPermissions(unittest.TestCase):
             # Check delete permissions (0 <-> 1 towards left and 1 -> 2)
             data["resource_id"] = str(res_ids[1])
             data["resource_full_name"] = f"/{self.test_service_name}/private-dir/workspace:file1"
+            data["scope"] = "match"
             resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
             utils.check_response_basic_info(resp, 200, expected_method="POST")
             for i in [0, 2]:
@@ -295,6 +303,8 @@ class TestSyncPermissions(unittest.TestCase):
             # Check delete permissions (3 <- 2)
             data["resource_id"] = str(res_ids[2])
             data["resource_full_name"] = f"/{self.test_service_name}/private-dir/workspace:file2"
+            data["access"] = "deny"
+            data["scope"] = "match"
             resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
             utils.check_response_basic_info(resp, 200, expected_method="POST")
             self.check_user_permissions(res_ids[3], [])

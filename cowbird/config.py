@@ -22,12 +22,14 @@ BIDIRECTIONAL_ARROW = "<->"
 RIGHT_ARROW = "->"
 LEFT_ARROW = "<-"
 
-PERMISSION_REGEX = r"(\w+|\[\s*\w+(?:\s*,\s*\w+)*\s*\])"  # Either a single word, or a list of words in array
+PERMISSION_REGEX = r"[\w-]+"
+# Either a single word, or a list of words in array
+PERMISSIONS_REGEX = rf"({PERMISSION_REGEX}|\[\s*{PERMISSION_REGEX}(?:\s*,\s*{PERMISSION_REGEX})*\s*\])"
 DIRECTION_REGEX = rf"({BIDIRECTIONAL_ARROW}|{LEFT_ARROW}|{RIGHT_ARROW})"
 # Mapping format
 # <res_key1> : <permission(s)> <direction> <res_key2> : <permission(s)>
-MAPPING_REGEX = r"(\w+)\s*:\s*" + PERMISSION_REGEX + r"\s*" + DIRECTION_REGEX + \
-                r"\s*(\w+)\s*:\s*" + PERMISSION_REGEX
+MAPPING_REGEX = r"(\w+)\s*:\s*" + PERMISSIONS_REGEX + r"\s*" + DIRECTION_REGEX + \
+                r"\s*(\w+)\s*:\s*" + PERMISSIONS_REGEX
 NAMED_TOKEN_REGEX = r"^\{\s*(\w+)\s*\}$"
 
 
@@ -253,7 +255,7 @@ def get_permissions_from_str(permissions):
     Returns a tuple of all permissions found in a string. Used for permission strings found in the config, which
     can either be a single permission or a list of permissions.
     """
-    matched_groups = re.findall(r"\w+", permissions)
+    matched_groups = re.findall(PERMISSION_REGEX, permissions)
     if not matched_groups:
         raise ConfigError("Couldn't find permission, invalid format.")
     return matched_groups

@@ -22,6 +22,9 @@ SEGMENT_NAME_REGEX = r"[\w:-]+"
 
 RES_NAMETYPE_SEPARATOR = "::"
 
+PERMISSION_DEFAULT_ACCESS = "allow"
+PERMISSION_DEFAULT_SCOPE = "recursive"
+
 
 class Permission:
     """
@@ -91,11 +94,29 @@ class SyncPoint:
         self.permissions_mapping = {}
 
         for mapping in permissions_mapping_list:
-            res_key1, permission1, direction, res_key2, permission2 = get_mapping_info(mapping)
+            left_res_key, left_permissions, direction, right_res_key, right_permissions = get_mapping_info(mapping)
             if direction == BIDIRECTIONAL_ARROW or direction == RIGHT_ARROW:
-                self._add_mapping(res_key1, permission1, res_key2, permission2)
+                self._add_mapping(left_res_key, left_permissions, right_res_key, right_permissions)
             if direction == BIDIRECTIONAL_ARROW or direction == LEFT_ARROW:
-                self._add_mapping(res_key2, permission2, res_key1, permission1)
+                self._add_mapping(right_res_key, right_permissions, left_res_key, left_permissions)
+
+    @staticmethod
+    def _get_explicit_permission(permission):
+        # type: (str) -> str
+        """
+        Converts a permission that could use an implicit format ('<name>' or '<name>-match') and converts it
+        to use an explicit format ('<name>-<access>-<scope>').
+        """
+        permission_parts = permission.split("-")
+        if len(permission_parts) == 1:
+            return f"{permission}-{PERMISSION_DEFAULT_ACCESS}-{PERMISSION_DEFAULT_SCOPE}"
+        elif len(permission_parts) == 2 and permission_parts[1] == "match":
+            return f"{permission_parts[0]}-{PERMISSION_DEFAULT_ACCESS}-match"
+        elif len(permission_parts) == 3:
+            # Already in explicit form
+            return permission
+        raise RuntimeError(f"Invalid permission found: {permission}. Should either use the explicit format "
+                           "`<name>-<access>-<scope>` or an implicit format `<name>` or `<name>-match`.")
 
     def _add_mapping(self, src_key, src_permissions, target_key, target_permissions):
         # type: (str, str, str, str) -> None
@@ -104,14 +125,17 @@ class SyncPoint:
         """
         if src_key not in self.permissions_mapping:
             self.permissions_mapping[src_key] = {}
-        for permission in get_permissions_from_str(src_permissions):
-            if permission not in self.permissions_mapping[src_key]:
-                self.permissions_mapping[src_key][permission] = {}
-            if target_key not in self.permissions_mapping[src_key][permission]:
-                self.permissions_mapping[src_key][permission][target_key] = []
+        for src_permission in get_permissions_from_str(src_permissions):
+            explicit_src_permission = SyncPoint._get_explicit_permission(src_permission)
 
-            self.permissions_mapping[src_key][permission][target_key] += \
-                get_permissions_from_str(target_permissions)
+            if explicit_src_permission not in self.permissions_mapping[src_key]:
+                self.permissions_mapping[src_key][explicit_src_permission] = {}
+            if target_key not in self.permissions_mapping[src_key][explicit_src_permission]:
+                self.permissions_mapping[src_key][explicit_src_permission][target_key] = []
+
+            for target_permission in get_permissions_from_str(target_permissions):
+                self.permissions_mapping[src_key][explicit_src_permission][target_key].append(
+                    SyncPoint._get_explicit_permission(target_permission))
 
     @staticmethod
     def _generate_regex_from_segments(res_segments):
@@ -380,11 +404,12 @@ class SyncPoint:
         """
         # For each permission mapping
         src_permissions = self.permissions_mapping.get(src_res_key)
-        target_res_and_permissions = src_permissions.get(input_permission.name) if src_permissions else None
+        explicit_input_permission_name = f"{input_permission.name}-{input_permission.access}-{input_permission.scope}"
+        target_res_and_permissions = src_permissions.get(explicit_input_permission_name) if src_permissions else None
 
         if not target_res_and_permissions:
-            raise RuntimeError(f"Failed to find resource key {src_res_key} with permission {input_permission.name}"
-                               "from the config permissions_mapping.")
+            raise RuntimeError(f"Failed to find resource key {src_res_key} with permission "
+                               f"{explicit_input_permission_name} from the config permissions_mapping.")
 
         permission_data = {}
         if perm_operation.__name__ == "delete_permission":
@@ -418,9 +443,13 @@ class SyncPoint:
 
         for target in target_permissions.values():
             permissions_data = target["res_path"]
-            for perm_name, user_and_group, in target["permissions"].items():
+            for perm_key, user_and_group, in target["permissions"].items():
                 # add permission details to last segment
-                permissions_data[-1]["permission"] = perm_name
+                permission_info = perm_key.split("-")
+                if len(permission_info) != 3:
+                    raise RuntimeError(f"Invalid permission found: {perm_key}. It should use the explicit "
+                                       "format `<name>-<access>-<scope>`.")
+                permissions_data[-1]["permission"] = dict(zip(["name", "access", "scope"], permission_info))
                 permissions_data[-1]["user"] = user_and_group[0]
                 permissions_data[-1]["group"] = user_and_group[1]
 
