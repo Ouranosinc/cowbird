@@ -312,11 +312,11 @@ class TestSyncPermissions(unittest.TestCase):
                             {"name": self.test_service_name, "type": "service"},
                             {"name": "private", "type": "directory"},
                             {"name": MULTI_TOKEN, "type": "directory"},
-                            {"name": '{file}', "type": "file"}],
+                            {"name": "{file}", "type": "file"}],
                         "Thredds_file_target": [
                             {"name": self.test_service_name, "type": "service"},
                             {"name": MULTI_TOKEN, "type": "directory"},
-                            {"name": '{file}', "type": "file"}],
+                            {"name": "{file}", "type": "file"}],
                         "Thredds_dir_src": [
                             {"name": self.test_service_name, "type": "service"},
                             {"name": "private", "type": "directory"},

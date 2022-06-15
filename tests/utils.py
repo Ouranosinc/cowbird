@@ -136,8 +136,8 @@ class MockMagpieService(Service):
         Returns the list of service names available on Magpie.
         """
         # Hardcoded listed of currently available services on Magpie.
-        return ['access', 'api', 'geoserver', 'geoserverwfs', 'geoserverwms', 'geoserverwps', 'ncwms', 'thredds',
-                'wfs', 'wps']
+        return ["access", "api", "geoserver", "geoserverwfs", "geoserverwms", "geoserverwps", "ncwms", "thredds",
+                "wfs", "wps"]
 
 
 class MockAnyServiceBase(Service):

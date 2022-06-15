@@ -86,7 +86,7 @@ def test_cowbird_services_list_with_formats():
             cowbird_cli(["services", "list", "-f", "json", "-c", TEST_INI_FILE])
         output_json = f.getvalue().split("\n")
         assert output_json[0] == "{"
-        assert '"services": [' in output_json[1]
+        assert "\"services\": [" in output_json[1]
 
         f = StringIO()
         with contextlib.redirect_stdout(f):

@@ -9,7 +9,7 @@ from cowbird.services.service_factory import ServiceFactory
 from cowbird.utils import get_config_path, get_logger
 
 if TYPE_CHECKING:
-    from typing import Callable, Dict, Generator, List, Match, Tuple
+    from typing import Callable, Dict, Generator, List, Tuple
 
     from cowbird.services.impl.magpie import Magpie
 
@@ -290,11 +290,11 @@ class SyncPoint:
 
         svc = ServiceFactory().get_service("Magpie")
         user_permissions = None
-        group_permissions = None
+        grp_permissions = None
         if input_permission.user:
             user_permissions = svc.get_user_permissions(input_permission.user)
         if input_permission.group:
-            group_permissions = svc.get_group_permissions(input_permission.group)
+            grp_permissions = svc.get_group_permissions(input_permission.group)
 
         user_targets = deepcopy(target_res_and_permissions)
         group_targets = deepcopy(target_res_and_permissions)
@@ -319,13 +319,11 @@ class SyncPoint:
                             res_data[src_res_key] = (svc_name, src_res_data)
                             if target_permission in user_targets[target_res_key] and \
                                     SyncPoint._is_in_permissions(src_perm_name, svc_name, src_res_data, user_permissions):
-                                # remove from user_targets
                                 user_targets[target_res_key].remove(target_permission)
                                 if not user_targets[target_res_key]:
                                     del user_targets[target_res_key]
                             if target_permission in group_targets[target_res_key] and \
-                                    SyncPoint._is_in_permissions(src_perm_name, svc_name, src_res_data, group_permissions):
-                                # remove from group_targets
+                                  SyncPoint._is_in_permissions(src_perm_name, svc_name, src_res_data, grp_permissions):
                                 group_targets[target_res_key].remove(target_permission)
                                 if not group_targets[target_res_key]:
                                     del group_targets[target_res_key]
@@ -418,9 +416,9 @@ class SyncPoint:
         src_res_key, src_matched_groups = self._find_matching_res(permission.service_name, resource_nametype_path)
         target_permissions = self._find_permissions_to_sync(src_res_key, src_matched_groups, permission, perm_operation)
 
-        for target_key in target_permissions:
-            permissions_data = target_permissions[target_key]["res_path"]
-            for perm_name, user_and_group, in target_permissions[target_key]["permissions"].items():
+        for target in target_permissions.values():
+            permissions_data = target["res_path"]
+            for perm_name, user_and_group, in target["permissions"].items():
                 # add permission details to last segment
                 permissions_data[-1]["permission"] = perm_name
                 permissions_data[-1]["user"] = user_and_group[0]

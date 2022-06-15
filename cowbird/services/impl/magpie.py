@@ -163,7 +163,7 @@ class Magpie(Service):
         data = {"user_name": self.admin_user, "password": self.admin_password}
         try:
             resp = requests.post(f"{self.url}/signin", json=data)
-        except Exception as e:
+        except Exception as exc:
             raise RuntimeError(f"Failed to sign in to Magpie (url: `{self.url}`) with user `{self.admin_user}`. "
-                               f"Exception : {e}. ")
+                               f"Exception : {exc}. ")
         return resp.cookies

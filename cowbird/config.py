@@ -10,7 +10,7 @@ from cowbird.utils import get_logger, print_log, raise_log
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import List, Set, Union
+    from typing import List, Union
 
     from cowbird.typedefs import ConfigDict
 
@@ -238,7 +238,7 @@ def get_mapping_info(mapping):
     """
     Obtain the different info found in a mapping string from the config.
     Returns the following matching groups :
-    (res_key1, permission1, direction, res_key2, permission2) 
+    (res_key1, permission1, direction, res_key2, permission2)
     """
     matched_groups = re.match(MAPPING_REGEX, mapping)
     if not matched_groups or len(matched_groups.groups()) != 5:
@@ -287,7 +287,7 @@ def validate_sync_config(sync_cfg):
 
     # validate and get all resources info
     res_info = {}
-    for svc, resources in sync_cfg["services"].items():
+    for resources in sync_cfg["services"].values():
         for res_key in resources:
             if res_key in res_info:
                 raise ConfigErrorInvalidResourceKey(f"Found duplicate resource key {res_key} in config. Config resource"
