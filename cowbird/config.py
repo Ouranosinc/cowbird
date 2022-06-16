@@ -251,7 +251,7 @@ def get_mapping_info(mapping):
 
 
 def get_permissions_from_str(permissions):
-    # type: (str) -> List
+    # type: (str) -> List[str]
     """
     Returns a tuple of all permissions found in a string. Used for permission strings found in the config, which
     can either be a single permission or a list of permissions.
