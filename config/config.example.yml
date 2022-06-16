@@ -22,8 +22,7 @@
 #     workspace_dir:      [optional, default=None] Location of the users workspace root.
 #                         Required for the following services : FileSystem, Catalog and Geoserver
 #
-# TODO: rename 'services' section here to 'handlers' and refactor all related 'services' in code, will be done in another PR
-# since services is used everywhere (services folder, ServiceFactory, services api, services cli, tests ...)
+# FIXME: rename 'services' section here to 'handlers' and refactor (issue https://github.com/Ouranosinc/cowbird/issues/22)
 services:
   Magpie:
     active: true

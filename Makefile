@@ -447,8 +447,8 @@ DOCKER_DEV_COMPOSES := -f "$(APP_ROOT)/docker/docker-compose.example.yml" -f "$(
 docker-up-dev: docker-build   ## run all dependencies containers using compose ready to be used by a local cowbird
 	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_DEV_COMPOSES) up
 
-.PHONY: docker-up-test
-docker-up-test:   ## run all test required dependencies containers in background, used for testing on github's ci
+.PHONY: docker-up-dev-detached
+docker-up-dev-detached:   ## run all dependencies containers using compose ready to be used by a local cowbird, in detached mode, used for testing on github's ci
 	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_DEV_COMPOSES) up -d
 
 .PHONY: docker-down

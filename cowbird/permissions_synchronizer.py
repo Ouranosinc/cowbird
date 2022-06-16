@@ -1,10 +1,19 @@
-from copy import deepcopy
 import re
+from copy import deepcopy
 from typing import TYPE_CHECKING
 
-from cowbird.config import BIDIRECTIONAL_ARROW, LEFT_ARROW, MULTI_TOKEN, RIGHT_ARROW, \
-    get_all_configs, get_mapping_info, get_permissions_from_str, validate_sync_config, NAMED_TOKEN_REGEX, \
+from cowbird.config import (
+    BIDIRECTIONAL_ARROW,
+    LEFT_ARROW,
+    MULTI_TOKEN,
+    NAMED_TOKEN_REGEX,
+    RIGHT_ARROW,
+    get_all_configs,
+    get_mapping_info,
+    get_permissions_from_str,
+    validate_sync_config,
     validate_sync_config_services
+)
 from cowbird.services.service_factory import ServiceFactory
 from cowbird.utils import get_config_path, get_logger
 
@@ -95,9 +104,9 @@ class SyncPoint:
 
         for mapping in permissions_mapping_list:
             left_res_key, left_permissions, direction, right_res_key, right_permissions = get_mapping_info(mapping)
-            if direction == BIDIRECTIONAL_ARROW or direction == RIGHT_ARROW:
+            if direction in (BIDIRECTIONAL_ARROW, RIGHT_ARROW):
                 self._add_mapping(left_res_key, left_permissions, right_res_key, right_permissions)
-            if direction == BIDIRECTIONAL_ARROW or direction == LEFT_ARROW:
+            if direction in (BIDIRECTIONAL_ARROW, LEFT_ARROW):
                 self._add_mapping(right_res_key, right_permissions, left_res_key, left_permissions)
 
     @staticmethod
@@ -110,9 +119,9 @@ class SyncPoint:
         permission_parts = permission.split("-")
         if len(permission_parts) == 1:
             return f"{permission}-{PERMISSION_DEFAULT_ACCESS}-{PERMISSION_DEFAULT_SCOPE}"
-        elif len(permission_parts) == 2 and permission_parts[1] == "match":
+        if len(permission_parts) == 2 and permission_parts[1] == "match":
             return f"{permission_parts[0]}-{PERMISSION_DEFAULT_ACCESS}-match"
-        elif len(permission_parts) == 3:
+        if len(permission_parts) == 3:
             # Already in explicit form
             return permission
         raise RuntimeError(f"Invalid permission found: {permission}. Should either use the explicit format "
@@ -268,7 +277,7 @@ class SyncPoint:
         """
         Yields all source resource/permissions found in the mappings.
         """
-        for src_res_key in self.permissions_mapping:
+        for src_res_key in self.permissions_mapping:  # pylint: disable=C0206,consider-using-dict-items
             for src_perm_name in self.permissions_mapping[src_res_key]:
                 yield src_res_key, src_perm_name
 
@@ -337,17 +346,20 @@ class SyncPoint:
                             # Another source resource uses the same target permission as the input.
                             # If the source permission exists, for the user/group, remove the target input permission
                             # since it should not be deleted in that case.
-                            svc_name, src_res_data = res_data.get(src_res_key,
-                                                                  self._get_resource_full_name_and_type(src_res_key, src_matched_groups))
+                            svc_name, src_res_data = \
+                                res_data.get(src_res_key,
+                                             self._get_resource_full_name_and_type(src_res_key, src_matched_groups))
                             # Save resource data if needed for other iterations
                             res_data[src_res_key] = (svc_name, src_res_data)
                             if target_permission in user_targets[target_res_key] and \
-                                    SyncPoint._is_in_permissions(src_perm_name, svc_name, src_res_data, user_permissions):
+                                    SyncPoint._is_in_permissions(src_perm_name, svc_name, src_res_data,
+                                                                 user_permissions):
                                 user_targets[target_res_key].remove(target_permission)
                                 if not user_targets[target_res_key]:
                                     del user_targets[target_res_key]
                             if target_permission in group_targets[target_res_key] and \
-                                  SyncPoint._is_in_permissions(src_perm_name, svc_name, src_res_data, grp_permissions):
+                                    SyncPoint._is_in_permissions(src_perm_name, svc_name, src_res_data,
+                                                                 grp_permissions):
                                 group_targets[target_res_key].remove(target_permission)
                                 if not group_targets[target_res_key]:
                                     del group_targets[target_res_key]

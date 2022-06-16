@@ -37,11 +37,11 @@ jobs:
         test-case: [test-github]  # add other test variations to run for every python/os/failure combinations
         # tests with single run
         include:
-#          # linter tests
-#          - os: ubuntu-latest
-#            python-version: 3.7
-#            allow-failure: false
-#            test-case: check
+          # linter tests
+          - os: ubuntu-latest
+            python-version: 3.7
+            allow-failure: false
+            test-case: check
           # docker smoke tests
           - os: ubuntu-latest
             python-version: 3.7
@@ -66,7 +66,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Start containers
-        run: make docker-up-test
+        run: make docker-up-dev-detached
       - name: Install Dependencies
         run: make install-pkg install-dev version
       - name: Display Packages
@@ -80,8 +80,7 @@ jobs:
           hash -r
           env | sort
       - name: Run Tests
-        run: |
-          make stop ${{ matrix.test-case }}
+        run: make stop ${{ matrix.test-case }}
       - name: Upload coverage report
         uses: codecov/codecov-action@v1
         if: ${{ success() && matrix.test-case == 'coverage' }}

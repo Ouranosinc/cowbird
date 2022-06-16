@@ -1,18 +1,24 @@
 import contextlib
 import os
 import tempfile
+import unittest
 from collections import Counter
 from typing import TYPE_CHECKING
-import unittest
 
 import mock
 import pytest
 import requests
 import yaml
+from schema import SchemaError
 
 from cowbird.api.schemas import ValidOperations
-from cowbird.config import MULTI_TOKEN, ConfigErrorInvalidResourceKey, ConfigErrorInvalidServiceKey, \
-    ConfigErrorInvalidTokens, ConfigError
+from cowbird.config import (
+    MULTI_TOKEN,
+    ConfigError,
+    ConfigErrorInvalidResourceKey,
+    ConfigErrorInvalidServiceKey,
+    ConfigErrorInvalidTokens
+)
 from cowbird.services import ServiceFactory
 from cowbird.services.impl.magpie import MAGPIE_ADMIN_PASSWORD_TAG, MAGPIE_ADMIN_USER_TAG
 from tests import utils
@@ -533,7 +539,7 @@ class TestSyncPermissions(unittest.TestCase):
 
 
 def check_config(config_data, expected_exception_type=None):
-    # type: (Dict, Type[ConfigError]) -> None
+    # type: (Dict, Type[Exception]) -> None
     """
     Checks if the config loads without error, or if it triggers the expected exception in the case of an invalid config.
     """
@@ -670,7 +676,7 @@ class TestSyncPermissionsConfig(unittest.TestCase):
                 "permissions_mapping": ["ValidResource : read <-> Invalid-format"]
             }
         }
-        check_config(self.data, ConfigError)
+        check_config(self.data, SchemaError)
 
     def test_multi_token_bidirectional(self):
         """

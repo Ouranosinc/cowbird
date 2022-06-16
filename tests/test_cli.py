@@ -7,17 +7,17 @@ test_cli
 
 Tests for :mod:`cowbird.cli` module.
 """
+import contextlib
+import subprocess
 from io import StringIO
 from pathlib import Path
-import subprocess
 
-import contextlib
 import mock
 import pytest
 
 from cowbird.cli import main as cowbird_cli
 from cowbird.config import get_all_configs
-from tests.utils import MockMagpieService, TEST_CFG_FILE, TEST_INI_FILE
+from tests.utils import TEST_CFG_FILE, TEST_INI_FILE, MockMagpieService
 
 KNOWN_HELPERS = [
     "services",

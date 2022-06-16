@@ -4,7 +4,7 @@ import re
 from typing import TYPE_CHECKING
 
 import yaml
-from schema import Optional, Schema
+from schema import Optional, Or, Regex, Schema
 
 from cowbird.utils import get_logger, print_log, raise_log
 
@@ -28,9 +28,8 @@ PERMISSIONS_REGEX = rf"({PERMISSION_REGEX}|\[\s*{PERMISSION_REGEX}(?:\s*,\s*{PER
 DIRECTION_REGEX = rf"({BIDIRECTIONAL_ARROW}|{LEFT_ARROW}|{RIGHT_ARROW})"
 # Mapping format
 # <res_key1> : <permission(s)> <direction> <res_key2> : <permission(s)>
-MAPPING_REGEX = r"(\w+)\s*:\s*" + PERMISSIONS_REGEX + r"\s*" + DIRECTION_REGEX + \
-                r"\s*(\w+)\s*:\s*" + PERMISSIONS_REGEX
-NAMED_TOKEN_REGEX = r"^\{\s*(\w+)\s*\}$"
+MAPPING_REGEX = r"(\w+)\s*:\s*" + PERMISSIONS_REGEX + r"\s*" + DIRECTION_REGEX + r"\s*(\w+)\s*:\s*" + PERMISSIONS_REGEX
+NAMED_TOKEN_REGEX = r"^\{\s*(\w+)\s*\}$"  # nosec: B105
 
 
 class ConfigError(RuntimeError):
@@ -140,7 +139,7 @@ def validate_services_config_schema(services_cfg):
     Validates the schema of the `services` section found in the config.
     """
     schema = Schema({
-        str: {
+        str: {  # Handler name
             Optional("active"): bool,
             Optional("priority"): int,
             Optional("url"): str,
@@ -157,13 +156,13 @@ def validate_sync_perm_config_schema(sync_cfg):
     schema = Schema({
         Optional(str): {
             "services": {
-                str: {
-                    str: [
+                str: {  # Service name, must correspond to an actual Magpie service
+                    str: [  # Resource key, used to identify the resource here and in the permissions_mapping
                         {"name": str, "type": str}
                     ]
                 }
             },
-            "permissions_mapping": [str]
+            "permissions_mapping": [Regex(MAPPING_REGEX)]
         }
     })
     schema.validate(sync_cfg)
