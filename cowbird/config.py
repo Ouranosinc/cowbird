@@ -278,11 +278,12 @@ def validate_sync_mapping_config(sync_cfg, res_info):
 
         if direction == BIDIRECTIONAL_ARROW:
             validate_bidirectional_mapping(mapping, res_info, res_key1, res_key2)
+        elif direction == RIGHT_ARROW:
+            validate_unidirectional_mapping(mapping, src_info=res_info[res_key1], tgt_info=res_info[res_key2])
+        elif direction == LEFT_ARROW:
+            validate_unidirectional_mapping(mapping, src_info=res_info[res_key2], tgt_info=res_info[res_key1])
         else:
-            if direction == RIGHT_ARROW:
-                validate_unidirectional_mapping(mapping, src_info=res_info[res_key1], tgt_info=res_info[res_key2])
-            else:
-                validate_unidirectional_mapping(mapping, src_info=res_info[res_key2], tgt_info=res_info[res_key1])
+            raise ConfigError(f"Invalid direction `{direction}` found in the permissions_mapping.")
 
 
 def validate_sync_config(sync_cfg):

@@ -87,24 +87,24 @@ sync_permissions:
           - name: nginx
             type: service
           - name: workspaces
-            type: folder
+            type: directory
           - name: "{user}"
-            type: folder
+            type: directory
           - name: "**"
-            type: folder
+            type: directory
           - name: "{synched_file}"
             type: file
         thredds_workspace:
           - name: catalog
             type: service
           - name: workspaces
-            type: folder
+            type: directory
           - name: "{user}"
-            type: folder
+            type: directory
           - name: "**"
-            type: folder
+            type: directory
           - name: subdir
-            type: folder
+            type: directory
           - name: "{synched_file}"
             type: file
     # [Required] This section defines an array of permissions mapping between services
