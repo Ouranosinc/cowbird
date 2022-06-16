@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from typing import Callable, Dict, Generator, List, Tuple
 
     from cowbird.services.impl.magpie import Magpie
+    from cowbird.typedefs import ConfigSegment, PermissionData, ResourceSegment
 
     SyncPointServicesType = Dict[str, Dict[str, List[Dict[str, str]]]]
     SyncPointMappingType = List[str]
@@ -148,7 +149,7 @@ class SyncPoint:
 
     @staticmethod
     def _generate_regex_from_segments(res_segments):
-        # type: (List[Dict[str, str]]) -> (str, int)
+        # type: (List[ConfigSegment]) -> (str, int)
         """
         Generates a regex for a resource_nametype_path (ex.: /name1::type1/name2::type2) from a list of segments.
         Returns the regex along with the count of segments in the regex that are named, and not using any token.
@@ -226,7 +227,7 @@ class SyncPoint:
 
     @staticmethod
     def _create_res_data(target_segments, input_matched_groups):
-        # type: (List[Dict], Dict[str, str]) -> List[Dict]
+        # type: (List[ConfigSegment], Dict[str, str]) -> List[ResourceSegment]
         """
         Creates resource data, by replacing any tokens found in the segment names to their actual corresponding values.
         This data includes the name and type of each segments of a full resource path.
@@ -260,7 +261,7 @@ class SyncPoint:
         return res_data
 
     def _get_resource_full_name_and_type(self, res_key, matched_groups):
-        # type: (str, Dict[str, str]) -> (str, List[Dict])
+        # type: (str, Dict[str, str]) -> (str, List[ConfigSegment])
         """
         Finds the resource data from the config by using the resource key.
         Returns the formatted resource data along with the related service name.
@@ -283,7 +284,7 @@ class SyncPoint:
 
     @staticmethod
     def _is_in_permissions(target_permission, svc_name, src_res_full_name, permissions):
-        # type: (str, str, str, Dict) -> bool
+        # type: (str, str, ResourceSegment, Dict) -> bool
         """
         Checks if a target permission is found in a permissions dict.
         The check if done by looking for the target permission's resource path in the permissions dict.
@@ -291,13 +292,13 @@ class SyncPoint:
         resource = permissions[svc_name]
         is_service = True  # Used for the first iteration, which has a different structure
         res_access_key = "resources"
-        for src_res in src_res_full_name:
+        for src_segment in src_res_full_name:
             if is_service:
-                resource = resource[src_res["resource_name"]]
+                resource = resource[src_segment["resource_name"]]
                 is_service = False  # Other children resources are not services
             else:
                 for children_res in resource[res_access_key].values():
-                    if children_res["resource_name"] == src_res["resource_name"]:
+                    if children_res["resource_name"] == src_segment["resource_name"]:
                         resource = children_res
                         break
                 else:
@@ -308,7 +309,7 @@ class SyncPoint:
         return target_permission in resource["permission_names"]
 
     def _filter_used_targets(self, target_res_and_permissions, input_src_res_key, src_matched_groups, input_permission):
-        # type: (Dict, str, Dict[str, str], Permission) -> (Dict, Dict)
+        # type: (Dict[str, List[str]], str, Dict[str, str], Permission) -> (Dict[str, List[str]], Dict[str, List[str]])
         """
         Filters a dictionary of target resource/permissions. This is used for the `remove` permission case, where all
         target permissions should not necessarily be synched. Any target permission that is also a target permission in
@@ -366,7 +367,7 @@ class SyncPoint:
         return user_targets, group_targets
 
     def _get_permission_data(self, user_targets, group_targets, src_matched_groups, input_permission):
-        # type: (Dict, Dict, Dict, Permission) -> Dict
+        # type: (Dict[str, List[str]], Dict[str, List[str]], Dict[str, str], Permission) -> PermissionData
         """
         Formats permissions data to send to Magpie. Output contains, for each target resource key, the resource path
         (with the name of each segment and its corresponding type), and all the permissions to sync, defining for each
@@ -398,7 +399,7 @@ class SyncPoint:
 
     def _prepare_permissions_to_remove(self, target_res_and_permissions, input_permission, input_src_res_key,
                                        src_matched_groups):
-        # type: (Dict[List], Permission, str, Dict) -> Dict
+        # type: (Dict[str, List[str]], Permission, str, Dict[str, str]) -> PermissionData
         """
         Removes every source resource found in the mappings that has an existing permission that is synched to one of
         the input target permissions. Used in the case of a `remove` permission.
@@ -410,7 +411,7 @@ class SyncPoint:
         return self._get_permission_data(user_targets, group_targets, src_matched_groups, input_permission)
 
     def _find_permissions_to_sync(self, src_res_key, src_matched_groups, input_permission, perm_operation):
-        # type: (str, Dict, Permission, Callable[[List[Dict]], None]) -> Dict
+        # type: (str, Dict[str, str], Permission, Callable[[List[Dict]], None]) -> PermissionData
         """
         Finds all permissions that should be synchronised with the source resource.
         """

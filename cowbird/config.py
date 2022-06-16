@@ -1,18 +1,18 @@
 import logging
 import os
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Tuple, Union, Any
 
 import yaml
-from schema import Optional, Or, Regex, Schema
+from schema import Optional, Regex, Schema
 
 from cowbird.utils import get_logger, print_log, raise_log
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import List, Union
+    from typing import Dict, List, Tuple, Union
 
-    from cowbird.typedefs import ConfigDict
+    from cowbird.typedefs import ConfigDict, ConfigResTokenInfo, ConfigSegment
 
 LOGGER = get_logger(__name__)
 
@@ -135,6 +135,7 @@ def _expand_all(config):
 
 
 def validate_services_config_schema(services_cfg):
+    # type: (ConfigDict) -> None
     """
     Validates the schema of the `services` section found in the config.
     """
@@ -150,6 +151,7 @@ def validate_services_config_schema(services_cfg):
 
 
 def validate_sync_perm_config_schema(sync_cfg):
+    # type: (ConfigDict) -> None
     """
     Validates the schema of the `sync_permissions` section found in the config.
     """
@@ -169,7 +171,7 @@ def validate_sync_perm_config_schema(sync_cfg):
 
 
 def validate_and_get_resource_info(res_key, segments):
-    # type: (str, List[dict[str, str]]) -> dict[str, Union[bool, set]]
+    # type: (str, List[ConfigSegment]) -> ConfigResTokenInfo
     """
     Validates a resource_key and its related info from the config
     and returns the following info, relevant to the config mapping validation :
@@ -199,7 +201,7 @@ def validate_and_get_resource_info(res_key, segments):
 
 
 def validate_bidirectional_mapping(mapping, res_info, res_key1, res_key2):
-    # type: (str, dict[str, dict[str, Union[bool, set]]], str, str) -> None
+    # type: (str, Dict[str, ConfigResTokenInfo], str, str) -> None
     """
     Validates if both resources of a bidirectional mapping respect validation rules.
     Both should either use MULTI_TOKEN or not use it and both should use exactly the same named tokens.
@@ -216,7 +218,7 @@ def validate_bidirectional_mapping(mapping, res_info, res_key1, res_key2):
 
 
 def validate_unidirectional_mapping(mapping, src_info, tgt_info):
-    # type: (str, dict[str, Union[bool, set]], dict[str, Union[bool, set]]) -> None
+    # type: (str, ConfigResTokenInfo, ConfigResTokenInfo) -> None
     """
     Validates if both source and target resource of a unidirectional mapping respect validation rules.
     Source resource should use MULTI_TOKEN if target uses it, and source resource should include all named tokens found
@@ -235,7 +237,7 @@ def validate_unidirectional_mapping(mapping, src_info, tgt_info):
 
 
 def get_mapping_info(mapping):
-    # type: (str) -> tuple
+    # type: (str) -> Tuple[Union[str, Any], ...]
     """
     Obtain the different info found in a mapping string from the config.
     Returns the following matching groups :
@@ -249,7 +251,7 @@ def get_mapping_info(mapping):
 
 
 def get_permissions_from_str(permissions):
-    # type: (str) -> list
+    # type: (str) -> List
     """
     Returns a tuple of all permissions found in a string. Used for permission strings found in the config, which
     can either be a single permission or a list of permissions.
@@ -261,7 +263,7 @@ def get_permissions_from_str(permissions):
 
 
 def validate_sync_mapping_config(sync_cfg, res_info):
-    # type: (ConfigDict, dict[str, dict[str, Union[bool, set]]]) -> None
+    # type: (ConfigDict, Dict[str, ConfigResTokenInfo]) -> None
     """
     Validates if mappings in the config have valid resource keys and use tokens properly.
     """

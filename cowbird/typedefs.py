@@ -6,7 +6,7 @@ Additional typing definitions.
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Any, Dict, List, Tuple, Type, Union
+    from typing import Any, Dict, List, Tuple, Type, TypedDict, Union
 
     from celery.app import Celery
     from pyramid.config import Configurator
@@ -43,6 +43,11 @@ if TYPE_CHECKING:
     ConfigItem = Dict[str, JSON]
     ConfigList = List[ConfigItem]
     ConfigDict = Dict[str, Union[str, ConfigItem, ConfigList, JSON]]
+    ConfigResTokenInfo = TypedDict["has_multi_token": bool, "named_tokens": set]
+    ConfigSegment = TypedDict["name": str, "type": str]
+
+    ResourceSegment = TypedDict["resource_name": str, "resource_type": str]
+    PermissionData = Dict[str, TypedDict["res_path": List[ResourceSegment], "permissions": Dict[str, List[str]]]]
 
     from cowbird.database.stores import StoreInterface
     StoreSelector = Union[Type[StoreInterface], StoreInterface, str]
