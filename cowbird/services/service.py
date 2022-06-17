@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 from cowbird.utils import get_logger, get_ssl_verify
 
 if TYPE_CHECKING:
+    from typing import Any
+
     # pylint: disable=W0611,unused-import
     from cowbird.typedefs import SettingsType
 
@@ -45,7 +47,7 @@ class Service(abc.ABC):
     """
 
     def __init__(self, settings, name, **kwargs):
-        # type: (SettingsType, str, dict) -> None
+        # type: (SettingsType, str, Any) -> None
         """
         :param settings: Cowbird settings for convenience
         :param name: Service name

@@ -130,10 +130,10 @@ class MockMagpieService(Service):
                 self.outbound_perms.remove(perm)
                 return
 
-    def get_service_names(self):
+    def get_service_types(self):
         # type: () -> List
         """
-        Returns the list of service names available on Magpie.
+        Returns the list of service types available on Magpie.
         """
         # Hardcoded listed of currently available services on Magpie.
         return ["access", "api", "geoserver", "geoserverwfs", "geoserverwms", "geoserverwps", "ncwms", "thredds",

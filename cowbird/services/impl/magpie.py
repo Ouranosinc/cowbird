@@ -10,7 +10,7 @@ from cowbird.services.service import SERVICE_URL_PARAM, Service
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger
 
 if TYPE_CHECKING:
-    from typing import Dict, List
+    from typing import Any, Dict, List
 
     from cowbird.typedefs import SettingsType
 
@@ -32,7 +32,7 @@ class Magpie(Service):
     required_params = [SERVICE_URL_PARAM]
 
     def __init__(self, settings, name, **kwargs):
-        # type: (SettingsType, str, Dict) -> None
+        # type: (SettingsType, str, Any) -> None
         """
         Create the magpie instance and instantiate the permission synchronizer that will handle the permission events.
 
@@ -47,19 +47,22 @@ class Magpie(Service):
         if not self.admin_user or not self.admin_password:
             raise ConfigError("Missing Magpie credentials in config. Admin Magpie username and password are required.")
         self.auth = (self.admin_user, self.admin_password)
+        self.service_types = None
 
         self.permissions_synch = PermissionSynchronizer(self)
 
-    def get_service_names(self):
+    def get_service_types(self):
         # type: () -> List
         """
-        Returns the list of service names available on Magpie.
+        Returns the list of service types available on Magpie.
         """
-        cookies = self.login()
-        resp = requests.get(url=f"{self.url}/services", headers=self.headers, cookies=cookies)
-        if resp.status_code != 200:
-            raise RuntimeError("Could not get Magpie's services.")
-        return list(resp.json()["services"].keys())
+        if not self.service_types:
+            cookies = self.login()
+            resp = requests.get(url=f"{self.url}/services/types", headers=self.headers, cookies=cookies)
+            if resp.status_code != 200:
+                raise RuntimeError("Could not get Magpie's services.")
+            self.service_types = list(resp.json()["service_types"])
+        return self.service_types
 
     def get_resource_id(self, resource_full_name):
         # type (str) -> str

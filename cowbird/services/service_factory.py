@@ -44,9 +44,9 @@ class ServiceFactory(metaclass=SingletonMeta):
         Instantiates a new `Service` implementation using its name, overwriting an existing instance if required.
         """
         svc = None
-        if name in VALID_SERVICES and \
-           name in self.services_cfg and \
-           self.services_cfg[name].get("active", False):
+        if (name in VALID_SERVICES and
+                name in self.services_cfg and
+                self.services_cfg[name].get("active", False)):
             module = importlib.import_module(".".join(["cowbird.services.impl", name.lower()]))
             cls = getattr(module, name)
             svc = cls(settings=self.settings, name=name, **self.services_cfg[name])

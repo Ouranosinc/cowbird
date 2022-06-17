@@ -14,7 +14,6 @@ from schema import SchemaError
 from cowbird.api.schemas import ValidOperations
 from cowbird.config import (
     MULTI_TOKEN,
-    ConfigError,
     ConfigErrorInvalidResourceKey,
     ConfigErrorInvalidServiceKey,
     ConfigErrorInvalidTokens

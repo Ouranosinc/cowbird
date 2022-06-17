@@ -338,12 +338,12 @@ class SyncPoint:
                 # No need to check the input src key, since it is the one that triggered the `remove` event.
                 continue
             for target_res_key in target_res_and_permissions:
-                if target_res_key in self.permissions_mapping[src_res_key][src_perm_name] \
-                        and (target_res_key in user_targets or target_res_key in group_targets):
+                if (target_res_key in self.permissions_mapping[src_res_key][src_perm_name]
+                        and (target_res_key in user_targets or target_res_key in group_targets)):
                     for target_permission in target_res_and_permissions[target_res_key]:
-                        if target_permission in self.permissions_mapping[src_res_key][src_perm_name][target_res_key] \
+                        if (target_permission in self.permissions_mapping[src_res_key][src_perm_name][target_res_key]
                                 and (target_permission in user_targets[target_res_key] or
-                                     target_permission in group_targets[target_res_key]):
+                                     target_permission in group_targets[target_res_key])):
                             # Another source resource uses the same target permission as the input.
                             # If the source permission exists, for the user/group, remove the target input permission
                             # since it should not be deleted in that case.
@@ -352,15 +352,15 @@ class SyncPoint:
                                              self._get_resource_full_name_and_type(src_res_key, src_matched_groups))
                             # Save resource data if needed for other iterations
                             res_data[src_res_key] = (svc_name, src_res_data)
-                            if target_permission in user_targets[target_res_key] and \
+                            if (target_permission in user_targets[target_res_key] and
                                     SyncPoint._is_in_permissions(src_perm_name, svc_name, src_res_data,
-                                                                 user_permissions):
+                                                                 user_permissions)):
                                 user_targets[target_res_key].remove(target_permission)
                                 if not user_targets[target_res_key]:
                                     del user_targets[target_res_key]
-                            if target_permission in group_targets[target_res_key] and \
+                            if (target_permission in group_targets[target_res_key] and
                                     SyncPoint._is_in_permissions(src_perm_name, svc_name, src_res_data,
-                                                                 grp_permissions):
+                                                                 grp_permissions)):
                                 group_targets[target_res_key].remove(target_permission)
                                 if not group_targets[target_res_key]:
                                     del group_targets[target_res_key]
@@ -493,7 +493,7 @@ class PermissionSynchronizer(object):
                 validate_sync_config(sync_cfg)
 
                 # Validate config services, only done here, since Magpie instance is not available at cowbird startup.
-                available_services = self.magpie_inst.get_service_names()
+                available_services = self.magpie_inst.get_service_types()
                 validate_sync_config_services(sync_cfg, available_services)
 
                 self.sync_point.append(SyncPoint(services=sync_cfg["services"],

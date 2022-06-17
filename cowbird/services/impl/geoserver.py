@@ -15,6 +15,8 @@ from cowbird.services.service_factory import ServiceFactory
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger
 
 if TYPE_CHECKING:
+    from typing import Any
+
     # pylint: disable=W0611,unused-import
     from cowbird.typedefs import SettingsType
 
@@ -89,7 +91,7 @@ class Geoserver(Service, FSMonitor):
     required_params = [SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM]
 
     def __init__(self, settings, name, **kwargs):
-        # type: (SettingsType, str, dict) -> None
+        # type: (SettingsType, str, Any) -> None
         """
         Create the geoserver service instance.
 

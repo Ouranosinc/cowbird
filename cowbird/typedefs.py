@@ -43,11 +43,13 @@ if TYPE_CHECKING:
     ConfigItem = Dict[str, JSON]
     ConfigList = List[ConfigItem]
     ConfigDict = Dict[str, Union[str, ConfigItem, ConfigList, JSON]]
-    ConfigResTokenInfo = TypedDict["has_multi_token": bool, "named_tokens": set]
-    ConfigSegment = TypedDict["name": str, "type": str]
+    ConfigResTokenInfo = TypedDict("ConfigResTokenInfo", {"has_multi_token": bool, "named_tokens": set})
+    ConfigSegment = TypedDict("ConfigSegment", {"name": str, "type": str})
 
-    ResourceSegment = TypedDict["resource_name": str, "resource_type": str]
-    PermissionData = Dict[str, TypedDict["res_path": List[ResourceSegment], "permissions": Dict[str, List[str]]]]
+    ResourceSegment = TypedDict("ResourceSegment", {"resource_name": str, "resource_type": str})
+    PermissionDataEntry = TypedDict("PermissionDataEntry",
+                                    {"res_path": List[ResourceSegment], "permissions": Dict[str, List[str]]})
+    PermissionData = Dict[str, PermissionDataEntry]
 
     from cowbird.database.stores import StoreInterface
     StoreSelector = Union[Type[StoreInterface], StoreInterface, str]
