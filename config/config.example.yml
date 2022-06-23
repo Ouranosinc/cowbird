@@ -134,7 +134,7 @@ sync_permissions:
       - "nginx_workspace : write <-> thredds_workspace : write"
   weaver_outputs:
     services:
-      wps:
+      api:
         process_description:
           - name: processes
             type: route
@@ -162,6 +162,8 @@ sync_permissions:
           - name: outputs
             type: route
         weaver_wps_outputs:
+          - name: wpsoutputs
+            type: route
           - name: weaver
             type: route
           - name: "{jobID}"
