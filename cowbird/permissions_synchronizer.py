@@ -114,8 +114,8 @@ class SyncPoint:
     def _get_explicit_permission(permission):
         # type: (str) -> str
         """
-        Converts a permission that could use an implicit format ('<name>' or '<name>-match') and converts it
-        to use an explicit format ('<name>-<access>-<scope>').
+        Converts a permission that could use an implicit format ('<name>' or '<name>-match') and converts it to use an
+        explicit format ('<name>-<access>-<scope>').
         """
         permission_parts = permission.split("-")
         if len(permission_parts) == 1:
@@ -152,7 +152,9 @@ class SyncPoint:
         # type: (List[ConfigSegment]) -> (str, int)
         """
         Generates a regex for a resource_nametype_path (ex.: /name1::type1/name2::type2) from a list of segments.
-        Returns the regex along with the count of segments in the regex that are named, and not using any token.
+
+        Returns the regex along with the count of segments in the regex that are named. This count excludes tokenized
+        segments.
         """
         named_segments_count = 0
         res_regex = r"^"
@@ -187,9 +189,9 @@ class SyncPoint:
     def _find_matching_res(self, service_name, resource_nametype_path):
         # type: (str, str) -> (str, Dict[str, str])
         """
-        Finds a resource key that matches the input resource path, in the sync_permissions config.
-        Note that it returns the longest match and only the named segments of the path are included in the length value.
-        Any tokenized segment is ignored in the length.
+        Finds a resource key that matches the input resource path, in the sync_permissions config. Note that it returns
+        the longest match and only the named segments of the path are included in the length value. Any tokenized
+        segment is ignored in the length.
 
         :param service_name: Name of the service associated with the input resource.
         :param resource_nametype_path: Full resource path name, which includes the type of each segment
@@ -264,6 +266,7 @@ class SyncPoint:
         # type: (str, Dict[str, str]) -> (str, List[ConfigSegment])
         """
         Finds the resource data from the config by using the resource key.
+
         Returns the formatted resource data along with the related service name.
         """
         # Get the resource_full_name, from the config, and with tokens
@@ -287,7 +290,8 @@ class SyncPoint:
         # type: (str, str, ResourceSegment, Dict) -> bool
         """
         Checks if a target permission is found in a permissions dict.
-        The check if done by looking for the target permission's resource path in the permissions dict.
+
+        The check is done by looking for the target permission's resource path in the permissions dict.
         """
         resource = permissions[svc_name]
         is_service = True  # Used for the first iteration, which has a different structure
@@ -311,14 +315,15 @@ class SyncPoint:
     def _filter_used_targets(self, target_res_and_permissions, input_src_res_key, src_matched_groups, input_permission):
         # type: (Dict[str, List[str]], str, Dict[str, str], Permission) -> (Dict[str, List[str]], Dict[str, List[str]])
         """
-        Filters a dictionary of target resource/permissions. This is used for the `remove` permission case, where all
-        target permissions should not necessarily be synched. Any target permission that is also a target permission in
-        another mapping and where the source permission of that other mapping still exists, should not be synched yet,
-        since it would destroy that other mapping.
+        Filters a dictionary of target resource/permissions.
+
+        This is used for the `remove` permission case, where all target permissions should not necessarily be synced.
+        Any target permission that is also a target permission in another mapping and where the source permission of
+        that other mapping still exists, should not be synced yet, since it would destroy that other mapping.
         Ex.:
         A -> C
         B -> C
-        If the A->C mapping was triggered for a `remove` permission case, the C target permission should only by synched
+        If the A->C mapping was triggered for a `remove` permission case, the C target permission should only be synced
         if both A and B permissions don't exist.
         """
 
@@ -372,6 +377,7 @@ class SyncPoint:
         Formats permissions data to send to Magpie. Output contains, for each target resource key, the resource path
         (with the name of each segment and its corresponding type), and all the permissions to sync, defining for each
         permission, if it is on a user, a group, or both.
+
         Output dict format :
         { <target_key>: {
             "res_path": [<list of segment names/types>],
@@ -402,7 +408,9 @@ class SyncPoint:
         # type: (Dict[str, List[str]], Permission, str, Dict[str, str]) -> PermissionData
         """
         Removes every source resource found in the mappings that has an existing permission that is synched to one of
-        the input target permissions. Used in the case of a `remove` permission.
+        the input target permissions.
+
+        Used in the case of a `remove` permission.
         """
         # If another mapping with the same target permission still has an existing source permission,
         # we can't remove the target permission yet.

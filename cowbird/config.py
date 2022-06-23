@@ -173,8 +173,10 @@ def validate_sync_perm_config_schema(sync_cfg):
 def validate_and_get_resource_info(res_key, segments):
     # type: (str, List[ConfigSegment]) -> ConfigResTokenInfo
     """
-    Validates a resource_key and its related info from the config
-    and returns the following info, relevant to the config mapping validation :
+    Validates a resource_key and its related info from the config and returns some resource info relevant to the config
+    mapping validation.
+
+    Returned info contains the following:
     - if the resource uses a MULTI_TOKEN in its resource_path
     - the list of named tokens found in the resource_path
     """
@@ -204,6 +206,7 @@ def validate_bidirectional_mapping(mapping, res_info, res_key1, res_key2):
     # type: (str, Dict[str, ConfigResTokenInfo], str, str) -> None
     """
     Validates if both resources of a bidirectional mapping respect validation rules.
+
     Both should either use MULTI_TOKEN or not use it and both should use exactly the same named tokens.
     """
     if res_info[res_key1]["has_multi_token"] != res_info[res_key2]["has_multi_token"]:
@@ -221,6 +224,7 @@ def validate_unidirectional_mapping(mapping, src_info, tgt_info):
     # type: (str, ConfigResTokenInfo, ConfigResTokenInfo) -> None
     """
     Validates if both source and target resource of a unidirectional mapping respect validation rules.
+
     Source resource should use MULTI_TOKEN if target uses it, and source resource should include all named tokens found
     in the target resource.
     """
@@ -240,6 +244,7 @@ def get_mapping_info(mapping):
     # type: (str) -> Tuple[Union[str, Any], ...]
     """
     Obtain the different info found in a mapping string from the config.
+
     Returns the following matching groups :
     (res_key1, permission1, direction, res_key2, permission2)
     """
@@ -253,8 +258,9 @@ def get_mapping_info(mapping):
 def get_permissions_from_str(permissions):
     # type: (str) -> List[str]
     """
-    Returns a tuple of all permissions found in a string. Used for permission strings found in the config, which
-    can either be a single permission or a list of permissions.
+    Returns a tuple of all permissions found in a string.
+
+    Used for permission strings found in the config, which can either be a single permission or a list of permissions.
     """
     matched_groups = re.findall(PERMISSION_REGEX, permissions)
     if not matched_groups:
@@ -304,8 +310,9 @@ def validate_sync_config(sync_cfg):
 def validate_sync_config_services(sync_cfg, available_services):
     # type: (ConfigDict, List) -> None
     """
-    Validates if all services used in the sync config are actual available services. Those should correspond to
-    services available in Magpie.
+    Validates if all services used in the sync config are actual available services.
+
+    All services should correspond to actual services available in Magpie.
     """
 
     for svc in sync_cfg["services"]:
