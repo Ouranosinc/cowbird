@@ -19,7 +19,6 @@ from cowbird.config import (
     ConfigErrorInvalidTokens
 )
 from cowbird.services import ServiceFactory
-from cowbird.services.impl.magpie import MAGPIE_ADMIN_PASSWORD_TAG, MAGPIE_ADMIN_USER_TAG
 from tests import utils
 
 if TYPE_CHECKING:
@@ -64,8 +63,8 @@ class TestSyncPermissions(unittest.TestCase):
                 "Magpie": {
                     "active": True,
                     "url": "http://localhost:2001/magpie",
-                    MAGPIE_ADMIN_USER_TAG: self.usr,
-                    MAGPIE_ADMIN_PASSWORD_TAG: self.pwd
+                    "admin_user": self.usr,
+                    "admin_password": self.pwd
                 },
                 "Thredds": {"active": True}
             }
@@ -563,7 +562,7 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         self.data = {
             "services": {
                 "Magpie": {"active": True, "url": "",
-                           MAGPIE_ADMIN_USER_TAG: "admin", MAGPIE_ADMIN_PASSWORD_TAG: "qwertyqwerty"},
+                           "admin_user": "admin", "admin_password": "qwertyqwerty"},
                 "Thredds": {"active": True},
                 "Geoserver": {"active": True}
             }

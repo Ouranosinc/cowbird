@@ -14,9 +14,6 @@ if TYPE_CHECKING:
 
     from cowbird.typedefs import SettingsType
 
-MAGPIE_ADMIN_USER_TAG = "admin_user"  # nosec: B105
-MAGPIE_ADMIN_PASSWORD_TAG = "admin_password"  # nosec: B105
-
 LOGGER = get_logger(__name__)
 
 
@@ -31,22 +28,23 @@ class Magpie(Service):
     """
     required_params = [SERVICE_URL_PARAM]
 
-    def __init__(self, settings, name, **kwargs):
-        # type: (SettingsType, str, Any) -> None
+    def __init__(self, settings, name, admin_user, admin_password, **kwargs):
+        # type: (SettingsType, str, str, str, Any) -> None
         """
         Create the magpie instance and instantiate the permission synchronizer that will handle the permission events.
 
         :param settings: Cowbird settings for convenience
         :param name: Service name
+        :param admin_user: Magpie admin username used for login.
+        :param admin_password: Magpie admin password used for login.
         """
         super(Magpie, self).__init__(settings, name, **kwargs)
 
         self.headers = {"Content-type": CONTENT_TYPE_JSON}
-        self.admin_user = kwargs.get(MAGPIE_ADMIN_USER_TAG, None)
-        self.admin_password = kwargs.get(MAGPIE_ADMIN_PASSWORD_TAG, None)
+        self.admin_user = admin_user
+        self.admin_password = admin_password
         if not self.admin_user or not self.admin_password:
             raise ConfigError("Missing Magpie credentials in config. Admin Magpie username and password are required.")
-        self.auth = (self.admin_user, self.admin_password)
         self.service_types = None
 
         self.permissions_synch = PermissionSynchronizer(self)
