@@ -12,7 +12,7 @@ Features / Changes
 
 * Add synchronization of Magpie permissions between different Magpie services, when receiving incoming webhooks.
 * Update config's `services` sections under `sync_permissions` to use actual Magpie service names instead of
-  Cowbird handler names.
+  Cowbird handler names (relates to `#22 <https://github.com/Ouranosinc/cowbird/issues/22>`_).
 * Reorganize ``config.example.yml`` to support more sync cases, provide info on the type of each segment of a resource
   path and to use tokenized path.
 * Add some config verifications when starting cowbird app.
