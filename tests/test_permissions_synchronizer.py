@@ -1,5 +1,6 @@
 import contextlib
 import os
+from pathlib import Path
 import tempfile
 import unittest
 from collections import Counter
@@ -10,6 +11,8 @@ import pytest
 import requests
 import yaml
 from schema import SchemaError
+
+from dotenv import load_dotenv
 
 from cowbird.api.schemas import ValidOperations
 from cowbird.config import (
@@ -23,6 +26,8 @@ from tests import utils
 
 if TYPE_CHECKING:
     from typing import Dict, List, Type
+
+CURR_DIR = Path(__file__).resolve().parent
 
 
 @pytest.mark.permissions
@@ -38,10 +43,13 @@ class TestSyncPermissions(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+
+        load_dotenv(CURR_DIR / "../docker/.env.example")
+
         cls.grp = "administrators"
-        cls.usr = "admin"
-        cls.pwd = "qwertyqwerty"
-        cls.url = "http://localhost:2001/magpie"
+        cls.usr = os.getenv("MAGPIE_ADMIN_USER")
+        cls.pwd = os.getenv("MAGPIE_ADMIN_PASSWORD")
+        cls.url = os.getenv("COWBIRD_TEST_MAGPIE_URL")
 
         data = {"user_name": cls.usr, "password": cls.pwd}
         resp = requests.post(f"{cls.url}/signin", json=data)
@@ -62,7 +70,7 @@ class TestSyncPermissions(unittest.TestCase):
             "services": {
                 "Magpie": {
                     "active": True,
-                    "url": "http://localhost:2001/magpie",
+                    "url": self.url,
                     "admin_user": self.usr,
                     "admin_password": self.pwd
                 },
