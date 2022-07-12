@@ -198,10 +198,25 @@ class SyncPoint:
                                        (ex.: /name1::type1/name2::type2)
         """
         service_resources = self.services[service_name]
+
         # Find which resource from the config matches with the input permission's resource tree
         # The length of a match is determined by the number of named segments matching the input resource.
         # Tokens are ignored from the match length since we favor a match with specific names over another with
         # generic tokens.
+        #
+        # Example cases:
+        # 1:
+        # - /dir1/**
+        # - /dir1/dir2/dir3/** # We favor this path if it matches since it is more specific.
+        # 2:
+        # - /dir/file # We favor this path if it matches since it is more specific.
+        # - /dir/{var}
+        # 3:
+        # Here both paths can match with the input resource_path `/file` and would result in an ambiguous match.
+        # An error would be raised because 2 matches of the same length would be found.
+        # - /**/file
+        # - /file
+
         matched_length_by_res = {}
         matched_groups_by_res = {}
         for res_key, res_segments in service_resources.items():

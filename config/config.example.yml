@@ -54,6 +54,9 @@ sync_permissions:
   # Friendly name to identify a sync point (The value is not used by Cowbird so this can be any relevant keyword)
   user_workspace:
     # [Required] This section defines a list of services and resources that exists in Magpie.
+    # For more info on the services available in Magpie :
+    #     https://pavics-magpie.readthedocs.io/en/latest/services.html#available-services
+    #     https://pavics-magpie.readthedocs.io/en/latest/autoapi/magpie/services/index.html
     services: # Contains the different resources that can be synchronized, ordered by service
       thredds: # Service name, which should also exists in Magpie
         # Resource key (ex.: nginx_workspace): Custom name to represent a resource path.
@@ -83,17 +86,6 @@ sync_permissions:
         # `permission_mappings` defined below. The `thredds_workspace` would be deduced to the resource path
         # `/catalog/workspaces/user_xyz/dir1/dir2/subdir/file_abc`.
         # The types of each segment of this target resource path  would be deduced from the `thredds_workspace` config below.
-        nginx_workspace:
-          - name: nginx
-            type: service
-          - name: workspaces
-            type: directory
-          - name: "{user}"
-            type: directory
-          - name: "**"
-            type: directory
-          - name: "{synched_file}"
-            type: file
         thredds_workspace:
           - name: catalog
             type: service
@@ -107,6 +99,18 @@ sync_permissions:
             type: directory
           - name: "{synched_file}"
             type: file
+      geoserver:
+        geoserver_workspace:
+          - name: geoserver
+            type: service
+          - name: workspaces
+            type: workspace
+          - name: "{user}"
+            type: workspace
+          - name: "**"
+            type: workspace
+          - name: "{synched_file}"
+            type: workspace
     # [Required] This section defines an array of permissions mapping between services
     # Each item found in the `permissions_mapping` use the following format :
     #     resource_key1 : permission(s) (-> or <- or <->) resource_key2 : permission(s)
@@ -114,6 +118,9 @@ sync_permissions:
     # use an implicit format (`<name>` or `<name>-match`) or an explicit format (`<name>-<access>-<scope>`).
     # When using an implicit format, if the access and/or scope are not specified, it will use the default
     # access `allow` and/or the default scope `recursive`.
+    # For more info on Magpie permissions :
+    #     https://pavics-magpie.readthedocs.io/en/latest/permissions.html#permission-definition-and-modifiers
+    #     https://pavics-magpie.readthedocs.io/en/latest/permissions.html#permissions-representation
     # The arrows between the 2 resources indicate the direction of the synchronization, and which resources can be a
     # `source` or `target` resource.
     # In the case of `<->` arrow, the synchronization of permissions can be done in either direction. Also, it is
@@ -125,13 +132,12 @@ sync_permissions:
     # just won't be used in the `target` path. Also, if the `target` resource uses the MULTI_TOKEN `**`, the `source`
     # resource should have one too. The `source` can also use the `**` token even if the `target` doesn't include one.
     permissions_mapping:
-      # A read permission for nginx_workspace creates/deletes both read and browse permissions in
-      # thredds_workspace. And a read or a browse permission on thredds_workspace creates/deletes a read
-      # permission on nginx_workspace.
-      - "nginx_workspace : read <-> thredds_workspace : [read,browse]"
-      # A write permission on nginx_workspace creates/deletes a write permission on thredds_workspace, and vice
-      # versa.
-      - "nginx_workspace : write <-> thredds_workspace : write"
+      # A read permission for thredds_workspace creates/deletes all specified geoserver_workspace permissions.
+      # And a specified geoserver_workspace permission creates/deletes a read permission on thredds_workspace.
+      - "geoserver_workspace : [getCapabilities, getFeature, getFeatureInfo] <-> thredds_workspace : read"
+      # A createStoredQuery permission on geoserver_workspace creates/deletes a write permission on thredds_workspace,
+      # and vice versa.
+      - "geoserver_workspace : createStoredQuery <-> thredds_workspace : write"
   weaver_outputs:
     services:
       api:
