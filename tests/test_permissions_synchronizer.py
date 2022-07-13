@@ -231,96 +231,127 @@ class TestSyncPermissions(unittest.TestCase):
             default_read_permission = ["read", "read-allow-recursive"]
             default_write_permission = ["write", "write-allow-recursive"]
 
-            for i in range(5):
-                self.check_user_permissions(res_ids[i], [])
-                self.check_group_permissions(res_ids[i], [])
+            test_cases = [
+                {"user": self.usr, "group": None},
+                {"user": None, "group": self.grp},
+                {"user": self.usr, "group": self.grp}
+            ]
 
-            data = {
-                "event": ValidOperations.CreateOperation.value,
-                "service_name": "thredds",
-                "resource_id": str(res_ids[0]),
-                "resource_full_name": f"/{self.test_service_name}/private-dir/workspace:file0",
-                "name": "read",
-                "access": "allow",
-                "scope": "recursive",
-                "user": self.usr,
-                "group": self.grp
-            }
+            for test_case_usr_grp in test_cases:
+                for i in range(5):
+                    self.check_user_permissions(res_ids[i], [])
+                    self.check_group_permissions(res_ids[i], [])
 
-            # Check create permissions (0 <-> 1 towards right)
-            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
-            utils.check_response_basic_info(resp, 200, expected_method="POST")
-            self.check_user_permissions(res_ids[1], default_write_permission + ["read-match", "read-allow-match"])
-            self.check_group_permissions(res_ids[1], default_write_permission + ["read-match", "read-allow-match"])
+                data = {
+                    "event": ValidOperations.CreateOperation.value,
+                    "service_name": "thredds",
+                    "resource_id": str(res_ids[0]),
+                    "resource_full_name": f"/{self.test_service_name}/private-dir/workspace:file0",
+                    "name": "read",
+                    "access": "allow",
+                    "scope": "recursive",
+                    "user": test_case_usr_grp["user"],
+                    "group": test_case_usr_grp["group"]
+                }
 
-            # Check create permissions (0 <-> 1 towards left, and 1 -> 2)
-            data["resource_id"] = str(res_ids[1])
-            data["resource_full_name"] = f"/{self.test_service_name}/private-dir/workspace:file1"
-            data["scope"] = "match"
-            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
-            utils.check_response_basic_info(resp, 200, expected_method="POST")
-            self.check_user_permissions(res_ids[0], default_read_permission)
-            self.check_group_permissions(res_ids[0], default_read_permission)
-            self.check_user_permissions(res_ids[2], ["read-deny-match"])
-            self.check_group_permissions(res_ids[2], ["read-deny-match"])
+                # Check create permissions (0 <-> 1 towards right)
+                resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
+                utils.check_response_basic_info(resp, 200, expected_method="POST")
 
-            # Check create permissions (3 <- 2)
-            data["resource_id"] = str(res_ids[2])
-            data["resource_full_name"] = f"/{self.test_service_name}/private-dir/workspace:file2"
-            data["access"] = "deny"
-            data["scope"] = "match"
-            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
-            utils.check_response_basic_info(resp, 200, expected_method="POST")
-            self.check_user_permissions(res_ids[3], default_read_permission)
-            self.check_group_permissions(res_ids[3], default_read_permission)
+                expected_perm = default_write_permission + ["read-match", "read-allow-match"] \
+                    if test_case_usr_grp["user"] else []
+                self.check_user_permissions(res_ids[1], expected_perm)
+                expected_perm = default_write_permission + ["read-match", "read-allow-match"] \
+                    if test_case_usr_grp["group"] else []
+                self.check_group_permissions(res_ids[1], expected_perm)
 
-            # Force create the permission 4, required for the following test.
-            self.create_test_permission(res_ids[4], {"name": "read", "access": "allow", "scope": "recursive"},
-                                        self.usr, self.grp)
+                # Check create permissions (0 <-> 1 towards left, and 1 -> 2)
+                data["resource_id"] = str(res_ids[1])
+                data["resource_full_name"] = f"/{self.test_service_name}/private-dir/workspace:file1"
+                data["scope"] = "match"
+                resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
+                utils.check_response_basic_info(resp, 200, expected_method="POST")
+                if test_case_usr_grp["user"]:
+                    self.check_user_permissions(res_ids[0], default_read_permission)
+                    self.check_user_permissions(res_ids[2], ["read-deny-match"])
+                else:
+                    self.check_user_permissions(res_ids[0], [])
+                    self.check_user_permissions(res_ids[2], [])
+                if test_case_usr_grp["group"]:
+                    self.check_group_permissions(res_ids[0], default_read_permission)
+                    self.check_group_permissions(res_ids[2], ["read-deny-match"])
+                else:
+                    self.check_group_permissions(res_ids[0], [])
+                    self.check_group_permissions(res_ids[2], [])
 
-            # Delete permissions
-            data["event"] = ValidOperations.DeleteOperation.value
+                # Check create permissions (3 <- 2)
+                data["resource_id"] = str(res_ids[2])
+                data["resource_full_name"] = f"/{self.test_service_name}/private-dir/workspace:file2"
+                data["access"] = "deny"
+                data["scope"] = "match"
+                resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
+                utils.check_response_basic_info(resp, 200, expected_method="POST")
+                expected_perm = default_read_permission if test_case_usr_grp["user"] else []
+                self.check_user_permissions(res_ids[3], expected_perm)
+                expected_perm = default_read_permission if test_case_usr_grp["group"] else []
+                self.check_group_permissions(res_ids[3], expected_perm)
 
-            # Check delete permissions (0 <-> 1 towards right), read permission 1 only should be deleted and
-            # write permission 1 should not be deleted, since there is also the mapping 4 -> 1(write),
-            # and the permission 4 still exists.
-            data["resource_id"] = str(res_ids[0])
-            data["resource_full_name"] = f"/{self.test_service_name}/private-dir/workspace:file0"
-            data["access"] = "allow"
-            data["scope"] = "recursive"
-            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
-            utils.check_response_basic_info(resp, 200, expected_method="POST")
-            self.check_user_permissions(res_ids[1], default_write_permission)
-            self.check_group_permissions(res_ids[1], default_write_permission)
+                # Force create the permission 4, required for the following test.
+                self.create_test_permission(res_ids[4], {"name": "read", "access": "allow", "scope": "recursive"},
+                                            self.usr, self.grp)
 
-            # Force delete the permission 4.
-            self.delete_test_permission(res_ids[4], {"name": "read", "access": "allow", "scope": "recursive"},
-                                        self.usr, self.grp)
-            # Check delete permissions (0 <-> 1 towards right), which should now work, since permission 4 was deleted.
-            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
-            utils.check_response_basic_info(resp, 200, expected_method="POST")
-            self.check_user_permissions(res_ids[1], [])
-            self.check_group_permissions(res_ids[1], [])
+                # Delete permissions
+                data["event"] = ValidOperations.DeleteOperation.value
 
-            # Check delete permissions (0 <-> 1 towards left and 1 -> 2)
-            data["resource_id"] = str(res_ids[1])
-            data["resource_full_name"] = f"/{self.test_service_name}/private-dir/workspace:file1"
-            data["scope"] = "match"
-            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
-            utils.check_response_basic_info(resp, 200, expected_method="POST")
-            for i in [0, 2]:
-                self.check_user_permissions(res_ids[i], [])
-                self.check_group_permissions(res_ids[i], [])
+                # Check delete permissions (0 <-> 1 towards right), read permission 1 only should be deleted and
+                # write permission 1 should not be deleted, since there is also the mapping 4 -> 1(write),
+                # and the permission 4 still exists.
+                data["resource_id"] = str(res_ids[0])
+                data["resource_full_name"] = f"/{self.test_service_name}/private-dir/workspace:file0"
+                data["access"] = "allow"
+                data["scope"] = "recursive"
+                resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
+                utils.check_response_basic_info(resp, 200, expected_method="POST")
+                if test_case_usr_grp["user"]:
+                    self.check_user_permissions(res_ids[1], default_write_permission)
+                if test_case_usr_grp["group"]:
+                    self.check_group_permissions(res_ids[1], default_write_permission)
 
-            # Check delete permissions (3 <- 2)
-            data["resource_id"] = str(res_ids[2])
-            data["resource_full_name"] = f"/{self.test_service_name}/private-dir/workspace:file2"
-            data["access"] = "deny"
-            data["scope"] = "match"
-            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
-            utils.check_response_basic_info(resp, 200, expected_method="POST")
-            self.check_user_permissions(res_ids[3], [])
-            self.check_group_permissions(res_ids[3], [])
+                # Force delete the permission 4.
+                self.delete_test_permission(res_ids[4], {"name": "read", "access": "allow", "scope": "recursive"},
+                                            self.usr, self.grp)
+                # Check delete permissions (0 <-> 1 towards right), which should now work,
+                # since permission 4 was deleted.
+                resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
+                utils.check_response_basic_info(resp, 200, expected_method="POST")
+                if test_case_usr_grp["user"]:
+                    self.check_user_permissions(res_ids[1], [])
+                if test_case_usr_grp["group"]:
+                    self.check_group_permissions(res_ids[1], [])
+
+                # Check delete permissions (0 <-> 1 towards left and 1 -> 2)
+                data["resource_id"] = str(res_ids[1])
+                data["resource_full_name"] = f"/{self.test_service_name}/private-dir/workspace:file1"
+                data["scope"] = "match"
+                resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
+                utils.check_response_basic_info(resp, 200, expected_method="POST")
+                for i in [0, 2]:
+                    if test_case_usr_grp["user"]:
+                        self.check_user_permissions(res_ids[i], [])
+                    if test_case_usr_grp["group"]:
+                        self.check_group_permissions(res_ids[i], [])
+
+                # Check delete permissions (3 <- 2)
+                data["resource_id"] = str(res_ids[2])
+                data["resource_full_name"] = f"/{self.test_service_name}/private-dir/workspace:file2"
+                data["access"] = "deny"
+                data["scope"] = "match"
+                resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
+                utils.check_response_basic_info(resp, 200, expected_method="POST")
+                if test_case_usr_grp["user"]:
+                    self.check_user_permissions(res_ids[3], [])
+                if test_case_usr_grp["group"]:
+                    self.check_group_permissions(res_ids[3], [])
 
     def test_webhooks_valid_tokens(self):
         """

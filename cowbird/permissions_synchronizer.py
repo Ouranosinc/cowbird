@@ -308,6 +308,9 @@ class SyncPoint:
 
         The check is done by looking for the target permission's resource path in the permissions dict.
         """
+        if not permissions:
+            return False
+
         resource = permissions[svc_name]
         is_service = True  # Used for the first iteration, which has a different structure
         res_access_key = "resources"
@@ -401,21 +404,23 @@ class SyncPoint:
         }
         """
         permission_data = {}
-        for target_key in user_targets:
-            _, res_path = self._get_resource_full_name_and_type(target_key, src_matched_groups)
-            permissions = {}
-            for target_permission in user_targets[target_key]:
-                permissions[target_permission] = [input_permission.user, None]
-            permission_data[target_key] = {"res_path": res_path, "permissions": permissions}
-        for target_key in group_targets:
-            if target_key not in permission_data:
+        if input_permission.user:
+            for target_key in user_targets:
                 _, res_path = self._get_resource_full_name_and_type(target_key, src_matched_groups)
-                permission_data[target_key] = {"res_path": res_path, "permissions": {}}
-            for target_permission in group_targets[target_key]:
-                if target_permission in permission_data[target_key]["permissions"]:
-                    permission_data[target_key]["permissions"][target_permission][1] = input_permission.group
-                else:
-                    permission_data[target_key]["permissions"][target_permission] = [None, input_permission.group]
+                permissions = {}
+                for target_permission in user_targets[target_key]:
+                    permissions[target_permission] = [input_permission.user, None]
+                permission_data[target_key] = {"res_path": res_path, "permissions": permissions}
+        if input_permission.group:
+            for target_key in group_targets:
+                if target_key not in permission_data:
+                    _, res_path = self._get_resource_full_name_and_type(target_key, src_matched_groups)
+                    permission_data[target_key] = {"res_path": res_path, "permissions": {}}
+                for target_permission in group_targets[target_key]:
+                    if target_permission in permission_data[target_key]["permissions"]:
+                        permission_data[target_key]["permissions"][target_permission][1] = input_permission.group
+                    else:
+                        permission_data[target_key]["permissions"][target_permission] = [None, input_permission.group]
         return permission_data
 
     def _prepare_permissions_to_remove(self, target_res_and_permissions, input_permission, input_src_res_key,
