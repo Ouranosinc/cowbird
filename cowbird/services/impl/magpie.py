@@ -1,3 +1,4 @@
+import time
 from typing import TYPE_CHECKING
 
 import requests
@@ -10,11 +11,13 @@ from cowbird.services.service import SERVICE_URL_PARAM, Service
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger
 
 if TYPE_CHECKING:
-    from typing import Any, Dict, List
+    from typing import Any, Dict, List, Optional
 
     from cowbird.typedefs import SettingsType
 
 LOGGER = get_logger(__name__)
+
+COOKIES_TIMEOUT = 60
 
 
 class Magpie(Service):
@@ -46,8 +49,26 @@ class Magpie(Service):
         if not self.admin_user or not self.admin_password:
             raise ConfigError("Missing Magpie credentials in config. Admin Magpie username and password are required.")
         self.service_types = None
+        self.cookies = None
+        self.last_cookies_update_time = None
 
         self.permissions_synch = PermissionSynchronizer(self)
+
+    def _send_request(self, method, url, params=None, json=None):
+        # type: (str, str, Optional[Any], Optional[Any]) -> requests.Response
+        """
+        Wrapping function to send requests to Magpie, which also handles login and cookies.
+        """
+        cookies = self.login()
+        resp = requests.request(method=method, url=url, params=params, json=json, cookies=cookies, headers=self.headers)
+
+        if resp.status_code in [401, 403]:
+            # try refreshing cookies in case of Unauthorized or Forbidden error
+            self.cookies = None
+            cookies = self.login()
+            resp = requests.request(method=method, url=url, params=params, json=json, cookies=cookies,
+                                    headers=self.headers)
+        return resp
 
     def get_service_types(self):
         # type: () -> List
@@ -55,8 +76,7 @@ class Magpie(Service):
         Returns the list of service types available on Magpie.
         """
         if not self.service_types:
-            cookies = self.login()
-            resp = requests.get(url=f"{self.url}/services/types", headers=self.headers, cookies=cookies)
+            resp = self._send_request(method="GET", url=f"{self.url}/services/types")
             if resp.status_code != 200:
                 raise RuntimeError("Could not get Magpie's services.")
             self.service_types = list(resp.json()["service_types"])
@@ -71,10 +91,8 @@ class Magpie(Service):
         """
         Returns the associated Magpie Resource object and all its parents in a list ordered from parent to child.
         """
-        cookies = self.login()
         data = {"parent": "true", "invert": "true", "flatten": "true"}
-        resp = requests.get(url=f"{self.url}/resources/{resource_id}",
-                            headers=self.headers, cookies=cookies, params=data)
+        resp = self._send_request(method="GET", url=f"{self.url}/resources/{resource_id}", params=data)
         if resp.status_code != 200:
             raise RuntimeError("Could not find the input resource's parent resources.")
         return resp.json()["resources"]
@@ -84,9 +102,7 @@ class Magpie(Service):
         """
         Gets all user resource permissions.
         """
-        cookies = self.login()
-        resp = requests.get(url=f"{self.url}/users/{user}/resources",
-                            headers=self.headers, cookies=cookies)
+        resp = self._send_request(method="GET", url=f"{self.url}/users/{user}/resources")
         if resp.status_code != 200:
             raise RuntimeError(f"Could not find the user `{user}` resource permissions.")
         return resp.json()["resources"]
@@ -96,9 +112,7 @@ class Magpie(Service):
         """
         Gets all group resource permissions.
         """
-        cookies = self.login()
-        resp = requests.get(url=f"{self.url}/groups/{grp}/resources",
-                            headers=self.headers, cookies=cookies)
+        resp = self._send_request(method="GET", url=f"{self.url}/groups/{grp}/resources")
         if resp.status_code != 200:
             raise RuntimeError(f"Could not find the group `{grp}` resource permissions.")
         return resp.json()["resources"]
@@ -120,15 +134,11 @@ class Magpie(Service):
         """
         Make sure that the specified permission exists on Magpie.
         """
-        cookies = self.login()
-
         if permissions_data:
             permissions_data[-1]["action"] = "create"
 
-            resp = requests.patch(
-                url=f"{self.url}/permissions",
-                headers=self.headers, cookies=cookies, json={"permissions": permissions_data}
-            )
+            resp = self._send_request(method="PATCH", url=f"{self.url}/permissions",
+                                      json={"permissions": permissions_data})
             if resp.status_code == 200:
                 LOGGER.info("Permission creation was successful.")
             else:
@@ -141,14 +151,11 @@ class Magpie(Service):
         """
         Remove the specified permission from Magpie if it exists.
         """
-        cookies = self.login()
         if permissions_data:
             permissions_data[-1]["action"] = "remove"
 
-            resp = requests.patch(
-                url=f"{self.url}/permissions",
-                headers=self.headers, cookies=cookies, json={"permissions": permissions_data}
-            )
+            resp = self._send_request(method="PATCH", url=f"{self.url}/permissions",
+                                      json={"permissions": permissions_data})
             if resp.status_code == 200:
                 LOGGER.info("Permission removal was successful.")
             else:
@@ -161,10 +168,14 @@ class Magpie(Service):
         """
         Login to Magpie app using admin credentials.
         """
-        data = {"user_name": self.admin_user, "password": self.admin_password}
-        try:
-            resp = requests.post(f"{self.url}/signin", json=data)
-        except Exception as exc:
-            raise RuntimeError(f"Failed to sign in to Magpie (url: `{self.url}`) with user `{self.admin_user}`. "
-                               f"Exception : {exc}. ")
-        return resp.cookies
+        if not self.cookies or not self.last_cookies_update_time \
+                or time.time() - self.last_cookies_update_time > COOKIES_TIMEOUT:
+            data = {"user_name": self.admin_user, "password": self.admin_password}
+            try:
+                resp = requests.post(f"{self.url}/signin", json=data)
+            except Exception as exc:
+                raise RuntimeError(f"Failed to sign in to Magpie (url: `{self.url}`) with user `{self.admin_user}`. "
+                                   f"Exception : {exc}. ")
+            self.cookies = resp.cookies
+            self.last_cookies_update_time = time.time()
+        return self.cookies
