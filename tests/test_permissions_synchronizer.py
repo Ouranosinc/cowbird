@@ -692,15 +692,15 @@ class TestSyncPermissionsConfig(unittest.TestCase):
             "user_workspace": {
                 "services": {
                     "thredds": {
-                        "TokenizedResource": [
+                        "TokenizedResource1": [
                             {"name": "catalog", "type": "service"},
                             {"name": MULTI_TOKEN, "type": "directory"}],
-                        "UntokenizedResource": [
+                        "TokenizedResource2": [
                             {"name": "catalog", "type": "service"},
                             {"name": MULTI_TOKEN, "type": "directory"},
                             {"name": "file", "type": "file"}
                         ]}},
-                "permissions_mapping": ["TokenizedResource : read <-> UntokenizedResource : read"]
+                "permissions_mapping": ["TokenizedResource1 : read <-> TokenizedResource2 : read"]
             }
         }
         check_config(self.data)
@@ -826,4 +826,46 @@ class TestSyncPermissionsConfig(unittest.TestCase):
 
         self.data["sync_permissions"]["user_workspace"]["permissions_mapping"] = \
             ["Resource2 : read <- Resource1 : read"]
+        check_config(self.data)
+
+    def test_cross_service_mappings(self):
+        """
+        Tests config that uses mappings between permissions of different services.
+        """
+        self.data["sync_permissions"] = {
+            "user_workspace": {
+                "services": {
+                    "thredds": {
+                        "ThreddsMultiTokenResource": [
+                            {"name": "catalog", "type": "service"},
+                            {"name": MULTI_TOKEN, "type": "directory"}],
+                        "ThreddsNamedTokenResource": [
+                            {"name": "catalog", "type": "service"},
+                            {"name": "{dir1_var}", "type": "directory"},
+                            {"name": "{dir2_var}", "type": "directory"}]
+                        },
+                    "geoserver": {
+                        "GeoserverMultiTokenResource": [
+                            {"name": "catalog", "type": "service"},
+                            {"name": MULTI_TOKEN, "type": "directory"},
+                            {"name": "file", "type": "file"}],
+                        "GeoserverUntokenizedResource": [
+                            {"name": "catalog", "type": "service"},
+                            {"name": "file", "type": "file"}],
+                        "GeoserverNamedTokenResource1": [
+                            {"name": "catalog", "type": "service"},
+                            {"name": "{dir1_var}", "type": "directory"},
+                            {"name": "dir2", "type": "directory"}],
+                        "GeoserverNamedTokenResource2": [
+                            {"name": "catalog", "type": "service"},
+                            {"name": "{dir1_var}", "type": "directory"},
+                            {"name": "{dir2_var}", "type": "directory"}]
+                    }},
+                "permissions_mapping": ["ThreddsMultiTokenResource : read -> GeoserverUntokenizedResource : read",
+                                        "ThreddsMultiTokenResource : read <-> GeoserverMultiTokenResource : read",
+                                        "ThreddsNamedTokenResource : read -> GeoserverUntokenizedResource : read",
+                                        "ThreddsNamedTokenResource : read -> GeoserverNamedTokenResource1 : read",
+                                        "ThreddsNamedTokenResource : read <-> GeoserverNamedTokenResource2 : read"]
+            }
+        }
         check_config(self.data)
