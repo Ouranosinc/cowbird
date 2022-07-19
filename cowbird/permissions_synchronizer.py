@@ -71,6 +71,12 @@ class Permission:
                 self.user == other.user and
                 self.group == other.group)
 
+    def get_full_permission_value(self):
+        # type: () -> str
+        """
+        Returns the full permission value, consisting of the name-access-scope values.
+        """
+        return f"{self.name}-{self.access}-{self.scope}"
 
 class SyncPoint:
     """
@@ -341,6 +347,7 @@ class SyncPoint:
         Ex.:
         A -> C
         B -> C
+        (or [A,B] -> C)
         If the A->C mapping was triggered for a `remove` permission case, the C target permission should only be synced
         if both A and B permissions don't exist.
         """
@@ -353,12 +360,14 @@ class SyncPoint:
         if input_permission.group:
             grp_permissions = svc.get_group_permissions(input_permission.group)
 
-        user_targets = deepcopy(target_res_and_permissions)
+        user_targets = deepcopy(target_res_and_permissions)  # TODO: should it be moved with the ifs above? keep targets empty if not required
         group_targets = deepcopy(target_res_and_permissions)
         res_data = {}
         for src_res_key, src_perm_name in self._get_src_permissions():
-            if src_res_key == input_src_res_key:
-                # No need to check the input src key, since it is the one that triggered the `remove` event.
+            if src_res_key == input_src_res_key and src_perm_name == input_permission.get_full_permission_value():
+                # No need to check the input src_key/permission, since it is the one that triggered the `remove` event.
+                # It is assumed no checks are required, since a webhook was received for this permission's deletion and
+                # this permission should not exist anymore in Magpie.
                 continue
             for target_res_key in target_res_and_permissions:
                 if (target_res_key in self.permissions_mapping[src_res_key][src_perm_name]
@@ -443,9 +452,9 @@ class SyncPoint:
         """
         Finds all permissions that should be synchronised with the source resource.
         """
-        # For each permission mapping
+        # Find each permission mapping related to source resource and input permission
         src_permissions = self.permissions_mapping.get(src_res_key)
-        explicit_input_permission_name = f"{input_permission.name}-{input_permission.access}-{input_permission.scope}"
+        explicit_input_permission_name = input_permission.get_full_permission_value()
         target_res_and_permissions = src_permissions.get(explicit_input_permission_name) if src_permissions else None
 
         if not target_res_and_permissions:
