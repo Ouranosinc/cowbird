@@ -464,27 +464,29 @@ class TestSyncPermissions(unittest.TestCase):
                                            side_effect=utils.MockAnyService))
 
             # Create test resources
-            src1_res_id = self.create_test_resource("private", "directory", self.test_service_id)
-            parent_res_id = self.create_test_resource("dir1", "directory", src1_res_id)
+            dir_src_res_id = self.create_test_resource("private", "directory", self.test_service_id)
+            parent_res_id = self.create_test_resource("dir1", "directory", dir_src_res_id)
             parent_res_id = self.create_test_resource("dir2", "directory", parent_res_id)
-            src2_res_id = self.create_test_resource("workspace_file", "file", parent_res_id)
+            file_src_res_id = self.create_test_resource("workspace_file", "file", parent_res_id)
 
-            target1_res_id = self.test_service_id
+            dir_target_res_id = self.test_service_id
             parent_res_id = self.create_test_resource("dir1", "directory", self.test_service_id)
             parent_res_id = self.create_test_resource("dir2", "directory", parent_res_id)
-            target2_res_id = self.create_test_resource("workspace_file", "file", parent_res_id)
+            file_target_res_id = self.create_test_resource("workspace_file", "file", parent_res_id)
 
             parent_res_id = self.create_test_resource("named_dir1", "directory", self.test_service_id)
             parent_res_id = self.create_test_resource("dir1", "directory", parent_res_id)
-            src3_res_id = self.create_test_resource("dir2", "directory", parent_res_id)
+            named_dir_src_res_id = self.create_test_resource("dir2", "directory", parent_res_id)
             parent_res_id = self.create_test_resource("named_dir2", "directory", self.test_service_id)
             parent_res_id = self.create_test_resource("dir2", "directory", parent_res_id)
-            target3_res_id = self.create_test_resource("dir1", "directory", parent_res_id)
+            named_dir_target_res_id = self.create_test_resource("dir1", "directory", parent_res_id)
 
+            # Create permissions for 1st mapping case, src resource should match with a MULTI_TOKEN that
+            # uses 0 segment occurrence
             data = {
                 "event": ValidOperations.CreateOperation.value,
                 "service_name": "thredds",
-                "resource_id": str(src1_res_id),
+                "resource_id": str(dir_src_res_id),
                 "resource_full_name": f"/{self.test_service_name}/private",
                 "name": "read",
                 "access": "allow",
@@ -492,30 +494,28 @@ class TestSyncPermissions(unittest.TestCase):
                 "user": self.usr,
                 "group": None
             }
-
-            # Create permissions
             resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
             utils.check_response_basic_info(resp, 200, expected_method="POST")
 
             # Check if only corresponding permissions were created
-            self.check_user_permissions(target1_res_id, ["read", "read-allow-recursive"])
-            self.check_user_permissions(target2_res_id, [])
+            self.check_user_permissions(dir_target_res_id, ["read", "read-allow-recursive"])
+            self.check_user_permissions(file_target_res_id, [])
 
             # Create and check permissions with 2nd mapping case
-            data["resource_id"] = str(src2_res_id)
+            data["resource_id"] = str(file_src_res_id)
             data["resource_full_name"] = f"/{self.test_service_name}/private/dir1/dir2/workspace_file"
 
             resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
             utils.check_response_basic_info(resp, 200, expected_method="POST")
-            self.check_user_permissions(target2_res_id, ["read", "read-allow-recursive"])
+            self.check_user_permissions(file_target_res_id, ["read", "read-allow-recursive"])
 
             # Create and check permissions with 3rd mapping case
-            data["resource_id"] = str(src3_res_id)
+            data["resource_id"] = str(named_dir_src_res_id)
             data["resource_full_name"] = f"/{self.test_service_name}/named_dir1/dir1/dir2"
 
             resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
             utils.check_response_basic_info(resp, 200, expected_method="POST")
-            self.check_user_permissions(target3_res_id, ["read", "read-allow-recursive"])
+            self.check_user_permissions(named_dir_target_res_id, ["read", "read-allow-recursive"])
 
     def test_webhooks_invalid_multimatch(self):
         """
