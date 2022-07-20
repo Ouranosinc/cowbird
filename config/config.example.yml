@@ -79,7 +79,7 @@ sync_permissions:
         # with the first token, and `seg3` with the second token, we could also match `seg1` with the first token, and
         # `seg2/seg3` with the second token, etc.
         #
-        # The variables and tokens are useful to know the type of any segments that is not named. For example, with the
+        # The variables and tokens are useful to know the type of any segments that doesn't have a fixed name. For example, with the
         # config below, if we have an input resource path `/nginx/workspaces/user_xyz/dir1/dir2/file_abc` that matches with
         # the `nginx_workspace` resource key, the `user` variable name would be matched with `user_xyz` and `synched_file`, with `file_abc`.
         # Also, this key would need to sync permissions with the `thredds_workspace` resource key, considering the
@@ -124,13 +124,18 @@ sync_permissions:
     # The arrows between the 2 resources indicate the direction of the synchronization, and which resources can be a
     # `source` or `target` resource.
     # In the case of `<->` arrow, the synchronization of permissions can be done in either direction. Also, it is
-    # important to note that in thise case, both mapped resources should matching `variable` names if any, and if one
+    # important to note that in thise case, both mapped resources should be matching `variable` names if any, and if one
     # of the resource uses the `**` MULTI_TOKEN, the other resource should also include it in its path, to know how to
     # match the segments.
     # In the case of `->` or `<-` arrow, the synchronization is only done one way. In this case, the `source` resource
     # path should include every `variable` names found in the `target` resource, but it can have more `variables` that
     # just won't be used in the `target` path. Also, if the `target` resource uses the MULTI_TOKEN `**`, the `source`
     # resource should have one too. The `source` can also use the `**` token even if the `target` doesn't include one.
+    #
+    # In the case of a `deleted` webhook event, note that the related target permissions only get removed if they are not in
+    # another sync mapping as a target where the source permission still exists. Deleting the target permission
+    # would break that other sync mapping, having an existing source permission but a deleted target permission.
+    # Instead, a target permission only gets deleted when all related source permissions are also deleted.
     permissions_mapping:
       # A read permission for thredds_workspace creates/deletes all specified geoserver_workspace permissions.
       # And a specified geoserver_workspace permission creates/deletes a read permission on thredds_workspace.
