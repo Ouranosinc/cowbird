@@ -351,8 +351,9 @@ class TestSyncPermissions(unittest.TestCase):
                                           1: default_write_permission})
 
                 # Check delete write permission 1 (0 <-> 1 towards left and 1 -> 2), 0 and 2 should be deleted, since
-                # read permission 1 does not exist anymore. The sync_permission gets applied since a webhook event was
-                # triggered for a deletion of the write permission 1, even if it still actually exists in Magpie.
+                # read permission 1 does not exist anymore. The sync is still applied, even though 0 and 2 are also
+                # mapped to the write permission 1 and the write permission 1 still actually exists in Magpie at this
+                # stage of the test, since cowbird assumes that Magpie sends valid webhook events.
                 if test_case_usr_grp["user"]:
                     self.check_user_permissions(res_ids[1], default_write_permission)
                 if test_case_usr_grp["group"]:
