@@ -1,18 +1,17 @@
 import contextlib
 import os
-from pathlib import Path
 import tempfile
 import unittest
 from collections import Counter
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import mock
 import pytest
 import requests
 import yaml
-from schema import SchemaError
-
 from dotenv import load_dotenv
+from schema import SchemaError
 
 from cowbird.api.schemas import ValidOperations
 from cowbird.config import (
