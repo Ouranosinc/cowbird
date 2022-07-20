@@ -935,8 +935,8 @@ class TestSyncPermissionsConfig(unittest.TestCase):
                         "ThreddsNamedTokenResource": [
                             {"name": "catalog", "type": "service"},
                             {"name": "{dir1_var}", "type": "directory"},
-                            {"name": "{dir2_var}", "type": "directory"}]
-                        },
+                            {"name": "{dir2_var}", "type": "directory"}
+                        ]},
                     "geoserver": {
                         "GeoserverMultiTokenResource": [
                             {"name": "catalog", "type": "service"},

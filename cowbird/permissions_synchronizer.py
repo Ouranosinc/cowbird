@@ -78,6 +78,7 @@ class Permission:
         """
         return f"{self.name}-{self.access}-{self.scope}"
 
+
 class SyncPoint:
     """
     A sync point contains services sharing resources via multiple APIs.
@@ -339,7 +340,8 @@ class SyncPoint:
     def _filter_used_targets(self, target_res_and_permissions, input_src_res_key, src_matched_groups, input_permission):
         # type: (Dict[str, List[str]], str, Dict[str, str], Permission) -> (Dict[str, List[str]], Dict[str, List[str]])
         """
-        Filters a dictionary of target resource/permissions.
+        Filters a dictionary of target resource/permissions, keeping only the permissions which should actually be
+        removed.
 
         This is used for the `remove` permission case, where all target permissions should not necessarily be synced.
         Any target permission that is also a target permission in another mapping and where the source permission of
@@ -355,13 +357,15 @@ class SyncPoint:
         svc = ServiceFactory().get_service("Magpie")
         user_permissions = None
         grp_permissions = None
+        user_targets = {}
+        group_targets = {}
         if input_permission.user:
             user_permissions = svc.get_user_permissions(input_permission.user)
+            user_targets = deepcopy(target_res_and_permissions)
         if input_permission.group:
             grp_permissions = svc.get_group_permissions(input_permission.group)
+            group_targets = deepcopy(target_res_and_permissions)
 
-        user_targets = deepcopy(target_res_and_permissions)  # TODO: should it be moved with the ifs above? keep targets empty if not required
-        group_targets = deepcopy(target_res_and_permissions)
         res_data = {}
         for src_res_key, src_perm_name in self._get_src_permissions():
             if src_res_key == input_src_res_key and src_perm_name == input_permission.get_full_permission_value():
@@ -374,8 +378,8 @@ class SyncPoint:
                         and (target_res_key in user_targets or target_res_key in group_targets)):
                     for target_permission in target_res_and_permissions[target_res_key]:
                         if (target_permission in self.permissions_mapping[src_res_key][src_perm_name][target_res_key]
-                                and (target_permission in user_targets[target_res_key] or
-                                     target_permission in group_targets[target_res_key])):
+                                and (target_permission in user_targets.get(target_res_key, []) or
+                                     target_permission in group_targets.get(target_res_key, []))):
                             # Another source resource uses the same target permission as the input.
                             # If the source permission exists, for the user/group, remove the target input permission
                             # since it should not be deleted in that case.
@@ -384,13 +388,13 @@ class SyncPoint:
                                              self._get_resource_full_name_and_type(src_res_key, src_matched_groups))
                             # Save resource data if needed for other iterations
                             res_data[src_res_key] = (svc_name, src_res_data)
-                            if (target_permission in user_targets[target_res_key] and
+                            if (target_permission in user_targets.get(target_res_key, []) and
                                     SyncPoint._is_in_permissions(src_perm_name, svc_name, src_res_data,
                                                                  user_permissions)):
                                 user_targets[target_res_key].remove(target_permission)
                                 if not user_targets[target_res_key]:
                                     del user_targets[target_res_key]
-                            if (target_permission in group_targets[target_res_key] and
+                            if (target_permission in group_targets.get(target_res_key, []) and
                                     SyncPoint._is_in_permissions(src_perm_name, svc_name, src_res_data,
                                                                  grp_permissions)):
                                 group_targets[target_res_key].remove(target_permission)
