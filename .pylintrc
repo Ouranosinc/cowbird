@@ -71,6 +71,9 @@ disable=C0111,missing-docstring,
         E0401,import-error,
         R0201,no-self-use
         R0205,useless-object-inheritance,
+        # R0401 disabled to avoid unnecessary warnings on already handled circular imports
+        # See issue : https://github.com/PyCQA/pylint/issues/850
+        R0401,cyclic-import,
         R0801,duplicate-code,
         R0904,too-many-public-methods,
         R0912,too-many-branches,
