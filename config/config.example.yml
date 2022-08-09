@@ -58,9 +58,9 @@ sync_permissions:
     #     https://pavics-magpie.readthedocs.io/en/latest/services.html#available-services
     #     https://pavics-magpie.readthedocs.io/en/latest/autoapi/magpie/services/index.html
     services: # Contains the different resources that can be synchronized, ordered by service
-      thredds: # Service name, which should also exists in Magpie
-        # Resource key (ex.: nginx_workspace): Custom name to represent a resource path.
-        # It should correspond to the names used in the `permission_mappings` section below.
+      thredds: # Service name, which should also exist in Magpie
+        # Resource key (ex.: thredds_workspace): Custom name to represent a resource path.
+        # It should correspond to the names used in the `permissions_mapping` section below.
         # It contains the list of each segment of its resource path, with their corresponding name and type.
         #
         # The name of a segment can either be a string name, a variable or a `MULTI_TOKEN` (`**`).
@@ -71,21 +71,23 @@ sync_permissions:
         # permission. Note that all variables found in a target resource path should also be included in the source
         # resource path.
         #
-        # MULTI_TOKEN represent any number (0 or more) of names that fit with the corresponding type.
-        # Also, the MULTI_TOKEN can only be used one time in each list of path segments. This is to avoid ambiguous
-        # cases that would result with using multiple MULTI_TOKENs, since multiple ways of matching the resource path
+        # `MULTI_TOKEN` represent any number (0 or more) of names that fit with the corresponding type.
+        # Also, the `MULTI_TOKEN` can only be used one time in each list of path segments. This is to avoid ambiguous
+        # cases that would result with using multiple `MULTI_TOKEN`, since multiple ways of matching the resource path
         # would then be possible. For example with a tokenized path `**/**` and an input resource `seg1/seg2/seg3`,
-        # multiple choices of matching appear when we try to match a suffix (mentioned below). We could match `seg1/seg2`
-        # with the first token, and `seg3` with the second token, we could also match `seg1` with the first token, and
-        # `seg2/seg3` with the second token, etc.
+        # multiple choices of matching appear when we try to match a suffix (mentioned below).
+        # We could match `seg1/seg2` with the first token, and `seg3` with the second token,
+        # we could also match `seg1` with the first token, and `seg2/seg3` with the second token, etc.
         #
-        # The variables and tokens are useful to know the type of any segments that doesn't have a fixed name. For example, with the
-        # config below, if we have an input resource path `/nginx/workspaces/user_xyz/dir1/dir2/file_abc` that matches with
-        # the `nginx_workspace` resource key, the `user` variable name would be matched with `user_xyz` and `synched_file`, with `file_abc`.
+        # The variables and tokens are useful to know the type of any segments that doesn't have a fixed name.
+        # For example, with the config below, if we have an input resource path
+        # `/nginx/workspaces/user_xyz/dir1/dir2/file_abc` that matches with the `nginx_workspace` resource key,
+        # the `user` variable name would be matched with `user_xyz` and `synched_file`, with `file_abc`.
         # Also, this key would need to sync permissions with the `thredds_workspace` resource key, considering the
-        # `permission_mappings` defined below. The `thredds_workspace` would be deduced to the resource path
+        # `permissions_mapping` defined below. The `thredds_workspace` would be deduced to the resource path
         # `/catalog/workspaces/user_xyz/dir1/dir2/subdir/file_abc`.
-        # The types of each segment of this target resource path  would be deduced from the `thredds_workspace` config below.
+        # The types of each segment of this target resource path would be deduced
+        # from the `thredds_workspace` config below.
         thredds_workspace:
           - name: catalog
             type: service
@@ -114,6 +116,7 @@ sync_permissions:
     # [Required] This section defines an array of permissions mapping between services
     # Each item found in the `permissions_mapping` use the following format :
     #     resource_key1 : permission(s) (-> or <- or <->) resource_key2 : permission(s)
+    #
     # The permissions can either be a single permission or a list of permissions. Each of those permissions can either
     # use an implicit format (`<name>` or `<name>-match`) or an explicit format (`<name>-<access>-<scope>`).
     # When using an implicit format, if the access and/or scope are not specified, it will use the default
@@ -121,27 +124,29 @@ sync_permissions:
     # For more info on Magpie permissions :
     #     https://pavics-magpie.readthedocs.io/en/latest/permissions.html#permission-definition-and-modifiers
     #     https://pavics-magpie.readthedocs.io/en/latest/permissions.html#permissions-representation
+    #
     # The arrows between the 2 resources indicate the direction of the synchronization, and which resources can be a
-    # `source` or `target` resource.
+    # source or target resource.
     # In the case of `<->` arrow, the synchronization of permissions can be done in either direction. Also, it is
-    # important to note that in thise case, both mapped resources should be matching `variable` names if any, and if one
+    # important to note that in this case, both mapped resources should have matching variable names if any, and if one
     # of the resource uses the `**` MULTI_TOKEN, the other resource should also include it in its path, to know how to
     # match the segments.
-    # In the case of `->` or `<-` arrow, the synchronization is only done one way. In this case, the `source` resource
-    # path should include every `variable` names found in the `target` resource, but it can have more `variables` that
-    # just won't be used in the `target` path. Also, if the `target` resource uses the MULTI_TOKEN `**`, the `source`
-    # resource should have one too. The `source` can also use the `**` token even if the `target` doesn't include one.
+    # In the case of `->` or `<-` arrow, the synchronization is only done one way. In this case, the source resource
+    # path should include every variable names found in the target resource, but it can have more variables that
+    # just won't be used in the target path. Also, if the target resource uses the MULTI_TOKEN `**`, the source
+    # resource should have one too. The source can also use the `**` token even if the target doesn't include one.
     #
-    # In the case of a `deleted` webhook event, note that the related target permissions only get removed if they are not in
-    # another sync mapping as a target where the source permission still exists. Deleting the target permission
-    # would break that other sync mapping, having an existing source permission but a deleted target permission.
+    # In the case of a `deleted` webhook event, note that the related target permissions only get removed if
+    # they are not in another sync mapping as a target where the source permission still exists.
+    # Deleting the target permission would break that other sync mapping, having an existing source permission
+    # but a deleted target permission.
     # Instead, a target permission only gets deleted when all related source permissions are also deleted.
     permissions_mapping:
-      # A read permission for thredds_workspace creates/deletes all specified geoserver_workspace permissions.
-      # And a specified geoserver_workspace permission creates/deletes a read permission on thredds_workspace.
+      # A `read` permission for `thredds_workspace` creates/deletes all specified `geoserver_workspace` permissions.
+      # And a specified `geoserver_workspace` permission creates/deletes a `read` permission on `thredds_workspace`.
       - "geoserver_workspace : [getCapabilities, getFeature, getFeatureInfo] <-> thredds_workspace : read"
-      # A createStoredQuery permission on geoserver_workspace creates/deletes a write permission on thredds_workspace,
-      # and vice versa.
+      # A `createStoredQuery` permission on `geoserver_workspace` creates/deletes
+      # a `write` permission on `thredds_workspace`, and vice versa.
       - "geoserver_workspace : createStoredQuery <-> thredds_workspace : write"
   weaver_outputs:
     services:

@@ -447,8 +447,9 @@ DOCKER_DEV_COMPOSES := -f "$(APP_ROOT)/docker/docker-compose.example.yml" -f "$(
 docker-up-dev: docker-build   ## run all dependencies containers using compose ready to be used by a local cowbird
 	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_DEV_COMPOSES) up
 
+# used for testing on github's ci
 .PHONY: docker-up-dev-detached
-docker-up-dev-detached:   ## run all dependencies containers using compose ready to be used by a local cowbird, in detached mode, used for testing on github's ci
+docker-up-dev-detached:   ## run all dependencies containers using compose ready to be used by a local cowbird, in detached mode
 	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_DEV_COMPOSES) up -d
 
 .PHONY: docker-down
@@ -663,8 +664,9 @@ test-magpie: install-dev install		## run Magpie requests tests against a configu
 	@echo "Running local tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "magpie" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
+# test target used by github's ci
 .PHONY: test-github
-test-github:  ## test target used by github's ci, runs all tests except online tests, without prior dependency check and installation
+test-github:  ## runs all tests except online tests, without prior dependency check and installation
 	@echo "Running tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "not online" --junitxml "$(APP_ROOT)/tests/results.xml"'
 

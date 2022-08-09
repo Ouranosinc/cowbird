@@ -343,14 +343,14 @@ class SyncPoint:
         Filters a dictionary of target resource/permissions, keeping only the permissions which should actually be
         removed.
 
-        This is used for the `remove` permission case, where all target permissions should not necessarily be synced.
+        This is used for the `deleted` webhook event, where all target permissions should not necessarily be synced.
         Any target permission that is also a target permission in another mapping and where the source permission of
         that other mapping still exists, should not be synced yet, since it would destroy that other mapping.
         Ex.:
         A -> C
         B -> C
         (or [A,B] -> C)
-        If the A->C mapping was triggered for a `remove` permission case, the C target permission should only be synced
+        If the A->C mapping was triggered for a `deleted` webhook event, the C target permission should only be synced
         if both A and B permissions don't exist.
         """
 
@@ -369,7 +369,7 @@ class SyncPoint:
         res_data = {}
         for src_res_key, src_perm_name in self._get_src_permissions():
             if src_res_key == input_src_res_key and src_perm_name == input_permission.get_full_permission_value():
-                # No need to check the input src_key/permission, since it is the one that triggered the `remove` event.
+                # No need to check the input src_key/permission, since it is the one that triggered the `deleted` event.
                 # It is assumed no checks are required, since a webhook was received for this permission's deletion and
                 # this permission should not exist anymore in Magpie.
                 continue
@@ -443,7 +443,7 @@ class SyncPoint:
         Removes every source resource found in the mappings that has an existing permission that is synched to one of
         the input target permissions.
 
-        Used in the case of a `remove` permission.
+        Used in the case of a `deleted` webhook event.
         """
         # If another mapping with the same target permission still has an existing source permission,
         # we can't remove the target permission yet.
