@@ -347,11 +347,18 @@ class SyncPoint:
         Any target permission that is also a target permission in another mapping and where the source permission of
         that other mapping still exists, should not be synced yet, since it would destroy that other mapping.
         Ex.:
-        A -> C
-        B -> C
-        (or [A,B] -> C)
-        If the A->C mapping was triggered for a `deleted` webhook event, the C target permission should only be synced
-        if both A and B permissions don't exist.
+
+        .. code-block:: text
+
+            A -> C
+            B -> C
+
+            or
+
+            [A,B] -> C
+
+        If the `A -> C` mapping was triggered for a `deleted` webhook event, the `C` target permission should
+        only be synced if both `A` and `B` permissions don't exist.
         """
 
         svc = ServiceFactory().get_service("Magpie")
@@ -410,11 +417,14 @@ class SyncPoint:
         permission, if it is on a user, a group, or both.
 
         Output dict format :
-        { <target_key>: {
-            "res_path": [<list of segment names/types>],
-            "permissions": { <permission_key>: [user, grp], ...}},
-          ...
-        }
+
+        .. code-block:: json
+
+            { <target_key>: {
+                "res_path": [<list of segment names/types>],
+                "permissions": { <permission_key>: [user, grp], ...}},
+              ...
+            }
         """
         permission_data = {}
         if input_permission.user:

@@ -65,11 +65,12 @@ sync_permissions:
         #
         # The name of a segment can either be a string name, a variable or a `MULTI_TOKEN` (`**`).
         #
-        # Variables are indicated by a name written between braces (ex.: {variable_name}). This represents a single
-        # repetition of any segment name with the corresponding type. These variables can be used any number of time in
-        # a resource path. They are useful to indicate the corresponding location of the resource segment in a mapped
-        # permission. Note that all variables found in a target resource path should also be included in the source
-        # resource path.
+        # Variables are indicated by a name written between braces (ex.: {variable_name}) and represent a single
+        # segment name. A variable can be reused across different resource paths if they have
+        # a matching segment name. A resource path can use any number of different variables, but
+        # each variable can only be used one time per resource path.
+        # They are useful to indicate the corresponding location of the resource segment in a mapped permission.
+        # Note that all variables found in a target resource path should also be included in the source resource path.
         #
         # `MULTI_TOKEN` represent any number (0 or more) of names that fit with the corresponding type.
         # Also, the `MULTI_TOKEN` can only be used one time in each list of path segments. This is to avoid ambiguous
@@ -81,7 +82,7 @@ sync_permissions:
         #
         # The variables and tokens are useful to know the type of any segments that doesn't have a fixed name.
         # For example, with the config below, if we have an input resource path
-        # `/nginx/workspaces/user_xyz/dir1/dir2/file_abc` that matches with the `nginx_workspace` resource key,
+        # `/geoserver/workspaces/user_xyz/dir1/dir2/file_abc` that matches with the `geoserver_workspace` resource key,
         # the `user` variable name would be matched with `user_xyz` and `synched_file`, with `file_abc`.
         # Also, this key would need to sync permissions with the `thredds_workspace` resource key, considering the
         # `permissions_mapping` defined below. The `thredds_workspace` would be deduced to the resource path
@@ -114,8 +115,11 @@ sync_permissions:
           - name: "{synched_file}"
             type: workspace
     # [Required] This section defines an array of permissions mapping between services
-    # Each item found in the `permissions_mapping` use the following format :
-    #     resource_key1 : permission(s) (-> or <- or <->) resource_key2 : permission(s)
+    # Each item found in the `permissions_mapping` uses the following format :
+    #     resource_key1 : <permissions1> <mapping> resource_key2 : <permissions2>
+    # <permissionsX> is defined as a single permission or a list of permissions :
+    #     `permission | [permission1, permission2, ...]`
+    # <mapping> is defined as a unidirectional or bidirectional arrow : `-> | <- | <->`
     #
     # The permissions can either be a single permission or a list of permissions. Each of those permissions can either
     # use an implicit format (`<name>` or `<name>-match`) or an explicit format (`<name>-<access>-<scope>`).
@@ -127,10 +131,12 @@ sync_permissions:
     #
     # The arrows between the 2 resources indicate the direction of the synchronization, and which resources can be a
     # source or target resource.
+    #
     # In the case of `<->` arrow, the synchronization of permissions can be done in either direction. Also, it is
-    # important to note that in this case, both mapped resources should have matching variable names if any, and if one
-    # of the resource uses the `**` MULTI_TOKEN, the other resource should also include it in its path, to know how to
-    # match the segments.
+    # important to note that, in this case, both mapped resources should have matching variable names if any. This means
+    # each resource needs to match all the variables of the other mapped resource. Also if one of the resource uses
+    # the `**` MULTI_TOKEN, the other resource should also include it in its path, to know how to match the segments.
+    #
     # In the case of `->` or `<-` arrow, the synchronization is only done one way. In this case, the source resource
     # path should include every variable names found in the target resource, but it can have more variables that
     # just won't be used in the target path. Also, if the target resource uses the MULTI_TOKEN `**`, the source
@@ -141,6 +147,13 @@ sync_permissions:
     # Deleting the target permission would break that other sync mapping, having an existing source permission
     # but a deleted target permission.
     # Instead, a target permission only gets deleted when all related source permissions are also deleted.
+    # For example, with the following mappings :
+    #   A -> C
+    #   B -> C
+    #   (or [A,B] -> C)
+    # If the `A -> C` mapping was triggered for a `deleted` webhook event on `A`, the `C` target permission should only
+    # be deleted if both `A` and `B` permissions don't exist.
+    # Else, the `B -> C` mapping would become invalid if `B` exists and `C` was deleted.
     permissions_mapping:
       # A `read` permission for `thredds_workspace` creates/deletes all specified `geoserver_workspace` permissions.
       # And a specified `geoserver_workspace` permission creates/deletes a `read` permission on `thredds_workspace`.
