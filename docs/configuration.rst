@@ -58,18 +58,18 @@ service.
 
 Parameters :
 
-==============      ===========================================================================================
-Parameter name      Description
-==============      ===========================================================================================
-active:             [optional, default=False] Bool allowing to deactivate a service and stop managing it.
-priority:           [optional, default=math.inf] Relative priority between services while handling events.
-                    Lower values have higher priority, default value is last.
-url:                [optional, default=None] URI of the web service represented by this Cowbird service.
-                    Some Cowbird services do not represent web service, but other will throw an exception if
-                    missing.
-workspace_dir:      [optional, default=None] Location of the users workspace root.
-                    Required for the following services : ``FileSystem``, ``Catalog`` and ``Geoserver``.
-==============      ===========================================================================================
+=================  =============  ======================================================================================
+Parameter name     Default value  Description
+=================  =============  ======================================================================================
+``active``         ``False``      Bool allowing to deactivate a service and stop managing it.
+``priority``       ``math.inf``   Relative priority between services while handling events.
+                                  Lower values have higher priority, default value is last.
+``url``            ``None``       URI of the web service represented by this Cowbird service.
+                                  Some Cowbird services do not represent web services, but others will throw an
+                                  exception if missing.
+``workspace_dir``  ``None``       Location of the users workspace root.
+                                  Required for the following services : ``FileSystem``, ``Catalog`` and ``Geoserver``.
+=================  =============  ======================================================================================
 
 Example :
 
