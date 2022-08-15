@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 from cowbird.utils import get_logger, get_ssl_verify
 
 if TYPE_CHECKING:
+    from typing import Any
+
     # pylint: disable=W0611,unused-import
     from cowbird.typedefs import SettingsType
 
@@ -45,11 +47,11 @@ class Service(abc.ABC):
     """
 
     def __init__(self, settings, name, **kwargs):
-        # type: (SettingsType, str, dict) -> None
+        # type: (SettingsType, str, Any) -> None
         """
-        @param settings: Cowbird settings for convenience
-        @param name: Service name
-        @param kwargs: The base class handle, but doesn't require the following variables:
+        :param settings: Cowbird settings for convenience
+        :param name: Service name
+        :param kwargs: The base class handle, but doesn't require the following variables:
                         param `priority`: Relative priority between services while handling events
                                           (lower value has higher priority, default value is last)
                         param `url`: Location of the web service represented by the cowbird service
@@ -66,12 +68,10 @@ class Service(abc.ABC):
         self.ssl_verify = get_ssl_verify(self.settings)
         for required_param in self.required_params:  # pylint: disable=E1101,no-member
             if required_param not in SERVICE_PARAMETERS:
-                raise Exception("Invalid service parameter : {}".format(required_param))
+                raise Exception(f"Invalid service parameter : {required_param}")
             if getattr(self, required_param) is None:
-                error_msg = "{} service requires the following missing configuration parameter : [{}]".format(
-                    self.__class__.__name__,
-                    required_param
-                )
+                error_msg = f"{self.__class__.__name__} service requires the following missing configuration " \
+                            f"parameter : [{required_param}]"
                 LOGGER.error(error_msg)
                 raise ServiceConfigurationException(error_msg)
 

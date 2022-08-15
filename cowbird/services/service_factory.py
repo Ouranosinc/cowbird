@@ -35,8 +35,23 @@ class ServiceFactory(metaclass=SingletonMeta):
                 else:
                     self.services_cfg[name] = cfg
         self.services = {}
-        LOGGER.info("Services config : [%s]", ", ".join(["{0} [{1}]".format(name, cfg.get("active", False))
+        LOGGER.info("Services config : [%s]", ", ".join([f"{name} [{cfg.get('active', False)}]"
                                                          for name, cfg in self.services_cfg.items()]))
+
+    def create_service(self, name):
+        # type: (ServiceFactory, str) -> Service
+        """
+        Instantiates a new `Service` implementation using its name, overwriting an existing instance if required.
+        """
+        svc = None
+        if (name in VALID_SERVICES and
+                name in self.services_cfg and
+                self.services_cfg[name].get("active", False)):
+            module = importlib.import_module(".".join(["cowbird.services.impl", name.lower()]))
+            cls = getattr(module, name)
+            svc = cls(settings=self.settings, name=name, **self.services_cfg[name])
+        self.services[name] = svc
+        return svc
 
     def get_service(self, name):
         # type: (ServiceFactory, str) -> Service
@@ -47,15 +62,7 @@ class ServiceFactory(metaclass=SingletonMeta):
         try:
             return self.services[name]
         except KeyError:
-            svc = None
-            if name in VALID_SERVICES and \
-               name in self.services_cfg and \
-               self.services_cfg[name].get("active", False):
-                module = importlib.import_module(".".join(["cowbird.services.impl", name.lower()]))
-                cls = getattr(module, name)
-                svc = cls(settings=self.settings, name=name, **self.services_cfg[name])
-            self.services[name] = svc
-            return svc
+            return self.create_service(name)
 
     def get_active_services(self):
         # type: (ServiceFactory) -> List[Service]

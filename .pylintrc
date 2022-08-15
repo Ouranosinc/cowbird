@@ -67,9 +67,13 @@ disable=C0111,missing-docstring,
         C0412,ungrouped-imports,
         C0415,import-outside-toplevel,
         C1801,len-as-condition,
+        E0012,bad-option-value
         E0401,import-error,
         R0201,no-self-use
         R0205,useless-object-inheritance,
+        # R0401 disabled to avoid unnecessary warnings on already handled circular imports
+        # See issue : https://github.com/PyCQA/pylint/issues/850
+        R0401,cyclic-import,
         R0801,duplicate-code,
         R0904,too-many-public-methods,
         R0912,too-many-branches,
@@ -296,13 +300,6 @@ max-line-length=120
 
 # Maximum number of lines in a module.
 max-module-lines=1000
-
-# List of optional constructs for which whitespace checking is disabled. `dict-
-# separator` is used to allow tabulation in dicts, etc.: {1  : 1,\n222: 2}.
-# `trailing-comma` allows a space between comma and closing bracket: (a, ).
-# `empty-line` allows space-only lines.
-no-space-check=trailing-comma,
-               dict-separator
 
 # Allow the body of a class to be on the same line as the declaration if body
 # contains single statement.

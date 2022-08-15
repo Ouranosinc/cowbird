@@ -128,9 +128,9 @@ WORKER_SUFFIX := -worker
 
 # docker-compose
 ifneq ("$(wildcard ./docker/.env)","")
-    DOCKER_COMPOSE_ENV_FILE := ./docker/.env
+    DOCKER_COMPOSE_ENV_FILE := $(APP_ROOT)/docker/.env
 else
-    DOCKER_COMPOSE_ENV_FILE := ./docker/.env.example
+    DOCKER_COMPOSE_ENV_FILE := $(APP_ROOT)/docker/.env.example
 endif
 
 .DEFAULT_GOAL := help
@@ -447,6 +447,11 @@ DOCKER_DEV_COMPOSES := -f "$(APP_ROOT)/docker/docker-compose.example.yml" -f "$(
 docker-up-dev: docker-build   ## run all dependencies containers using compose ready to be used by a local cowbird
 	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_DEV_COMPOSES) up
 
+# used for testing on github's ci
+.PHONY: docker-up-dev-detached
+docker-up-dev-detached:   ## run all dependencies containers using compose ready to be used by a local cowbird, in detached mode
+	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_DEV_COMPOSES) up -d
+
 .PHONY: docker-down
 docker-down:  ## stop running containers and remove them
 	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_TEST_COMPOSES) down || true
@@ -564,7 +569,7 @@ check-css: mkdir-reports install-npm
 		--output-file "$(REPORTS_DIR)/fixed-css.txt" \
 		"$(APP_ROOT)/**/*.css"
 
-FIXES := imports lint docf css
+FIXES := imports lint docf fstring css
 FIXES := $(addprefix fix-, $(FIXES))
 
 .PHONY: fix
@@ -604,6 +609,14 @@ fix-docf: install-dev	## fix some PEP8 code documentation style problems automat
 			--recursive \
 			$(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/fixed-docf.txt")'
+
+.PHONY: fix-fstring
+fix-fstring: mkdir-reports install-dev    ## fix code string formats substitutions to f-string definitions automatically
+	@echo "Fixing code string formats substitutions to f-string definitions..."
+	@-rm -f "$(REPORTS_DIR)/fixed-fstring.txt"
+	@bash -c '$(CONDA_CMD) \
+		flynt $(FLYNT_FLAGS) "$(APP_ROOT)" \
+		1> >(tee "$(REPORTS_DIR)/fixed-fstring.txt")'
 
 .PHONY: fix-css
 fix-css: mkdir-reports install-npm		## fix CSS styles problems automatically
@@ -646,8 +659,14 @@ test-geoserver: install-dev install		## run Geoserver requests tests against a c
 	@echo "Running local tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "geoserver" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
+.PHONY: test-magpie
+test-magpie: install-dev install		## run Magpie requests tests against a configured Magpie instance. Most of these tests are "online" tests
+	@echo "Running local tests..."
+	@bash -c '$(CONDA_CMD) pytest tests -vv -m "magpie" --junitxml "$(APP_ROOT)/tests/results.xml"'
+
+# test target used by github's ci
 .PHONY: test-github
-test-github:  ## test target used by github's ci, runs all tests except online tests, without prior dependency check and installation
+test-github:  ## runs all tests except online tests, without prior dependency check and installation
 	@echo "Running tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "not online" --junitxml "$(APP_ROOT)/tests/results.xml"'
 

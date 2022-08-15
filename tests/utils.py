@@ -130,6 +130,15 @@ class MockMagpieService(Service):
                 self.outbound_perms.remove(perm)
                 return
 
+    def get_service_types(self):
+        # type: () -> List
+        """
+        Returns the list of service types available on Magpie.
+        """
+        # Hardcoded listed of currently available services on Magpie.
+        return ["access", "api", "geoserver", "geoserverwfs", "geoserverwms", "geoserverwps", "ncwms", "thredds",
+                "wfs", "wps"]
+
 
 class MockAnyServiceBase(Service):
     ResourceId = 1000
@@ -175,7 +184,7 @@ def get_test_app(settings=None):
     config.registry.settings["cowbird.url"] = "http://localhost:80"
     config.registry.settings["cowbird.ini_file_path"] = TEST_INI_FILE
     config.registry.settings["cowbird.config_path"] = TEST_CFG_FILE
-    config.registry.settings["mongo_uri"] = "mongodb://{host}:{port}/{db_name}".format(
+    config.registry.settings["mongo_uri"] = "mongodb://{host}:{port}/{db_name}".format(  # pylint: disable=C0209
         host=os.getenv("COWBIRD_TEST_DB_HOST", "127.0.0.1"),
         port=os.getenv("COWBIRD_TEST_DB_PORT", "27017"),
         db_name=os.getenv("COWBIRD_TEST_DB_NAME", "cowbird-test")
@@ -258,7 +267,7 @@ def json_msg(json_body, msg=null):
     """
     json_str = json_pkg.dumps(json_body, indent=4, ensure_ascii=False)
     if msg is not null:
-        return "{}\n{}".format(msg, json_str)
+        return f"{msg}\n{json_str}"
     return json_str
 
 
@@ -301,7 +310,7 @@ def mock_request(request_path_query="",     # type: str
     """
     parts = request_path_query.split("?")
     path = parts[0]
-    query = dict()
+    query = {}
     if len(parts) > 1 and parts[1]:
         for part in parts[1].split("&"):
             kv = part.split("=")  # handle trailing keyword query arguments without values
@@ -376,7 +385,7 @@ def test_request(test_item,             # type: AnyTestItemType
     :param allow_redirects:
         Passed down to :mod:`requests` when using URL, handled manually for same behaviour when using :class:`TestApp`.
     :param kwargs: any additional keywords that will be forwarded to the request call.
-    :return: response of the request
+    :returns: response of the request
     """
     method = method.upper()
     status = kwargs.pop("status", None)
@@ -398,7 +407,7 @@ def test_request(test_item,             # type: AnyTestItemType
 
         # update path with query parameters since TestApp does not have an explicit argument when not using GET
         if params:
-            path += "?" + "&".join("{!s}={!s}".format(k, v) for k, v in params.items() if v is not None)
+            path += "?" + "&".join(f"{k!s}={v!s}" for k, v in params.items() if v is not None)
 
         kwargs.update({
             "params": _body,  # TestApp uses 'params' for the body during POST (these are not the query parameters)
@@ -423,7 +432,7 @@ def test_request(test_item,             # type: AnyTestItemType
             err_msg = str(exc) + str(getattr(exc, "exception", ""))
         except Exception as exc:
             err_code = 500
-            err_msg = "Unknown: {!s}".format(exc)
+            err_msg = f"Unknown: {exc!s}"
         finally:
             if err_code:
                 info = json_msg({"path": path, "method": method, "body": _body, "headers": kwargs["headers"]})
@@ -446,7 +455,7 @@ def test_request(test_item,             # type: AnyTestItemType
         kwargs["json"] = _body
     elif data or body:
         kwargs["data"] = _body
-    url = "{url}{path}".format(url=app_or_url, path=path)
+    url = f"{app_or_url}{path}"
     while True:
         try:
             return requests.request(method, url, params=params, headers=headers, cookies=cookies,
@@ -464,16 +473,16 @@ def visual_repr(item):
             return json_pkg.dumps(item, indent=4, ensure_ascii=False)
     except Exception:  # noqa
         pass
-    return "'{}'".format(repr(item))
+    return f"'{repr(item)}'"
 
 
 def format_test_val_ref(val, ref, pre="Fail", msg=None):
     if is_null(msg):
-        _msg = "({}) Failed condition between test and reference values.".format(pre)
+        _msg = f"({pre}) Failed condition between test and reference values."
     else:
-        _msg = "({}) Test value: {}, Reference value: {}".format(pre, visual_repr(val), visual_repr(ref))
+        _msg = f"({pre}) Test value: {visual_repr(val)}, Reference value: {visual_repr(ref)}"
         if isinstance(msg, str):
-            _msg = "{}\n{}".format(msg, _msg)
+            _msg = f"{msg}\n{_msg}"
     return _msg
 
 
@@ -541,15 +550,14 @@ def check_raises(func, exception_type, msg=None):
     :raise AssertionError: on failing exception check or missing raised exception.
     :returns: raised exception of expected type if it was raised.
     """
-    msg = ": {}".format(msg) if msg else "."
+    msg = f": {msg}" if msg else "."
     try:
         func()
     except Exception as exc:  # pylint: disable=W0703
-        msg = "Wrong exception [{!s}] raised instead of [{!s}]{}" \
-              .format(type(exc).__name__, exception_type.__name__, msg)
+        msg = f"Wrong exception [{type(exc).__name__!s}] raised instead of [{exception_type.__name__!s}]{msg}"
         assert isinstance(exc, exception_type), msg
         return exc
-    raise AssertionError("Exception [{!s}] was not raised{}".format(exception_type.__name__, msg))
+    raise AssertionError(f"Exception [{exception_type.__name__!s}] was not raised{msg}")
 
 
 def check_no_raise(func, msg=None):
@@ -562,8 +570,8 @@ def check_no_raise(func, msg=None):
     try:
         return func()
     except Exception as exc:  # pylint: disable=W0703
-        msg = ": {}".format(msg) if msg else "."
-        raise AssertionError("Exception [{!r}] was raised when none is expected{}".format(type(exc).__name__, msg))
+        msg = f": {msg}" if msg else "."
+        raise AssertionError(f"Exception [{type(exc).__name__!r}] was raised when none is expected{msg}")
 
 
 def check_response_basic_info(response,                         # type: AnyResponseType
@@ -584,7 +592,7 @@ def check_response_basic_info(response,                         # type: AnyRespo
     :param expected_type: Content-Type to validate from the response.
     :param expected_method: method 'GET', 'POST', etc. to validate from the response if an error.
     :param extra_message: additional message to append to every specific test message if provided.
-    :return: json body of the response for convenience.
+    :returns: json body of the response for convenience.
     """
     def _(_msg):
         return _msg + " " + extra_message if extra_message else _msg
@@ -595,7 +603,7 @@ def check_response_basic_info(response,                         # type: AnyRespo
     code_message = "Response doesn't match expected HTTP status code."
     if expected_type == CONTENT_TYPE_JSON:
         # provide more details about mismatching code since to help debug cause of error
-        code_message += "\nReason:\n{}".format(json_msg(get_json_body(response)))
+        code_message += f"\nReason:\n{json_msg(get_json_body(response))}"
     check_val_equal(response.status_code, expected_code, msg=_(code_message))
 
     if expected_type == CONTENT_TYPE_JSON:

@@ -6,6 +6,8 @@ from cowbird.services.service import SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PA
 from cowbird.utils import get_logger
 
 if TYPE_CHECKING:
+    from typing import Any
+
     # pylint: disable=W0611,unused-import
     from cowbird.typedefs import SettingsType
 
@@ -19,12 +21,12 @@ class Catalog(Service, FSMonitor):
     required_params = [SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM]
 
     def __init__(self, settings, name, **kwargs):
-        # type: (SettingsType, str, dict) -> None
+        # type: (SettingsType, str, Any) -> None
         """
         Create the catalog instance.
 
-        @param settings: Cowbird settings for convenience
-        @param name: Service name
+        :param settings: Cowbird settings for convenience
+        :param name: Service name
         """
         super(Catalog, self).__init__(settings, name, **kwargs)
         # TODO: Need to monitor data directory

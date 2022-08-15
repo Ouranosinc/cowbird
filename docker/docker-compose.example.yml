@@ -32,8 +32,8 @@ services:
       # Need to comment the magpie.url in the magpie ini file as it has precedence over this variable
       MAGPIE_SECRET: itzaseekrit
       MAGPIE_ADMIN_GROUP: administrators
-      MAGPIE_ADMIN_USER: admin
-      MAGPIE_ADMIN_PASSWORD: qwertyqwerty
+      MAGPIE_ADMIN_USER: $MAGPIE_ADMIN_USER
+      MAGPIE_ADMIN_PASSWORD: $MAGPIE_ADMIN_PASSWORD
       MAGPIE_USER_GROUP: users
       MAGPIE_ANONYMOUS_USER: anonymous
       MAGPIE_PORT: 2001

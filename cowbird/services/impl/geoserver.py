@@ -15,6 +15,8 @@ from cowbird.services.service_factory import ServiceFactory
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger
 
 if TYPE_CHECKING:
+    from typing import Any
+
     # pylint: disable=W0611,unused-import
     from cowbird.typedefs import SettingsType
 
@@ -28,8 +30,8 @@ def geoserver_response_handling(func):
     """
     Decorator for response and logging handling for the different Geoserver HTTP requests.
 
-    @param func : Function executing a http request to Geoserver
-    @return : Response object
+    :param func: Function executing a http request to Geoserver
+    :returns: Response object
     """
 
     @functools.wraps(func)
@@ -89,15 +91,15 @@ class Geoserver(Service, FSMonitor):
     required_params = [SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM]
 
     def __init__(self, settings, name, **kwargs):
-        # type: (SettingsType, str, dict) -> None
+        # type: (SettingsType, str, Any) -> None
         """
         Create the geoserver service instance.
 
-        @param settings: Cowbird settings for convenience
-        @param name: Service name
+        :param settings: Cowbird settings for convenience
+        :param name: Service name
         """
         super(Geoserver, self).__init__(settings, name, **kwargs)
-        self.api_url = "{}/rest".format(self.url)
+        self.api_url = f"{self.url}/rest"
         self.headers = {"Content-type": CONTENT_TYPE_JSON}
         self.admin_user = kwargs.get(SERVICE_ADMIN_USER, None)
         self.admin_password = kwargs.get(SERVICE_ADMIN_PASSWORD, None)
@@ -179,7 +181,7 @@ class Geoserver(Service, FSMonitor):
         """
         Create a new Geoserver workspace.
 
-        @param name: Workspace name
+        :param name: Workspace name
         """
         LOGGER.info("Attempting to create Geoserver workspace [%s]", name)
         self._create_workspace_request(name)
@@ -189,7 +191,7 @@ class Geoserver(Service, FSMonitor):
         """
         Removes a workspace from geoserver. Will also remove all datastores associated with the workspace.
 
-        @param name: Workspace name
+        :param name: Workspace name
         """
         LOGGER.info("Attempting to remove Geoserver workspace [%s]", name)
         self._remove_workspace_request(name)
@@ -199,8 +201,8 @@ class Geoserver(Service, FSMonitor):
         """
         Create a new Geoserver workspace.
 
-        @param self: Geoserver instance
-        @param workspace_name: Workspace name where the datastore must be created
+        :param self: Geoserver instance
+        :param workspace_name: Workspace name where the datastore must be created
         """
 
         datastore_name = self._get_datastore_name(workspace_name)
@@ -217,8 +219,8 @@ class Geoserver(Service, FSMonitor):
         """
         Publish a shapefile in the specified workspace.
 
-        @param workspace_name: Name of the workspace from which the shapefile will be published
-        @param shapefile_name: The shapefile's name, without file extension
+        :param workspace_name: Name of the workspace from which the shapefile will be published
+        :param shapefile_name: The shapefile's name, without file extension
         """
         LOGGER.info("Shapefile [%s] is valid", shapefile_name)
         datastore_name = self._get_datastore_name(workspace_name)
@@ -235,8 +237,8 @@ class Geoserver(Service, FSMonitor):
         Validate shapefile. Will look for the three other files necessary for Geoserver publishing (.prj, .dbf, .shx)
         and raise a FileNotFoundError exception if one is missing.
 
-        @param workspace_name: Name of the workspace from which the shapefile will be published
-        @param shapefile_name: The shapefile's name, without file extension
+        :param workspace_name: Name of the workspace from which the shapefile will be published
+        :param shapefile_name: The shapefile's name, without file extension
         """
         # Small wait time to prevent unnecessary failure since shapefile is a multi file format
         sleep(1)
@@ -255,8 +257,8 @@ class Geoserver(Service, FSMonitor):
         """
         Remove a shapefile from the specified workspace.
 
-        @param workspace_name: Name of the workspace from which the shapefile will be removed
-        @param filename: The shapefile's name, without file extension
+        :param workspace_name: Name of the workspace from which the shapefile will be removed
+        :param filename: The shapefile's name, without file extension
         """
         datastore_name = self._get_datastore_name(workspace_name)
         LOGGER.info("Attempting to remove shapefile [%s] from workspace:datastore [%s : %s]",
@@ -283,8 +285,8 @@ class Geoserver(Service, FSMonitor):
     def _get_shapefile_info(filename):
         # type:(str) -> Tuple[str, str]
         """
-        @param filename: Relative filename of a new file
-        @return: Workspace name (str) where file is located and shapefile name (str)
+        :param filename: Relative filename of a new file
+        :returns: Workspace name (str) where file is located and shapefile name (str)
         """
         split_path = filename.split("/")
         workspace = split_path[-3]
@@ -301,7 +303,7 @@ class Geoserver(Service, FSMonitor):
         To be used in the HTTP requests sent to Geoserver.
         This name does not exist on the file system.
         """
-        return "shapefile_datastore_{}".format(workspace_name)
+        return f"shapefile_datastore_{workspace_name}"
 
     def _shapefile_folder_dir(self, workspace_name):
         # type: (str) -> str
@@ -326,10 +328,10 @@ class Geoserver(Service, FSMonitor):
         """
         Request to create a new workspace.
 
-        @param workspace_name: Name of workspace to be created
-        @return: Response object
+        :param workspace_name: Name of workspace to be created
+        :returns: Response object
         """
-        request_url = "{}/workspaces/".format(self.api_url)
+        request_url = f"{self.api_url}/workspaces/"
         payload = {"workspace": {"name": workspace_name, "isolated": "True"}}
         response = requests.post(url=request_url, json=payload, auth=self.auth, headers=self.headers)
         return response
@@ -340,10 +342,10 @@ class Geoserver(Service, FSMonitor):
         """
         Request to remove workspace and all associated datastores and layers.
 
-        @param workspace_name: Name of workspace to remove
-        @return: Response object
+        :param workspace_name: Name of workspace to remove
+        :returns: Response object
         """
-        request_url = "{}/workspaces/{}?recurse=true".format(self.api_url, workspace_name)
+        request_url = f"{self.api_url}/workspaces/{workspace_name}?recurse=true"
         response = requests.delete(url=request_url, auth=self.auth, headers=self.headers)
         return response
 
@@ -361,11 +363,11 @@ class Geoserver(Service, FSMonitor):
         """
         Initial creation of the datastore with no connection parameters.
 
-        @param workspace_name: Name of the workspace in which the datastore is created
-        @param datastore_name: Name of the datastore that will be created
-        @return: Response object
+        :param workspace_name: Name of the workspace in which the datastore is created
+        :param datastore_name: Name of the datastore that will be created
+        :returns: Response object
         """
-        request_url = "{}/workspaces/{}/datastores".format(self.api_url, workspace_name)
+        request_url = f"{self.api_url}/workspaces/{workspace_name}/datastores"
         payload = {
             "dataStore": {
                 "name": datastore_name,
@@ -387,12 +389,12 @@ class Geoserver(Service, FSMonitor):
         This is done as a secondary step because Geoserver tends to create the wrong type of datastore
         (shapefile instead of directory of shapefiles) when setting them at creation.
 
-        @param workspace_name: Name of the workspace in which the datastore is created
-        @param datastore_name: Name of the datastore that will be created
-        @return: Response object
+        :param workspace_name: Name of the workspace in which the datastore is created
+        :param datastore_name: Name of the datastore that will be created
+        :returns: Response object
         """
-        geoserver_datastore_path = "file://{}".format(datastore_path)
-        request_url = "{}/workspaces/{}/datastores/{}".format(self.api_url, workspace_name, datastore_name)
+        geoserver_datastore_path = f"file://{datastore_path}"
+        request_url = f"{self.api_url}/workspaces/{workspace_name}/datastores/{datastore_name}"
         payload = {
             "dataStore": {
                 "name": datastore_name,
@@ -414,7 +416,7 @@ class Geoserver(Service, FSMonitor):
                         {"$": "true",
                          "@key": "enable spatial "
                                  "index"},
-                        {"$": "http://{}".format(datastore_name),
+                        {"$": f"http://{datastore_name}",
                          "@key": "namespace"},
                         {"$": "true",
                          "@key": "cache and reuse "
@@ -436,14 +438,12 @@ class Geoserver(Service, FSMonitor):
         """
         Request to publish a shapefile in Geoserver. Does so by creating a `Feature type` in Geoserver.
 
-        @param workspace_name: Workspace where file will be published
-        @param datastore_name: Datastore where file will be published
-        @param filename: Name of the shapefile (with no extentions)
-        @return: Response object
+        :param workspace_name: Workspace where file will be published
+        :param datastore_name: Datastore where file will be published
+        :param filename: Name of the shapefile (with no extentions)
+        :returns: Response object
         """
-        request_url = "{}/workspaces/{}/datastores/{}/featuretypes".format(self.api_url,
-                                                                           workspace_name,
-                                                                           datastore_name)
+        request_url = f"{self.api_url}/workspaces/{workspace_name}/datastores/{datastore_name}/featuretypes"
 
         # This is just a basic example. There are lots of other attributes that can be configured
         # https://docs.geoserver.org/latest/en/api/#1.0.0/featuretypes.yaml
@@ -480,15 +480,13 @@ class Geoserver(Service, FSMonitor):
         """
         Request to remove specified Geoserver `Feature type` and corresponding layer.
 
-        @param workspace_name: Workspace where file is published
-        @param datastore_name: Datastore where file is published
-        @param filename: Name of the shapefile (with no extentions)
-        @return: Response object
+        :param workspace_name: Workspace where file is published
+        :param datastore_name: Datastore where file is published
+        :param filename: Name of the shapefile (with no extentions)
+        :returns: Response object
         """
-        request_url = "{}/workspaces/{}/datastores/{}/featuretypes/{}?recurse=true".format(self.api_url,
-                                                                                           workspace_name,
-                                                                                           datastore_name,
-                                                                                           filename)
+        request_url = f"{self.api_url}/workspaces/{workspace_name}/datastores/{datastore_name}" \
+                      f"/featuretypes/{filename}?recurse=true"
         response = requests.delete(url=request_url, auth=self.auth, headers=self.headers)
         return response
 

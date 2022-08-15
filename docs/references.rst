@@ -23,7 +23,7 @@
 
 .. file/source references
 .. _config.yml: https://github.com/Ouranosinc/cowbird/tree/master/config/cowbird.example.yml
-.. _config.example.yml: https://github.com/Ouranosinc/cowbird/tree/master/config/cowbird.example.yml
+.. _config.example.yml: https://github.com/Ouranosinc/cowbird/tree/master/config/config.example.yml
 .. _cowbird.ini: https://github.com/Ouranosinc/cowbird/tree/master/config/cowbird.example.ini
 .. _cowbird.example.ini: https://github.com/Ouranosinc/cowbird/tree/master/config/cowbird.example.ini
 .. _docker: https://github.com/Ouranosinc/cowbird/tree/master/Dockerfile

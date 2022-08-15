@@ -11,10 +11,10 @@ from cowbird.services.service_factory import ServiceFactory
 
 def file_io(filename, mv_filename):
     # Create
-    with open(filename, "w") as f:
+    with open(filename, "w", encoding="utf-8") as f:
         f.write("Hello")
     # Update
-    with open(filename, "a") as f:
+    with open(filename, "a", encoding="utf-8") as f:
         f.write(" world!")
     # Should create a delete and a create event
     os.rename(filename, mv_filename)

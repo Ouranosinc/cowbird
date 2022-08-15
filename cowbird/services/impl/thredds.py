@@ -3,6 +3,8 @@ from typing import TYPE_CHECKING
 from cowbird.services.service import Service
 
 if TYPE_CHECKING:
+    from typing import Any
+
     # pylint: disable=W0611,unused-import
     from cowbird.typedefs import SettingsType
 
@@ -14,12 +16,12 @@ class Thredds(Service):
     required_params = []
 
     def __init__(self, settings, name, **kwargs):
-        # type: (SettingsType, str, dict) -> None
+        # type: (SettingsType, str, Any) -> None
         """
         Create the thredds instance.
 
-        @param settings: Cowbird settings for convenience
-        @param name: Service name
+        :param settings: Cowbird settings for convenience
+        :param name: Service name
         """
         super(Thredds, self).__init__(settings, name, **kwargs)
 

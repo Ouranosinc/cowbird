@@ -48,7 +48,7 @@ class MongoDatabase(DatabaseInterface):
         super(MongoDatabase, self).__init__(container)
         self._database = get_mongodb_engine(container)
         self._settings = get_settings(container)
-        self._stores = dict()
+        self._stores = {}
 
     def reset_store(self, store_type):
         store_type = self._get_store_type(store_type)
@@ -75,7 +75,7 @@ class MongoDatabase(DatabaseInterface):
                         *store_args, **store_kwargs
                     )
                 return self._stores[store_type]
-        raise NotImplementedError("Database '{}' cannot find matching store '{}'.".format(self.type, store_type))
+        raise NotImplementedError(f"Database '{self.type}' cannot find matching store '{store_type}'.")
 
     def get_session(self):
         # type: (...) -> Any
@@ -104,7 +104,7 @@ def get_mongodb_connection(container):
     settings = get_settings(container)
     default_mongo_uri = "mongodb://0.0.0.0:27017/cowbird"
     if settings.get("mongo_uri", None) is None:
-        warnings.warn("Setting 'mongo_uri' not defined in registry, using default [{}].".format(default_mongo_uri))
+        warnings.warn(f"Setting 'mongo_uri' not defined in registry, using default [{default_mongo_uri}].")
         settings["mongo_uri"] = default_mongo_uri
     db_url = urlparse(settings["mongo_uri"])
     client = pymongo.MongoClient(

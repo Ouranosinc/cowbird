@@ -22,7 +22,7 @@ class TestServiceFactory(unittest.TestCase):
             "services": {
                 "Catalog": {"active": False},
                 "Geoserver": {"active": True, "url": "", "workspace_dir": "", "admin_user": "", "admin_password": ""},
-                "Magpie": {"active": True, "url": ""},
+                "Magpie": {"active": True, "url": "", "admin_user": "admin", "admin_password": "qwertyqwerty"},
                 "Nginx": {"active": True, "url": ""},
                 "Thredds": {"active": True, "url": ""}
             }
@@ -30,7 +30,7 @@ class TestServiceFactory(unittest.TestCase):
         cls.priority = ["Thredds", "Magpie"]
         for idx, svc in enumerate(cls.priority):
             cls.test_data["services"][svc]["priority"] = idx
-        cls.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)
+        cls.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)  # pylint: disable=R1732
         with cls.cfg_file as f:
             f.write(yaml.safe_dump(cls.test_data))
         cls.app = utils.get_test_app(settings={"cowbird.config_path": cls.cfg_file.name})

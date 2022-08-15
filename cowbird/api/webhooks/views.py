@@ -87,18 +87,16 @@ def post_permission_webhook_view(request):
                     msg_on_fail=s.PermissionWebhook_POST_BadRequestResponseSchema.description)
     service_name = ar.get_multiformat_body(request, "service_name")
     resource_id = ar.get_multiformat_body(request, "resource_id")
-    param_regex_with_slashes = r"^/?[A-Za-z0-9]+(?:[\s_\-\./][A-Za-z0-9]+)*$"
+    param_regex_with_slashes = r"^/?[A-Za-z0-9]+(?:[\s_\-\./:][A-Za-z0-9]+)*$"
     resource_full_name = ar.get_multiformat_body(request, "resource_full_name",
                                                  pattern=param_regex_with_slashes)
     name = ar.get_multiformat_body(request, "name")
     access = ar.get_multiformat_body(request, "access")
     scope = ar.get_multiformat_body(request, "scope")
-    user = ar.get_multiformat_body(request, "user")
-    group = None
-    if user:
-        ar.check_value(user, "user")
-    else:
-        group = ar.get_multiformat_body(request, "group")
+    user = ar.get_multiformat_body_raw(request, "user")
+    group = ar.get_multiformat_body_raw(request, "group")
+    ax.verify_param(bool(user or group), is_true=True, http_error=HTTPBadRequest,
+                    msg_on_fail=s.PermissionWebhook_POST_BadRequestResponseSchema.description)
 
     permission = Permission(
         service_name=service_name,

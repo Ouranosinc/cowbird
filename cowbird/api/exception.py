@@ -114,7 +114,7 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
     :param matches: test that :paramref:`param` matches the regex specified by :paramref:`param_compare` value
     :raises HTTPError: if tests fail, specified exception is raised (default: :class:`HTTPBadRequest`)
     :raises HTTPInternalServerError: for evaluation error
-    :return: nothing if all tests passed
+    :returns: nothing if all tests passed
     """
     content = {} if content is None else content
     needs_compare = is_type or is_in or not_in or is_equal or not_equal or matches
@@ -265,7 +265,7 @@ def apply_param_content(content,                # type: JSON
             if needs_iterable or is_type:
                 param_compare = str if param_compare == str else param_compare
                 param_compare = getattr(param_compare, "__name__", str(param_compare))
-                param_compare = "Type[{}]".format(param_compare) if is_type else param_compare
+                param_compare = f"Type[{param_compare}]" if is_type else param_compare
             content["param"]["compare"] = str(param_compare)
         if isinstance(param_content, dict):
             content["param"].update(param_content)
@@ -313,7 +313,7 @@ def evaluate_call(call,                                 # type: Callable[[], Any
     :param content_type: format in which to return the exception (one of `cowbird.common.SUPPORTED_ACCEPT_TYPES`)
     :raises http_error: on `call` failure
     :raises `HTTPInternalServerError`: on `fallback` failure
-    :return: whichever return value `call` might have if no exception occurred
+    :returns: whichever return value `call` might have if no exception occurred
     """
     msg_on_fail = str(msg_on_fail) if isinstance(msg_on_fail, str) else repr(msg_on_fail)
     content_repr = repr(content) if content is not None else content
@@ -365,7 +365,7 @@ def valid_http(http_success=HTTPOk,             # type: Union[Type[HTTPSuccessfu
     """
     global RAISE_RECURSIVE_SAFEGUARD_COUNT  # pylint: disable=W0603
 
-    content = dict() if content is None else content
+    content = {} if content is None else content
     detail = repr(detail) if not isinstance(detail, str) else detail
     content_type = CONTENT_TYPE_JSON if content_type == CONTENT_TYPE_ANY else content_type
     http_code, detail, content = validate_params(http_success, [HTTPSuccessful, HTTPRedirection],
@@ -404,7 +404,7 @@ def raise_http(http_error=HTTPInternalServerError,  # type: Type[HTTPError]
 
     # fail-fast if recursion generates too many calls
     # this would happen only if a major programming error occurred within this function
-    global RAISE_RECURSIVE_SAFEGUARD_MAX    # pylint: disable=W0603
+    global RAISE_RECURSIVE_SAFEGUARD_MAX    # pylint: disable=W0602,W0603
     global RAISE_RECURSIVE_SAFEGUARD_COUNT  # pylint: disable=W0603
     RAISE_RECURSIVE_SAFEGUARD_COUNT = RAISE_RECURSIVE_SAFEGUARD_COUNT + 1
     if RAISE_RECURSIVE_SAFEGUARD_COUNT > RAISE_RECURSIVE_SAFEGUARD_MAX:
@@ -445,7 +445,7 @@ def validate_params(http_class,     # type: Type[HTTPException]
     """
     # verify input arguments, raise `HTTPInternalServerError` with caller info if invalid
     # cannot be done within a try/except because it would always trigger with `raise_http`
-    content = dict() if content is None else content
+    content = {} if content is None else content
     detail = repr(detail) if not isinstance(detail, str) else detail
     caller = {"content": content, "type": content_type, "detail": detail, "code": 520}  # "unknown" code error
     verify_param(isclass(http_class), param_name="http_class", is_true=True,
@@ -486,7 +486,7 @@ def format_content_json_str(http_code, detail, content, content_type):
         content["type"] = content_type
         json_body = json.dumps(content)
     except Exception as exc:  # pylint: disable=W0703
-        msg = "Dumping json content '{!s}' resulted in exception '{!r}'.".format(content, exc)
+        msg = f"Dumping json content '{content!s}' resulted in exception '{exc!r}'."
         raise_http(http_error=HTTPInternalServerError, detail=msg,
                    content_type=CONTENT_TYPE_JSON,
                    content={"traceback": repr(exc_info()),
@@ -538,7 +538,7 @@ def generate_response_http_format(http_class, http_kwargs, content, content_type
     :param content: formatted JSON content or literal string content providing additional details for the response
     :param content_type: one of `cowbird.utils.SUPPORTED_ACCEPT_TYPES` (default: `cowbird.utils.CONTENT_TYPE_PLAIN`)
     :param metadata: request metadata to add to the response body. (see: :func:`cowbird.api.requests.get_request_info`)
-    :return: `http_class` instance with requested information and content type if creation succeeds
+    :returns: `http_class` instance with requested information and content type if creation succeeds
     :raises: `HTTPInternalServerError` instance details about requested information and content type if creation fails
     """
     # content body is added manually to avoid auto-format and suppression of fields by `HTTPException`
@@ -551,7 +551,7 @@ def generate_response_http_format(http_class, http_kwargs, content, content_type
     content = str(content) if not isinstance(content, str) else content
 
     # adjust additional keyword arguments and try building the http response class with them
-    http_kwargs = dict() if http_kwargs is None else http_kwargs
+    http_kwargs = {} if http_kwargs is None else http_kwargs
     http_headers = http_kwargs.get("headers", {})
     # omit content-type and related headers that we override
     for header in dict(http_headers):
@@ -561,7 +561,7 @@ def generate_response_http_format(http_class, http_kwargs, content, content_type
     try:
         # directly output json
         if content_type == CONTENT_TYPE_JSON:
-            content_type = "{}; charset=UTF-8".format(CONTENT_TYPE_JSON)
+            content_type = f"{CONTENT_TYPE_JSON}; charset=UTF-8"
             http_response = http_class(body=content, content_type=content_type, **http_kwargs)
 
         # otherwise json is contained within the html <body> section
@@ -572,9 +572,9 @@ def generate_response_http_format(http_class, http_kwargs, content, content_type
                 http_class.explanation = http_class.title  # some don't have any defined
             # add preformat <pre> section to output as is within the <body> section
             html_status = "Exception" if http_class.code >= 400 else "Response"
-            html_header = "{}<br><h2>{} Details</h2>".format(http_class.explanation, html_status)
+            html_header = f"{http_class.explanation}<br><h2>{html_status} Details</h2>"
             html_template = "<pre style='word-wrap: break-word; white-space: pre-wrap;'>{}</pre>"
-            content_type = "{}; charset=UTF-8".format(CONTENT_TYPE_HTML)
+            content_type = f"{CONTENT_TYPE_HTML}; charset=UTF-8"
             if json_content:
                 html_body = html_template.format(json.dumps(json_content, indent=True, ensure_ascii=False))
             else:

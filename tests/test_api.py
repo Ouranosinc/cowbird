@@ -31,7 +31,7 @@ class TestAPI(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)
+        cls.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)  # pylint: disable=R1732
         with cls.cfg_file as f:
             f.write(yaml.safe_dump({"services": {"Magpie": {"active": True}}}))
         cls.app = utils.get_test_app(settings={"cowbird.config_path": cls.cfg_file.name})
@@ -52,6 +52,9 @@ class TestAPI(unittest.TestCase):
         utils.check_val_is_in("cowbird", body["name"])
 
     def test_webhooks(self):
+        """
+        Test that sends a webhook request from Magpie to cowbird.
+        """
         with contextlib.ExitStack() as stack:
             stack.enter_context(mock.patch("cowbird.services.impl.magpie.Magpie",
                                            side_effect=utils.MockMagpieService))
@@ -129,7 +132,7 @@ def test_response_metadata():
             kwargs.pop("headers", None)
             resp = utils.test_request(app, method, path, expect_errors=True, headers=headers, **kwargs)
             # following util check validates all expected request metadata in response body
-            msg = "\n[Test: #{}, Code: {}]".format(i, code)
+            msg = f"\n[Test: #{i}, Code: {code}]"
             utils.check_response_basic_info(resp, expected_code=code, expected_method=method, extra_message=msg)
 
 

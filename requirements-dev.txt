@@ -4,12 +4,15 @@ bandit==1.7.4
 bump2version==1.0.0
 codacy-coverage>=1.3.11
 coverage==5.5,<5.6
-doc8>=0.8
+doc8>=0.8,<1.0.0
 docformatter==1.4
 flake8>=3.8.3,<3.9
+flynt
 isort>5.5
 mock>4
-pylint>=2.7,<2.8
+# pylint: Use at least version 2.13.0 to avoid security vulnerabilities (https://github.com/PyCQA/pylint/issues/5322)
+# and at least version 2.14 to avoid issue (https://github.com/PyCQA/pylint/pull/6212)
+pylint>=2.14.0
 pylint-quotes
 pytest
 pytest-celery

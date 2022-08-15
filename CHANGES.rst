@@ -7,7 +7,19 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* Add synchronization of Magpie permissions between different Magpie services, when receiving incoming webhooks.
+* Update config's ``services`` sections under ``sync_permissions`` to use actual Magpie service names instead of
+  Cowbird handler names (relates to `#22 <https://github.com/Ouranosinc/cowbird/issues/22>`_).
+* Reorganize ``config.example.yml`` to support more sync cases, provide info on the type of each segment of a resource
+  path and to use tokenized path.
+* Add schema validation when starting cowbird app.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+n/a
 
 `0.4.1 <https://github.com/Ouranosinc/cowbird/tree/0.4.1>`_ (2022-03-09)
 ------------------------------------------------------------------------------------
