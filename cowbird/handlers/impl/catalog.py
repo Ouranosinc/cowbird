@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
-from cowbird.services.service import SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM, Service
+from cowbird.handlers.handler import HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PARAM, Handler
 from cowbird.utils import get_logger
 
 if TYPE_CHECKING:
@@ -14,11 +14,11 @@ if TYPE_CHECKING:
 LOGGER = get_logger(__name__)
 
 
-class Catalog(Service, FSMonitor):
+class Catalog(Handler, FSMonitor):
     """
     Keep the catalog index in sync when files are created/deleted/updated.
     """
-    required_params = [SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM]
+    required_params = [HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PARAM]
 
     def __init__(self, settings, name, **kwargs):
         # type: (SettingsType, str, Any) -> None
@@ -26,7 +26,7 @@ class Catalog(Service, FSMonitor):
         Create the catalog instance.
 
         :param settings: Cowbird settings for convenience
-        :param name: Service name
+        :param name: Handler name
         """
         super(Catalog, self).__init__(settings, name, **kwargs)
         # TODO: Need to monitor data directory
@@ -54,8 +54,8 @@ class Catalog(Service, FSMonitor):
         """
         Return the Catalog singleton instance from the class name used to retrieve the FSMonitor from the DB.
         """
-        from cowbird.services.service_factory import ServiceFactory
-        return ServiceFactory().get_service("Catalog")
+        from cowbird.handlers.handler_factory import HandlerFactory
+        return HandlerFactory().get_handler("Catalog")
 
     def on_created(self, filename):
         """

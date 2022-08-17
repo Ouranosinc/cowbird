@@ -9,24 +9,24 @@ from cowbird.api import requests as ar
 from cowbird.api import schemas as s
 from cowbird.api.schemas import ValidOperations
 from cowbird.permissions_synchronizer import Permission
-from cowbird.services.service_factory import ServiceFactory
+from cowbird.handlers.handler_factory import HandlerFactory
 from cowbird.utils import get_logger, get_ssl_verify
 
 LOGGER = get_logger(__name__)
 
 
-def dispatch(svc_fct):
+def dispatch(handler_fct):
     exceptions = []
-    event_name = inspect.getsource(svc_fct).split(":")[1].strip()
-    for svc in ServiceFactory().get_active_services():
-        # Allow every service to be notified even if one of them throw an error
+    event_name = inspect.getsource(handler_fct).split(":")[1].strip()
+    for handler in HandlerFactory().get_active_handlers():
+        # Allow every handler to be notified even if one of them throw an error
         try:
-            LOGGER.info("Dispatching event [%s] for service [%s]", event_name, svc.name)
-            svc_fct(svc)
+            LOGGER.info("Dispatching event [%s] for handler [%s]", event_name, handler.name)
+            handler_fct(handler)
         except Exception as exception:  # noqa
             exceptions.append(exception)
-            LOGGER.error("Exception raised while handling event [%s] for service [%s] : [%r]",
-                         event_name, svc.name, exception)
+            LOGGER.error("Exception raised while handling event [%s] for handler [%s] : [%r]",
+                         event_name, handler.name, exception)
     if exceptions:
         raise Exception(exceptions)
 
@@ -49,15 +49,15 @@ def post_user_webhook_view(request):
         # FIXME: Tried with ax.URL_REGEX, but cannot match what seems valid urls...
         callback_url = ar.get_multiformat_body(request, "callback_url", pattern=None)
 
-        def svc_fct(svc):
-            svc.user_created(user_name=user_name)
+        def handler_fct(handler):
+            handler.user_created(user_name=user_name)
     else:
         callback_url = None
 
-        def svc_fct(svc):
-            svc.user_deleted(user_name=user_name)
+        def handler_fct(handler):
+            handler.user_deleted(user_name=user_name)
     try:
-        dispatch(svc_fct)
+        dispatch(handler_fct)
     except Exception:  # noqa
         if callback_url:
             # If something bad happens, set the status as erroneous in Magpie
@@ -109,7 +109,7 @@ def post_permission_webhook_view(request):
         group=group
     )
     if event == ValidOperations.CreateOperation.value:
-        dispatch(lambda svc: svc.permission_created(permission=permission))
+        dispatch(lambda handler: handler.permission_created(permission=permission))
     else:
-        dispatch(lambda svc: svc.permission_deleted(permission=permission))
+        dispatch(lambda handler: handler.permission_deleted(permission=permission))
     return ax.valid_http(HTTPOk, detail=s.PermissionWebhook_POST_OkResponseSchema.description)

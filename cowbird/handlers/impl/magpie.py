@@ -7,7 +7,7 @@ from requests.cookies import RequestsCookieJar
 
 from cowbird.config import ConfigError
 from cowbird.permissions_synchronizer import PermissionSynchronizer
-from cowbird.services.service import SERVICE_URL_PARAM, Service
+from cowbird.handlers.handler import HANDLER_URL_PARAM, Handler
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger
 
 if TYPE_CHECKING:
@@ -20,7 +20,7 @@ LOGGER = get_logger(__name__)
 COOKIES_TIMEOUT = 60
 
 
-class Magpie(Service):
+class Magpie(Handler):
     """
     Complete the Magpie's webhook call by calling Magpie temporary urls. Also keep service-shared resources in sync when
     permissions are updated for one of them.
@@ -29,7 +29,7 @@ class Magpie(Service):
     handle permissions synchronisation directly on permission update events. No
     need to handle them explicitly in nginx, thredds and geoserver classes.
     """
-    required_params = [SERVICE_URL_PARAM]
+    required_params = [HANDLER_URL_PARAM]
 
     def __init__(self, settings, name, admin_user, admin_password, **kwargs):
         # type: (SettingsType, str, str, str, Any) -> None
@@ -37,7 +37,7 @@ class Magpie(Service):
         Create the magpie instance and instantiate the permission synchronizer that will handle the permission events.
 
         :param settings: Cowbird settings for convenience
-        :param name: Service name
+        :param name: Handler name
         :param admin_user: Magpie admin username used for login.
         :param admin_password: Magpie admin password used for login.
         """

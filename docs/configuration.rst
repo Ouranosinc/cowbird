@@ -41,41 +41,41 @@ File: config.yml
 ~~~~~~~~~~~~~~~~~~~
 
 This is the core configuration file that defines most of `Cowbird`'s data configuration which it must work with to
-manage :term:`Services` components.
-A basic `config.example.yml`_ file is provided, for sample definition of expected schemas per service.
+manage :term:`Handler` components.
+A basic `config.example.yml`_ file is provided, for sample definition of expected schemas per handler.
 
 This config file contains the following required sections :
 
-services:
+handlers:
 #########
 
-The ``services`` section contains the definition of managed services by Cowbird.
-Each service is provided as a string that must match an actual implementation in Cowbird.
-Each service must be further configured with one or more of the following parameters. If
-a required parameter is missing for a service it will throw a ``ServiceConfigurationException`` exception.
-Additional parameters can be used for some services, such as ``admin_user`` and ``admin_password`` for a `Magpie`_
-service.
+The ``handlers`` section contains the definition of managed handlers by Cowbird.
+Each handler is provided as a string that must match an actual implementation in Cowbird.
+Each handler must be further configured with one or more of the following parameters. If
+a required parameter is missing for a handler it will throw a ``HandlerConfigurationException`` exception.
+Additional parameters can be used for some handlers, such as ``admin_user`` and ``admin_password`` for a `Magpie`_
+handler.
 
 Parameters :
 
 =================  =============  ======================================================================================
 Parameter name     Default value  Description
 =================  =============  ======================================================================================
-``active``         ``False``      Bool allowing to deactivate a service and stop managing it.
-``priority``       ``math.inf``   Relative priority between services while handling events.
+``active``         ``False``      Bool allowing to deactivate a handler and stop managing it.
+``priority``       ``math.inf``   Relative priority between handlers while handling events.
                                   Lower values have higher priority, default value is last.
-``url``            ``None``       URI of the web service represented by this Cowbird service.
-                                  Some Cowbird services do not represent web services, but others will throw an
+``url``            ``None``       URI of the web service represented by this Cowbird handler.
+                                  Some Cowbird handlers do not represent web services, but others will throw an
                                   exception if missing.
 ``workspace_dir``  ``None``       Location of the users workspace root.
-                                  Required for the following services : ``FileSystem``, ``Catalog`` and ``Geoserver``.
+                                  Required for the following handlers : ``FileSystem``, ``Catalog`` and ``Geoserver``.
 =================  =============  ======================================================================================
 
 Example :
 
 .. code-block:: yaml
 
-    services:
+    handlers:
       Magpie:
         active: true
         url: https://${HOSTNAME}/magpie

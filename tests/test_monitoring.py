@@ -6,7 +6,7 @@ import pytest
 
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
-from cowbird.services.service_factory import ServiceFactory
+from cowbird.handlers.handler_factory import HandlerFactory
 
 
 def file_io(filename, mv_filename):
@@ -96,8 +96,8 @@ def test_register_unregister_monitor():
         assert not Monitoring().unregister(tmpdir, mon)
 
         # Test registering a callback via a qualified class name string
-        catalog_mon = Monitoring().register(tmpdir, False, "cowbird.services.impl.catalog.Catalog").callback_instance
-        assert catalog_mon == ServiceFactory().get_service("Catalog")
+        catalog_mon = Monitoring().register(tmpdir, False, "cowbird.handlers.impl.catalog.Catalog").callback_instance
+        assert catalog_mon == HandlerFactory().get_handler("Catalog")
 
 
 class TestMonitor(FSMonitor):

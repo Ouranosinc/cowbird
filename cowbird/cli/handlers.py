@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Cowbird CLI helper to execute service operations.
+Cowbird CLI helper to execute handler operations.
 """
 import argparse
 from typing import TYPE_CHECKING
 
 from cowbird.cli import LOGGER
 from cowbird.cli.utils import get_config_parser, get_format_parser, print_format, set_log_level, subparser_help
-from cowbird.services import get_services
+from cowbird.handlers import get_handlers
 from cowbird.utils import CLI_MODE_CFG, get_app_config
 
 if TYPE_CHECKING:
@@ -19,13 +19,13 @@ def make_parser(shared_parsers=None, prefixes=None):
     cfg = get_config_parser()
     fmt = get_format_parser()
     parents = list(shared_parsers or []) + [cfg, fmt]
-    prog = " ".join(prefix for prefix in list(prefixes or []) + ["services"] if prefix)
-    parser = argparse.ArgumentParser(description="Service commands.", prog=prog, parents=parents)
+    prog = " ".join(prefix for prefix in list(prefixes or []) + ["handlers"] if prefix)
+    parser = argparse.ArgumentParser(description="Handler commands.", prog=prog, parents=parents)
     parents += []
-    cmd = parser.add_subparsers(title="Commands", dest="command", description="Command to run on services.")
-    cmd.add_parser("list", parents=parents, **subparser_help("List known services.", parser))
-    info = cmd.add_parser("info", parents=parents, **subparser_help("Obtains information about a service.", parser))
-    info.add_argument("name", help="Name of the service to retrieve.")
+    cmd = parser.add_subparsers(title="Commands", dest="command", description="Command to run on handlers.")
+    cmd.add_parser("list", parents=parents, **subparser_help("List known handlers.", parser))
+    info = cmd.add_parser("info", parents=parents, **subparser_help("Obtains information about a handler.", parser))
+    info.add_argument("name", help="Name of the handler to retrieve.")
     return parser
 
 
@@ -41,16 +41,16 @@ def main(args=None, parser=None, namespace=None):
     config = get_app_config({"cowbird.ini_file_path": args.config,
                              CLI_MODE_CFG: True})
     if args.command == "list":
-        services = get_services(config)
-        svc_json = [svc.name for svc in services]
-        print_format(svc_json, args.format, section="services")
+        handlers = get_handlers(config)
+        handler_json = [handler.name for handler in handlers]
+        print_format(handler_json, args.format, section="handlers")
     elif args.command == "info":
-        services = get_services(config)
-        svc_json = [svc.json() for svc in services if svc.name == args.name]
-        if not len(svc_json) == 1:
-            LOGGER.error("Cannot find service named: %s", args.name)
+        handlers = get_handlers(config)
+        handler_json = [handler.json() for handler in handlers if handler.name == args.name]
+        if not len(handler_json) == 1:
+            LOGGER.error("Cannot find handler named: %s", args.name)
             return -1
-        print_format(svc_json[0], args.format, section="service")
+        print_format(handler_json[0], args.format, section="handler")
     return 0
 
 

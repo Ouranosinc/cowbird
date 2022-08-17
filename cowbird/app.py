@@ -8,7 +8,7 @@ import sys
 
 from cowbird.config import (
     get_all_configs,
-    validate_services_config_schema,
+    validate_handlers_config_schema,
     validate_sync_config,
     validate_sync_perm_config_schema
 )
@@ -28,9 +28,9 @@ def get_app(global_config=None, **settings):
     global_config.update(settings)
     config = get_app_config(global_config)
 
-    services_cfgs = get_all_configs(get_config_path(), "services", allow_missing=True)
-    for services_cfg in services_cfgs:
-        validate_services_config_schema(services_cfg)
+    handlers_cfgs = get_all_configs(get_config_path(), "handlers", allow_missing=True)
+    for handlers_cfg in handlers_cfgs:
+        validate_handlers_config_schema(handlers_cfg)
 
     sync_perm_cfgs = get_all_configs(get_config_path(), "sync_permissions", allow_missing=True)
     # Validate sync_permissions config before starting the app

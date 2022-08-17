@@ -15,7 +15,7 @@ import pytest
 import yaml
 
 from cowbird.constants import COWBIRD_ROOT
-from cowbird.services.impl.geoserver import Geoserver, GeoserverError
+from cowbird.handlers.impl.geoserver import Geoserver, GeoserverError
 
 
 def get_geoserver_settings():
@@ -26,7 +26,7 @@ def get_geoserver_settings():
     config_path = os.path.join(COWBIRD_ROOT, "config/config.example.yml")
     with open(config_path, "r", encoding="utf-8") as f:
         settings_dictionary = yaml.safe_load(f)
-    geoserver_settings = settings_dictionary["services"]["Geoserver"]
+    geoserver_settings = settings_dictionary["handlers"]["Geoserver"]
     if "${HOSTNAME}" in geoserver_settings["url"]:
         hostname = os.getenv("HOSTNAME", "localhost")
         geoserver_settings["url"] = geoserver_settings["url"].replace("${HOSTNAME}", hostname)
@@ -75,7 +75,7 @@ class TestGeoserverRequests:
 
     @pytest.fixture
     def geoserver(self):
-        # Bypasses ServiceFactory() to prevent side effects in other tests.
+        # Bypasses HandlerFactory() to prevent side effects in other tests.
         geoserver = Geoserver(settings={}, name="Geoserver", **self.geoserver_settings)
         geoserver.ssl_verify = self.geoserver_settings["ssl_verify"]
         return geoserver
@@ -165,7 +165,7 @@ class TestGeoserverRequests:
                                                datastore_name=datastore_name,
                                                datastore_path=geoserver_workspace_path)
 
-        # Preparations needed to make tests work without all the other services running
+        # Preparations needed to make tests work without all the other handlers running
         shapefile_name = "Espace_Vert"
         workspace_path = self.folders["publish_remove"] + "/shapefile_datastore"
         # This next part can fail if the user running this test doesn't have write access to the directory

@@ -134,10 +134,10 @@ def _expand_all(config):
     return config
 
 
-def validate_services_config_schema(services_cfg):
+def validate_handlers_config_schema(handlers_cfg):
     # type: (ConfigDict) -> None
     """
-    Validates the schema of the `services` section found in the config.
+    Validates the schema of the `handlers` section found in the config.
     """
     schema = Schema({
         str: {  # Handler name
@@ -147,7 +147,7 @@ def validate_services_config_schema(services_cfg):
             Optional("workspace_dir"): str,
         }
     }, ignore_extra_keys=True)
-    schema.validate(services_cfg)
+    schema.validate(handlers_cfg)
 
 
 def validate_sync_perm_config_schema(sync_cfg):

@@ -21,7 +21,7 @@ class Monitoring(metaclass=SingletonMeta):
     Class handling file system monitoring and registering listeners.
 
     .. todo:: At some point we will need a consistency function that goes through all monitored folder and make sure
-              that monitoring services are up to date.
+              that monitoring handlers are up to date.
     """
 
     def __init__(self, config=None):

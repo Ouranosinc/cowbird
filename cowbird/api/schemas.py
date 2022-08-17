@@ -127,12 +127,12 @@ VersionAPI = Service(
 HomepageAPI = Service(
     path="/",
     name="homepage")
-ServicesAPI = Service(
-    path="/services",
-    name="service_list")
-ServiceAPI = Service(
-    path="/services/{service_name}",
-    name="service_detail")
+HandlersAPI = Service(
+    path="/handlers",
+    name="handler_list")
+HandlerAPI = Service(
+    path="/handlers/{handler_name}",
+    name="handler_detail")
 UserWebhookAPI = Service(
     path="/webhooks/users",
     name="user_webhook")
@@ -145,29 +145,29 @@ OperationParameter = colander.SchemaNode(
     colander.String(),
     description="Operation to interact with.",
     example="users",)
-ServiceNameParameter = colander.SchemaNode(
+HandlerNameParameter = colander.SchemaNode(
     colander.String(),
-    description="Registered service name.",
+    description="Registered handler name.",
     example="my-wps")
 
 
-class Service_RequestPathSchema(colander.MappingSchema):
-    service_name = ServiceNameParameter
+class Handler_RequestPathSchema(colander.MappingSchema):
+    handler_name = HandlerNameParameter
 
 
 # Tags
 APITag = "API"
 WebhooksTag = "Webhooks"
-ServicesTag = "Service"
+HandlersTag = "Handler"
 
 TAG_DESCRIPTIONS = {
     APITag: "General information about the API.",
     WebhooksTag:
         f"Webhooks that are managed by {__meta__.__title__}.\n\n" +
-        "Each of the managed webhook provides specific functionalities against specific services of the stack.",
-    ServicesTag:
-        f"Services that are managed by {__meta__.__title__}.\n\n" +
-        "Each service defines information such as endpoint and configuration details for running webhooks.",
+        "Each of the managed webhook provides specific functionalities against specific handlers of the stack.",
+    HandlersTag:
+        f"Handlers that are managed by {__meta__.__title__}.\n\n" +
+        "Each handler defines information such as endpoint and configuration details for running webhooks.",
 }
 
 # Header definitions
@@ -399,160 +399,160 @@ class ResourceListSchema(colander.SequenceSchema):
     resource = ResourceSchema()
 
 
-class ServiceSummarySchema(colander.SchemaNode):
-    description = "Managed service."
+class HandlerSummarySchema(colander.SchemaNode):
+    description = "Managed handler."
     schema_type = colander.String
-    example = "test-service"
+    example = "test-handler"
 
 
-class ServiceListSchema(colander.SequenceSchema):
-    description = "List of managed services."
-    service = colander.SchemaNode(
+class HandlerListSchema(colander.SequenceSchema):
+    description = "List of managed handlers."
+    handler = colander.SchemaNode(
         colander.String(),
-        description="Name of the service.",
-        example="thredds"
+        description="Name of the handler.",
+        example="Thredds"
     )
 
 
-class ServiceConfigurationSchema(colander.MappingSchema):
-    description = "Custom configuration of the service. Expected format and fields specific to each service type."
+class HandlerConfigurationSchema(colander.MappingSchema):
+    description = "Custom configuration of the handler. Expected format and fields specific to each handler type."
     missing = colander.drop
     default = colander.null
 
 
-class ServiceDetailSchema(colander.MappingSchema):
+class HandlerDetailSchema(colander.MappingSchema):
     name = colander.SchemaNode(
         colander.String(),
-        description="Name of the service",
+        description="Name of the handler",
         example="thredds"
     )
     type = colander.SchemaNode(
         colander.String(),
-        description="Type of the service",
+        description="Type of the handler",
         example="thredds"
     )
     url = colander.SchemaNode(
         colander.String(),
         missing=colander.drop,  # if listed with corresponding scope (users/groups/admin)
-        description="URL of the service (restricted access)",
+        description="URL of the handler (restricted access)",
         example="http://localhost:9999/thredds"
     )
     resources = ResourceListSchema()
     permissions = PermissionListSchema()
 
 
-class Services_GET_RequestSchema(BaseRequestSchemaAPI):
+class Handlers_GET_RequestSchema(BaseRequestSchemaAPI):
     pass
 
 
-class Services_GET_ResponseBodySchema(BaseResponseBodySchema):
-    services = ServiceListSchema()
+class Handlers_GET_ResponseBodySchema(BaseResponseBodySchema):
+    handlers = HandlerListSchema()
 
 
-class Services_GET_OkResponseSchema(BaseResponseSchemaAPI):
-    description = "Get services successful."
-    body = Services_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
+class Handlers_GET_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Get handlers successful."
+    body = Handlers_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
-class Services_GET_BadRequestResponseSchema(BaseResponseSchemaAPI):
-    description = "Invalid service name."
+class Handlers_GET_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "Invalid handler name."
     body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
-class Services_POST_RequestBodySchema(ServiceDetailSchema):
+class Handlers_POST_RequestBodySchema(HandlerDetailSchema):
     pass  # FIXME: define fields with derived from MappingSchema if request accepts different fields
 
 
-class Services_POST_RequestSchema(BaseRequestSchemaAPI):
-    body = Services_POST_RequestBodySchema()
+class Handlers_POST_RequestSchema(BaseRequestSchemaAPI):
+    body = Handlers_POST_RequestBodySchema()
 
 
-class Services_POST_CreatedResponseSchema(BaseResponseSchemaAPI):
-    description = "Service creation successful."
+class Handlers_POST_CreatedResponseSchema(BaseResponseSchemaAPI):
+    description = "Handler creation successful."
     body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
 
 
-class Services_POST_BadRequestResponseSchema(BaseResponseSchemaAPI):
-    description = "Invalid value parameters for service creation."
+class Handlers_POST_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "Invalid value parameters for handler creation."
     body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
-class Service_SummaryBodyResponseSchema(BaseResponseBodySchema):
-    service = ServiceSummarySchema()
+class Handler_SummaryBodyResponseSchema(BaseResponseBodySchema):
+    handler = HandlerSummarySchema()
 
 
-class Service_GET_RequestSchema(BaseRequestSchemaAPI):
-    path = Service_RequestPathSchema()
+class Handler_GET_RequestSchema(BaseRequestSchemaAPI):
+    path = Handler_RequestPathSchema()
 
 
-class Service_GET_ResponseBodySchema(BaseResponseBodySchema):
-    service = ServiceDetailSchema()
+class Handler_GET_ResponseBodySchema(BaseResponseBodySchema):
+    handler = HandlerDetailSchema()
 
 
-class Service_GET_OkResponseSchema(BaseResponseSchemaAPI):
-    description = "Get service successful."
-    body = Service_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
+class Handler_GET_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Get handler successful."
+    body = Handler_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
-class Service_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
-    description = "Could not find specified service."
+class Handler_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
+    description = "Could not find specified handler."
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
 
 
-class Services_POST_ForbiddenResponseSchema(BaseResponseSchemaAPI):
-    description = "Service registration forbidden."
+class Handlers_POST_ForbiddenResponseSchema(BaseResponseSchemaAPI):
+    description = "Handler registration forbidden."
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
-class Services_POST_ConflictResponseSchema(BaseResponseSchemaAPI):
-    description = "Specified 'service_name' value already exists."
+class Handlers_POST_ConflictResponseSchema(BaseResponseSchemaAPI):
+    description = "Specified 'handler_name' value already exists."
     body = ErrorResponseBodySchema(code=HTTPConflict.code, description=description)
 
 
-class Services_POST_UnprocessableEntityResponseSchema(BaseResponseSchemaAPI):
-    description = "Service creation for registration failed."
+class Handlers_POST_UnprocessableEntityResponseSchema(BaseResponseSchemaAPI):
+    description = "Handler creation for registration failed."
     body = ErrorResponseBodySchema(code=HTTPUnprocessableEntity.code, description=description)
 
 
-class Services_POST_InternalServerErrorResponseSchema(BaseResponseSchemaAPI):
-    description = "Service registration status could not be validated."
+class Handlers_POST_InternalServerErrorResponseSchema(BaseResponseSchemaAPI):
+    description = "Handler registration status could not be validated."
     body = ErrorResponseBodySchema(code=HTTPInternalServerError.code, description=description)
 
 
-class Service_PATCH_RequestBodySchema(ServiceDetailSchema):
+class Handler_PATCH_RequestBodySchema(HandlerDetailSchema):
     pass  # FIXME: define fields with derived from MappingSchema if request accepts different fields
 
 
-class Service_PATCH_RequestSchema(BaseRequestSchemaAPI):
-    path = Service_RequestPathSchema()
-    body = Service_PATCH_RequestBodySchema()
+class Handler_PATCH_RequestSchema(BaseRequestSchemaAPI):
+    path = Handler_RequestPathSchema()
+    body = Handler_PATCH_RequestBodySchema()
 
 
-class Service_PATCH_ResponseBodySchema(Service_GET_ResponseBodySchema):
+class Handler_PATCH_ResponseBodySchema(Handler_GET_ResponseBodySchema):
     pass  # FIXME: define fields with derived from MappingSchema if request accepts different fields
 
 
-class Service_PATCH_OkResponseSchema(BaseResponseSchemaAPI):
-    description = "Update service successful."
-    body = Service_PATCH_ResponseBodySchema(code=HTTPOk.code, description=description)
+class Handler_PATCH_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Update handler successful."
+    body = Handler_PATCH_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
-class Service_PATCH_BadRequestResponseSchema(BaseResponseSchemaAPI):
-    description = "Registered service values are already equal to update values."
+class Handler_PATCH_BadRequestResponseSchema(BaseResponseSchemaAPI):
+    description = "Registered handler values are already equal to update values."
     body = ErrorResponseBodySchema(code=HTTPBadRequest.code, description=description)
 
 
-class Service_PATCH_ForbiddenResponseSchema_ReservedKeyword(BaseResponseSchemaAPI):
-    description = "Update service name to 'types' not allowed (reserved keyword)."
+class Handler_PATCH_ForbiddenResponseSchema_ReservedKeyword(BaseResponseSchemaAPI):
+    description = "Update handler name to 'types' not allowed (reserved keyword)."
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
-class Service_PATCH_ForbiddenResponseSchema(BaseResponseSchemaAPI):
-    description = "Update service failed during value assignment."
+class Handler_PATCH_ForbiddenResponseSchema(BaseResponseSchemaAPI):
+    description = "Update handler failed during value assignment."
     body = ErrorResponseBodySchema(code=HTTPForbidden.code, description=description)
 
 
-class Service_PATCH_UnprocessableEntityResponseSchema(Services_POST_UnprocessableEntityResponseSchema):
+class Handler_PATCH_UnprocessableEntityResponseSchema(Handlers_POST_UnprocessableEntityResponseSchema):
     pass
 
 
@@ -683,37 +683,37 @@ class SwaggerAPI_GET_OkResponseSchema(colander.MappingSchema):
 
 
 # Responses for specific views
-Services_GET_responses = {
-    "200": Services_GET_OkResponseSchema(),
-    "400": Services_GET_BadRequestResponseSchema(),
+Handlers_GET_responses = {
+    "200": Handlers_GET_OkResponseSchema(),
+    "400": Handlers_GET_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
-Services_POST_responses = {
-    "201": Services_POST_CreatedResponseSchema(),
-    "400": Services_POST_BadRequestResponseSchema(),
+Handlers_POST_responses = {
+    "201": Handlers_POST_CreatedResponseSchema(),
+    "400": Handlers_POST_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
-    "403": Services_POST_ForbiddenResponseSchema(),
+    "403": Handlers_POST_ForbiddenResponseSchema(),
     "406": NotAcceptableResponseSchema(),
-    "409": Services_POST_ConflictResponseSchema(),
-    "422": Services_POST_UnprocessableEntityResponseSchema(),
+    "409": Handlers_POST_ConflictResponseSchema(),
+    "422": Handlers_POST_UnprocessableEntityResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
-Service_GET_responses = {
-    "200": Service_GET_OkResponseSchema(),
+Handler_GET_responses = {
+    "200": Handler_GET_OkResponseSchema(),
     "401": UnauthorizedResponseSchema(),
-    "404": Service_GET_NotFoundResponseSchema(),
+    "404": Handler_GET_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
-Service_PATCH_responses = {
-    "200": Service_PATCH_OkResponseSchema(),
-    "400": Service_PATCH_BadRequestResponseSchema(),
+Handler_PATCH_responses = {
+    "200": Handler_PATCH_OkResponseSchema(),
+    "400": Handler_PATCH_BadRequestResponseSchema(),
     "401": UnauthorizedResponseSchema(),
-    "403": Service_PATCH_ForbiddenResponseSchema(),
+    "403": Handler_PATCH_ForbiddenResponseSchema(),
     "406": NotAcceptableResponseSchema(),
-    "422": Service_PATCH_UnprocessableEntityResponseSchema(),
+    "422": Handler_PATCH_UnprocessableEntityResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 UserWebhook_POST_responses = {

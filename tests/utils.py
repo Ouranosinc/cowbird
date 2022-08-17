@@ -16,7 +16,7 @@ from webtest.response import TestResponse
 
 from cowbird.app import get_app
 from cowbird.constants import COWBIRD_ROOT, get_constant
-from cowbird.services.service import Service
+from cowbird.handlers.handler import Handler
 from cowbird.utils import (
     CONTENT_TYPE_JSON,
     USE_TEST_CELERY_APP_CFG,
@@ -91,11 +91,11 @@ class TestVersion(LooseVersion):
         return super(TestVersion, self)._cmp(other)
 
 
-class MockMagpieService(Service):
+class MockMagpieHandler(Handler):
     required_params = []
 
     def __init__(self, settings, name, **kwargs):
-        super(MockMagpieService, self).__init__(settings, name, **kwargs)
+        super(MockMagpieHandler, self).__init__(settings, name, **kwargs)
         self.event_users = []
         self.event_perms = []
         self.outbound_perms = []
@@ -140,12 +140,12 @@ class MockMagpieService(Service):
                 "wfs", "wps"]
 
 
-class MockAnyServiceBase(Service):
+class MockAnyHandlerBase(Handler):
     ResourceId = 1000
 
     def get_resource_id(self, resource_full_name):
         # type (str) -> str
-        return MockAnyService.ResourceId
+        return MockAnyHandler.ResourceId
 
     def user_created(self, user_name):
         pass
@@ -160,12 +160,12 @@ class MockAnyServiceBase(Service):
         pass
 
 
-class MockAnyService(MockAnyServiceBase):
+class MockAnyHandler(MockAnyHandlerBase):
     required_params = []
 
 
-def clear_services_instances():
-    # Remove the service instances initialized with test specific config
+def clear_handlers_instances():
+    # Remove the handler instances initialized with test specific config
     SingletonMeta._instances.clear()  # pylint: disable=W0212
 
 
@@ -287,7 +287,7 @@ def mock_get_settings(test):
 
     @functools.wraps(test)
     def wrapped(*_, **__):
-        # mock.patch("cowbird.services.get_settings", side_effect=mocked)
+        # mock.patch("cowbird.handlers.get_settings", side_effect=mocked)
         with mock.patch("cowbird.utils.get_settings", side_effect=mocked):
             return test(*_, **__)
     return wrapped

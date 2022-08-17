@@ -10,8 +10,8 @@ from celery import chain, shared_task
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
 from cowbird.request_task import RequestTask
-from cowbird.services.service import SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM, Service
-from cowbird.services.service_factory import ServiceFactory
+from cowbird.handlers.handler import HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PARAM, Handler
+from cowbird.handlers.handler_factory import HandlerFactory
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger
 
 if TYPE_CHECKING:
@@ -20,8 +20,8 @@ if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from cowbird.typedefs import SettingsType
 
-SERVICE_ADMIN_USER = "admin_user"  # nosec: B105
-SERVICE_ADMIN_PASSWORD = "admin_password"  # nosec: B105
+HANDLER_ADMIN_USER = "admin_user"  # nosec: B105
+HANDLER_ADMIN_PASSWORD = "admin_password"  # nosec: B105
 
 LOGGER = get_logger(__name__)
 
@@ -84,32 +84,32 @@ def geoserver_response_handling(func):
     return wrapper
 
 
-class Geoserver(Service, FSMonitor):
+class Geoserver(Handler, FSMonitor):
     """
     Keep Geoserver internal representation in sync with the platform.
     """
-    required_params = [SERVICE_URL_PARAM, SERVICE_WORKSPACE_DIR_PARAM]
+    required_params = [HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PARAM]
 
     def __init__(self, settings, name, **kwargs):
         # type: (SettingsType, str, Any) -> None
         """
-        Create the geoserver service instance.
+        Create the geoserver handler instance.
 
         :param settings: Cowbird settings for convenience
-        :param name: Service name
+        :param name: Handler name
         """
         super(Geoserver, self).__init__(settings, name, **kwargs)
         self.api_url = f"{self.url}/rest"
         self.headers = {"Content-type": CONTENT_TYPE_JSON}
-        self.admin_user = kwargs.get(SERVICE_ADMIN_USER, None)
-        self.admin_password = kwargs.get(SERVICE_ADMIN_PASSWORD, None)
+        self.admin_user = kwargs.get(HANDLER_ADMIN_USER, None)
+        self.admin_password = kwargs.get(HANDLER_ADMIN_PASSWORD, None)
         self.auth = (self.admin_user, self.admin_password)
 
     #
     # Implementation of parent classes' functions
     #
 
-    # Service class functions
+    # Handler class functions
     def get_resource_id(self, resource_full_name):
         # type:(str) -> str
         raise NotImplementedError
@@ -138,7 +138,7 @@ class Geoserver(Service, FSMonitor):
         """
         Return the Geoserver singleton instance from the class name used to retrieve the FSMonitor from the DB.
         """
-        return ServiceFactory().get_service("Geoserver")
+        return HandlerFactory().get_handler("Geoserver")
 
     def on_created(self, filename):
         """

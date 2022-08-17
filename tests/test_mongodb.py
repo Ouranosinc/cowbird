@@ -13,8 +13,8 @@ from cowbird.monitoring.monitor import Monitor
 @pytest.mark.database
 class MongodbServiceStoreTestCase(unittest.TestCase):
     def setUp(self):
-        self.monitor_params = dict(path="/", recursive=False, callback="cowbird.services.impl.catalog.Catalog")
-        self.monitor_params_bad_path = dict(path="", recursive=False, callback="cowbird.services.impl.catalog.Catalog")
+        self.monitor_params = dict(path="/", recursive=False, callback="cowbird.handlers.impl.catalog.Catalog")
+        self.monitor_params_bad_path = dict(path="", recursive=False, callback="cowbird.handlers.impl.catalog.Catalog")
         self.monitor_params_bad_callback = dict(path="/", recursive=False, callback="")
         self.monitor = Monitor(**self.monitor_params)
 

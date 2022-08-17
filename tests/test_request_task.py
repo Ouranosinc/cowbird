@@ -21,7 +21,7 @@ from celery.states import FAILURE, SUCCESS
 from requests.exceptions import RequestException
 
 from cowbird.request_task import AbortException, RequestTask
-from cowbird.services.impl.geoserver import Geoserver
+from cowbird.handlers.impl.geoserver import Geoserver
 from tests import utils
 
 
@@ -75,7 +75,7 @@ class TestRequestTask(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        utils.clear_services_instances()
+        utils.clear_handlers_instances()
 
     def test_chain(self):
         res = chain(sum_task.s(1, 2),
@@ -108,9 +108,9 @@ class TestRequestTask(unittest.TestCase):
         assert task.status == FAILURE
 
     @pytest.mark.geoserver
-    @patch("cowbird.services.impl.geoserver.Geoserver._create_datastore_dir")
-    @patch("cowbird.services.impl.geoserver.Geoserver.create_datastore")
-    @patch("cowbird.services.impl.geoserver.Geoserver.create_workspace")
+    @patch("cowbird.handlers.impl.geoserver.Geoserver._create_datastore_dir")
+    @patch("cowbird.handlers.impl.geoserver.Geoserver.create_datastore")
+    @patch("cowbird.handlers.impl.geoserver.Geoserver.create_workspace")
     def test_geoserver_user_created(self, create_workspace_mock, create_datastore_mock, create_datastore_dir_mock):
         test_user_name = "test_user"
         geoserver = Geoserver.get_instance()
@@ -125,10 +125,10 @@ class TestRequestTask(unittest.TestCase):
         create_datastore_mock.assert_called_with(test_user_name)
 
     @pytest.mark.geoserver
-    @patch("cowbird.services.impl.geoserver.Geoserver._create_datastore_dir")
-    @patch("cowbird.services.impl.geoserver.Geoserver._configure_datastore_request")
-    @patch("cowbird.services.impl.geoserver.Geoserver._create_datastore_request")
-    @patch("cowbird.services.impl.geoserver.Geoserver._create_workspace_request")
+    @patch("cowbird.handlers.impl.geoserver.Geoserver._create_datastore_dir")
+    @patch("cowbird.handlers.impl.geoserver.Geoserver._configure_datastore_request")
+    @patch("cowbird.handlers.impl.geoserver.Geoserver._create_datastore_request")
+    @patch("cowbird.handlers.impl.geoserver.Geoserver._create_workspace_request")
     def test_geoserver_workspace_datastore_created(self,
                                                    create_workspace_request_mock,
                                                    create_datastore_request_mock,
@@ -152,7 +152,7 @@ class TestRequestTask(unittest.TestCase):
                                                             datastore_path=test_datastore_path)
 
     @pytest.mark.geoserver
-    @patch("cowbird.services.impl.geoserver.Geoserver.remove_workspace")
+    @patch("cowbird.handlers.impl.geoserver.Geoserver.remove_workspace")
     def test_geoserver_user_deleted(self, remove_workspace_mock):
         test_user_name = "test_user"
         geoserver = Geoserver.get_instance()
@@ -164,7 +164,7 @@ class TestRequestTask(unittest.TestCase):
         remove_workspace_mock.assert_called_with(test_user_name)
 
     @pytest.mark.geoserver
-    @patch("cowbird.services.impl.geoserver.Geoserver._remove_workspace_request")
+    @patch("cowbird.handlers.impl.geoserver.Geoserver._remove_workspace_request")
     def test_geoserver_workspace_removed(self, remove_workspace_request_mock):
         test_user_name = "test_user"
         geoserver = Geoserver.get_instance()
@@ -176,8 +176,8 @@ class TestRequestTask(unittest.TestCase):
         remove_workspace_request_mock.assert_called_with(test_user_name)
 
     @pytest.mark.geoserver
-    @patch("cowbird.services.impl.geoserver.Geoserver._publish_shapefile_request")
-    @patch("cowbird.services.impl.geoserver.Geoserver.validate_shapefile")
+    @patch("cowbird.handlers.impl.geoserver.Geoserver._publish_shapefile_request")
+    @patch("cowbird.handlers.impl.geoserver.Geoserver.validate_shapefile")
     def test_geoserver_file_creation(self, validate_shapefile_mock, publish_shapefile_request_mock):
         test_user_name = "test_user"
         shapefile_name = "test_shapefile"
@@ -196,7 +196,7 @@ class TestRequestTask(unittest.TestCase):
                                                           filename=shapefile_name)
 
     @pytest.mark.geoserver
-    @patch("cowbird.services.impl.geoserver.Geoserver._remove_shapefile_request")
+    @patch("cowbird.handlers.impl.geoserver.Geoserver._remove_shapefile_request")
     def test_geoserver_file_removal(self, remove_shapefile_request_mock):
         test_user_name = "test_user"
         shapefile_name = "test_shapefile"

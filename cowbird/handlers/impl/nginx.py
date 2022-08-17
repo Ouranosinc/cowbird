@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from cowbird.services.service import Service
+from cowbird.handlers.handler import Handler
 
 if TYPE_CHECKING:
     from typing import Any
@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from cowbird.typedefs import SettingsType
 
 
-class Nginx(Service):
+class Nginx(Handler):
     """
     Nothing to do right now.
     """
@@ -21,7 +21,7 @@ class Nginx(Service):
         Create the nginx instance.
 
         :param settings: Cowbird settings for convenience
-        :param name: Service name
+        :param name: Handler name
         """
         super(Nginx, self).__init__(settings, name, **kwargs)
 
