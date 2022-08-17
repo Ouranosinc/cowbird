@@ -1,8 +1,8 @@
 from typing import TYPE_CHECKING
 
+from cowbird.handlers.handler import HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PARAM, Handler
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
-from cowbird.handlers.handler import HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PARAM, Handler
 from cowbird.utils import get_logger
 
 if TYPE_CHECKING:

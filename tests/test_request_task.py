@@ -20,8 +20,8 @@ from celery import chain, shared_task
 from celery.states import FAILURE, SUCCESS
 from requests.exceptions import RequestException
 
-from cowbird.request_task import AbortException, RequestTask
 from cowbird.handlers.impl.geoserver import Geoserver
+from cowbird.request_task import AbortException, RequestTask
 from tests import utils
 
 

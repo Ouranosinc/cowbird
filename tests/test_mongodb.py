@@ -1,12 +1,12 @@
+import os
+import tempfile
 import unittest
 
 import mock
-import os
 import pytest
+import yaml
 from pymongo.collection import Collection
 from pymongo.cursor import Cursor
-import tempfile
-import yaml
 
 from cowbird.database.mongodb import MongoDatabase
 from cowbird.database.stores import MonitoringStore

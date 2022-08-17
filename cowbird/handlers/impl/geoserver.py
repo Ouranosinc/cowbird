@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING, Tuple
 import requests
 from celery import chain, shared_task
 
+from cowbird.handlers.handler import HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PARAM, Handler
+from cowbird.handlers.handler_factory import HandlerFactory
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
 from cowbird.request_task import RequestTask
-from cowbird.handlers.handler import HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PARAM, Handler
-from cowbird.handlers.handler_factory import HandlerFactory
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger
 
 if TYPE_CHECKING:

@@ -8,8 +8,8 @@ from cowbird.api import exception as ax
 from cowbird.api import requests as ar
 from cowbird.api import schemas as s
 from cowbird.api.schemas import ValidOperations
-from cowbird.permissions_synchronizer import Permission
 from cowbird.handlers.handler_factory import HandlerFactory
+from cowbird.permissions_synchronizer import Permission
 from cowbird.utils import get_logger, get_ssl_verify
 
 LOGGER = get_logger(__name__)

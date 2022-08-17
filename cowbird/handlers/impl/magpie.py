@@ -6,8 +6,8 @@ from pyramid.httpexceptions import HTTPError
 from requests.cookies import RequestsCookieJar
 
 from cowbird.config import ConfigError
-from cowbird.permissions_synchronizer import PermissionSynchronizer
 from cowbird.handlers.handler import HANDLER_URL_PARAM, Handler
+from cowbird.permissions_synchronizer import PermissionSynchronizer
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger
 
 if TYPE_CHECKING:

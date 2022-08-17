@@ -1,15 +1,14 @@
-import unittest
-
 import os
 import tempfile
+import unittest
 from time import sleep
-import yaml
 
 import pytest
+import yaml
 
+from cowbird.handlers.handler_factory import HandlerFactory
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
-from cowbird.handlers.handler_factory import HandlerFactory
 from tests import utils
 
 
