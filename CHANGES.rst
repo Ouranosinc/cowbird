@@ -7,7 +7,14 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* Renamed Cowbird ``services`` term to ``handlers``, to avoid confusion with Magpie services.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+n/a
 
 `0.5.0 <https://github.com/Ouranosinc/cowbird/tree/0.5.0>`_ (2022-08-15)
 ------------------------------------------------------------------------------------
