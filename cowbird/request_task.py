@@ -21,6 +21,7 @@ class RequestTask(Task, ABC):
     Using this class will set the following Task configuration :
      - auto-retry for every RequestException
      - backoff and jitter strategy
+
     There is also an abort_chain function to stop the chain of requests in case of an unrecoverable event
 
     To use this class simply decorate your asynchronous function like this:

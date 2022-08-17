@@ -107,13 +107,16 @@ class TestMonitoring(unittest.TestCase):
             # Validate cleanup
             Monitoring().unregister(tmpdir, mon)
             Monitoring().unregister(tmpdir, mon2)
-            assert not Monitoring().unregister(test_subdir, mon2)  # Here we try to unregister a path with a bad class type
-            Monitoring().unregister(test_subdir, mon3)  # Here we have the good class type
+            # Here we try to unregister a path with a bad class type
+            assert not Monitoring().unregister(test_subdir, mon2)
+            # Here we have the good class type
+            Monitoring().unregister(test_subdir, mon3)
             assert len(Monitoring().monitors) == 0
             assert not Monitoring().unregister(tmpdir, mon)
 
             # Test registering a callback via a qualified class name string
-            catalog_mon = Monitoring().register(tmpdir, False, "cowbird.handlers.impl.catalog.Catalog").callback_instance
+            catalog_mon = \
+                Monitoring().register(tmpdir, False, "cowbird.handlers.impl.catalog.Catalog").callback_instance
             assert catalog_mon == HandlerFactory().get_handler("Catalog")
 
 

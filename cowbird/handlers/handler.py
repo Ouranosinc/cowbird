@@ -52,10 +52,11 @@ class Handler(abc.ABC):
         :param settings: Cowbird settings for convenience
         :param name: Handler name
         :param kwargs: The base class handle, but doesn't require the following variables:
-                        param `priority`: Relative priority between handlers while handling events
-                                          (lower value has higher priority, default value is last)
-                        param `url`: Location of the web service represented by the cowbird handler
-                        param `workspace_dir`:
+
+        :param url: Location of the web service represented by the cowbird handler
+        :param workspace_dir: Workspace directory
+        :param priority: Relative priority between handlers while handling events.
+                         Lower value has higher priority, default value is last.
         """
         if getattr(self, "required_params", None) is None:
             raise NotImplementedError("Handler 'required_params' must be overridden in inheriting class.")

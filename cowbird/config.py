@@ -86,10 +86,12 @@ def get_all_configs(path_or_dict, section, allow_missing=False):
     a single configuration (if a file) or directly
     returns the specified dictionary section (if a configuration dictionary).
     :returns:
+
         - list of configurations loaded if input was a directory path
         - list of single configuration if input was a file path
         - list of single configuration if input was a JSON dict
         - empty list if none of the other cases where matched
+
     .. note::
         Order of file loading will be resolved by alphabetically sorted filename
         if specifying a directory path.
