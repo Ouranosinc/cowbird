@@ -19,7 +19,7 @@ MAKEFILE_NAME := $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))
 # Application
 APP_ROOT    := $(abspath $(lastword $(MAKEFILE_NAME))/..)
 APP_NAME    := cowbird
-APP_VERSION ?= 0.5.0
+APP_VERSION ?= 0.5.1
 APP_INI     ?= $(APP_ROOT)/config/$(APP_NAME).ini
 APP_PORT    ?= 7000
 

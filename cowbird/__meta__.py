@@ -2,7 +2,7 @@
 General meta information on the package.
 """
 
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 __title__ = "Cowbird"
 __package__ = "cowbird"  # pylint: disable=W0622
 __author__ = "Ouranos inc., CRIM"
