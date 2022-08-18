@@ -24,11 +24,11 @@ More specifically:
     # display available helpers
     cowbird --help
 
-    # display available commands of 'services' helper
-    cowbird services --help
+    # display available commands of 'handlers' helper
+    cowbird handlers --help
 
-    # display specific arguments and options of 'list' command of 'services' helper
-    cowbird services list --help
+    # display specific arguments and options of 'list' command of 'handlers' helper
+    cowbird handlers list --help
 
 
 The ``cowbird`` CLI should be available on your path directly following :ref:`installation` of the package.

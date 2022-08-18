@@ -17,7 +17,7 @@ import mock
 import pytest
 import yaml
 
-from cowbird.services.service_factory import ServiceFactory
+from cowbird.handlers.handler_factory import HandlerFactory
 from cowbird.utils import CONTENT_TYPE_JSON
 from tests import utils
 
@@ -33,12 +33,12 @@ class TestAPI(unittest.TestCase):
     def setUpClass(cls):
         cls.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)  # pylint: disable=R1732
         with cls.cfg_file as f:
-            f.write(yaml.safe_dump({"services": {"Magpie": {"active": True}}}))
+            f.write(yaml.safe_dump({"handlers": {"Magpie": {"active": True}}}))
         cls.app = utils.get_test_app(settings={"cowbird.config_path": cls.cfg_file.name})
 
     @classmethod
     def tearDownClass(cls):
-        utils.clear_services_instances()
+        utils.clear_handlers_instances()
         os.unlink(cls.cfg_file.name)
 
     def test_homepage(self):
@@ -56,8 +56,8 @@ class TestAPI(unittest.TestCase):
         Test that sends a webhook request from Magpie to cowbird.
         """
         with contextlib.ExitStack() as stack:
-            stack.enter_context(mock.patch("cowbird.services.impl.magpie.Magpie",
-                                           side_effect=utils.MockMagpieService))
+            stack.enter_context(mock.patch("cowbird.handlers.impl.magpie.Magpie",
+                                           side_effect=utils.MockMagpieHandler))
             data = {
                 "event": "created",
                 "user_name": "test_user",
@@ -66,7 +66,7 @@ class TestAPI(unittest.TestCase):
             resp = utils.test_request(self.app, "POST", "/webhooks/users", json=data)
             utils.check_response_basic_info(resp, 200, expected_method="POST")
             utils.check_response_basic_info(resp)
-            magpie = ServiceFactory().get_service("Magpie")
+            magpie = HandlerFactory().get_handler("Magpie")
             assert len(magpie.json()["event_users"]) == 1
             assert magpie.json()["event_users"][0] == data["user_name"]
 
@@ -89,7 +89,7 @@ class TestAPI(unittest.TestCase):
             }
             resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
             utils.check_response_basic_info(resp, 200, expected_method="POST")
-            magpie = ServiceFactory().get_service("Magpie")
+            magpie = HandlerFactory().get_handler("Magpie")
             assert len(magpie.json()["event_perms"]) == 1
             assert magpie.json()["event_perms"][0] == data["resource_full_name"]
 
@@ -107,7 +107,7 @@ def test_response_metadata():
     note: test only locally to avoid remote server side-effects and because mock cannot be done remotely
     """
 
-    class MockService(object):
+    class MockHandler(object):
         def name(self):
             raise TypeError()
 
@@ -115,18 +115,18 @@ def test_response_metadata():
     # all paths below must be publicly accessible
     for i, (code, method, path, kwargs) in enumerate([
         (200, "GET", "", {}),
-        (400, "GET", "/services/!!!!", {}),  # invalid format
-        # (401, "GET", "/services", {}),  # anonymous unauthorized
+        (400, "GET", "/handlers/!!!!", {}),  # invalid format
+        # (401, "GET", "/handlers", {}),  # anonymous unauthorized
         (404, "GET", "/random", {}),
         (405, "POST", "/json", {"body": {}}),
         (406, "GET", "/api", {"headers": {"Accept": "application/pdf"}}),
         # 409: need connection to test conflict, no route available without so (other tests validates them though)
-        # (422, "POST", "/services", {"body": {"name": 1}}),  # invalid field type  # FIXME: route impl required
-        (500, "GET", "/services", {}),  # see mock
+        # (422, "POST", "/handlers", {"body": {"name": 1}}),  # invalid field type  # FIXME: route impl required
+        (500, "GET", "/handlers", {}),  # see mock
     ], start=1):
         with contextlib.ExitStack() as stack:
             if code == 500:
-                stack.enter_context(mock.patch("cowbird.services.impl.magpie.Magpie", side_effect=MockService))
+                stack.enter_context(mock.patch("cowbird.handlers.impl.magpie.Magpie", side_effect=MockHandler))
             headers = {"Accept": CONTENT_TYPE_JSON, "Content-Type": CONTENT_TYPE_JSON}
             headers.update(kwargs.get("headers", {}))
             kwargs.pop("headers", None)

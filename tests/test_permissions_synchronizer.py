@@ -20,7 +20,7 @@ from cowbird.config import (
     ConfigErrorInvalidServiceKey,
     ConfigErrorInvalidTokens
 )
-from cowbird.services import ServiceFactory
+from cowbird.handlers import HandlerFactory
 from tests import utils
 
 if TYPE_CHECKING:
@@ -57,8 +57,8 @@ class TestSyncPermissions(unittest.TestCase):
 
         cls.test_service_name = "catalog"
 
-        # Reset services instances in case any are left from other test cases
-        utils.clear_services_instances()
+        # Reset handlers instances in case any are left from other test cases
+        utils.clear_handlers_instances()
 
     def setUp(self):
         # Create test service
@@ -66,7 +66,7 @@ class TestSyncPermissions(unittest.TestCase):
 
         self.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)  # pylint: disable=R1732
         self.data = {
-            "services": {
+            "handlers": {
                 "Magpie": {
                     "active": True,
                     "url": self.url,
@@ -78,7 +78,7 @@ class TestSyncPermissions(unittest.TestCase):
         }
 
     def tearDown(self):
-        utils.clear_services_instances()
+        utils.clear_handlers_instances()
         os.unlink(self.cfg_file.name)
         self.delete_test_service()
 
@@ -214,12 +214,12 @@ class TestSyncPermissions(unittest.TestCase):
         with self.cfg_file as f:
             f.write(yaml.safe_dump(self.data))
         app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
-        # Recreate new magpie service instance with new config
-        ServiceFactory().create_service("Magpie")
+        # Recreate new magpie handler instance with new config
+        HandlerFactory().create_handler("Magpie")
 
         with contextlib.ExitStack() as stack:
-            stack.enter_context(mock.patch("cowbird.services.impl.thredds.Thredds",
-                                           side_effect=utils.MockAnyService))
+            stack.enter_context(mock.patch("cowbird.handlers.impl.thredds.Thredds",
+                                           side_effect=utils.MockAnyHandler))
 
             # Create test resources
             private_dir_res_id = self.create_test_resource("private-dir", "directory", self.test_service_id)
@@ -456,12 +456,12 @@ class TestSyncPermissions(unittest.TestCase):
         with self.cfg_file as f:
             f.write(yaml.safe_dump(self.data))
         app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
-        # Recreate new magpie service instance with new config
-        ServiceFactory().create_service("Magpie")
+        # Recreate new magpie handler instance with new config
+        HandlerFactory().create_handler("Magpie")
 
         with contextlib.ExitStack() as stack:
-            stack.enter_context(mock.patch("cowbird.services.impl.thredds.Thredds",
-                                           side_effect=utils.MockAnyService))
+            stack.enter_context(mock.patch("cowbird.handlers.impl.thredds.Thredds",
+                                           side_effect=utils.MockAnyHandler))
 
             # Create test resources
             dir_src_res_id = self.create_test_resource("private", "directory", self.test_service_id)
@@ -539,12 +539,12 @@ class TestSyncPermissions(unittest.TestCase):
         with self.cfg_file as f:
             f.write(yaml.safe_dump(self.data))
         app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
-        # Recreate new magpie service instance with new config
-        ServiceFactory().create_service("Magpie")
+        # Recreate new magpie handler instance with new config
+        HandlerFactory().create_handler("Magpie")
 
         with contextlib.ExitStack() as stack:
-            stack.enter_context(mock.patch("cowbird.services.impl.thredds.Thredds",
-                                           side_effect=utils.MockAnyService))
+            stack.enter_context(mock.patch("cowbird.handlers.impl.thredds.Thredds",
+                                           side_effect=utils.MockAnyHandler))
             # Create test resources
             parent_id = self.create_test_resource("dir1", "directory", self.test_service_id)
             src_res_id = self.create_test_resource("dir2", "directory", parent_id)
@@ -587,12 +587,12 @@ class TestSyncPermissions(unittest.TestCase):
         with self.cfg_file as f:
             f.write(yaml.safe_dump(self.data))
         app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
-        # Recreate new magpie service instance with new config
-        ServiceFactory().create_service("Magpie")
+        # Recreate new magpie handler instance with new config
+        HandlerFactory().create_handler("Magpie")
 
         with contextlib.ExitStack() as stack:
-            stack.enter_context(mock.patch("cowbird.services.impl.thredds.Thredds",
-                                           side_effect=utils.MockAnyService))
+            stack.enter_context(mock.patch("cowbird.handlers.impl.thredds.Thredds",
+                                           side_effect=utils.MockAnyHandler))
             # Create test resources
             src_res_id = self.create_test_resource("dir", "file", self.test_service_id)
 
@@ -632,7 +632,7 @@ class TestSyncPermissions(unittest.TestCase):
 
         utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
         # Try creating Magpie handler with invalid config
-        utils.check_raises(lambda: ServiceFactory().create_service("Magpie"),
+        utils.check_raises(lambda: HandlerFactory().create_handler("Magpie"),
                            ConfigErrorInvalidServiceKey, msg="invalid config file should raise")
 
 
@@ -660,7 +660,7 @@ class TestSyncPermissionsConfig(unittest.TestCase):
 
     def setUp(self):
         self.data = {
-            "services": {
+            "handlers": {
                 "Magpie": {"active": True, "url": "",
                            "admin_user": "admin", "admin_password": "qwertyqwerty"},
                 "Thredds": {"active": True},

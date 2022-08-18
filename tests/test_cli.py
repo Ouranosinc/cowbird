@@ -17,10 +17,10 @@ import pytest
 
 from cowbird.cli import main as cowbird_cli
 from cowbird.config import get_all_configs
-from tests.utils import TEST_CFG_FILE, TEST_INI_FILE, MockMagpieService
+from tests.utils import TEST_CFG_FILE, TEST_INI_FILE, MockMagpieHandler
 
 KNOWN_HELPERS = [
-    "services",
+    "handlers",
 ]
 
 CURR_DIR = Path(__file__).resolve().parent
@@ -66,45 +66,45 @@ def test_cowbird_helper_as_python():
 
 
 @pytest.mark.cli
-def test_cowbird_services_list_with_formats():
+def test_cowbird_handlers_list_with_formats():
     override = {"COWBIRD_CONFIG_PATH": TEST_CFG_FILE}
-    svcs_config = get_all_configs(TEST_CFG_FILE, "services")[0]
+    handlers_config = get_all_configs(TEST_CFG_FILE, "handlers")[0]
 
     with mock.patch.dict("os.environ", override), contextlib.ExitStack() as stack:
         # Mocked Magpie required since config is validated when calling cli, and config validation relies
         # on a Magpie instance.
-        stack.enter_context(mock.patch("cowbird.services.impl.magpie.Magpie", side_effect=MockMagpieService))
+        stack.enter_context(mock.patch("cowbird.handlers.impl.magpie.Magpie", side_effect=MockMagpieHandler))
 
         f = StringIO()
         with contextlib.redirect_stdout(f):
-            cowbird_cli(["services", "list", "-f", "yaml", "-c", TEST_INI_FILE])
+            cowbird_cli(["handlers", "list", "-f", "yaml", "-c", TEST_INI_FILE])
         output_yaml = f.getvalue().split("\n")
-        assert output_yaml[0] == "services:"
+        assert output_yaml[0] == "handlers:"
 
         f = StringIO()
         with contextlib.redirect_stdout(f):
-            cowbird_cli(["services", "list", "-f", "json", "-c", TEST_INI_FILE])
+            cowbird_cli(["handlers", "list", "-f", "json", "-c", TEST_INI_FILE])
         output_json = f.getvalue().split("\n")
         assert output_json[0] == "{"
-        assert "\"services\": [" in output_json[1]
+        assert "\"handlers\": [" in output_json[1]
 
         f = StringIO()
         with contextlib.redirect_stdout(f):
-            cowbird_cli(["services", "list", "-f", "table", "-c", TEST_INI_FILE])
+            cowbird_cli(["handlers", "list", "-f", "table", "-c", TEST_INI_FILE])
         output_table = f.getvalue().split("\n")
         assert "+---" in output_table[0]
-        assert "| services" in output_table[1]
+        assert "| handlers" in output_table[1]
         assert "+===" in output_table[2]
 
-        # Test services config
-        active_services = [line.strip("|").strip(" ") for line in output_table[3:-2]]
-        # Every active service should be in test data
-        for service in active_services:
-            assert service in svcs_config
-            assert svcs_config[service]["active"]
-        # Every activated test service should be in the active services
-        for test_service, config in svcs_config.items():
+        # Test handlers config
+        active_handlers = [line.strip("|").strip(" ") for line in output_table[3:-2]]
+        # Every active handler should be in test data
+        for handler in active_handlers:
+            assert handler in handlers_config
+            assert handlers_config[handler]["active"]
+        # Every activated test handler should be in the active handlers
+        for test_handler, config in handlers_config.items():
             if config["active"]:
-                assert test_service in active_services
+                assert test_handler in active_handlers
             else:
-                assert test_service not in active_services
+                assert test_handler not in active_handlers

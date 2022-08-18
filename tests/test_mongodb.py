@@ -1,20 +1,37 @@
+import os
+import tempfile
 import unittest
 
 import mock
 import pytest
+import yaml
 from pymongo.collection import Collection
 from pymongo.cursor import Cursor
 
 from cowbird.database.mongodb import MongoDatabase
 from cowbird.database.stores import MonitoringStore
 from cowbird.monitoring.monitor import Monitor
+from tests import utils
 
 
 @pytest.mark.database
 class MongodbServiceStoreTestCase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)  # pylint: disable=R1732
+        with cls.cfg_file as f:
+            f.write(yaml.safe_dump(
+                {"handlers": {"Catalog": {"active": True, "url": "http://catalog", "workspace_dir": "/workspace"}}}))
+        cls.app = utils.get_test_app(settings={"cowbird.config_path": cls.cfg_file.name})
+
+    @classmethod
+    def tearDownClass(cls):
+        utils.clear_handlers_instances()
+        os.unlink(cls.cfg_file.name)
+
     def setUp(self):
-        self.monitor_params = dict(path="/", recursive=False, callback="cowbird.services.impl.catalog.Catalog")
-        self.monitor_params_bad_path = dict(path="", recursive=False, callback="cowbird.services.impl.catalog.Catalog")
+        self.monitor_params = dict(path="/", recursive=False, callback="cowbird.handlers.impl.catalog.Catalog")
+        self.monitor_params_bad_path = dict(path="", recursive=False, callback="cowbird.handlers.impl.catalog.Catalog")
         self.monitor_params_bad_callback = dict(path="/", recursive=False, callback="")
         self.monitor = Monitor(**self.monitor_params)
 

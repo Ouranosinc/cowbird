@@ -86,10 +86,12 @@ def get_all_configs(path_or_dict, section, allow_missing=False):
     a single configuration (if a file) or directly
     returns the specified dictionary section (if a configuration dictionary).
     :returns:
+
         - list of configurations loaded if input was a directory path
         - list of single configuration if input was a file path
         - list of single configuration if input was a JSON dict
         - empty list if none of the other cases where matched
+
     .. note::
         Order of file loading will be resolved by alphabetically sorted filename
         if specifying a directory path.
@@ -134,10 +136,10 @@ def _expand_all(config):
     return config
 
 
-def validate_services_config_schema(services_cfg):
+def validate_handlers_config_schema(handlers_cfg):
     # type: (ConfigDict) -> None
     """
-    Validates the schema of the `services` section found in the config.
+    Validates the schema of the `handlers` section found in the config.
     """
     schema = Schema({
         str: {  # Handler name
@@ -147,7 +149,7 @@ def validate_services_config_schema(services_cfg):
             Optional("workspace_dir"): str,
         }
     }, ignore_extra_keys=True)
-    schema.validate(services_cfg)
+    schema.validate(handlers_cfg)
 
 
 def validate_sync_perm_config_schema(sync_cfg):

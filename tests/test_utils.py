@@ -235,14 +235,14 @@ class TestUtils(unittest.TestCase):
         try:
             app = utils.get_test_app()
             with mock.patch("cowbird.api.exception.generate_response_http_format", side_effect=mock_raise):
-                with mock.patch("cowbird.api.services.views.get_services", side_effect=mock_lambda_call):
+                with mock.patch("cowbird.api.handlers.views.get_handlers", side_effect=mock_lambda_call):
                     # Call request that ends up calling the response formatter via 'evaluate_call' itself raising to
                     # trigger 'mock_raise' recursively within 'raise_http' function.
                     # Since tweens are set up to format all response prior to return, the raised error will itself
                     # call 'raise_http' again each time operation fails, creating recursive raises.
                     # If recursive safeguard does its job, it should end up raising 'HTTPInternalServerError' directly
                     # (without further formatting attempt when reaching the MAX value), stopping the endless loop.
-                    utils.test_request(app, "GET", "/services", expect_errors=True)
+                    utils.test_request(app, "GET", "/handlers", expect_errors=True)
         except AssertionError:
             # Request called with above 'test_request' should catch the final 'HTTPInternalServerError' that is
             # raised directly instead of usual TestResponse returned. That error is again re-raised as 'AssertionError'

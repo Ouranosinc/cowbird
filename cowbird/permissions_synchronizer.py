@@ -14,13 +14,13 @@ from cowbird.config import (
     validate_sync_config,
     validate_sync_config_services
 )
-from cowbird.services.service_factory import ServiceFactory
+from cowbird.handlers.handler_factory import HandlerFactory
 from cowbird.utils import get_config_path, get_logger
 
 if TYPE_CHECKING:
     from typing import Callable, Dict, Generator, List, Tuple
 
-    from cowbird.services.impl.magpie import Magpie
+    from cowbird.handlers.impl.magpie import Magpie
     from cowbird.typedefs import ConfigSegment, PermissionData, ResourceSegment
 
     SyncPointServicesType = Dict[str, Dict[str, List[Dict[str, str]]]]
@@ -361,16 +361,16 @@ class SyncPoint:
         only be synced if both `A` and `B` permissions don't exist.
         """
 
-        svc = ServiceFactory().get_service("Magpie")
+        handler = HandlerFactory().get_handler("Magpie")
         user_permissions = None
         grp_permissions = None
         user_targets = {}
         group_targets = {}
         if input_permission.user:
-            user_permissions = svc.get_user_permissions(input_permission.user)
+            user_permissions = handler.get_user_permissions(input_permission.user)
             user_targets = deepcopy(target_res_and_permissions)
         if input_permission.group:
-            grp_permissions = svc.get_group_permissions(input_permission.group)
+            grp_permissions = handler.get_group_permissions(input_permission.group)
             group_targets = deepcopy(target_res_and_permissions)
 
         res_data = {}

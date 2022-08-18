@@ -9,8 +9,8 @@ Glossary
 .. glossary::
     :sorted:
 
-    Service
-        Managed component for which `Cowbird` provides some sort interactive :term:`Operation`.
+    Handler
+        Managed component for which `Cowbird` provides some sort of interactive :term:`Operation`.
 
     Operation
         Sequence of execution steps that configures or sends requests to other components of the `bird-house`_ stack

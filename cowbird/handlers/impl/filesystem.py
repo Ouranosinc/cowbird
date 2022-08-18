@@ -2,7 +2,7 @@ import os
 import shutil
 from typing import TYPE_CHECKING
 
-from cowbird.services.service import SERVICE_WORKSPACE_DIR_PARAM, Service
+from cowbird.handlers.handler import HANDLER_WORKSPACE_DIR_PARAM, Handler
 from cowbird.utils import get_logger
 
 if TYPE_CHECKING:
@@ -14,11 +14,11 @@ if TYPE_CHECKING:
 LOGGER = get_logger(__name__)
 
 
-class FileSystem(Service):
+class FileSystem(Handler):
     """
     Keep the proper directory structure in sync with the platform.
     """
-    required_params = [SERVICE_WORKSPACE_DIR_PARAM]
+    required_params = [HANDLER_WORKSPACE_DIR_PARAM]
 
     def __init__(self, settings, name, **kwargs):
         # type: (SettingsType, str, Any) -> None
@@ -26,7 +26,7 @@ class FileSystem(Service):
         Create the file system instance.
 
         :param settings: Cowbird settings for convenience
-        :param name: Service name
+        :param name: Handler name
         """
         super(FileSystem, self).__init__(settings, name, **kwargs)
 
