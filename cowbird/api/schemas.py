@@ -158,7 +158,7 @@ class Handler_RequestPathSchema(colander.MappingSchema):
 # Tags
 APITag = "API"
 WebhooksTag = "Webhooks"
-HandlersTag = "Handler"
+HandlersTag = "Handlers"
 
 TAG_DESCRIPTIONS = {
     APITag: "General information about the API.",

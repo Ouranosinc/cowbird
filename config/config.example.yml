@@ -11,7 +11,7 @@
 #   Additional parameters can be used for some handlers, such as `admin_user` and `admin_password`
 #   for the Magpie handler.
 #
-#   handler_name:
+#   {handler_name}:
 #     active:             [optional, default=False] Bool allowing to deactivate a handler and stop managing it.
 #     priority:           [optional, default=math.inf] Relative priority between handlers while managing events.
 #                         Lower values have higher priority, default value is last.
