@@ -200,7 +200,7 @@ setup(
     license=__meta__.__license__,
     keywords=", ".join(__meta__.__keywords__),
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         f"License :: OSI Approved :: {__meta__.__license__} License",
         "Natural Language :: English",

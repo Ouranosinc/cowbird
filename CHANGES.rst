@@ -9,7 +9,7 @@ Changes
 
 * Nothing yet.
 
-`0.5.1 <https://github.com/Ouranosinc/cowbird/tree/0.5.1>`_ (2022-08-18)
+`1.0.0 <https://github.com/Ouranosinc/cowbird/tree/1.0.0>`_ (2022-08-18)
 ------------------------------------------------------------------------------------
 
 Features / Changes
