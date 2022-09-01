@@ -19,5 +19,6 @@ requests_file
 schema
 simplejson
 threddsclient>=0.4.1
+typing_extensions
 watchdog
 webob

@@ -42,7 +42,7 @@ def geoserver_response_handling(func):
 
         # This try/except is used to catch errors caused by an unavailable Geoserver instance.
         # Since a connection error causes the requests library to raise an exception (RequestException),
-        # we can't rely on a response code and need to handle this case so it can be seen in the logs.
+        # we can't rely on a response code and need to handle this case, so it can be seen in the logs.
         # Without this, the requests auto-retries as per RequestTask class's configurations, but
         try:
             response = func(*args, **kwargs)
@@ -135,6 +135,7 @@ class Geoserver(Handler, FSMonitor):
     # FSMonitor class functions
     @staticmethod
     def get_instance():
+        # type: () -> Geoserver
         """
         Return the Geoserver singleton instance from the class name used to retrieve the FSMonitor from the DB.
         """
@@ -234,7 +235,9 @@ class Geoserver(Handler, FSMonitor):
 
     def validate_shapefile(self, workspace_name, shapefile_name):
         """
-        Validate shapefile. Will look for the three other files necessary for Geoserver publishing (.prj, .dbf, .shx)
+        Validate shapefile.
+
+        Will look for the three other files necessary for Geoserver publishing (.prj, .dbf, .shx)
         and raise a FileNotFoundError exception if one is missing.
 
         :param workspace_name: Name of the workspace from which the shapefile will be published
@@ -316,9 +319,9 @@ class Geoserver(Handler, FSMonitor):
     def _geoserver_user_datastore_dir(user_name):
         # type: (str) -> str
         """
-        Returns the path to the user's shapefile datastore inside the Geoserver instance container, ie.
+        Returns the path to the user's shapefile datastore inside the Geoserver instance container.
 
-        where the `WORKSPACE_DIR` env variable is mapped in the Geoserver container.
+        Uses the ``WORKSPACE_DIR`` env variable mapped in the Geoserver container.
         """
         return os.path.join("/user_workspaces", user_name, "shapefile_datastore")
 
@@ -406,21 +409,17 @@ class Geoserver(Handler, FSMonitor):
                         {"$": "shapefile",
                          "@key": "filetype"},
                         {"$": "true",
-                         "@key": "create spatial "
-                                 "index"},
+                         "@key": "create spatial index"},
                         {"$": "true",
-                         "@key": "memory mapped "
-                                 "buffer"},
+                         "@key": "memory mapped buffer"},
                         {"$": "GMT",
                          "@key": "timezone"},
                         {"$": "true",
-                         "@key": "enable spatial "
-                                 "index"},
+                         "@key": "enable spatial index"},
                         {"$": f"http://{datastore_name}",
                          "@key": "namespace"},
                         {"$": "true",
-                         "@key": "cache and reuse "
-                                 "memory maps"},
+                         "@key": "cache and reuse memory maps"},
                         {"$": geoserver_datastore_path,
                          "@key": "url"},
                         {"$": "shape",
@@ -440,7 +439,7 @@ class Geoserver(Handler, FSMonitor):
 
         :param workspace_name: Workspace where file will be published
         :param datastore_name: Datastore where file will be published
-        :param filename: Name of the shapefile (with no extentions)
+        :param filename: Name of the shapefile (with no extensions)
         :returns: Response object
         """
         request_url = f"{self.api_url}/workspaces/{workspace_name}/datastores/{datastore_name}/featuretypes"
@@ -482,7 +481,7 @@ class Geoserver(Handler, FSMonitor):
 
         :param workspace_name: Workspace where file is published
         :param datastore_name: Datastore where file is published
-        :param filename: Name of the shapefile (with no extentions)
+        :param filename: Name of the shapefile (with no extensions)
         :returns: Response object
         """
         request_url = f"{self.api_url}/workspaces/{workspace_name}/datastores/{datastore_name}" \
@@ -492,35 +491,35 @@ class Geoserver(Handler, FSMonitor):
 
 
 @shared_task(bind=True, base=RequestTask)
-def create_workspace(self, user_name):
+def create_workspace(_task, user_name):
     # Avoid any actual logic in celery task handler, only task related stuff should be done here
     return Geoserver.get_instance().create_workspace(user_name)
 
 
 @shared_task(bind=True, base=RequestTask)
-def create_datastore(self, datastore_name):
+def create_datastore(_task, datastore_name):
     # Avoid any actual logic in celery task handler, only task related stuff should be done here
     return Geoserver.get_instance().create_datastore(datastore_name)
 
 
 @shared_task(bind=True, base=RequestTask)
-def remove_workspace(self, workspace_name):
+def remove_workspace(_task, workspace_name):
     # Avoid any actual logic in celery task handler, only task related stuff should be done here
     return Geoserver.get_instance().remove_workspace(workspace_name)
 
 
 @shared_task(bind=True, autoretry_for=(FileNotFoundError,), retry_backoff=True, max_retries=8)
-def validate_shapefile(self, workspace_name, shapefile_name):
+def validate_shapefile(_task, workspace_name, shapefile_name):
     return Geoserver.get_instance().validate_shapefile(workspace_name, shapefile_name)
 
 
 @shared_task(bind=True, base=RequestTask)
-def publish_shapefile(self, workspace_name, shapefile_name):
+def publish_shapefile(_task, workspace_name, shapefile_name):
     return Geoserver.get_instance().publish_shapefile(workspace_name, shapefile_name)
 
 
 @shared_task(bind=True, base=RequestTask)
-def remove_shapefile(self, workspace_name, shapefile_name):
+def remove_shapefile(_task, workspace_name, shapefile_name):
     return Geoserver.get_instance().remove_shapefile(workspace_name, shapefile_name)
 
 
