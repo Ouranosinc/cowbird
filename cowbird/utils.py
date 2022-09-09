@@ -565,7 +565,7 @@ def get_config_path():
     settings = get_settings(None, app=True)
     return get_constant("COWBIRD_CONFIG_PATH", settings,
                         default_value=None,
-                        raise_missing=False, raise_not_set=False,
+                        raise_missing=True, raise_not_set=True,  # no reason for cowbird to run without a config!
                         print_missing=True)
 
 

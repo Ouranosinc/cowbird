@@ -6,7 +6,7 @@ import pytest
 import yaml
 
 from cowbird.handlers.handler import HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PARAM, HandlerConfigurationException
-from cowbird.handlers.handler_factory import HandlerFactory
+from cowbird.handlers import get_handlers
 from tests import utils
 
 
@@ -51,7 +51,7 @@ class TestHandlerFactory(unittest.TestCase):
         assert HandlerFactory().handlers["Magpie"] is inst1
 
         # Test handlers config
-        active_handlers = [handler.name for handler in HandlerFactory().get_active_handlers()]
+        active_handlers = [handler.name for handler in get_handlers()]
         # Every active handler should be in test data
         for handler in active_handlers:
             assert handler in TestHandlerFactory.test_data["handlers"]
