@@ -62,7 +62,7 @@ def post_user_webhook_view(request):
             handler.user_deleted(user_name=user_name)
     try:
         dispatch(handler_fct)
-    except Exception:  # noqa
+    except Exception as dispatch_exc:  # noqa
         if callback_url:
             # If something bad happens, set the status as erroneous in Magpie
             LOGGER.warning("Exception occured while dispatching event [%s], "
@@ -72,7 +72,7 @@ def post_user_webhook_view(request):
             except requests.exceptions.RequestException as exc:
                 LOGGER.warning("Cannot complete the Magpie callback url request to [%s] : [%s]", callback_url, exc)
         else:
-            LOGGER.warning("Exception occured while dispatching event [%s].", event)
+            LOGGER.warning("Exception occured while dispatching event [%s].", event, exc_info=dispatch_exc)
         # TODO: return something else than 200
     return ax.valid_http(HTTPOk, detail=s.UserWebhook_POST_OkResponseSchema.description)
 
