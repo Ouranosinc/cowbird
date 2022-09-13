@@ -428,7 +428,10 @@ docker-test: docker-build	## execute a smoke test of the built Docker image (val
 	@echo "Smoke test of built application docker image"
 	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_TEST_COMPOSES) up -d
 	sleep 5
-	curl localhost:$(APP_PORT)/version | python -m json.tool | grep "version"
+	curl localhost:$(APP_PORT)/version | python -m json.tool | grep "version" || ( \
+		$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_TEST_COMPOSES) logs cowbird worker; \
+		exit 1; \
+	)
 	curl localhost:$(APP_PORT) | python -m json.tool | grep $(APP_NAME)
 	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_TEST_COMPOSES) logs
 	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_TEST_COMPOSES) stop
@@ -654,7 +657,7 @@ test-cli: install-dev install		## run only CLI tests with the environment Python
 	@echo "Running local tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "cli" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
-.PHONY: test-geoserver 
+.PHONY: test-geoserver
 test-geoserver: install-dev install		## run Geoserver requests tests against a configured Geoserver instance. Most of these tests are "online" tests
 	@echo "Running local tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "geoserver" --junitxml "$(APP_ROOT)/tests/results.xml"'

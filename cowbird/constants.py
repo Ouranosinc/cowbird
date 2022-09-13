@@ -90,6 +90,7 @@ _SETTING_SECTION_PREFIXES = [
 ]
 _SETTINGS_REQUIRED = [
     "COWBIRD_URL",
+    "COWBIRD_CONFIG_PATH",
     # FIXME: add others here as needed
 ]
 
