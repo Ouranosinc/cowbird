@@ -17,6 +17,7 @@ Features / Changes
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
+* Add default ``timeout=5`` to all request calls (``pylint`` recommended fix to avoid infinite lock).
 * Minor typing fixes.
 
 `1.0.0 <https://github.com/Ouranosinc/cowbird/tree/1.0.0>`_ (2022-08-18)

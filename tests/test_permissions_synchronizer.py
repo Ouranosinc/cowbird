@@ -51,7 +51,7 @@ class TestSyncPermissions(unittest.TestCase):
         cls.url = os.getenv("COWBIRD_TEST_MAGPIE_URL")
 
         data = {"user_name": cls.usr, "password": cls.pwd}
-        resp = requests.post(f"{cls.url}/signin", json=data)
+        resp = requests.post(f"{cls.url}/signin", json=data, timeout=5)
         utils.check_response_basic_info(resp, 200, expected_method="POST")
         cls.cookies = resp.cookies
 

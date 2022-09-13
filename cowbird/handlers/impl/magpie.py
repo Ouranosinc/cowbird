@@ -60,14 +60,15 @@ class Magpie(Handler):
         Wrapping function to send requests to Magpie, which also handles login and cookies.
         """
         cookies = self.login()
-        resp = requests.request(method=method, url=url, params=params, json=json, cookies=cookies, headers=self.headers)
+        resp = requests.request(method=method, url=url, params=params, json=json,
+                                cookies=cookies, headers=self.headers, timeout=5)
 
         if resp.status_code in [401, 403]:
             # try refreshing cookies in case of Unauthorized or Forbidden error
             self.cookies = None
             cookies = self.login()
-            resp = requests.request(method=method, url=url, params=params, json=json, cookies=cookies,
-                                    headers=self.headers)
+            resp = requests.request(method=method, url=url, params=params, json=json,
+                                    cookies=cookies, headers=self.headers, timeout=5)
         return resp
 
     def get_service_types(self):
@@ -172,7 +173,7 @@ class Magpie(Handler):
                 or time.time() - self.last_cookies_update_time > COOKIES_TIMEOUT:
             data = {"user_name": self.admin_user, "password": self.admin_password}
             try:
-                resp = requests.post(f"{self.url}/signin", json=data)
+                resp = requests.post(f"{self.url}/signin", json=data, timeout=5)
             except Exception as exc:
                 raise RuntimeError(f"Failed to sign in to Magpie (url: `{self.url}`) with user `{self.admin_user}`. "
                                    f"Exception : {exc}. ")

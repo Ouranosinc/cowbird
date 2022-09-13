@@ -68,7 +68,7 @@ def post_user_webhook_view(request):
             LOGGER.warning("Exception occured while dispatching event [%s], "
                            "calling Magpie callback url : [%s]", event, callback_url)
             try:
-                requests.get(callback_url, verify=get_ssl_verify(request))
+                requests.head(callback_url, verify=get_ssl_verify(request), timeout=5)
             except requests.exceptions.RequestException as exc:
                 LOGGER.warning("Cannot complete the Magpie callback url request to [%s] : [%s]", callback_url, exc)
         else:
