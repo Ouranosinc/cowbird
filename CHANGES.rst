@@ -7,7 +7,17 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Enforce specification of ``COWBIRD_CONFIG_PATH`` environment variable or ``cowbird.config_path`` INI configuration
+  to provide the ``cowbird.yml`` file with definitions of services and permissions to manage, and raise directly at
+  application startup otherwise. Without those definitions, `Cowbird` has no reason to exist.
+* Add logging details when ``handlers`` are processed, succeed and failed their operation to provide insights
+  about `Cowbird` integration with other services.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Minor typing fixes.
 
 `1.0.0 <https://github.com/Ouranosinc/cowbird/tree/1.0.0>`_ (2022-08-18)
 ------------------------------------------------------------------------------------
