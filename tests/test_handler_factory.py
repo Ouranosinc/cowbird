@@ -5,9 +5,9 @@ import unittest
 import pytest
 import yaml
 
+from cowbird.handlers import get_handlers
 from cowbird.handlers.handler import HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PARAM, HandlerConfigurationException
 from cowbird.handlers.handler_factory import HandlerFactory
-from cowbird.handlers import get_handlers
 from tests import utils
 
 
