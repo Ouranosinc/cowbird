@@ -12,10 +12,12 @@ services:
     environment:
       HOSTNAME: localhost
       FORWARDED_ALLOW_IPS: "*"
+      COWBIRD_CONFIG_PATH: /config.yml
     # make directly available to host for testing purpose only
     # production instance should normally employ protected network
     network_mode: host
     volumes:
+      - ../../config/config.example.yml:/config.yml
       - ../../config/cowbird.example.ini:/opt/local/src/cowbird/config/cowbird.ini
       - ../../config/celeryconfig.py:/opt/local/src/cowbird/config/celeryconfig.py
 
@@ -23,10 +25,13 @@ services:
     image: pavics/cowbird:latest-worker
     container_name: "cowbird-worker-smoke-test"
     restart: "no"
+    environment:
+      COWBIRD_CONFIG_PATH: /config.yml
     # make directly available to host for testing purpose only
     # production instance should normally employ protected network
     network_mode: host
     volumes:
+      - ../../config/config.example.yml:/config.yml
       - ../../config/cowbird.example.ini:/opt/local/src/cowbird/config/cowbird.ini
       - ../../config/celeryconfig.py:/opt/local/src/cowbird/config/celeryconfig.py
 

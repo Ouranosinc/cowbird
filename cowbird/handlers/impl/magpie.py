@@ -25,7 +25,7 @@ class Magpie(Handler):
     Complete the Magpie's webhook call by calling Magpie temporary urls. Also keep service-shared resources in sync when
     permissions are updated for one of them.
 
-    ** Cowbird components diagram 1.2.0 needs to be update since Magpie can
+    ** Cowbird components diagram 1.2.0 needs to be updated since Magpie can
     handle permissions synchronisation directly on permission update events. No
     need to handle them explicitly in nginx, thredds and geoserver classes.
     """
@@ -60,14 +60,15 @@ class Magpie(Handler):
         Wrapping function to send requests to Magpie, which also handles login and cookies.
         """
         cookies = self.login()
-        resp = requests.request(method=method, url=url, params=params, json=json, cookies=cookies, headers=self.headers)
+        resp = requests.request(method=method, url=url, params=params, json=json,
+                                cookies=cookies, headers=self.headers, timeout=self.timeout)
 
         if resp.status_code in [401, 403]:
             # try refreshing cookies in case of Unauthorized or Forbidden error
             self.cookies = None
             cookies = self.login()
-            resp = requests.request(method=method, url=url, params=params, json=json, cookies=cookies,
-                                    headers=self.headers)
+            resp = requests.request(method=method, url=url, params=params, json=json,
+                                    cookies=cookies, headers=self.headers, timeout=self.timeout)
         return resp
 
     def get_service_types(self):
@@ -172,7 +173,7 @@ class Magpie(Handler):
                 or time.time() - self.last_cookies_update_time > COOKIES_TIMEOUT:
             data = {"user_name": self.admin_user, "password": self.admin_password}
             try:
-                resp = requests.post(f"{self.url}/signin", json=data)
+                resp = requests.post(f"{self.url}/signin", json=data, timeout=self.timeout)
             except Exception as exc:
                 raise RuntimeError(f"Failed to sign in to Magpie (url: `{self.url}`) with user `{self.admin_user}`. "
                                    f"Exception : {exc}. ")

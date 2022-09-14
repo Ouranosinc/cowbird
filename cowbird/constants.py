@@ -22,8 +22,19 @@ from pyramid.threadlocal import get_current_registry
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import Optional
+    from typing_extensions import Literal
 
     from cowbird.typedefs import AnySettingsContainer, SettingValue
+
+    AnyLogLevel = Literal[
+        "NOTSET", 0,
+        "DEBUG", "debug", 10,
+        "INFO", "info", 20,
+        "WARNING", "warning", 30,
+        "ERROR", "error", 40,
+        "FATAL", "fatal", 50,
+        "CRITICAL", "critical", 50,
+    ]
 
 # ===========================
 # path variables
@@ -38,6 +49,7 @@ COWBIRD_INI_FILE_PATH = os.getenv(
 
 
 def _get_default_log_level():
+    # type: () -> AnyLogLevel
     """
     Get logging level from INI configuration file or fallback to default ``INFO`` if it cannot be retrieved.
     """
@@ -90,11 +102,13 @@ _SETTING_SECTION_PREFIXES = [
 ]
 _SETTINGS_REQUIRED = [
     "COWBIRD_URL",
+    "COWBIRD_CONFIG_PATH",
     # FIXME: add others here as needed
 ]
 
 
 def get_constant_setting_name(name):
+    # type: (str) -> str
     """
     Find the equivalent setting name of the provided environment variable name.
 

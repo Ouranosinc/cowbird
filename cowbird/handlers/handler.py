@@ -3,13 +3,16 @@ import math
 import os
 from typing import TYPE_CHECKING
 
-from cowbird.utils import get_logger, get_ssl_verify
+from cowbird.utils import get_logger, get_ssl_verify, get_timeout
 
 if TYPE_CHECKING:
-    from typing import Any
+    from typing import Any, List
+    from typing_extensions import Literal
 
     # pylint: disable=W0611,unused-import
-    from cowbird.typedefs import SettingsType
+    from cowbird.typedefs import JSON, SettingsType
+
+    AnyHandlerParameter = Literal["priority", "url", "workspace_dir"]
 
 HANDLER_PRIORITY_PARAM = "priority"
 HANDLER_URL_PARAM = "url"
@@ -31,10 +34,10 @@ class HandlerConfigurationException(Exception):
 
 
 class Handler(abc.ABC):
-    __slots__ = ["required_params",  # Must be defined in each and every implementation
-                 "settings",
+    __slots__ = ["settings",
                  "name",
                  "ssl_verify",
+                 "timeout",
                  HANDLER_PRIORITY_PARAM,
                  HANDLER_URL_PARAM,
                  HANDLER_WORKSPACE_DIR_PARAM
@@ -43,8 +46,14 @@ class Handler(abc.ABC):
     Handler interface used to notify implemented handlers of users/permissions changes.
 
     .. todo:: At some point we will need a consistency function that goes through all Magpie users and make sure that
-              handlers are up to date.
+              handlers are up-to-date.
     """
+
+    @property
+    @abc.abstractmethod
+    def required_params(self):
+        # type: () -> List[AnyHandlerParameter]
+        raise NotImplementedError
 
     def __init__(self, settings, name, **kwargs):
         # type: (SettingsType, str, Any) -> None
@@ -65,8 +74,9 @@ class Handler(abc.ABC):
         self.priority = kwargs.get(HANDLER_PRIORITY_PARAM, math.inf)
         self.url = kwargs.get(HANDLER_URL_PARAM, None)
         self.workspace_dir = kwargs.get(HANDLER_WORKSPACE_DIR_PARAM, None)
-        # Handlers making outbound requests should use this settings to avoid SSLError on test/dev setup
+        # Handlers making outbound requests should use these settings to avoid SSLError on test/dev setup
         self.ssl_verify = get_ssl_verify(self.settings)
+        self.timeout = get_timeout(self.settings)
         for required_param in self.required_params:  # pylint: disable=E1101,no-member
             if required_param not in HANDLER_PARAMETERS:
                 raise Exception(f"Invalid handler parameter : {required_param}")
@@ -77,6 +87,7 @@ class Handler(abc.ABC):
                 raise HandlerConfigurationException(error_msg)
 
     def json(self):
+        # type: () -> JSON
         return {"name": self.name}
 
     def _user_workspace_dir(self, user_name):
@@ -84,7 +95,7 @@ class Handler(abc.ABC):
 
     @abc.abstractmethod
     def get_resource_id(self, resource_full_name):
-        # type (str) -> str
+        # type: (str) -> str
         """
         Each handler must provide this implementation required by the permission synchronizer.
 

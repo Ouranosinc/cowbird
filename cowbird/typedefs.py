@@ -6,7 +6,8 @@ Additional typing definitions.
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Any, Dict, List, Tuple, Type, TypedDict, Union
+    from typing import Any, Dict, List, Optional, Tuple, Type, TypedDict, Union
+    from typing_extensions import TypeAlias
 
     from celery.app import Celery
     from pyramid.config import Configurator
@@ -34,10 +35,19 @@ if TYPE_CHECKING:
     AnyCookiesType = Union[CookiesType, RequestsCookieJar]
     AnyResponseType = Union[WebobResponse, PyramidResponse, RequestsResponse, HTTPException, TestResponse]
 
+    # pylint: disable=C0103,invalid-name
+    ValueType = Union[str, Number, bool]
+    AnyValueType = Optional[ValueType]  # avoid naming ambiguity with PyWPS AnyValue
     AnyKey = Union[str, int]
-    AnyValue = Union[str, Number, bool, None]
-    BaseJSON = Union[AnyValue, List["BaseJSON"], Dict[AnyKey, "BaseJSON"]]
-    JSON = Union[Dict[AnyKey, Union[BaseJSON, "JSON"]], List[BaseJSON]]
+    # add more levels of explicit definitions than necessary to simulate JSON recursive structure better than 'Any'
+    # amount of repeated equivalent definition makes typing analysis 'work well enough' for most use cases
+    _JSON: TypeAlias = "JSON"
+    _JsonObjectItemAlias: TypeAlias = "_JsonObjectItem"
+    _JsonListItemAlias: TypeAlias = "_JsonListItem"
+    _JsonObjectItem = Dict[str, Union[_JSON, _JsonObjectItemAlias, _JsonListItemAlias]]
+    _JsonListItem = List[Union[AnyValueType, _JsonObjectItem, _JsonListItemAlias]]
+    _JsonItem = Union[AnyValueType, _JsonObjectItem, _JsonListItem, _JSON]
+    JSON = Union[Dict[str, _JsonItem], List[_JsonItem], AnyValueType]
 
     # registered configurations
     ConfigItem = Dict[str, JSON]

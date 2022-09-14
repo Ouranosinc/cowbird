@@ -8,9 +8,9 @@ from cowbird.api import exception as ax
 from cowbird.api import requests as ar
 from cowbird.api import schemas as s
 from cowbird.api.schemas import ValidOperations
-from cowbird.handlers.handler_factory import HandlerFactory
+from cowbird.handlers import get_handlers
 from cowbird.permissions_synchronizer import Permission
-from cowbird.utils import get_logger, get_ssl_verify
+from cowbird.utils import get_logger, get_ssl_verify, get_timeout
 
 LOGGER = get_logger(__name__)
 
@@ -18,15 +18,18 @@ LOGGER = get_logger(__name__)
 def dispatch(handler_fct):
     exceptions = []
     event_name = inspect.getsource(handler_fct).split(":")[1].strip()
-    for handler in HandlerFactory().get_active_handlers():
+    handlers = get_handlers()
+    for handler in handlers:
         # Allow every handler to be notified even if one of them throw an error
         try:
-            LOGGER.info("Dispatching event [%s] for handler [%s]", event_name, handler.name)
+            LOGGER.info("Dispatching event [%s] for handler [%s].", event_name, handler.name)
             handler_fct(handler)
         except Exception as exception:  # noqa
             exceptions.append(exception)
-            LOGGER.error("Exception raised while handling event [%s] for handler [%s] : [%r]",
+            LOGGER.error("Exception raised while handling event [%s] for handler [%s] : [%r].",
                          event_name, handler.name, exception)
+    if not handlers:
+        LOGGER.warning("No handlers matched for dispatch of event [%s].", event_name)
     if exceptions:
         raise Exception(exceptions)
 
@@ -45,6 +48,7 @@ def post_user_webhook_view(request):
                     http_error=HTTPBadRequest,
                     msg_on_fail=s.UserWebhook_POST_BadRequestResponseSchema.description)
     user_name = ar.get_multiformat_body(request, "user_name")
+    LOGGER.debug("Received user webhook event [%s] for user [%s].", event, user_name)
     if event == ValidOperations.CreateOperation.value:
         # FIXME: Tried with ax.URL_REGEX, but cannot match what seems valid urls...
         callback_url = ar.get_multiformat_body(request, "callback_url", pattern=None)
@@ -58,16 +62,17 @@ def post_user_webhook_view(request):
             handler.user_deleted(user_name=user_name)
     try:
         dispatch(handler_fct)
-    except Exception:  # noqa
+    except Exception as dispatch_exc:  # noqa
         if callback_url:
             # If something bad happens, set the status as erroneous in Magpie
-            LOGGER.warning("Exception occurs while dispatching event, calling Magpie callback url : [%s]", callback_url)
+            LOGGER.warning("Exception occurred while dispatching event [%s], "
+                           "calling Magpie callback url : [%s]", event, callback_url)
             try:
-                requests.get(callback_url, verify=get_ssl_verify(request))
+                requests.head(callback_url, verify=get_ssl_verify(request), timeout=get_timeout(request))
             except requests.exceptions.RequestException as exc:
                 LOGGER.warning("Cannot complete the Magpie callback url request to [%s] : [%s]", callback_url, exc)
         else:
-            LOGGER.warning("Exception occurs while dispatching event")
+            LOGGER.warning("Exception occurred while dispatching event [%s].", event, exc_info=dispatch_exc)
         # TODO: return something else than 200
     return ax.valid_http(HTTPOk, detail=s.UserWebhook_POST_OkResponseSchema.description)
 
@@ -108,6 +113,7 @@ def post_permission_webhook_view(request):
         user=user,
         group=group
     )
+    LOGGER.debug("Received permission webhook event [%s] for [%s].", event, permission)
     if event == ValidOperations.CreateOperation.value:
         dispatch(lambda handler: handler.permission_created(permission=permission))
     else:

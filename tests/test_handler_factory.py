@@ -5,6 +5,7 @@ import unittest
 import pytest
 import yaml
 
+from cowbird.handlers import get_handlers
 from cowbird.handlers.handler import HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PARAM, HandlerConfigurationException
 from cowbird.handlers.handler_factory import HandlerFactory
 from tests import utils
@@ -51,7 +52,7 @@ class TestHandlerFactory(unittest.TestCase):
         assert HandlerFactory().handlers["Magpie"] is inst1
 
         # Test handlers config
-        active_handlers = [handler.name for handler in HandlerFactory().get_active_handlers()]
+        active_handlers = [handler.name for handler in get_handlers()]
         # Every active handler should be in test data
         for handler in active_handlers:
             assert handler in TestHandlerFactory.test_data["handlers"]
@@ -77,19 +78,20 @@ class TestHandlerFactory(unittest.TestCase):
             GoodHandler(HandlerFactory().settings, "GoodHandler", **invalid_config)
 
         # Should raise if the handler does not define its required params
-        with pytest.raises(NotImplementedError):
+        with pytest.raises(TypeError):
+            # pylint: disable=E0110  # whole point of this test is to validate missing 'required_params'
             BadHandler(HandlerFactory().settings, "BadHandler", **valid_config)
 
         # Should raise if a handler defines an invalid param
         with pytest.raises(Exception):
-            BadParamHandler("BadParamHandler", **valid_config)
+            BadParamHandler("BadParamHandler", **valid_config)  # type: ignore  # test wrong parameter on purpose
 
         handler = GoodHandler(HandlerFactory().settings, "GoodHandler", **valid_config)
         assert getattr(handler, HANDLER_URL_PARAM) == valid_config[HANDLER_URL_PARAM]
         assert getattr(handler, HANDLER_WORKSPACE_DIR_PARAM) == valid_config[HANDLER_WORKSPACE_DIR_PARAM]
 
 
-class BadHandler(utils.MockAnyHandlerBase):
+class BadHandler(utils.MockAnyHandlerBase):  # noqa  # missing abstract method 'required_params'
     #  This handler is bad because Handler implementation must define the required_params variable
     pass
 

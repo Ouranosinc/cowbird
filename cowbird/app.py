@@ -27,17 +27,23 @@ def get_app(global_config=None, **settings):
     global_config = global_config or {}
     global_config.update(settings)
     config = get_app_config(global_config)
+    config_path = get_config_path()
+    LOGGER.info("Using configuration file: [%s]", config_path)
 
-    handlers_cfgs = get_all_configs(get_config_path(), "handlers", allow_missing=True)
+    handlers_cfgs = get_all_configs(config_path, "handlers", allow_missing=True)
     for handlers_cfg in handlers_cfgs:
         validate_handlers_config_schema(handlers_cfg)
+    if not handlers_cfgs:
+        LOGGER.warning("No handlers configuration found in [%s]", config_path)
 
-    sync_perm_cfgs = get_all_configs(get_config_path(), "sync_permissions", allow_missing=True)
+    sync_perm_cfgs = get_all_configs(config_path, "sync_permissions", allow_missing=True)
     # Validate sync_permissions config before starting the app
     for sync_perm_config in sync_perm_cfgs:
         validate_sync_perm_config_schema(sync_perm_config)
         for sync_cfg in sync_perm_config.values():
             validate_sync_config(sync_cfg)
+    if not sync_perm_cfgs:
+        LOGGER.warning("No permssion mapping configuration found in [%s]", config_path)
 
     print_log("Starting Cowbird app...", LOGGER)
     wsgi_app = config.make_wsgi_app()
