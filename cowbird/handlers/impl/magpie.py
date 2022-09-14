@@ -25,7 +25,7 @@ class Magpie(Handler):
     Complete the Magpie's webhook call by calling Magpie temporary urls. Also keep service-shared resources in sync when
     permissions are updated for one of them.
 
-    ** Cowbird components diagram 1.2.0 needs to be update since Magpie can
+    ** Cowbird components diagram 1.2.0 needs to be updated since Magpie can
     handle permissions synchronisation directly on permission update events. No
     need to handle them explicitly in nginx, thredds and geoserver classes.
     """

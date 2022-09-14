@@ -78,7 +78,7 @@ class TestHandlerFactory(unittest.TestCase):
             GoodHandler(HandlerFactory().settings, "GoodHandler", **invalid_config)
 
         # Should raise if the handler does not define its required params
-        with pytest.raises(NotImplementedError):
+        with pytest.raises(TypeError):
             BadHandler(HandlerFactory().settings, "BadHandler", **valid_config)
 
         # Should raise if a handler defines an invalid param
