@@ -65,14 +65,14 @@ def post_user_webhook_view(request):
     except Exception as dispatch_exc:  # noqa
         if callback_url:
             # If something bad happens, set the status as erroneous in Magpie
-            LOGGER.warning("Exception occured while dispatching event [%s], "
+            LOGGER.warning("Exception occurred while dispatching event [%s], "
                            "calling Magpie callback url : [%s]", event, callback_url)
             try:
                 requests.head(callback_url, verify=get_ssl_verify(request), timeout=get_timeout(request))
             except requests.exceptions.RequestException as exc:
                 LOGGER.warning("Cannot complete the Magpie callback url request to [%s] : [%s]", callback_url, exc)
         else:
-            LOGGER.warning("Exception occured while dispatching event [%s].", event, exc_info=dispatch_exc)
+            LOGGER.warning("Exception occurred while dispatching event [%s].", event, exc_info=dispatch_exc)
         # TODO: return something else than 200
     return ax.valid_http(HTTPOk, detail=s.UserWebhook_POST_OkResponseSchema.description)
 
