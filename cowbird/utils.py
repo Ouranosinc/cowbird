@@ -561,17 +561,25 @@ def is_null(item):
     return isinstance(item, NullType) or item is null
 
 
-def get_config_path():
-    settings = get_settings(None, app=True)
+def get_config_path(container=None):
+    # type: (Optional[AnySettingsContainer]) -> str
+    settings = get_settings(container, app=True)
     return get_constant("COWBIRD_CONFIG_PATH", settings,
                         default_value=None,
                         raise_missing=True, raise_not_set=True,  # no reason for cowbird to run without a config!
                         print_missing=True)
 
 
-def get_ssl_verify(container):
+def get_ssl_verify(container=None):
     # type: (Optional[AnySettingsContainer]) -> bool
     return asbool(get_constant("COWBIRD_SSL_VERIFY", container,
                                default_value=True,
                                raise_missing=False, raise_not_set=False,
                                print_missing=True))
+
+
+def get_timeout(container=None):
+    # type: (Optional[AnySettingsContainer]) -> int
+    return int(get_constant("COWBIRD_REQUEST_TIMEOUT", container,
+                            default_value=5,
+                            raise_missing=False, raise_not_set=False))

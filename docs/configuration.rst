@@ -237,7 +237,7 @@ These settings can be used to specify where to find other settings through custo
 
   Configuration directory where to look for `cowbird.ini`_ file.
 
-- ``COWBIRD_CONFIG_PATH``
+- ``COWBIRD_CONFIG_PATH`` [**required**]
 
   Explicit path where to find a `config.yml`_ configuration file to load at `Cowbird` startup.
 
@@ -271,6 +271,16 @@ at the start of the :ref:`configuration` section.
   .. note::
     This value is notably useful to indicate the exposed proxy location where `Cowbird` should be invoked from
     within a server stack that integrates it.
+
+- | ``COWBIRD_SSL_VERIFY``
+  | (Default: ``true``)
+
+  Specify if requests should enable SSL verification (*recommended*, should be disabled only for testing purposes).
+
+- | ``COWBIRD_REQUEST_TIMEOUT``
+  | (Default: ``5``, in seconds)
+
+  Specify the connection timeout to be used when sending requests.
 
 - | ``COWBIRD_LOG_LEVEL``
   | (Default: ``INFO``)

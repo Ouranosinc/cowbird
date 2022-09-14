@@ -336,7 +336,8 @@ class Geoserver(Handler, FSMonitor):
         """
         request_url = f"{self.api_url}/workspaces/"
         payload = {"workspace": {"name": workspace_name, "isolated": "True"}}
-        response = requests.post(url=request_url, json=payload, auth=self.auth, headers=self.headers, timeout=5)
+        response = requests.post(url=request_url, json=payload, auth=self.auth,
+                                 headers=self.headers, timeout=self.timeout)
         return response
 
     @geoserver_response_handling
@@ -349,7 +350,8 @@ class Geoserver(Handler, FSMonitor):
         :returns: Response object
         """
         request_url = f"{self.api_url}/workspaces/{workspace_name}?recurse=true"
-        response = requests.delete(url=request_url, auth=self.auth, headers=self.headers, timeout=5)
+        response = requests.delete(url=request_url, auth=self.auth,
+                                   headers=self.headers, timeout=self.timeout)
         return response
 
     def _create_datastore_dir(self, workspace_name):
@@ -380,7 +382,8 @@ class Geoserver(Handler, FSMonitor):
                 },
             }
         }
-        response = requests.post(url=request_url, json=payload, auth=self.auth, headers=self.headers, timeout=5)
+        response = requests.post(url=request_url, json=payload, auth=self.auth,
+                                 headers=self.headers, timeout=self.timeout)
         return response
 
     @geoserver_response_handling
@@ -428,7 +431,8 @@ class Geoserver(Handler, FSMonitor):
                 },
             }
         }
-        response = requests.put(url=request_url, json=payload, auth=self.auth, headers=self.headers, timeout=5)
+        response = requests.put(url=request_url, json=payload, auth=self.auth,
+                                headers=self.headers, timeout=self.timeout)
         return response
 
     @geoserver_response_handling
@@ -470,7 +474,8 @@ class Geoserver(Handler, FSMonitor):
                 "numDecimals": 6,
             }
         }
-        response = requests.post(url=request_url, json=payload, auth=self.auth, headers=self.headers, timeout=5)
+        response = requests.post(url=request_url, json=payload, auth=self.auth,
+                                 headers=self.headers, timeout=self.timeout)
         return response
 
     @geoserver_response_handling
@@ -488,7 +493,8 @@ class Geoserver(Handler, FSMonitor):
             f"{self.api_url}/workspaces/{workspace_name}/datastores/{datastore_name}"
             f"/featuretypes/{filename}?recurse=true"
         )
-        response = requests.delete(url=request_url, auth=self.auth, headers=self.headers, timeout=5)
+        response = requests.delete(url=request_url, auth=self.auth,
+                                   headers=self.headers, timeout=self.timeout)
         return response
 
 

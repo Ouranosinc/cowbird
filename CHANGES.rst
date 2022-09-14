@@ -14,10 +14,13 @@ Features / Changes
   application startup otherwise. Without those definitions, `Cowbird` has no reason to exist.
 * Add logging details when ``handlers`` are processed, succeed and failed their operation to provide insights
   about `Cowbird` integration with other services.
+* Add ``COWBIRD_REQUEST_TIMEOUT`` environment variable and ``cowbird.request_timeout`` INI configuration parameters
+  for specifying the connection timeout (default: ``5s``) to be applied when sending requests.
+* Add missing ``COWBIRD_SSL_VERIFY`` configuration setting in documentation.
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* Add default ``timeout=5`` to all request calls (``pylint`` recommended fix to avoid infinite lock).
+* Add ``timeout`` to all request calls (``pylint`` recommended fix to avoid infinite lock).
 * Minor typing fixes.
 
 `1.0.0 <https://github.com/Ouranosinc/cowbird/tree/1.0.0>`_ (2022-08-18)
