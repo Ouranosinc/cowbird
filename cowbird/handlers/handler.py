@@ -34,8 +34,7 @@ class HandlerConfigurationException(Exception):
 
 
 class Handler(abc.ABC):
-    __slots__ = ["required_params",  # Must be defined in each and every implementation
-                 "settings",
+    __slots__ = ["settings",
                  "name",
                  "ssl_verify",
                  HANDLER_PRIORITY_PARAM,
