@@ -44,14 +44,7 @@ if TYPE_CHECKING:
 
     from pyramid.request import Request
 
-    from cowbird.typedefs import (
-        JSON,
-        AnyCookiesType,
-        AnyHeadersType,
-        AnyResponseType,
-        HeadersType,
-        SettingsType
-    )
+    from cowbird.typedefs import JSON, AnyCookiesType, AnyHeadersType, AnyResponseType, HeadersType, SettingsType
     from cowbird.utils import NullType
 
     # pylint: disable=C0103,invalid-name
