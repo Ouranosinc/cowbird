@@ -79,18 +79,19 @@ class TestHandlerFactory(unittest.TestCase):
 
         # Should raise if the handler does not define its required params
         with pytest.raises(TypeError):
+            # pylint: disable=E0110  # whole point of this test is to validate missing 'required_params'
             BadHandler(HandlerFactory().settings, "BadHandler", **valid_config)
 
         # Should raise if a handler defines an invalid param
         with pytest.raises(Exception):
-            BadParamHandler("BadParamHandler", **valid_config)
+            BadParamHandler("BadParamHandler", **valid_config)  # type: ignore  # test wrong parameter on purpose
 
         handler = GoodHandler(HandlerFactory().settings, "GoodHandler", **valid_config)
         assert getattr(handler, HANDLER_URL_PARAM) == valid_config[HANDLER_URL_PARAM]
         assert getattr(handler, HANDLER_WORKSPACE_DIR_PARAM) == valid_config[HANDLER_WORKSPACE_DIR_PARAM]
 
 
-class BadHandler(utils.MockAnyHandlerBase):
+class BadHandler(utils.MockAnyHandlerBase):  # noqa  # missing abstract method 'required_params'
     #  This handler is bad because Handler implementation must define the required_params variable
     pass
 

@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from typing_extensions import Literal
 
     # pylint: disable=W0611,unused-import
-    from cowbird.typedefs import SettingsType
+    from cowbird.typedefs import JSON, SettingsType
 
     AnyHandlerParameter = Literal["priority", "url", "workspace_dir"]
 
@@ -87,6 +87,7 @@ class Handler(abc.ABC):
                 raise HandlerConfigurationException(error_msg)
 
     def json(self):
+        # type: () -> JSON
         return {"name": self.name}
 
     def _user_workspace_dir(self, user_name):
@@ -94,7 +95,7 @@ class Handler(abc.ABC):
 
     @abc.abstractmethod
     def get_resource_id(self, resource_full_name):
-        # type (str) -> str
+        # type: (str) -> str
         """
         Each handler must provide this implementation required by the permission synchronizer.
 

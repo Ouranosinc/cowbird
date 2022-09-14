@@ -139,11 +139,10 @@ class MockMagpieHandler(Handler):
                 "wfs", "wps"]
 
 
-class MockAnyHandlerBase(Handler):
+class MockAnyHandlerBase(Handler):  # noqa  # missing abstract method 'required_params'
     ResourceId = 1000
 
     def get_resource_id(self, resource_full_name):
-        # type (str) -> str
         return MockAnyHandler.ResourceId
 
     def user_created(self, user_name):
