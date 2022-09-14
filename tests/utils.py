@@ -49,7 +49,6 @@ if TYPE_CHECKING:
         AnyCookiesType,
         AnyHeadersType,
         AnyResponseType,
-        CookiesType,
         HeadersType,
         SettingsType
     )
@@ -223,7 +222,7 @@ def get_hostname(test_item):
     app_or_url = get_app_or_url(test_item)
     if isinstance(app_or_url, TestApp):
         app_or_url = get_constant("COWBIRD_URL", app_or_url.app.registry)
-    return urlparse(app_or_url).hostname
+    return str(urlparse(app_or_url).hostname)
 
 
 def get_headers(app_or_url, header_dict):
@@ -349,8 +348,8 @@ def test_request(test_item,             # type: AnyTestItemType
                  retries=3,             # type: int
                  allow_redirects=True,  # type: bool
                  content_type=None,     # type: Optional[str]
-                 headers=None,          # type: Optional[HeadersType]
-                 cookies=None,          # type: Optional[CookiesType]
+                 headers=None,          # type: Optional[AnyHeadersType]
+                 cookies=None,          # type: Optional[AnyCookiesType]
                  **kwargs               # type: Any
                  ):                     # type: (...) -> AnyResponseType
     """

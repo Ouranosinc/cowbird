@@ -37,6 +37,7 @@ class Handler(abc.ABC):
     __slots__ = ["settings",
                  "name",
                  "ssl_verify",
+                 "timeout",
                  HANDLER_PRIORITY_PARAM,
                  HANDLER_URL_PARAM,
                  HANDLER_WORKSPACE_DIR_PARAM
