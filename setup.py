@@ -3,7 +3,11 @@
 import logging
 import os
 import sys
-from distutils.version import LooseVersion
+
+try:
+    from packaging.version import Version as LooseVersion  # noqa
+except ImportError:
+    from distutils.version import LooseVersion
 
 try:
     from setuptools import setup
@@ -52,7 +56,7 @@ def _split_requirement(requirement, version=False, python=False, merge=False):
 
     Package requirement format::
 
-        package [<|<=|==|>|>=|!= x.y.z][; python_version <|<=|==|>|>=|!= "x.y.z"]
+        package [<|<=|==|>|>=|!= x.y.z][; python_version <|<=|==|>|>=|!= "x.y.z"][ # comment]
 
     Returned values with provided arguments::
 
@@ -118,15 +122,17 @@ def _parse_requirements(file_path, requirements, links):
             # ignore empty line, comment line or reference to other requirements file (-r flag)
             if not line or line.startswith("#") or line.startswith("-"):
                 continue
+            line = line.split(" # ")[0] if " # " in line else line
             if "python_version" in line:
-                operator, py_ver = _split_requirement(line, version=True, python=True)
+                operator, py_pkg_ver = _split_requirement(line, version=True, python=True)
+                py_env_ver = sys.version.split("(", 1)[0].strip()
                 op_map = {
-                    "==": LooseVersion(sys.version) == LooseVersion(py_ver),
-                    ">=": LooseVersion(sys.version) >= LooseVersion(py_ver),
-                    "<=": LooseVersion(sys.version) <= LooseVersion(py_ver),
-                    "!=": LooseVersion(sys.version) != LooseVersion(py_ver),
-                    ">": LooseVersion(sys.version) > LooseVersion(py_ver),
-                    "<": LooseVersion(sys.version) < LooseVersion(py_ver),
+                    "==": LooseVersion(py_env_ver) == LooseVersion(py_pkg_ver),
+                    ">=": LooseVersion(py_env_ver) >= LooseVersion(py_pkg_ver),
+                    "<=": LooseVersion(py_env_ver) <= LooseVersion(py_pkg_ver),
+                    "!=": LooseVersion(py_env_ver) != LooseVersion(py_pkg_ver),
+                    ">": LooseVersion(py_env_ver) > LooseVersion(py_pkg_ver),
+                    "<": LooseVersion(py_env_ver) < LooseVersion(py_pkg_ver),
                 }
                 # skip requirement if not fulfilling python version
                 if not op_map[operator]:
