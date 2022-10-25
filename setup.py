@@ -125,7 +125,7 @@ def _parse_requirements(file_path, requirements, links):
             line = line.split(" # ")[0] if " # " in line else line
             if "python_version" in line:
                 operator, py_pkg_ver = _split_requirement(line, version=True, python=True)
-                py_env_ver = sys.version.split("(")[0].strip()
+                py_env_ver = sys.version.split("(", 1)[0].strip()
                 op_map = {
                     "==": LooseVersion(py_env_ver) == LooseVersion(py_pkg_ver),
                     ">=": LooseVersion(py_env_ver) >= LooseVersion(py_pkg_ver),
