@@ -40,7 +40,7 @@ class FileSystem(Handler):
     def user_created(self, user_name):
         user_workspace_dir = self._get_user_workspace_dir(user_name)
         try:
-            os.mkdir(user_workspace_dir)
+            os.mkdir(user_workspace_dir, 0o755)
         except FileExistsError:
             LOGGER.info("User workspace directory already existing (skip creation): [%s]", user_workspace_dir)
 
