@@ -56,11 +56,11 @@ the resources under those services such that the complete ecosystem can seamless
     :alt: Dependencies Status
     :target: https://pyup.io/account/repos/github/Ouranosinc/cowbird/
 
-.. |github_latest| image:: https://img.shields.io/github/workflow/status/Ouranosinc/cowbird/Tests/master?label=master
+.. |github_latest| image:: https://img.shields.io/github/actions/workflow/status/Ouranosinc/cowbird/tests.yml?label=master&branch=master
     :alt: Github Actions CI Build Status (master branch)
     :target: https://github.com/Ouranosinc/cowbird/actions?query=branch%3Amaster
 
-.. |github_tagged| image:: https://img.shields.io/github/workflow/status/Ouranosinc/cowbird/Tests/1.0.0?label=1.0.0
+.. |github_tagged| image:: https://img.shields.io/github/actions/workflow/status/Ouranosinc/cowbird/tests.yml?label=1.0.0&branch=1.0.0
     :alt: Github Actions CI Build Status (latest tag)
     :target: https://github.com/Ouranosinc/cowbird/tree/1.0.0
 
