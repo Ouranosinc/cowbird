@@ -1,7 +1,7 @@
 import inspect
 
 import requests
-from pyramid.httpexceptions import HTTPBadRequest, HTTPOk
+from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError, HTTPOk
 from pyramid.view import view_config
 
 from cowbird.api import exception as ax
@@ -66,14 +66,15 @@ def post_user_webhook_view(request):
         if callback_url:
             # If something bad happens, set the status as erroneous in Magpie
             LOGGER.warning("Exception occurred while dispatching event [%s], "
-                           "calling Magpie callback url : [%s]", event, callback_url)
+                           "calling Magpie callback url : [%s]", event, callback_url, exc_info=dispatch_exc)
             try:
                 requests.head(callback_url, verify=get_ssl_verify(request), timeout=get_timeout(request))
             except requests.exceptions.RequestException as exc:
                 LOGGER.warning("Cannot complete the Magpie callback url request to [%s] : [%s]", callback_url, exc)
         else:
             LOGGER.warning("Exception occurred while dispatching event [%s].", event, exc_info=dispatch_exc)
-        # TODO: return something else than 200
+        return ax.raise_http(HTTPInternalServerError,
+                             detail=s.UserWebhook_POST_InternalServerErrorResponseSchema.description)
     return ax.valid_http(HTTPOk, detail=s.UserWebhook_POST_OkResponseSchema.description)
 
 
