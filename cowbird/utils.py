@@ -152,7 +152,7 @@ def raise_log(msg, exception=Exception, logger=None, level=logging.ERROR):
     logger.log(level, msg)
     if not isclass(exception) or not issubclass(exception, Exception):
         exception = Exception
-    raise exception(msg)
+    raise exception(msg)  # pylint: disable=W0719
 
 
 def bool2str(value):

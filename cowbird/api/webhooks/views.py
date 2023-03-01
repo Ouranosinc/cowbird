@@ -31,7 +31,7 @@ def dispatch(handler_fct):
     if not handlers:
         LOGGER.warning("No handlers matched for dispatch of event [%s].", event_name)
     if exceptions:
-        raise Exception(exceptions)
+        raise Exception(exceptions)  # pylint: disable=W0719
 
 
 @s.UserWebhookAPI.post(schema=s.UserWebhook_POST_RequestSchema, tags=[s.WebhooksTag],

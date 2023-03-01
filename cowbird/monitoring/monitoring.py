@@ -34,8 +34,8 @@ class Monitoring(metaclass=SingletonMeta):
                        must be initialized with a proper config and after that the init function should not be hit.
         """
         if not config:
-            raise Exception("Without proper application settings, the Monitoring class cannot obtains a proper database"
-                            " store.")
+            raise ValueError("Without proper application settings, the Monitoring class cannot obtains a proper "
+                             "database store.")
         self.monitors = defaultdict(lambda: {})
         self.store = get_db(config).get_store(MonitoringStore)
 
