@@ -1,7 +1,7 @@
 import os
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -60,7 +60,7 @@ class TestFileSystem(unittest.TestCase):
             utils.check_response_basic_info(resp, 200, expected_method="POST")
             assert not (Path(workspace_dir) / self.test_username).exists()
 
-    @patch('cowbird.api.webhooks.views.requests.head')
+    @patch("cowbird.api.webhooks.views.requests.head")
     def test_create_user_missing_workspace_dir(self, mock_head_request):
         """
         Tests creating a user directory with a missing workspace directory.
