@@ -588,7 +588,7 @@ class UserWebhook_POST_OkResponseSchema(BaseResponseSchemaAPI):
 
 
 class UserWebhook_POST_InternalServerErrorResponseSchema(BaseResponseSchemaAPI):
-    description = "Failed to handle user event."
+    description = "Failed to handle user webhook event."
     body = BaseResponseBodySchema(code=HTTPInternalServerError.code, description=description)
 
 

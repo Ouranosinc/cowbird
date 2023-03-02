@@ -10,9 +10,15 @@ from cowbird.api import schemas as s
 from cowbird.api.schemas import ValidOperations
 from cowbird.handlers import get_handlers
 from cowbird.permissions_synchronizer import Permission
-from cowbird.utils import get_logger, get_ssl_verify, get_timeout
+from cowbird.utils import get_logger, get_ssl_verify, get_timeout, CONTENT_TYPE_JSON
 
 LOGGER = get_logger(__name__)
+
+
+class WebhookDispatchException(Exception):
+    """
+    Error indicating that an exception occured during a webhook dispatch.
+    """
 
 
 def dispatch(handler_fct):
@@ -31,7 +37,7 @@ def dispatch(handler_fct):
     if not handlers:
         LOGGER.warning("No handlers matched for dispatch of event [%s].", event_name)
     if exceptions:
-        raise Exception(exceptions)  # pylint: disable=W0719
+        raise WebhookDispatchException(exceptions)
 
 
 @s.UserWebhookAPI.post(schema=s.UserWebhook_POST_RequestSchema, tags=[s.WebhooksTag],
@@ -73,8 +79,13 @@ def post_user_webhook_view(request):
                 LOGGER.warning("Cannot complete the Magpie callback url request to [%s] : [%s]", callback_url, exc)
         else:
             LOGGER.warning("Exception occurred while dispatching event [%s].", event, exc_info=dispatch_exc)
-        return ax.raise_http(HTTPInternalServerError,
-                             detail=s.UserWebhook_POST_InternalServerErrorResponseSchema.description)
+        ax.raise_http(HTTPInternalServerError,
+                      detail=s.UserWebhook_POST_InternalServerErrorResponseSchema.description,
+                      content_type=CONTENT_TYPE_JSON,
+                      content={
+                          "webhook": request.json_body,
+                          "exception": str(dispatch_exc)
+                      })
     return ax.valid_http(HTTPOk, detail=s.UserWebhook_POST_OkResponseSchema.description)
 
 

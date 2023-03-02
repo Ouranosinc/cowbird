@@ -2,6 +2,7 @@ import functools
 import json as json_pkg  # avoid conflict name with json argument employed for some function
 import os
 from distutils.version import LooseVersion
+from stat import ST_MODE
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
@@ -661,3 +662,11 @@ def check_error_param_structure(body,                                   # type: 
         check_val_is_in("compare", body["param"])
         if param_compare is not null:
             check_val_equal(body["param"]["compare"], param_compare)
+
+
+def check_file_permissions(file_path, permissions):
+    # type: (str, str) -> bool
+    """
+    Checks if the file has the right permissions, by verifying the last digits of the octal permissions.
+    """
+    return oct(os.stat(file_path)[ST_MODE])[-3:] == permissions

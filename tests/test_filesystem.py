@@ -17,22 +17,23 @@ class TestFileSystem(unittest.TestCase):
     """
 
     def setUp(self):
-        self.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)  # pylint: disable=R1732
         self.test_username = "test_username"
 
     def tearDown(self):
         utils.clear_handlers_instances()
-        os.unlink(self.cfg_file.name)
 
     def test_manage_user_workspace(self):
         """
         Tests creating and deleting a user workspace.
         """
-        with tempfile.TemporaryDirectory() as workspace_dir:
-            with self.cfg_file as f:
-                f.write(yaml.safe_dump({"handlers":
-                                        {"FileSystem": {"active": True, "workspace_dir": workspace_dir}}}))
-            app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
+        with tempfile.TemporaryDirectory() as workspace_dir, \
+                tempfile.NamedTemporaryFile(mode="w", suffix=".cfg") as cfg_file:
+            user_workspace_dir = Path(workspace_dir) / self.test_username
+
+            cfg_file.write(yaml.safe_dump(
+                {"handlers": {"FileSystem": {"active": True, "workspace_dir": workspace_dir}}}))
+            cfg_file.flush()
+            app = utils.get_test_app(settings={"cowbird.config_path": cfg_file.name})
             data = {
                 "event": "created",
                 "user_name": self.test_username,
@@ -40,12 +41,22 @@ class TestFileSystem(unittest.TestCase):
             }
             resp = utils.test_request(app, "POST", "/webhooks/users", json=data)
             utils.check_response_basic_info(resp, 200, expected_method="POST")
-            assert (Path(workspace_dir) / self.test_username).exists()
+            assert user_workspace_dir.exists()
+            assert utils.check_file_permissions(str(user_workspace_dir), "755")
 
             # Creating a user if its directory already exists should not trigger any errors.
             resp = utils.test_request(app, "POST", "/webhooks/users", json=data)
             utils.check_response_basic_info(resp, 200, expected_method="POST")
-            assert (Path(workspace_dir) / self.test_username).exists()
+            assert user_workspace_dir.exists()
+            assert utils.check_file_permissions(str(user_workspace_dir), "755")
+
+            # If the directory already exists, it should correct the directory to have the right permissions.
+            os.chmod(user_workspace_dir, 0o777)
+            assert utils.check_file_permissions(str(user_workspace_dir), "777")
+            resp = utils.test_request(app, "POST", "/webhooks/users", json=data)
+            utils.check_response_basic_info(resp, 200, expected_method="POST")
+            assert user_workspace_dir.exists()
+            assert utils.check_file_permissions(str(user_workspace_dir), "755")
 
             data = {
                 "event": "deleted",
@@ -53,12 +64,12 @@ class TestFileSystem(unittest.TestCase):
             }
             resp = utils.test_request(app, "POST", "/webhooks/users", json=data)
             utils.check_response_basic_info(resp, 200, expected_method="POST")
-            assert not (Path(workspace_dir) / self.test_username).exists()
+            assert not user_workspace_dir.exists()
 
             # Deleting a user if its directory does not exists should not trigger any errors.
             resp = utils.test_request(app, "POST", "/webhooks/users", json=data)
             utils.check_response_basic_info(resp, 200, expected_method="POST")
-            assert not (Path(workspace_dir) / self.test_username).exists()
+            assert not user_workspace_dir.exists()
 
     @patch("cowbird.api.webhooks.views.requests.head")
     def test_create_user_missing_workspace_dir(self, mock_head_request):
@@ -66,18 +77,21 @@ class TestFileSystem(unittest.TestCase):
         Tests creating a user directory with a missing workspace directory.
         """
         workspace_dir = "/missing_dir"
-        with self.cfg_file as f:
-            f.write(yaml.safe_dump({"handlers":
-                                    {"FileSystem": {"active": True, "workspace_dir": workspace_dir}}}))
-        app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
-        callback_url = "callback_url"
-        data = {
-            "event": "created",
-            "user_name": self.test_username,
-            "callback_url": callback_url
-        }
-        resp = utils.test_request(app, "POST", "/webhooks/users", json=data, expect_errors=True)
-        utils.check_response_basic_info(resp, 500, expected_method="POST")
-        assert not (Path(workspace_dir) / self.test_username).exists()
-        # The callback url should have been called if an exception occurred during the handler's operations.
-        mock_head_request.assert_called_with(callback_url, verify=True, timeout=5)
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".cfg") as cfg_file:
+            cfg_file.write(yaml.safe_dump(
+                {"handlers": {"FileSystem": {"active": True, "workspace_dir": workspace_dir}}}))
+            cfg_file.flush()
+            app = utils.get_test_app(settings={"cowbird.config_path": cfg_file.name})
+            callback_url = "callback_url"
+            data = {
+                "event": "created",
+                "user_name": self.test_username,
+                "callback_url": callback_url
+            }
+            resp = utils.test_request(app, "POST", "/webhooks/users", json=data, expect_errors=True)
+            utils.check_response_basic_info(resp, 500, expected_method="POST")
+            assert not (Path(workspace_dir) / self.test_username).exists()
+            assert "No such file or directory" in resp.json_body["exception"]
+
+            # The callback url should have been called if an exception occurred during the handler's operations.
+            mock_head_request.assert_called_with(callback_url, verify=True, timeout=5)
