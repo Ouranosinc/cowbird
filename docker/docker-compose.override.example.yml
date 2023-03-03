@@ -18,6 +18,7 @@ services:
       - ../config/cowbird.docker.ini:/opt/local/src/cowbird/config/cowbird.ini
       - ../config/celeryconfig.docker.py:/opt/local/src/cowbird/config/celeryconfig.py
       - $WORKSPACE_DIR:/user_workspaces
+      - $JUPYTERHUB_USER_DATA_DIR:/jupyterhub_user_data_dir
     restart: always
 
   worker:
@@ -30,6 +31,7 @@ services:
       - ../config/cowbird.docker.ini:/opt/local/src/cowbird/config/cowbird.ini
       - ../config/celeryconfig.docker.py:/opt/local/src/cowbird/config/celeryconfig.py
       - $WORKSPACE_DIR:/user_workspaces
+      - $JUPYTERHUB_USER_DATA_DIR:/jupyterhub_user_data_dir
     env_file:
       - ./config/cowbird/cowbird.env
     restart: always
