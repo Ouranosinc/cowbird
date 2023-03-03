@@ -52,13 +52,23 @@ class FileSystem(Handler):
         except FileExistsError:
             LOGGER.info("User workspace directory already existing (skip creation): [%s]", user_workspace_dir)
         os.chmod(user_workspace_dir, 0o755)  # nosec
+        create_symlink = False
         symlink_dir = os.path.join(user_workspace_dir, NOTEBOOKS_DIR_NAME)
+
+        # Check if creating a new symlink is required
         if not os.path.islink(symlink_dir):
             if not os.path.exists(symlink_dir):
-                os.symlink(self._get_jupyterhub_user_data_dir(user_name), symlink_dir, target_is_directory=True)
+                create_symlink = True
             else:
                 raise FileExistsError(f"Failed to create symlinked jupyterhub directory in the user {user_name}'s "
                                       "workspace, since a non-symlink directory already exists.")
+        elif os.readlink(symlink_dir) != self._get_jupyterhub_user_data_dir(user_name):
+            # If symlink already exists but points to the wrong source, update symlink to the new source directory.
+            os.remove(symlink_dir)
+            create_symlink = True
+
+        if create_symlink:
+            os.symlink(self._get_jupyterhub_user_data_dir(user_name), symlink_dir, target_is_directory=True)
 
     def user_deleted(self, user_name):
         user_workspace_dir = self._get_user_workspace_dir(user_name)

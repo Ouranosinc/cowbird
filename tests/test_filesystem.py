@@ -86,6 +86,15 @@ class TestFileSystem(unittest.TestCase):
             # The callback url should have been called if an exception occurred during the handler's operations.
             mock_head_request.assert_called_with(self.callback_url, verify=True, timeout=5)
 
+            # If the symlink path already exists, but points to the wrong src directory, the symlink should be updated.
+            os.rmdir(user_symlink)
+            os.symlink("/wrong_source_dir", user_symlink, target_is_directory=True)
+
+            resp = utils.test_request(app, "POST", "/webhooks/users", json=data)
+            utils.check_response_basic_info(resp, 200, expected_method="POST")
+            assert os.path.islink(user_symlink)
+            assert os.readlink(user_symlink) == os.path.join(self.jupyterhub_user_data_dir, self.test_username)
+
             data = {
                 "event": "deleted",
                 "user_name": self.test_username
