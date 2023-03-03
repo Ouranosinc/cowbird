@@ -10,7 +10,7 @@ from cowbird.api import schemas as s
 from cowbird.api.schemas import ValidOperations
 from cowbird.handlers import get_handlers
 from cowbird.permissions_synchronizer import Permission
-from cowbird.utils import get_logger, get_ssl_verify, get_timeout, CONTENT_TYPE_JSON
+from cowbird.utils import CONTENT_TYPE_JSON, get_logger, get_ssl_verify, get_timeout
 
 LOGGER = get_logger(__name__)
 

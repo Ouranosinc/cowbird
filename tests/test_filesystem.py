@@ -36,11 +36,11 @@ class TestFileSystem(unittest.TestCase):
             user_symlink = user_workspace_dir / NOTEBOOKS_DIR_NAME
 
             cfg_file.write(yaml.safe_dump({
-                    "handlers": {
-                         "FileSystem": {
-                             "active": True,
-                             "workspace_dir": workspace_dir,
-                             "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir}}}))
+                "handlers": {
+                    "FileSystem": {
+                        "active": True,
+                        "workspace_dir": workspace_dir,
+                        "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir}}}))
             cfg_file.flush()
             app = utils.get_test_app(settings={"cowbird.config_path": cfg_file.name})
             data = {
