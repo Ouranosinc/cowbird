@@ -17,7 +17,7 @@ LOGGER = get_logger(__name__)
 
 class WebhookDispatchException(Exception):
     """
-    Error indicating that an exception occured during a webhook dispatch.
+    Error indicating that an exception occurred during a webhook dispatch.
     """
 
 
