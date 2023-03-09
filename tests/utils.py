@@ -665,8 +665,8 @@ def check_error_param_structure(body,                                   # type: 
 
 
 def check_file_permissions(file_path, permissions):
-    # type: (str, str) -> bool
+    # type: (Union[str, os.PathLike], int) -> bool
     """
     Checks if the file has the right permissions, by verifying the last digits of the octal permissions.
     """
-    return oct(os.stat(file_path)[ST_MODE])[-3:] == permissions
+    return oct(os.stat(file_path)[ST_MODE])[-3:] == oct(permissions)[-3:]

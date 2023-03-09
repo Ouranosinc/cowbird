@@ -61,7 +61,8 @@ class FileSystem(Handler):
                 create_symlink = True
             else:
                 raise FileExistsError(f"Failed to create symlinked jupyterhub directory in the user {user_name}'s "
-                                      "workspace, since a non-symlink directory already exists.")
+                                      "workspace, since a non-symlink directory already exists at the targeted path "
+                                      f"{symlink_dir}.")
         elif os.readlink(symlink_dir) != self._get_jupyterhub_user_data_dir(user_name):
             # If symlink already exists but points to the wrong source, update symlink to the new source directory.
             os.remove(symlink_dir)

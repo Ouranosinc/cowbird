@@ -17,7 +17,7 @@ Features / Changes
 * Add ``COWBIRD_REQUEST_TIMEOUT`` environment variable and ``cowbird.request_timeout`` INI configuration parameters
   for specifying the connection timeout (default: ``5s``) to be applied when sending requests.
 * Add missing ``COWBIRD_SSL_VERIFY`` configuration setting in documentation.
-* Review FileSystem's handler for user workspace creation/deletion and to ensure compatibility with
+* Review ``FileSystem``'s handler for user workspace creation/deletion and to ensure compatibility with
   `birdhouse-deploy <https://github.com/bird-house/birdhouse-deploy>`_'s setup.
 
 Bug Fixes

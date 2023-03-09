@@ -79,7 +79,7 @@ class Handler(abc.ABC):
         self.timeout = get_timeout(self.settings)
         for required_param in self.required_params:  # pylint: disable=E1101,no-member
             if required_param not in HANDLER_PARAMETERS:
-                raise ValueError(f"Invalid handler parameter : {required_param}")
+                raise HandlerConfigurationException(f"Invalid handler parameter : {required_param}")
             if getattr(self, required_param) is None:
                 error_msg = f"{self.__class__.__name__} handler requires the following missing configuration " \
                             f"parameter : [{required_param}]"

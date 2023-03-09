@@ -84,7 +84,7 @@ def post_user_webhook_view(request):
                       content_type=CONTENT_TYPE_JSON,
                       content={
                           "webhook": request.json_body,
-                          "exception": str(dispatch_exc)
+                          "exception": repr(dispatch_exc)
                       })
     return ax.valid_http(HTTPOk, detail=s.UserWebhook_POST_OkResponseSchema.description)
 
