@@ -587,6 +587,11 @@ class UserWebhook_POST_OkResponseSchema(BaseResponseSchemaAPI):
     body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
 
 
+class UserWebhook_POST_InternalServerErrorResponseSchema(BaseResponseSchemaAPI):
+    description = "Failed to handle user webhook event."
+    body = BaseResponseBodySchema(code=HTTPInternalServerError.code, description=description)
+
+
 class PermissionWebhook_POST_RequestBodySchema(colander.MappingSchema):
     event = colander.SchemaNode(
         colander.String(),

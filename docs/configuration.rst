@@ -85,6 +85,7 @@ Example :
         active: true
         priority: 1
         workspace_dir: ${WORKSPACE_DIR}
+        jupyterhub_user_data_dir: ${JUPYTERHUB_USER_DATA_DIR}
 
 sync_permissions:
 #################

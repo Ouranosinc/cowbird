@@ -1,7 +1,7 @@
 import inspect
 
 import requests
-from pyramid.httpexceptions import HTTPBadRequest, HTTPOk
+from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError, HTTPOk
 from pyramid.view import view_config
 
 from cowbird.api import exception as ax
@@ -10,9 +10,15 @@ from cowbird.api import schemas as s
 from cowbird.api.schemas import ValidOperations
 from cowbird.handlers import get_handlers
 from cowbird.permissions_synchronizer import Permission
-from cowbird.utils import get_logger, get_ssl_verify, get_timeout
+from cowbird.utils import CONTENT_TYPE_JSON, get_logger, get_ssl_verify, get_timeout
 
 LOGGER = get_logger(__name__)
+
+
+class WebhookDispatchException(Exception):
+    """
+    Error indicating that an exception occurred during a webhook dispatch.
+    """
 
 
 def dispatch(handler_fct):
@@ -31,7 +37,7 @@ def dispatch(handler_fct):
     if not handlers:
         LOGGER.warning("No handlers matched for dispatch of event [%s].", event_name)
     if exceptions:
-        raise Exception(exceptions)
+        raise WebhookDispatchException(exceptions)
 
 
 @s.UserWebhookAPI.post(schema=s.UserWebhook_POST_RequestSchema, tags=[s.WebhooksTag],
@@ -66,14 +72,20 @@ def post_user_webhook_view(request):
         if callback_url:
             # If something bad happens, set the status as erroneous in Magpie
             LOGGER.warning("Exception occurred while dispatching event [%s], "
-                           "calling Magpie callback url : [%s]", event, callback_url)
+                           "calling Magpie callback url : [%s]", event, callback_url, exc_info=dispatch_exc)
             try:
                 requests.head(callback_url, verify=get_ssl_verify(request), timeout=get_timeout(request))
             except requests.exceptions.RequestException as exc:
                 LOGGER.warning("Cannot complete the Magpie callback url request to [%s] : [%s]", callback_url, exc)
         else:
             LOGGER.warning("Exception occurred while dispatching event [%s].", event, exc_info=dispatch_exc)
-        # TODO: return something else than 200
+        ax.raise_http(HTTPInternalServerError,
+                      detail=s.UserWebhook_POST_InternalServerErrorResponseSchema.description,
+                      content_type=CONTENT_TYPE_JSON,
+                      content={
+                          "webhook": request.json_body,
+                          "exception": repr(dispatch_exc)
+                      })
     return ax.valid_http(HTTPOk, detail=s.UserWebhook_POST_OkResponseSchema.description)
 
 

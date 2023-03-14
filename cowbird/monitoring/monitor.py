@@ -118,8 +118,7 @@ class Monitor(FileSystemEventHandler):
         """
         Return a dict that can be used as a unique key to identify this :class:`Monitor` in a BD.
         """
-        return dict(callback=self.callback,
-                    path=self.path)
+        return {"callback": self.callback, "path": self.path}
 
     def params(self):
         # type: () -> Dict
@@ -127,9 +126,7 @@ class Monitor(FileSystemEventHandler):
         Return a dict serializing this object from which a new :class:`Monitor` can be recreated using the init
         function.
         """
-        return dict(callback=self.callback,
-                    path=self.path,
-                    recursive=self.__recursive)
+        return {"callback": self.callback, "path": self.path, "recursive": self.__recursive}
 
     def start(self):
         """

@@ -10,6 +10,8 @@ from cowbird.handlers.handler import HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PA
 from cowbird.handlers.handler_factory import HandlerFactory
 from tests import utils
 
+INVALID_PARAM_NAME = "Invalid_param_name"
+
 
 @pytest.mark.handler_factory
 class TestHandlerFactory(unittest.TestCase):
@@ -83,8 +85,8 @@ class TestHandlerFactory(unittest.TestCase):
             BadHandler(HandlerFactory().settings, "BadHandler", **valid_config)
 
         # Should raise if a handler defines an invalid param
-        with pytest.raises(Exception):
-            BadParamHandler("BadParamHandler", **valid_config)  # type: ignore  # test wrong parameter on purpose
+        with pytest.raises(HandlerConfigurationException, match=f"Invalid handler parameter : {INVALID_PARAM_NAME}"):
+            BadParamHandler(HandlerFactory().settings, "BadParamHandler", **valid_config)
 
         handler = GoodHandler(HandlerFactory().settings, "GoodHandler", **valid_config)
         assert getattr(handler, HANDLER_URL_PARAM) == valid_config[HANDLER_URL_PARAM]
@@ -98,7 +100,7 @@ class BadHandler(utils.MockAnyHandlerBase):  # noqa  # missing abstract method '
 
 class BadParamHandler(utils.MockAnyHandlerBase):
     #  This handler is bad because the required_params must only include param from the frozen set HANDLER_PARAMETERS
-    required_params = [HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PARAM, "Invalid_param_name"]
+    required_params = [HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PARAM, INVALID_PARAM_NAME]
 
 
 class GoodHandler(utils.MockAnyHandlerBase):

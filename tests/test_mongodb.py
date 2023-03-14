@@ -30,9 +30,10 @@ class MongodbServiceStoreTestCase(unittest.TestCase):
         os.unlink(cls.cfg_file.name)
 
     def setUp(self):
-        self.monitor_params = dict(path="/", recursive=False, callback="cowbird.handlers.impl.catalog.Catalog")
-        self.monitor_params_bad_path = dict(path="", recursive=False, callback="cowbird.handlers.impl.catalog.Catalog")
-        self.monitor_params_bad_callback = dict(path="/", recursive=False, callback="")
+        self.monitor_params = {"path": "/", "recursive": False, "callback": "cowbird.handlers.impl.catalog.Catalog"}
+        self.monitor_params_bad_path = {"path": "", "recursive": False,
+                                        "callback": "cowbird.handlers.impl.catalog.Catalog"}
+        self.monitor_params_bad_callback = {"path": "/", "recursive": False, "callback": ""}
         self.monitor = Monitor(**self.monitor_params)
 
     @pytest.mark.database
