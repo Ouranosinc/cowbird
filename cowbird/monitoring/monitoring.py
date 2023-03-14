@@ -16,6 +16,12 @@ if TYPE_CHECKING:
 LOGGER = get_logger(__name__)
 
 
+class MonitoringConfigurationException(Exception):
+    """
+    Exception thrown when the monitoring instance cannot be initialized because of a bad configuration.
+    """
+
+
 class Monitoring(metaclass=SingletonMeta):
     """
     Class handling file system monitoring and registering listeners.
@@ -34,8 +40,8 @@ class Monitoring(metaclass=SingletonMeta):
                        must be initialized with a proper config and after that the init function should not be hit.
         """
         if not config:
-            raise ValueError("Without proper application settings, the Monitoring class cannot obtains a proper "
-                             "database store.")
+            raise MonitoringConfigurationException("Without proper application settings, the Monitoring class cannot "
+                                                   "obtains a proper database store.")
         self.monitors = defaultdict(lambda: {})
         self.store = get_db(config).get_store(MonitoringStore)
 
