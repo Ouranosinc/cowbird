@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`1.1.0 <https://github.com/Ouranosinc/cowbird/tree/1.1.0>`_ (2023-03-14)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Enforce specification of ``COWBIRD_CONFIG_PATH`` environment variable or ``cowbird.config_path`` INI configuration
