@@ -39,7 +39,7 @@ class Monitoring(metaclass=SingletonMeta):
                        The default value of None is only there to disable pylint E1120. The singleton instance
                        must be initialized with a proper config and after that the init function should not be hit.
         """
-        if not config:
+        if not config:  # pragma: no cover
             raise MonitoringConfigurationException("Without proper application settings, the Monitoring class cannot "
                                                    "obtains a proper database store.")
         self.monitors = defaultdict(lambda: {})
