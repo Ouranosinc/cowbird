@@ -2,7 +2,7 @@ from copy import deepcopy
 
 import celery.exceptions
 from celery import shared_task
-from pyramid.httpexceptions import HTTPOk, HTTPFailedDependency, HTTPInternalServerError
+from pyramid.httpexceptions import HTTPFailedDependency, HTTPInternalServerError, HTTPOk
 from pyramid.security import NO_PERMISSION_REQUIRED
 from pyramid.view import view_config
 
