@@ -26,7 +26,7 @@ class Nginx(Handler):
         super(Nginx, self).__init__(settings, name, **kwargs)
 
     def get_resource_id(self, resource_full_name):
-        # type (str) -> str
+        # type: (str) -> str
         raise NotImplementedError
 
     def user_created(self, user_name):

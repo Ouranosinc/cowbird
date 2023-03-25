@@ -177,7 +177,7 @@ def configure_celery(config, config_ini):
 
     # shared_tasks use the default celery app by default so setting the pyramid_celery celery_app as default prevent
     # celery to create its own app instance (which is not configured properly and is bugging the shared tasks).
-    # Also it must be done early because as soon as config scan is started, some packages may include celery and
+    # Also, it must be done early because as soon as config scan is started, some packages may include celery,
     # and it will create its own app instance.
     #
     # ** If the test celery app must be used, nothing has to be done since this is already the default app **
@@ -208,7 +208,7 @@ def configure_celery(config, config_ini):
 
 
 def get_app_config(container):
-    # type: (AnySettingsContainer, bool) -> Configurator
+    # type: (AnySettingsContainer) -> Configurator
     """
     Generates application configuration with all required utilities and settings configured.
     """
