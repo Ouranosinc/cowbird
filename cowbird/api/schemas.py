@@ -7,6 +7,7 @@ from cornice_swagger.swagger import CorniceSwagger
 from pyramid.httpexceptions import (
     HTTPBadRequest,
     HTTPConflict,
+    HTTPFailedDependency,
     HTTPForbidden,
     HTTPInternalServerError,
     HTTPMethodNotAllowed,
@@ -676,6 +677,11 @@ class Version_GET_OkResponseSchema(BaseResponseSchemaAPI):
     body = Version_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
+class FailedDependencyErrorResponseSchema(BaseResponseSchemaAPI):
+    description = "Version dependencies could not all be identified."
+    body = ErrorResponseBodySchema(code=HTTPFailedDependency.code, description=description)
+
+
 class Homepage_GET_OkResponseSchema(BaseResponseSchemaAPI):
     description = "Get homepage successful."
     body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
@@ -736,6 +742,7 @@ PermissionWebhook_POST_responses = {
 Version_GET_responses = {
     "200": Version_GET_OkResponseSchema(),
     "406": NotAcceptableResponseSchema(),
+    "424": FailedDependencyErrorResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 Homepage_GET_responses = {
