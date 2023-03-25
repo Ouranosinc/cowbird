@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`1.1.1 <https://github.com/Ouranosinc/cowbird/tree/1.1.1>`_ (2023-03-24)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Return `HTTP 424 (Failed Dependency)` when the `celery` worker version cannot be retrieved on ``GET /version``.
