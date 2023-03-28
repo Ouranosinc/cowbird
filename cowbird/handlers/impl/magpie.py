@@ -19,6 +19,13 @@ LOGGER = get_logger(__name__)
 
 COOKIES_TIMEOUT = 60
 
+WFS_READ_PERMISSIONS = ["describefeaturetype", "describestoredqueries", "getcapabilities", "getfeature", "getgmlobject",
+                        "getpropertyvalue", "liststoredqueries"]
+WFS_WRITE_PERMISSIONS = ["createstoredquery", "dropstoredquery", "getfeaturewithlock", "lockfeature", "transaction"]
+WMS_READ_PERMISSIONS = ["describelayer", "getcapabilities", "getfeatureinfo", "getlegendgraphic", "getmap"]
+WPS_READ_PERMISSIONS = ["describeprocess", "getcapabilities"]
+WPS_WRITE_PERMISSIONS = ["execute"]
+
 
 class Magpie(Handler):
     """
@@ -87,6 +94,13 @@ class Magpie(Handler):
         # type (str) -> str
         raise NotImplementedError
 
+    def get_resources_by_service(self, service_name):
+        # type: (str) -> List
+        resp = self._send_request(method="GET", url=f"{self.url}/services/{service_name}/resources")
+        if resp.status_code != 200:
+            raise RuntimeError("Could not find the input service's resources.")
+        return resp.json()[service_name]
+
     def get_resources_tree(self, resource_id):
         # type: (int) -> List
         """
@@ -107,6 +121,20 @@ class Magpie(Handler):
         if resp.status_code != 200:
             raise RuntimeError(f"Could not find the user `{user}` resource permissions.")
         return resp.json()["resources"]
+
+    def get_user_permissions_by_res_id(self, user, res_id):
+        # type: (str, int) -> Dict
+        resp = self._send_request(method="GET", url=f"{self.url}/users/{user}/resources/{res_id}/permissions")
+        if resp.status_code != 200:
+            raise RuntimeError(f"Could not find the user `{user}` permissions for the resource `{res_id}`.")
+        return resp.json()
+
+    def get_group_permissions_by_res_id(self, grp, res_id):
+        # type: (str, int) -> Dict
+        resp = self._send_request(method="GET", url=f"{self.url}/groups/{grp}/resources/{res_id}/permissions")
+        if resp.status_code != 200:
+            raise RuntimeError(f"Could not find the group `{grp}` permissions for the resource `{res_id}`.")
+        return resp.json()
 
     def get_group_permissions(self, grp):
         # type: (str) -> Dict
@@ -147,6 +175,42 @@ class Magpie(Handler):
         else:
             LOGGER.warning("Empty permission data, no permissions to create.")
 
+    def create_permission_by_user_and_res_id(self, user_name, res_id, permission_data):
+        # type: (str, int, Dict[str,Dict[str,str]]) -> None
+        resp = self._send_request(method="POST", url=f"{self.url}/users/{user_name}/resources/{res_id}/permissions",
+                                  json=permission_data)
+        if resp.status_code == 201:
+            LOGGER.info("Permission creation was successful.")
+        else:
+            raise HTTPError(f"Failed to create permission : {resp.text}")
+
+    def create_permission_by_grp_and_res_id(self, grp_name, res_id, permission_data):
+        # type: (str, int, Dict[str,Dict[str,str]]) -> None
+        resp = self._send_request(method="POST", url=f"{self.url}/groups/{grp_name}/resources/{res_id}/permissions",
+                                  json=permission_data)
+        if resp.status_code == 201:
+            LOGGER.info("Permission creation was successful.")
+        else:
+            raise HTTPError(f"Failed to create permission : {resp.text}")
+
+    def delete_permission_by_user_and_res_id(self, user_name, res_id, permission_data):
+        # type: (str, int, Dict[str,Dict[str,str]]) -> None
+        resp = self._send_request(method="DELETE", url=f"{self.url}/users/{user_name}/resources/{res_id}/permissions",
+                                  json=permission_data)
+        if resp.status_code == 200:
+            LOGGER.info("Permission deletion was successful.")
+        else:
+            raise HTTPError(f"Failed to delete permission : {resp.text}")
+
+    def delete_permission_by_grp_and_res_id(self, grp_name, res_id, permission_data):
+        # type: (str, int, Dict[str,Dict[str,str]]) -> None
+        resp = self._send_request(method="DELETE", url=f"{self.url}/groups/{grp_name}/resources/{res_id}/permissions",
+                                  json=permission_data)
+        if resp.status_code == 200:
+            LOGGER.info("Permission deletion was successful.")
+        else:
+            raise HTTPError(f"Failed to delete permission : {resp.text}")
+
     def delete_permission(self, permissions_data):
         # type: (List[Dict[str,str]]) -> None
         """
@@ -163,6 +227,42 @@ class Magpie(Handler):
                 raise HTTPError(f"Failed to remove permissions : {resp.text}")
         else:
             LOGGER.warning("Empty permission data, no permissions to remove.")
+
+    def create_resource(self, resource_name, resource_type, parent_id):
+        # type: (str, str, int) -> str
+        """
+        Creates the specified resource in Magpie and returns the created resource id if successful.
+        """
+        resource_data = {
+            "resource_name": resource_name,
+            "resource_display_name": resource_name,
+            "resource_type": resource_type,
+            "parent_id": parent_id
+        }
+        resp = self._send_request(method="POST", url=f"{self.url}/resources", json=resource_data)
+        if resp.status_code == 201:
+            LOGGER.info("Resource creation was successful.")
+            return resp.json()["resource"]["resource_id"]
+        else:
+            raise HTTPError(f"Failed to create resource : {resp.text}")
+
+    def create_service(self, service_data):
+        # type (Dict[str, str]) -> str
+        resp = self._send_request(method="POST", url=f"{self.url}/services", json=service_data)
+        if resp.status_code == 201:
+            LOGGER.info("Service creation was successful.")
+            return resp.json()["service"]["resource_id"]
+        else:
+            raise HTTPError(f"Failed to create service : {resp.text}")
+
+    def delete_service(self, service_name):
+        resp = self._send_request(method="DELETE", url=f"{self.url}/services/{service_name}")
+        if resp.status_code == 200:
+            LOGGER.info("Delete service successful.")
+        elif resp.status_code == 404:
+            LOGGER.info("Service name was not found. No service to delete.")
+        else:
+            raise HTTPError(f"Failed to delete resource : {resp.text}")
 
     def login(self):
         # type: () -> RequestsCookieJar

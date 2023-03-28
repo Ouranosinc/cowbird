@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 
 import mock
 import pytest
-import requests
 import yaml
 from dotenv import load_dotenv
 from schema import SchemaError
@@ -49,21 +48,12 @@ class TestSyncPermissions(unittest.TestCase):
         cls.usr = os.getenv("MAGPIE_ADMIN_USER")
         cls.pwd = os.getenv("MAGPIE_ADMIN_PASSWORD")
         cls.url = os.getenv("COWBIRD_TEST_MAGPIE_URL")
-
-        data = {"user_name": cls.usr, "password": cls.pwd}
-        resp = requests.post(f"{cls.url}/signin", json=data, timeout=5)
-        utils.check_response_basic_info(resp, 200, expected_method="POST")
-        cls.cookies = resp.cookies
-
         cls.test_service_name = "catalog"
 
         # Reset handlers instances in case any are left from other test cases
         utils.clear_handlers_instances()
 
     def setUp(self):
-        # Create test service
-        self.test_service_id = self.reset_test_service()
-
         self.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)  # pylint: disable=R1732
         self.data = {
             "handlers": {
@@ -76,6 +66,13 @@ class TestSyncPermissions(unittest.TestCase):
                 "Thredds": {"active": True}
             }
         }
+        with self.cfg_file as f:
+            f.write(yaml.safe_dump(self.data))
+        app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
+        # Create new magpie handler instance with new config
+        self.magpie = HandlerFactory().create_handler("Magpie")
+        # Create test service
+        self.test_service_id = self.reset_test_service()
 
     def tearDown(self):
         utils.clear_handlers_instances()
@@ -97,35 +94,13 @@ class TestSyncPermissions(unittest.TestCase):
             "service_url": f"http://localhost:9000/{self.test_service_name}",
             "configuration": {}
         }
-        resp = utils.test_request(self.url, "POST", "/services", cookies=self.cookies, json=data)
-        body = utils.check_response_basic_info(resp, 201, expected_method="POST")
-        return body["service"]["resource_id"]
+        return self.magpie.create_service(data)
 
     def delete_test_service(self):
         """
         Deletes the test service if it exists.
         """
-        resp = utils.test_request(self.url, "GET", "/services/" + self.test_service_name, cookies=self.cookies)
-        if resp.status_code == 200:
-            resp = utils.test_request(self.url, "DELETE", "/services/" + self.test_service_name, cookies=self.cookies)
-            utils.check_response_basic_info(resp, 200, expected_method="DELETE")
-        else:
-            utils.check_response_basic_info(resp, 404, expected_method="GET")
-
-    def create_test_resource(self, resource_name, resource_type, parent_id):
-        # type: (str, str, int) -> int
-        """
-        Creates a test resource in Magpie app.
-        """
-        data = {
-            "resource_name": resource_name,
-            "resource_display_name": resource_name,
-            "resource_type": resource_type,
-            "parent_id": parent_id
-        }
-        resp = utils.test_request(self.url, "POST", "/resources", cookies=self.cookies, json=data)
-        body = utils.check_response_basic_info(resp, 201, expected_method="POST")
-        return body["resource"]["resource_id"]
+        self.magpie.delete_service(self.test_service_name)
 
     def create_test_permission(self, resource_id, permission, user_name, group_name):
         # type: (int, Dict, str, str) -> None
@@ -134,13 +109,9 @@ class TestSyncPermissions(unittest.TestCase):
         """
         data = {"permission": permission}
         if user_name:
-            resp = utils.test_request(self.url, "POST", f"/users/{user_name}/resources/{resource_id}/permissions",
-                                      cookies=self.cookies, json=data)
-            utils.check_response_basic_info(resp, 201, expected_method="POST")
+            self.magpie.create_permission_by_user_and_res_id(user_name, resource_id, data)
         if group_name:
-            resp = utils.test_request(self.url, "POST", f"/groups/{group_name}/resources/{resource_id}/permissions",
-                                      cookies=self.cookies, json=data)
-            utils.check_response_basic_info(resp, 201, expected_method="POST")
+            self.magpie.create_permission_by_grp_and_res_id(group_name, resource_id, data)
 
     def delete_test_permission(self, resource_id, permission, user_name, group_name):
         # type: (int, Dict, str, str) -> None
@@ -149,33 +120,25 @@ class TestSyncPermissions(unittest.TestCase):
         """
         data = {"permission": permission}
         if user_name:
-            resp = utils.test_request(self.url, "DELETE", f"/users/{user_name}/resources/{resource_id}/permissions",
-                                      cookies=self.cookies, json=data)
-            utils.check_response_basic_info(resp, 200, expected_method="DELETE")
+            self.magpie.delete_permission_by_user_and_res_id(user_name, resource_id, data)
         if group_name:
-            resp = utils.test_request(self.url, "DELETE", f"/groups/{group_name}/resources/{resource_id}/permissions",
-                                      cookies=self.cookies, json=data)
-            utils.check_response_basic_info(resp, 200, expected_method="DELETE")
+            self.magpie.delete_permission_by_grp_and_res_id(group_name, resource_id, data)
 
     def check_user_permissions(self, resource_id, expected_permissions):
         # type: (int, List) -> None
         """
         Checks if the test user has the `expected_permissions` on the `resource_id`.
         """
-        resp = utils.test_request(self.url, "GET", f"/users/{self.usr}/resources/{resource_id}/permissions",
-                                  cookies=self.cookies)
-        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        assert Counter(body["permission_names"]) == Counter(expected_permissions)
+        permissions = self.magpie.get_user_permissions_by_res_id(self.usr, resource_id)
+        assert Counter(permissions["permission_names"]) == Counter(expected_permissions)
 
     def check_group_permissions(self, resource_id, expected_permissions):
         # type: (int, List) -> None
         """
         Checks if the test group has the `expected_permissions` on the `resource_id`.
         """
-        resp = utils.test_request(self.url, "GET", f"/groups/{self.grp}/resources/{resource_id}/permissions",
-                                  cookies=self.cookies)
-        body = utils.check_response_basic_info(resp, 200, expected_method="GET")
-        assert Counter(body["permission_names"]) == Counter(expected_permissions)
+        permissions = self.magpie.get_group_permissions_by_res_id(self.grp, resource_id)
+        assert Counter(permissions["permission_names"]) == Counter(expected_permissions)
 
     def test_webhooks_no_tokens(self):
         """
@@ -211,7 +174,7 @@ class TestSyncPermissions(unittest.TestCase):
                                         "Thredds4 : read -> Thredds1 : [write]"]
             }
         }
-        with self.cfg_file as f:
+        with open(self.cfg_file.name, mode="w") as f:
             f.write(yaml.safe_dump(self.data))
         app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
         # Recreate new magpie handler instance with new config
@@ -222,9 +185,9 @@ class TestSyncPermissions(unittest.TestCase):
                                            side_effect=utils.MockAnyHandler))
 
             # Create test resources
-            private_dir_res_id = self.create_test_resource("private-dir", "directory", self.test_service_id)
-            res_ids = [self.create_test_resource(f"workspace:file{i}", "file", private_dir_res_id) for i in range(2)]
-            res_ids += [self.create_test_resource(f"workspace:file{i}", "file", self.test_service_id)
+            private_dir_res_id = self.magpie.create_resource("private-dir", "directory", self.test_service_id)
+            res_ids = [self.magpie.create_resource(f"workspace:file{i}", "file", private_dir_res_id) for i in range(2)]
+            res_ids += [self.magpie.create_resource(f"workspace:file{i}", "file", self.test_service_id)
                         for i in range(2, 5)]
 
             default_read_permission = ["read", "read-allow-recursive"]
@@ -453,7 +416,7 @@ class TestSyncPermissions(unittest.TestCase):
                                         "Thredds_named_dir_src : read <-> Thredds_named_dir_target : read"]
             }
         }
-        with self.cfg_file as f:
+        with open(self.cfg_file.name, mode="w") as f:
             f.write(yaml.safe_dump(self.data))
         app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
         # Recreate new magpie handler instance with new config
@@ -464,22 +427,22 @@ class TestSyncPermissions(unittest.TestCase):
                                            side_effect=utils.MockAnyHandler))
 
             # Create test resources
-            dir_src_res_id = self.create_test_resource("private", "directory", self.test_service_id)
-            parent_res_id = self.create_test_resource("dir1", "directory", dir_src_res_id)
-            parent_res_id = self.create_test_resource("dir2", "directory", parent_res_id)
-            file_src_res_id = self.create_test_resource("workspace_file", "file", parent_res_id)
+            dir_src_res_id = self.magpie.create_resource("private", "directory", self.test_service_id)
+            parent_res_id = self.magpie.create_resource("dir1", "directory", dir_src_res_id)
+            parent_res_id = self.magpie.create_resource("dir2", "directory", parent_res_id)
+            file_src_res_id = self.magpie.create_resource("workspace_file", "file", parent_res_id)
 
             dir_target_res_id = self.test_service_id
-            parent_res_id = self.create_test_resource("dir1", "directory", self.test_service_id)
-            parent_res_id = self.create_test_resource("dir2", "directory", parent_res_id)
-            file_target_res_id = self.create_test_resource("workspace_file", "file", parent_res_id)
+            parent_res_id = self.magpie.create_resource("dir1", "directory", self.test_service_id)
+            parent_res_id = self.magpie.create_resource("dir2", "directory", parent_res_id)
+            file_target_res_id = self.magpie.create_resource("workspace_file", "file", parent_res_id)
 
-            parent_res_id = self.create_test_resource("named_dir1", "directory", self.test_service_id)
-            parent_res_id = self.create_test_resource("dir1", "directory", parent_res_id)
-            named_dir_src_res_id = self.create_test_resource("dir2", "directory", parent_res_id)
-            parent_res_id = self.create_test_resource("named_dir2", "directory", self.test_service_id)
-            parent_res_id = self.create_test_resource("dir2", "directory", parent_res_id)
-            named_dir_target_res_id = self.create_test_resource("dir1", "directory", parent_res_id)
+            parent_res_id = self.magpie.create_resource("named_dir1", "directory", self.test_service_id)
+            parent_res_id = self.magpie.create_resource("dir1", "directory", parent_res_id)
+            named_dir_src_res_id = self.magpie.create_resource("dir2", "directory", parent_res_id)
+            parent_res_id = self.magpie.create_resource("named_dir2", "directory", self.test_service_id)
+            parent_res_id = self.magpie.create_resource("dir2", "directory", parent_res_id)
+            named_dir_target_res_id = self.magpie.create_resource("dir1", "directory", parent_res_id)
 
             # Create permissions for 1st mapping case, src resource should match with a MULTI_TOKEN that
             # uses 0 segment occurrence
@@ -536,7 +499,7 @@ class TestSyncPermissions(unittest.TestCase):
                 "permissions_mapping": ["Thredds_match1 : read -> Thredds_match2 : read"]
             }
         }
-        with self.cfg_file as f:
+        with open(self.cfg_file.name, mode="w") as f:
             f.write(yaml.safe_dump(self.data))
         app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
         # Recreate new magpie handler instance with new config
@@ -546,8 +509,8 @@ class TestSyncPermissions(unittest.TestCase):
             stack.enter_context(mock.patch("cowbird.handlers.impl.thredds.Thredds",
                                            side_effect=utils.MockAnyHandler))
             # Create test resources
-            parent_id = self.create_test_resource("dir1", "directory", self.test_service_id)
-            src_res_id = self.create_test_resource("dir2", "directory", parent_id)
+            parent_id = self.magpie.create_resource("dir1", "directory", self.test_service_id)
+            src_res_id = self.magpie.create_resource("dir2", "directory", parent_id)
 
             data = {
                 "event": ValidOperations.CreateOperation.value,
@@ -584,7 +547,7 @@ class TestSyncPermissions(unittest.TestCase):
                 "permissions_mapping": ["Thredds_match1 : read -> Thredds_match2 : read"]
             }
         }
-        with self.cfg_file as f:
+        with open(self.cfg_file.name, mode="w") as f:
             f.write(yaml.safe_dump(self.data))
         app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
         # Recreate new magpie handler instance with new config
@@ -594,7 +557,7 @@ class TestSyncPermissions(unittest.TestCase):
             stack.enter_context(mock.patch("cowbird.handlers.impl.thredds.Thredds",
                                            side_effect=utils.MockAnyHandler))
             # Create test resources
-            src_res_id = self.create_test_resource("dir", "file", self.test_service_id)
+            src_res_id = self.magpie.create_resource("dir", "file", self.test_service_id)
 
             data = {
                 "event": ValidOperations.CreateOperation.value,
@@ -627,7 +590,7 @@ class TestSyncPermissions(unittest.TestCase):
                 "permissions_mapping": []
             }
         }
-        with self.cfg_file as f:
+        with open(self.cfg_file.name, mode="w") as f:
             f.write(yaml.safe_dump(self.data))
 
         utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})

@@ -9,13 +9,22 @@ More integration tests should be in Jupyter Notebook format as is the case with 
 import glob
 import os
 import shutil
+import tempfile
 from pathlib import Path
 
+from itertools import product
 import pytest
 import yaml
+from dotenv import load_dotenv
 
 from cowbird.constants import COWBIRD_ROOT
-from cowbird.handlers.impl.geoserver import Geoserver, GeoserverError
+from cowbird.handlers import HandlerFactory
+from cowbird.handlers.impl.geoserver import Geoserver, GeoserverError, SHAPEFILE_ALL_EXTENSIONS, SHAPEFILE_MAIN_EXTENSION
+from cowbird.handlers.impl.magpie import WFS_READ_PERMISSIONS, WMS_READ_PERMISSIONS, WFS_WRITE_PERMISSIONS
+from cowbird.permissions_synchronizer import Permission
+from tests import utils
+
+CURR_DIR = Path(__file__).resolve().parent
 
 
 def get_geoserver_settings():
@@ -23,10 +32,13 @@ def get_geoserver_settings():
     Setup basic parameters for an unmodified local test run (using the example files) unless environment variables are
     set.
     """
+    load_dotenv(CURR_DIR / "../docker/.env.example")
     config_path = os.path.join(COWBIRD_ROOT, "config/config.example.yml")
+    app = utils.get_test_app(settings={"cowbird.config_path": config_path})
     with open(config_path, "r", encoding="utf-8") as f:
         settings_dictionary = yaml.safe_load(f)
     geoserver_settings = settings_dictionary["handlers"]["Geoserver"]
+    geoserver_settings["url"] = os.getenv("COWBIRD_TEST_GEOSERVER_URL")
     if "${HOSTNAME}" in geoserver_settings["url"]:
         hostname = os.getenv("HOSTNAME", "localhost")
         geoserver_settings["url"] = geoserver_settings["url"].replace("${HOSTNAME}", hostname)
@@ -65,7 +77,8 @@ class TestGeoserverRequests:
         "datastore-create": "test-datastore-creation",
         "datastore-config": "test-datastore-configuration",
         "datastore-duplicate": "test-duplicate-datastore",
-        "publish_remove": "test_publish_remove_shapefile"
+        #"publish_remove": "test_publish_remove_shapefile"
+        "publish_remove": "admin"
     }
     # Be careful of typos or path choisec, as the paths contained in the following dictionary
     # will the removed during teardown.
@@ -176,6 +189,76 @@ class TestGeoserverRequests:
         response = geoserver._publish_shapefile_request(workspace_name, datastore_name, shapefile_name)
         assert response.status_code == 201
 
-        # Remove shapefile
-        response = geoserver._remove_shapefile_request(workspace_name, datastore_name, shapefile_name)
-        assert response.status_code == 200
+        # TODO: Voir si on met la partie du sync avec magpie dans une autre classe séparée, qui utiliserait pas une vraie instance de geoserver, mais un MockedGeoserver
+        #  pas besoin de tester les requêtes de Geoserver ici
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".cfg") as cfg_file:
+            cfg_file.write(yaml.safe_dump({
+                "handlers": {
+                    "Magpie": {
+                        "active": True,
+                        "url": os.getenv("COWBIRD_TEST_MAGPIE_URL"),
+                        "admin_user": os.getenv("MAGPIE_ADMIN_USER"),
+                        "admin_password": os.getenv("MAGPIE_ADMIN_PASSWORD")
+                    }}}))
+            cfg_file.flush()
+            app = utils.get_test_app(settings={"cowbird.config_path": cfg_file.name})
+
+            # Recreate new magpie handler instance with new config
+            magpie = HandlerFactory().create_handler("Magpie")
+
+            # Create geoserver service
+            magpie.delete_service("geoserver")
+            data = {
+                "service_name": "geoserver",
+                "service_type": "geoserver",
+                "service_url": f"http://localhost:9000/geoserver",
+            }
+            magpie.create_service(data)
+
+            geoserver.on_created(os.path.join(workspace_path, shapefile_name + SHAPEFILE_MAIN_EXTENSION))
+
+            # TODO: check if this is valid
+            user_name = workspace_name
+
+            # TODO: Questions, si les fichiers ont pas toutes la même permission (shapefile = plusieurs fichiers)
+            geoserver_resources = magpie.get_resources_by_service("geoserver")
+            res_id = list(list(geoserver_resources["resources"].values())[0]["children"])[0]
+
+            # Check if the user has the right permissions
+            user_permissions = magpie.get_user_permissions_by_res_id(user_name, res_id)
+            expected_permissions = set(WFS_READ_PERMISSIONS + WMS_READ_PERMISSIONS + WFS_WRITE_PERMISSIONS)
+            expected_permissions = [a + b for a, b in product(expected_permissions, ["-match", "-allow-match"])]
+            assert set(expected_permissions) == set(user_permissions["permission_names"])
+
+            base_filename = f"{workspace_path}/{shapefile_name}"
+            shapefile_list = [base_filename + ext for ext in SHAPEFILE_ALL_EXTENSIONS]
+            for file in shapefile_list:
+                os.chmod(file, 0o000)
+
+            new_permission = Permission(
+                service_name="geoserver",
+                resource_id="1",
+                resource_full_name=f"/geoserver/{workspace_name}/{shapefile_name}",
+                name="describefeaturetype",
+                access="allow",
+                scope="recursive",
+                user=workspace_name
+            )
+            geoserver.permission_created(new_permission)
+            for file in shapefile_list:
+                utils.check_file_permissions(file, 0o440)
+
+            new_permission.name = "createstoredquery"
+            geoserver.permission_created(new_permission)
+            for file in shapefile_list:
+                utils.check_file_permissions(file, 0o660)
+
+            # Remove shapefile
+            response = geoserver._remove_shapefile_request(workspace_name, datastore_name, shapefile_name)
+            assert response.status_code == 200
+
+            # TODO: Check if resource was removed on Magpie
+
+            magpie.delete_service("geoserver")
+        utils.clear_handlers_instances()
