@@ -113,16 +113,15 @@ class TestSyncPermissions(unittest.TestCase):
         if group_name:
             self.magpie.create_permission_by_grp_and_res_id(group_name, resource_id, data)
 
-    def delete_test_permission(self, resource_id, permission, user_name, group_name):
-        # type: (int, Dict, str, str) -> None
+    def delete_test_permission(self, resource_id, permission_name, user_name, group_name):
+        # type: (int, str, str, str) -> None
         """
         Creates a test permission in Magpie app.
         """
-        data = {"permission": permission}
         if user_name:
-            self.magpie.delete_permission_by_user_and_res_id(user_name, resource_id, data)
+            self.magpie.delete_permission_by_user_and_res_id(user_name, resource_id, permission_name)
         if group_name:
-            self.magpie.delete_permission_by_grp_and_res_id(group_name, resource_id, data)
+            self.magpie.delete_permission_by_grp_and_res_id(group_name, resource_id, permission_name)
 
     def check_user_permissions(self, resource_id, expected_permissions):
         # type: (int, List) -> None
@@ -241,7 +240,7 @@ class TestSyncPermissions(unittest.TestCase):
                     data = {
                         "event": event,
                         "service_name": "thredds",
-                        "resource_id": str(src_res_id),
+                        "resource_id": src_res_id,
                         "resource_full_name": resources[src_res_id]["res_full_name"],
                         "name": perm_name,
                         "access": resources[src_res_id]["perms"][perm_name]["access"],
@@ -334,8 +333,7 @@ class TestSyncPermissions(unittest.TestCase):
                                             test_case_usr_grp["user"], test_case_usr_grp["group"])
 
                 # Force delete the permission 4.
-                self.delete_test_permission(res_ids[4], {"name": "read", "access": "allow", "scope": "recursive"},
-                                            test_case_usr_grp["user"], test_case_usr_grp["group"])
+                self.delete_test_permission(res_ids[4], "read", test_case_usr_grp["user"], test_case_usr_grp["group"])
 
                 # Check delete permission 0 (0 <-> 1 towards right), which should now work,
                 # since permission 4 was deleted.
@@ -374,8 +372,7 @@ class TestSyncPermissions(unittest.TestCase):
                                       perm_name="read",
                                       expected_perm_dict={
                                           3: default_write_permission})
-                self.delete_test_permission(res_ids[3], {"name": "write", "access": "allow", "scope": "recursive"},
-                                            test_case_usr_grp["user"], test_case_usr_grp["group"])
+                self.delete_test_permission(res_ids[3], "write", test_case_usr_grp["user"], test_case_usr_grp["group"])
 
     def test_webhooks_valid_tokens(self):
         """

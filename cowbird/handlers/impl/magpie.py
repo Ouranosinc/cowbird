@@ -243,21 +243,25 @@ class Magpie(Handler):
         else:
             raise HTTPError(f"Failed to create permission : {resp.text}")
 
-    def delete_permission_by_user_and_res_id(self, user_name, res_id, permission_data):
-        # type: (str, int, Dict[str,Dict[str,str]]) -> None
-        resp = self._send_request(method="DELETE", url=f"{self.url}/users/{user_name}/resources/{res_id}/permissions",
-                                  json=permission_data)
+    def delete_permission_by_user_and_res_id(self, user_name, res_id, permission_name):
+        # type: (str, int, str) -> None
+        resp = self._send_request(method="DELETE",
+                                  url=f"{self.url}/users/{user_name}/resources/{res_id}/permissions/{permission_name}")
         if resp.status_code == 200:
             LOGGER.info("Permission deletion was successful.")
+        elif resp.status_code == 404:
+            LOGGER.info("No permission found to delete.")
         else:
             raise HTTPError(f"Failed to delete permission : {resp.text}")
 
-    def delete_permission_by_grp_and_res_id(self, grp_name, res_id, permission_data):
-        # type: (str, int, Dict[str,Dict[str,str]]) -> None
-        resp = self._send_request(method="DELETE", url=f"{self.url}/groups/{grp_name}/resources/{res_id}/permissions",
-                                  json=permission_data)
+    def delete_permission_by_grp_and_res_id(self, grp_name, res_id, permission_name):
+        # type: (str, int, str) -> None
+        resp = self._send_request(method="DELETE",
+                                  url=f"{self.url}/groups/{grp_name}/resources/{res_id}/permissions/{permission_name}")
         if resp.status_code == 200:
             LOGGER.info("Permission deletion was successful.")
+        elif resp.status_code == 404:
+            LOGGER.info("No permission found to delete.")
         else:
             raise HTTPError(f"Failed to delete permission : {resp.text}")
 

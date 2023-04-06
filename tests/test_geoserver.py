@@ -185,6 +185,7 @@ class TestGeoserverRequests:
         # Preparations needed to make tests work without all the other handlers running
         shapefile_name = "Espace_Vert"
         workspace_path = self.folders["publish_remove"] + "/shapefile_datastore"
+        shapefile_list = geoserver.get_shapefile_list(workspace_name, shapefile_name)
         # This next part can fail if the user running this test doesn't have write access to the directory
         copy_shapefile(basename=shapefile_name, destination=workspace_path)
 
@@ -217,6 +218,9 @@ class TestGeoserverRequests:
             }
             magpie.create_service(data)
 
+            for file in shapefile_list:
+                os.chmod(file, 0o400)
+
             geoserver.on_created(os.path.join(workspace_path, shapefile_name + SHAPEFILE_MAIN_EXTENSION))
 
             user_name = workspace_name
@@ -227,17 +231,14 @@ class TestGeoserverRequests:
 
             # Check if the user has the right permissions on Magpie
             user_permissions = magpie.get_user_permissions_by_res_id(user_name, shapefile_res_id)
-            expected_permissions = set(WFS_READ_PERMISSIONS + WMS_READ_PERMISSIONS + WFS_WRITE_PERMISSIONS)
-            expected_permissions = [a + b for a, b in product(expected_permissions, ["-match", "-allow-match"])]
-            assert set(expected_permissions) == set(user_permissions["permission_names"])
-            shapefile_list = geoserver.get_shapefile_list(workspace_name, shapefile_name)
+            read_permissions = set(WFS_READ_PERMISSIONS + WMS_READ_PERMISSIONS)
+            read_permissions = set([a + b for a, b in product(read_permissions, ["-match", "-allow-match"])])
+            write_permissions = set(WFS_WRITE_PERMISSIONS)
+            write_permissions = set([a + b for a, b in product(write_permissions, ["-match", "-allow-match"])])
+            assert read_permissions == set(user_permissions["permission_names"])
             expected_chown_shapefile_calls = [mock.call(file, DEFAULT_UID, DEFAULT_GID) for file in shapefile_list]
-            mock_chown.assert_has_calls(expected_chown_shapefile_calls, any_order=True)
-            assert mock_chown.call_count == 4
-            mock_chown.reset_mock()
+            utils.check_mock_has_calls_exactly(mock_chown, expected_chown_shapefile_calls)
 
-            base_filename = f"{workspace_path}/{shapefile_name}"
-            shapefile_list = [base_filename + ext for ext in SHAPEFILE_ALL_EXTENSIONS]
             for file in shapefile_list:
                 os.chmod(file, 0o000)
 
@@ -252,9 +253,7 @@ class TestGeoserverRequests:
                 user=workspace_name
             )
             geoserver.permission_created(new_permission)
-            mock_chown.assert_has_calls(expected_chown_shapefile_calls, any_order=True)
-            assert mock_chown.call_count == 4
-            mock_chown.reset_mock()
+            utils.check_mock_has_calls_exactly(mock_chown, expected_chown_shapefile_calls)
             for file in shapefile_list:
                 utils.check_file_permissions(file, 0o400)
 
@@ -262,8 +261,7 @@ class TestGeoserverRequests:
             new_permission.resource_id = workspace_res_id
             new_permission.resource_full_name = f"/geoserver/{workspace_name}"
             geoserver.permission_created(new_permission)
-            mock_chown.assert_called_once_with(workspace_path, DEFAULT_UID, DEFAULT_GID)
-
+            utils.check_mock_has_calls_exactly(mock_chown, [mock.call(workspace_path, DEFAULT_UID, DEFAULT_GID)])
 
             # # Delete file on storage, it should be redownloaded from Geoserver during a permission_created event.
             # TODO: expect error

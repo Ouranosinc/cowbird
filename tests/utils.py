@@ -670,3 +670,9 @@ def check_file_permissions(file_path, permissions):
     Checks if the file has the right permissions, by verifying the last digits of the octal permissions.
     """
     return oct(os.stat(file_path)[ST_MODE])[-3:] == oct(permissions)[-3:]
+
+
+def check_mock_has_calls_exactly(mocked_fct, calls):
+    mocked_fct.assert_has_calls(calls, any_order=True)
+    assert mocked_fct.call_count == len(calls)
+    mocked_fct.reset_mock()

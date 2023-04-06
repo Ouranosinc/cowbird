@@ -253,6 +253,13 @@ class Geoserver(Handler, FSMonitor):
                             "access": "allow",
                             "scope": "match"
                         }})
+            permissions_to_remove = set((WFS_READ_PERMISSIONS + WMS_READ_PERMISSIONS if not is_readable else []) +
+                                        (WFS_WRITE_PERMISSIONS if not is_writable else []))
+            for perm_name in permissions_to_remove:
+                magpie_handler.delete_permission_by_user_and_res_id(
+                    user_name=workspace_name,
+                    res_id=shapefile_res_id,
+                    permission_name=perm_name)
 
     def on_deleted(self, filename):
         """
