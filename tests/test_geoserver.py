@@ -7,6 +7,7 @@ still useful for a developer working on the Geoserver requests. They can be run 
 More integration tests should be in Jupyter Notebook format as is the case with Birdhouse-deploy / DACCS platform.
 """
 import glob
+import mock
 import os
 import shutil
 import tempfile
@@ -19,6 +20,7 @@ from dotenv import load_dotenv
 
 from cowbird.constants import COWBIRD_ROOT
 from cowbird.handlers import HandlerFactory
+from cowbird.handlers.impl.filesystem import DEFAULT_UID, DEFAULT_GID
 from cowbird.handlers.impl.geoserver import Geoserver, GeoserverError, SHAPEFILE_ALL_EXTENSIONS, SHAPEFILE_MAIN_EXTENSION
 from cowbird.handlers.impl.magpie import WFS_READ_PERMISSIONS, WMS_READ_PERMISSIONS, WFS_WRITE_PERMISSIONS
 from cowbird.permissions_synchronizer import Permission
@@ -166,7 +168,9 @@ class TestGeoserverRequests:
                                                 datastore_name="test-datastore")
         assert "Operation [_create_datastore_request] failed" in str(error.value)
 
-    def test_publish_and_remove_shapefile(self, geoserver):
+    # Mock the chown function to avoid fail in case the tests are run as non-root
+    @mock.patch("os.chown")
+    def test_publish_and_remove_shapefile(self, mock_chown, geoserver):
         # Creating workspace and datastore needed to publish a shapefile
         workspace_name = self.workspaces["publish_remove"]
         datastore_name = "test-datastore-publish_remove"
@@ -188,9 +192,6 @@ class TestGeoserverRequests:
         geoserver.validate_shapefile(workspace_name=workspace_name, shapefile_name=shapefile_name)
         response = geoserver._publish_shapefile_request(workspace_name, datastore_name, shapefile_name)
         assert response.status_code == 201
-
-        # TODO: Voir si on met la partie du sync avec magpie dans une autre classe séparée, qui utiliserait pas une vraie instance de geoserver, mais un MockedGeoserver
-        #  pas besoin de tester les requêtes de Geoserver ici
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".cfg") as cfg_file:
             cfg_file.write(yaml.safe_dump({
@@ -218,27 +219,32 @@ class TestGeoserverRequests:
 
             geoserver.on_created(os.path.join(workspace_path, shapefile_name + SHAPEFILE_MAIN_EXTENSION))
 
-            # TODO: check if this is valid
             user_name = workspace_name
-
-            # TODO: Questions, si les fichiers ont pas toutes la même permission (shapefile = plusieurs fichiers)
             geoserver_resources = magpie.get_resources_by_service("geoserver")
-            res_id = list(list(geoserver_resources["resources"].values())[0]["children"])[0]
+            workspace_res = list(geoserver_resources["resources"].values())[0]
+            workspace_res_id = workspace_res["resource_id"]
+            shapefile_res_id = list(workspace_res["children"])[0]
 
-            # Check if the user has the right permissions
-            user_permissions = magpie.get_user_permissions_by_res_id(user_name, res_id)
+            # Check if the user has the right permissions on Magpie
+            user_permissions = magpie.get_user_permissions_by_res_id(user_name, shapefile_res_id)
             expected_permissions = set(WFS_READ_PERMISSIONS + WMS_READ_PERMISSIONS + WFS_WRITE_PERMISSIONS)
             expected_permissions = [a + b for a, b in product(expected_permissions, ["-match", "-allow-match"])]
             assert set(expected_permissions) == set(user_permissions["permission_names"])
+            shapefile_list = geoserver.get_shapefile_list(workspace_name, shapefile_name)
+            expected_chown_shapefile_calls = [mock.call(file, DEFAULT_UID, DEFAULT_GID) for file in shapefile_list]
+            mock_chown.assert_has_calls(expected_chown_shapefile_calls, any_order=True)
+            assert mock_chown.call_count == 4
+            mock_chown.reset_mock()
 
             base_filename = f"{workspace_path}/{shapefile_name}"
             shapefile_list = [base_filename + ext for ext in SHAPEFILE_ALL_EXTENSIONS]
             for file in shapefile_list:
                 os.chmod(file, 0o000)
 
+            # Update shapefile read permissions
             new_permission = Permission(
                 service_name="geoserver",
-                resource_id="1",
+                resource_id=shapefile_res_id,
                 resource_full_name=f"/geoserver/{workspace_name}/{shapefile_name}",
                 name="describefeaturetype",
                 access="allow",
@@ -246,18 +252,35 @@ class TestGeoserverRequests:
                 user=workspace_name
             )
             geoserver.permission_created(new_permission)
+            mock_chown.assert_has_calls(expected_chown_shapefile_calls, any_order=True)
+            assert mock_chown.call_count == 4
+            mock_chown.reset_mock()
             for file in shapefile_list:
-                utils.check_file_permissions(file, 0o440)
+                utils.check_file_permissions(file, 0o400)
 
+            # Update workspace read permissions
+            new_permission.resource_id = workspace_res_id
+            new_permission.resource_full_name = f"/geoserver/{workspace_name}"
+            geoserver.permission_created(new_permission)
+            mock_chown.assert_called_once_with(workspace_path, DEFAULT_UID, DEFAULT_GID)
+
+
+            # # Delete file on storage, it should be redownloaded from Geoserver during a permission_created event.
+            # TODO: expect error
+            # os.remove(workspace_path + f"/{shapefile_name}.shp")
+
+            # Update shapefile write permissions
             new_permission.name = "createstoredquery"
+            new_permission.resource_full_name = f"/geoserver/{workspace_name}/{shapefile_name}"
             geoserver.permission_created(new_permission)
             for file in shapefile_list:
-                utils.check_file_permissions(file, 0o660)
+                utils.check_file_permissions(file, 0o600)
 
             # Remove shapefile
             response = geoserver._remove_shapefile_request(workspace_name, datastore_name, shapefile_name)
             assert response.status_code == 200
 
+            # Resource should only removed when the file is deleted from the filesystem?
             # TODO: Check if resource was removed on Magpie
 
             magpie.delete_service("geoserver")

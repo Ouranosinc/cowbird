@@ -555,7 +555,7 @@ class PermissionSynchronizer(object):
         """
         Create the same permission on each service sharing the same resource.
         """
-        resource_tree = self.magpie_inst.get_resources_tree(permission.resource_id)
+        resource_tree = self.magpie_inst.get_parents_resource_tree(permission.resource_id)
         for point in self.sync_point:
             point.sync(self.magpie_inst.create_permission, permission, resource_tree)
 
@@ -564,6 +564,6 @@ class PermissionSynchronizer(object):
         """
         Delete the same permission on each service sharing the same resource.
         """
-        resource_tree = self.magpie_inst.get_resources_tree(permission.resource_id)
+        resource_tree = self.magpie_inst.get_parents_resource_tree(permission.resource_id)
         for point in self.sync_point:
             point.sync(self.magpie_inst.delete_permission, permission, resource_tree)

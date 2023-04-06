@@ -101,7 +101,7 @@ class Magpie(Handler):
             raise RuntimeError("Could not find the input service's resources.")
         return resp.json()[service_name]
 
-    def get_resources_tree(self, resource_id):
+    def get_parents_resource_tree(self, resource_id):
         # type: (int) -> List
         """
         Returns the associated Magpie Resource object and all its parents in a list ordered from parent to child.
@@ -111,6 +111,16 @@ class Magpie(Handler):
         if resp.status_code != 200:
             raise RuntimeError("Could not find the input resource's parent resources.")
         return resp.json()["resources"]
+
+    def get_children_resource_tree(self, resource_id):
+        # type: (int) -> List
+        """
+        Returns the associated Magpie Resource object and all its children.
+        """
+        resp = self._send_request(method="GET", url=f"{self.url}/resources/{resource_id}", params={"parent": "false"})
+        if resp.status_code != 200:
+            raise RuntimeError("Could not find the input resource's children resources.")
+        return resp.json()["resource"]["children"]
 
     def get_user_permissions(self, user):
         # type: (str) -> Dict

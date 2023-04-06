@@ -15,6 +15,9 @@ LOGGER = get_logger(__name__)
 
 NOTEBOOKS_DIR_NAME = "notebooks"
 
+DEFAULT_UID = 1000
+DEFAULT_GID = 1000
+
 
 class FileSystem(Handler):
     """

@@ -1,7 +1,6 @@
 import functools
 import os
 import re
-import shutil
 import stat
 from time import sleep
 from typing import TYPE_CHECKING, Tuple
@@ -11,6 +10,7 @@ from celery import chain, shared_task
 
 from cowbird.handlers.handler import HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PARAM, Handler
 from cowbird.handlers.handler_factory import HandlerFactory
+from cowbird.handlers.impl.filesystem import DEFAULT_GID, DEFAULT_UID
 from cowbird.handlers.impl.magpie import WFS_READ_PERMISSIONS, WFS_WRITE_PERMISSIONS, WMS_READ_PERMISSIONS
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
@@ -133,47 +133,77 @@ class Geoserver(Handler, FSMonitor):
         LOGGER.info("Stop monitoring datastore of created user [%s]", user_name)
         Monitoring().unregister(self._shapefile_folder_dir(user_name), self)
 
+    def get_shapefile_list(self, workspace_name, shapefile_name):
+        # type:(str, str) -> List[str]
+        """
+        Generates the list of all files associated with a shapefile name.
+        """
+        base_filename = self._shapefile_folder_dir(workspace_name) + "/" + shapefile_name
+        return [base_filename + ext for ext in SHAPEFILE_ALL_EXTENSIONS]
+
+    def update_resource_files_permissions(self, resource_type, permission_name, workspace_name, layer_name=None):
+        if resource_type == "layer":
+            if not layer_name:
+                raise GeoserverError("Missing layer name to update permissions.")
+            file_list = self.get_shapefile_list(workspace_name, layer_name)
+        else:
+            file_list = [self._shapefile_folder_dir(workspace_name)]
+
+        for file in file_list:
+            if not os.path.exists(file):
+                LOGGER.warning(f"{file} could not be found and its permissions could not be updated.")
+                continue
+            new_perms = os.stat(file)[stat.ST_MODE]
+            if permission_name in WFS_READ_PERMISSIONS + WMS_READ_PERMISSIONS:
+                new_perms = new_perms | stat.S_IRUSR | stat.S_IXUSR
+            elif permission_name in WFS_WRITE_PERMISSIONS:
+                new_perms = new_perms | stat.S_IWUSR
+
+            try:
+                os.chmod(file, new_perms)
+            except PermissionError as exc:
+                LOGGER.warning(f"Failed to change permissions on the {file} file: {exc}")
+            try:
+                # This operation only works as root.
+                os.chown(file, DEFAULT_UID, DEFAULT_GID)
+            except PermissionError as exc:
+                LOGGER.warning(f"Failed to change ownership of the {file} file:  {exc}")
+
+    def update_res_children_files_permissions(self, children_res_tree, permission_name):
+        for res_id, res_info in children_res_tree.items():
+            res_type = res_info["resource_type"]
+            # Get the current permissions on Magpie and calculate is_readable/is_writable
+            # TODO: should this be always done? Even for the resource who receives the permission change
+            if res_type == "workspace":
+                self.update_res_children_files_permissions(res_info["children"], permission_name)
+            elif res_type == "layer":
+                pass
+
     def permission_created(self, permission):
-
-        # TODO: quoi faire dans le cas d'un groupe, ajouter à tous les users du groupe?
-
-        # TODO: create file is doesnt exist in file system, si oui, ajouter test case (delete file + check if redwlded)
-        #  Est-ce qu'il faut vraiment? Quoi faire si seulement un des 4 types de fichiers est manquant.
-
-        # TODO: Check for 'deny' case. S'il y a un allow sur un autre r ou w, sera ignored...
-        #  Donc si pas de permission ou si Deny, même chose
-        # TODO: Check for 'recursive' case. Si shapefile change rien (jamais de child). Si workspace, les layers qu'ils
-        #   contient vont avoir la novuelle permission. On prend le + permissif???
-        #  Donc, dans le cas d'un changement provenant de Magpie, il faut vérifier les parents de la resources.
-        #  Priorité #1 permission du user... Donc si changement sur user, on applique ça that's it
-        #  Si changement sur un workspace, on applique sur le folder et sur le child si recursive, sauf si le child a
-        #  déjà une permission de définie.
-
-        if permission.service_name != "geoserver":
+        LOGGER.info(permission.name)
+        if permission.name not in WFS_READ_PERMISSIONS + WFS_WRITE_PERMISSIONS + WMS_READ_PERMISSIONS:
+            LOGGER.info("Nothing to do, since it is not a permission for a Geoserver resource.")
             return
-        layer_name = permission.resource_full_name.split('/')[-1]
-        base_filename = self._shapefile_folder_dir(permission.user) + "/" + layer_name
-        shapefile_list = [base_filename + ext for ext in SHAPEFILE_ALL_EXTENSIONS]
-        if not os.path.exists(base_filename + ".shp"):
-            # Get file from Geoserver
-            request_url = (
-                f"{self.url}/{permission.user}/wfs?service=WFS&version=1.0.0&request=GetFeature&"
-                f"typeName={permission.user}:{layer_name}&outputformat=SHAPE-ZIP"
-            )
-            response = requests.get(url=request_url, auth=self.auth,
-                                    headers=self.headers, timeout=self.timeout, stream=True)
-            with open(base_filename + ".zip", 'wb') as out_file:
-                shutil.copyfileobj(response.raw, out_file)
 
-        # Set permissions as Magpie changes
-        if permission.name in WFS_READ_PERMISSIONS or WMS_READ_PERMISSIONS:
-            for shapefile in shapefile_list:
-                current_perms = os.stat(shapefile)[stat.ST_MODE]
-                os.chmod(shapefile, current_perms | stat.S_IRUSR | stat.S_IRGRP)
-        elif permission.name in WFS_WRITE_PERMISSIONS:
-            for shapefile in shapefile_list:
-                current_perms = os.stat(shapefile)[stat.ST_MODE]
-                os.chmod(shapefile, current_perms | stat.S_IWUSR | stat.S_IWGRP)
+        magpie_handler = HandlerFactory().get_handler("Magpie")
+        # Assume the user name is also the workspace name
+        workspace_name = permission.user
+        layer_name = permission.resource_full_name.split('/')[-1]
+
+        # Get resource type with resource id
+        resource_tree = magpie_handler.get_parents_resource_tree(permission.resource_id)
+        resource_type = resource_tree[-1]["resource_type"]
+
+        LOGGER.info(f"RESOURCE NAME IN PERMISSION : {permission.resource_full_name}")
+        if resource_type in ["workspace", "layer"]:
+            self.update_resource_files_permissions(resource_type, permission.name, workspace_name, layer_name)
+
+        if resource_type in ["service", "workspace"] and permission.scope == "recursive":
+            children_res_tree = magpie_handler.get_children_resource_tree(permission.resource_id)
+            self.update_res_children_files_permissions(children_res_tree, permission.name)
+
+        # TODO: résoudre la permission avant d'assigner
+        #  user - groupe - deny - recursive
 
     def permission_deleted(self, permission):
         # TODO: modify permissions
@@ -207,7 +237,12 @@ class Geoserver(Handler, FSMonitor):
             magpie_handler = HandlerFactory().get_handler("Magpie")
 
             # TODO: verify if we use the generic `geoserver` service, or if we use the specific ones (wfs, wms, wps)
-            # Check if Magpie workspace exists, and create if doesn't
+            # 1. Get service_id
+            # 2. Get id from children resources
+            # 3. Create workspace if not found
+            # 4. Get id from children resources
+            # 4. Create shapefile resource if not found
+
             geoserver_svc_resources = magpie_handler.get_resources_by_service("geoserver")
             workspace_res_id = None
             for res_id in geoserver_svc_resources["resources"]:
@@ -215,21 +250,20 @@ class Geoserver(Handler, FSMonitor):
                     workspace_res_id = res_id
                     break
             if not workspace_res_id:
-                workspace_res_id = magpie_handler.create_resource(
-                    resource_name=workspace_name,
-                    resource_type="workspace",
-                    parent_id=geoserver_svc_resources["resource_id"])
+                workspace_res_id = magpie_handler.create_resource(resource_name=workspace_name,
+                                                                  resource_type="workspace",
+                                                                  parent_id=geoserver_svc_resources["resource_id"])
 
-            # Get permissions of all files
+            # Get permissions of all files on the file system
             is_readable, is_writable = self.get_shapefile_permissions(workspace_name, shapefile_name)
-            # TODO: donner les mêmes permissions à tous les fichiers du shapefile (y aller avec le + permissif)
+            self.normalize_shapefile_permissions(workspace_name, shapefile_name, is_readable, is_writable)
+
+            # TODO: Create shapefile resource only if doesn't exist already
             shapefile_res_id = magpie_handler.create_resource(
                 resource_name=shapefile_name,
                 resource_type="layer",
                 parent_id=workspace_res_id)
 
-            # TODO: check if workspace_name is also the user_name
-            #  in /user_workspaces, we have folders by user, and file is added to each user's folder
             permissions_to_add = set((WFS_READ_PERMISSIONS + WMS_READ_PERMISSIONS if is_readable else []) +
                                      (WFS_WRITE_PERMISSIONS if is_writable else []))
             for perm_name in permissions_to_add:
@@ -365,6 +399,21 @@ class Geoserver(Handler, FSMonitor):
             if not is_write_permitted and os.access(file, os.W_OK):
                 is_write_permitted = True
         return is_read_permitted, is_write_permitted
+
+    def normalize_shapefile_permissions(self, workspace_name, shapefile_name, is_readable, is_writable):
+        """
+        Makes sure all files associated with a shapefile is owned by the default user/group
+        and have the same permissions.
+        """
+        for shapefile in self.get_shapefile_list(workspace_name, shapefile_name):
+            try:
+                os.chown(shapefile, DEFAULT_UID, DEFAULT_GID)
+            except PermissionError as exc:
+                LOGGER.warning(f"Failed to change ownership of the {shapefile} file: {exc}")
+            new_perms = os.stat(shapefile)[stat.ST_MODE]
+            new_perms = new_perms | stat.S_IRUSR if is_readable else new_perms & ~stat.S_IRUSR
+            new_perms = new_perms | stat.S_IWUSR if is_writable else new_perms & ~stat.S_IWUSR
+            os.chmod(shapefile, new_perms)
 
     def remove_shapefile(self, workspace_name, filename):
         # type:(Geoserver, str, str) -> None
