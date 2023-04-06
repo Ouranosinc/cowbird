@@ -94,6 +94,13 @@ class Magpie(Handler):
         # type (str) -> str
         raise NotImplementedError
 
+    def get_services_by_type(self, service_type):
+        # type: (str) -> List
+        resp = self._send_request(method="GET", url=f"{self.url}/services/types/{service_type}")
+        if resp.status_code != 200:
+            raise RuntimeError("Could not find the input type's services.")
+        return resp.json()["services"][service_type]
+
     def get_resources_by_service(self, service_name):
         # type: (str) -> List
         resp = self._send_request(method="GET", url=f"{self.url}/services/{service_name}/resources")
@@ -121,6 +128,39 @@ class Magpie(Handler):
         if resp.status_code != 200:
             raise RuntimeError("Could not find the input resource's children resources.")
         return resp.json()["resource"]["children"]
+
+    def get_or_create_layer_resource_id(self, workspace_name, layer_name):
+        # type: (str, str) -> int
+        """
+        Tries to get the resource id of a specific layer, on `geoserver` type services, and creates the resource and
+        workspace if they do not exist yet.
+        """
+        layer_res_id, workspace_res_id = None, None
+        geoserver_type_services = self.get_services_by_type("geoserver")
+        if not geoserver_type_services:
+            raise ValueError("No service of type `geoserver` found on Magpie while trying to get a layer resource id.")
+        for svc in geoserver_type_services.values():
+            if layer_res_id:
+                break
+            for workspace in self.get_children_resource_tree(svc["resource_id"]).values():
+                if workspace["resource_name"] == workspace_name:
+                    workspace_res_id = workspace["resource_id"]
+                    for layer in workspace["children"].values():
+                        if layer["resource_name"] == layer_name:
+                            layer_res_id = layer["resource_id"]
+                            break
+                    break
+        if not layer_res_id:
+            if not workspace_res_id:
+                workspace_res_id = self.create_resource(
+                    resource_name=workspace_name,
+                    resource_type="workspace",
+                    parent_id=list(geoserver_type_services.values())[0]["resource_id"])
+            layer_res_id = self.create_resource(
+                resource_name=layer_name,
+                resource_type="layer",
+                parent_id=workspace_res_id)
+        return layer_res_id
 
     def get_user_permissions(self, user):
         # type: (str) -> Dict
@@ -239,7 +279,7 @@ class Magpie(Handler):
             LOGGER.warning("Empty permission data, no permissions to remove.")
 
     def create_resource(self, resource_name, resource_type, parent_id):
-        # type: (str, str, int) -> str
+        # type: (str, str, int) -> int
         """
         Creates the specified resource in Magpie and returns the created resource id if successful.
         """
@@ -255,6 +295,15 @@ class Magpie(Handler):
             return resp.json()["resource"]["resource_id"]
         else:
             raise HTTPError(f"Failed to create resource : {resp.text}")
+
+    def delete_resource(self, resource_id):
+        resp = self._send_request(method="DELETE", url=f"{self.url}/resources/{resource_id}")
+        if resp.status_code == 200:
+            LOGGER.info("Delete resource successful.")
+        elif resp.status_code == 404:
+            LOGGER.info("Resource id was not found. No resource to delete.")
+        else:
+            raise HTTPError(f"Failed to delete resource : {resp.text}")
 
     def create_service(self, service_data):
         # type (Dict[str, str]) -> str
@@ -273,6 +322,15 @@ class Magpie(Handler):
             LOGGER.info("Service name was not found. No service to delete.")
         else:
             raise HTTPError(f"Failed to delete resource : {resp.text}")
+
+    def delete_all_services(self):
+        resp = self._send_request(method="GET", url=f"{self.url}/services")
+        if resp.status_code == 200:
+            for services_by_svc_type in resp.json()["services"].values():
+                for svc in services_by_svc_type.values():
+                    self.delete_service(svc["service_name"])
+        else:
+            raise HTTPError(f"Failed to find Magpie services.")
 
     def login(self):
         # type: () -> RequestsCookieJar

@@ -235,34 +235,11 @@ class Geoserver(Handler, FSMonitor):
             res.delay()
 
             magpie_handler = HandlerFactory().get_handler("Magpie")
-
-            # TODO: verify if we use the generic `geoserver` service, or if we use the specific ones (wfs, wms, wps)
-            # 1. Get service_id
-            # 2. Get id from children resources
-            # 3. Create workspace if not found
-            # 4. Get id from children resources
-            # 4. Create shapefile resource if not found
-
-            geoserver_svc_resources = magpie_handler.get_resources_by_service("geoserver")
-            workspace_res_id = None
-            for res_id in geoserver_svc_resources["resources"]:
-                if geoserver_svc_resources["resources"][res_id]["resource_name"] == workspace_name:
-                    workspace_res_id = res_id
-                    break
-            if not workspace_res_id:
-                workspace_res_id = magpie_handler.create_resource(resource_name=workspace_name,
-                                                                  resource_type="workspace",
-                                                                  parent_id=geoserver_svc_resources["resource_id"])
+            shapefile_res_id = magpie_handler.get_or_create_layer_resource_id(workspace_name, shapefile_name)
 
             # Get permissions of all files on the file system
             is_readable, is_writable = self.get_shapefile_permissions(workspace_name, shapefile_name)
             self.normalize_shapefile_permissions(workspace_name, shapefile_name, is_readable, is_writable)
-
-            # TODO: Create shapefile resource only if doesn't exist already
-            shapefile_res_id = magpie_handler.create_resource(
-                resource_name=shapefile_name,
-                resource_type="layer",
-                parent_id=workspace_res_id)
 
             permissions_to_add = set((WFS_READ_PERMISSIONS + WMS_READ_PERMISSIONS if is_readable else []) +
                                      (WFS_WRITE_PERMISSIONS if is_writable else []))
