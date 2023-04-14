@@ -15,7 +15,7 @@ from cowbird.handlers.impl.magpie import WFS_READ_PERMISSIONS, WFS_WRITE_PERMISS
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
 from cowbird.request_task import RequestTask
-from cowbird.utils import CONTENT_TYPE_JSON, get_logger
+from cowbird.utils import CONTENT_TYPE_JSON, get_logger, update_permissions
 
 if TYPE_CHECKING:
     from typing import Any
@@ -141,7 +141,8 @@ class Geoserver(Handler, FSMonitor):
         base_filename = self._shapefile_folder_dir(workspace_name) + "/" + shapefile_name
         return [base_filename + ext for ext in SHAPEFILE_ALL_EXTENSIONS]
 
-    def update_resource_files_permissions(self, resource_type, permission_name, workspace_name, layer_name=None):
+    def update_resource_files_permissions(self, resource_type, permission, resource_id, workspace_name,
+                                          layer_name=None):
         if resource_type == "layer":
             if not layer_name:
                 raise GeoserverError("Missing layer name to update permissions.")
@@ -149,16 +150,23 @@ class Geoserver(Handler, FSMonitor):
         else:
             file_list = [self._shapefile_folder_dir(workspace_name)]
 
+        # Get the actual effective user permissions
+        user_permissions = HandlerFactory().get_handler("Magpie").get_user_permissions_by_res_id(
+            permission.user, resource_id, effective=True)
+
+        allowed_user_perm_names = set([p["name"] for p in user_permissions["permissions"] if p["access"] == "allow"])
+        is_readable = any(p in WFS_READ_PERMISSIONS + WMS_READ_PERMISSIONS for p in allowed_user_perm_names)
+        is_writable = any(p in WFS_WRITE_PERMISSIONS for p in allowed_user_perm_names)
+
         for file in file_list:
             if not os.path.exists(file):
                 LOGGER.warning(f"{file} could not be found and its permissions could not be updated.")
                 continue
             new_perms = os.stat(file)[stat.ST_MODE]
-            if permission_name in WFS_READ_PERMISSIONS + WMS_READ_PERMISSIONS:
-                new_perms = new_perms | stat.S_IRUSR | stat.S_IXUSR
-            elif permission_name in WFS_WRITE_PERMISSIONS:
-                new_perms = new_perms | stat.S_IWUSR
-
+            new_perms = update_permissions(new_perms,
+                                           is_readable=is_readable,
+                                           is_writable=is_writable,
+                                           is_executable=is_readable)
             try:
                 os.chmod(file, new_perms)
             except PermissionError as exc:
@@ -169,15 +177,22 @@ class Geoserver(Handler, FSMonitor):
             except PermissionError as exc:
                 LOGGER.warning(f"Failed to change ownership of the {file} file:  {exc}")
 
-    def update_res_children_files_permissions(self, children_res_tree, permission_name):
+    def update_res_children_files_permissions(self, children_res_tree, permission, workspace_name, layer_name=None):
         for res_id, res_info in children_res_tree.items():
             res_type = res_info["resource_type"]
-            # Get the current permissions on Magpie and calculate is_readable/is_writable
-            # TODO: should this be always done? Even for the resource who receives the permission change
+            if res_type == "layer":
+                layer_name = res_info["resource_name"]
+
+            self.update_resource_files_permissions(resource_type=res_type,
+                                                   permission=permission,
+                                                   resource_id=res_id,
+                                                   workspace_name=workspace_name,
+                                                   layer_name=layer_name)
             if res_type == "workspace":
-                self.update_res_children_files_permissions(res_info["children"], permission_name)
-            elif res_type == "layer":
-                pass
+                self.update_res_children_files_permissions(children_res_tree=res_info["children"],
+                                                           permission=permission,
+                                                           workspace_name=workspace_name,
+                                                           layer_name=layer_name)
 
     def permission_created(self, permission):
         LOGGER.info(permission.name)
@@ -186,9 +201,11 @@ class Geoserver(Handler, FSMonitor):
             return
 
         magpie_handler = HandlerFactory().get_handler("Magpie")
-        # Assume the user name is also the workspace name
+
+        if permission.user is None:
+            raise NotImplementedError("A permission change on a group is not supported for now on Geoserver, since"
+                                      "workspaces are based on users only.")
         workspace_name = permission.user
-        layer_name = permission.resource_full_name.split('/')[-1]
 
         # Get resource type with resource id
         resource_tree = magpie_handler.get_parents_resource_tree(permission.resource_id)
@@ -196,14 +213,18 @@ class Geoserver(Handler, FSMonitor):
 
         LOGGER.info(f"RESOURCE NAME IN PERMISSION : {permission.resource_full_name}")
         if resource_type in ["workspace", "layer"]:
-            self.update_resource_files_permissions(resource_type, permission.name, workspace_name, layer_name)
+            layer_name = permission.resource_full_name.split('/')[-1] if resource_type == "layer" else None
+            self.update_resource_files_permissions(resource_type=resource_type,
+                                                   permission=permission,
+                                                   resource_id=permission.resource_id,
+                                                   workspace_name=workspace_name,
+                                                   layer_name=layer_name)
 
         if resource_type in ["service", "workspace"] and permission.scope == "recursive":
             children_res_tree = magpie_handler.get_children_resource_tree(permission.resource_id)
-            self.update_res_children_files_permissions(children_res_tree, permission.name)
-
-        # TODO: résoudre la permission avant d'assigner
-        #  user - groupe - deny - recursive
+            self.update_res_children_files_permissions(children_res_tree=children_res_tree,
+                                                       permission=permission,
+                                                       workspace_name=workspace_name)
 
     def permission_deleted(self, permission):
         # TODO: modify permissions
@@ -395,8 +416,8 @@ class Geoserver(Handler, FSMonitor):
             except PermissionError as exc:
                 LOGGER.warning(f"Failed to change ownership of the {shapefile} file: {exc}")
             new_perms = os.stat(shapefile)[stat.ST_MODE]
-            new_perms = new_perms | stat.S_IRUSR if is_readable else new_perms & ~stat.S_IRUSR
-            new_perms = new_perms | stat.S_IWUSR if is_writable else new_perms & ~stat.S_IWUSR
+            new_perms = update_permissions(new_perms, is_readable=is_readable, is_writable=is_writable,
+                                           is_executable=is_readable)
             os.chmod(shapefile, new_perms)
 
     def remove_shapefile(self, workspace_name, filename):

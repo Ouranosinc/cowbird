@@ -162,6 +162,26 @@ class Magpie(Handler):
                 parent_id=workspace_res_id)
         return layer_res_id
 
+    def create_user(self, user_name, email, password, group_name):
+        resp = self._send_request(method="POST", url=f"{self.url}/users",
+                                  json={
+                                      "user_name": user_name,
+                                      "email": email,
+                                      "password": password,
+                                      "group_name": group_name
+                                  })
+        if resp.status_code != 201:
+            raise RuntimeError(f"Failed to create user `{user_name}`.")
+
+    def delete_user(self, user_name):
+        resp = self._send_request(method="DELETE", url=f"{self.url}/users/{user_name}")
+        if resp.status_code == 200:
+            LOGGER.info("Delete user successful.")
+        elif resp.status_code == 404:
+            LOGGER.info("User name was not found. No user to delete.")
+        else:
+            raise HTTPError(f"Failed to delete resource : {resp.text}")
+
     def get_user_permissions(self, user):
         # type: (str) -> Dict
         """
@@ -172,16 +192,18 @@ class Magpie(Handler):
             raise RuntimeError(f"Could not find the user `{user}` resource permissions.")
         return resp.json()["resources"]
 
-    def get_user_permissions_by_res_id(self, user, res_id):
-        # type: (str, int) -> Dict
-        resp = self._send_request(method="GET", url=f"{self.url}/users/{user}/resources/{res_id}/permissions")
+    def get_user_permissions_by_res_id(self, user, res_id, effective=False):
+        # type: (str, int, bool) -> Dict
+        resp = self._send_request(method="GET", url=f"{self.url}/users/{user}/resources/{res_id}/permissions",
+                                  params={"effective": effective})
         if resp.status_code != 200:
             raise RuntimeError(f"Could not find the user `{user}` permissions for the resource `{res_id}`.")
         return resp.json()
 
-    def get_group_permissions_by_res_id(self, grp, res_id):
-        # type: (str, int) -> Dict
-        resp = self._send_request(method="GET", url=f"{self.url}/groups/{grp}/resources/{res_id}/permissions")
+    def get_group_permissions_by_res_id(self, grp, res_id, effective=False):
+        # type: (str, int, bool) -> Dict
+        resp = self._send_request(method="GET", url=f"{self.url}/groups/{grp}/resources/{res_id}/permissions",
+                                  params={"effective": effective})
         if resp.status_code != 200:
             raise RuntimeError(f"Could not find the group `{grp}` permissions for the resource `{res_id}`.")
         return resp.json()

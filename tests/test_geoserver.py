@@ -13,7 +13,6 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from itertools import product
 import pytest
 import yaml
 from dotenv import load_dotenv
@@ -21,7 +20,7 @@ from dotenv import load_dotenv
 from cowbird.constants import COWBIRD_ROOT
 from cowbird.handlers import HandlerFactory
 from cowbird.handlers.impl.filesystem import DEFAULT_UID, DEFAULT_GID
-from cowbird.handlers.impl.geoserver import Geoserver, GeoserverError, SHAPEFILE_ALL_EXTENSIONS, SHAPEFILE_MAIN_EXTENSION
+from cowbird.handlers.impl.geoserver import Geoserver, GeoserverError, SHAPEFILE_MAIN_EXTENSION
 from cowbird.handlers.impl.magpie import WFS_READ_PERMISSIONS, WMS_READ_PERMISSIONS, WFS_WRITE_PERMISSIONS
 from cowbird.permissions_synchronizer import Permission
 from tests import utils
@@ -80,7 +79,7 @@ class TestGeoserverRequests:
         "datastore-config": "test-datastore-configuration",
         "datastore-duplicate": "test-duplicate-datastore",
         #"publish_remove": "test_publish_remove_shapefile"
-        "publish_remove": "admin"
+        "publish_remove": "test_user"
     }
     # Be careful of typos or path choisec, as the paths contained in the following dictionary
     # will the removed during teardown.
@@ -218,24 +217,25 @@ class TestGeoserverRequests:
             }
             magpie.create_service(data)
 
+            user_name = workspace_name
+            magpie.delete_user(user_name)
+            magpie.create_user(user_name, "test@test.com", "qwertyqwerty", "users")
+
             for file in shapefile_list:
-                os.chmod(file, 0o400)
+                os.chmod(file, 0o500)
 
             geoserver.on_created(os.path.join(workspace_path, shapefile_name + SHAPEFILE_MAIN_EXTENSION))
 
-            user_name = workspace_name
             geoserver_resources = magpie.get_resources_by_service("geoserver")
             workspace_res = list(geoserver_resources["resources"].values())[0]
             workspace_res_id = workspace_res["resource_id"]
             shapefile_res_id = list(workspace_res["children"])[0]
 
             # Check if the user has the right permissions on Magpie
-            user_permissions = magpie.get_user_permissions_by_res_id(user_name, shapefile_res_id)
+            user_permissions = magpie.get_user_permissions_by_res_id(user_name, shapefile_res_id, effective=True)
             read_permissions = set(WFS_READ_PERMISSIONS + WMS_READ_PERMISSIONS)
-            read_permissions = set([a + b for a, b in product(read_permissions, ["-match", "-allow-match"])])
-            write_permissions = set(WFS_WRITE_PERMISSIONS)
-            write_permissions = set([a + b for a, b in product(write_permissions, ["-match", "-allow-match"])])
-            assert read_permissions == set(user_permissions["permission_names"])
+            assert read_permissions == set([p["name"] for p in
+                                            user_permissions["permissions"] if p["access"] == "allow"])
             expected_chown_shapefile_calls = [mock.call(file, DEFAULT_UID, DEFAULT_GID) for file in shapefile_list]
             utils.check_mock_has_calls_exactly(mock_chown, expected_chown_shapefile_calls)
 
@@ -255,24 +255,38 @@ class TestGeoserverRequests:
             geoserver.permission_created(new_permission)
             utils.check_mock_has_calls_exactly(mock_chown, expected_chown_shapefile_calls)
             for file in shapefile_list:
-                utils.check_file_permissions(file, 0o400)
+                utils.check_file_permissions(file, 0o500)
 
-            # Update workspace read permissions
+            # Make sure workspace has only read permissions
+            os.chmod(workspace_path, 0o500)
+            magpie.create_permission_by_user_and_res_id(user_name, workspace_res_id, {
+                        "permission": {
+                            "name": "describefeaturetype",
+                            "access": "allow",
+                            "scope": "match"
+                        }})
+            # Update workspace with write permissions
+            new_permission.name = "createstoredquery"
             new_permission.resource_id = workspace_res_id
             new_permission.resource_full_name = f"/geoserver/{workspace_name}"
+            magpie.create_permission_by_user_and_res_id(user_name, workspace_res_id, {
+                        "permission": {
+                            "name": new_permission.name,
+                            "access": new_permission.access,
+                            "scope": new_permission.scope
+                        }})
             geoserver.permission_created(new_permission)
-            utils.check_mock_has_calls_exactly(mock_chown, [mock.call(workspace_path, DEFAULT_UID, DEFAULT_GID)])
+            utils.check_mock_has_calls_exactly(mock_chown, [mock.call(workspace_path, DEFAULT_UID, DEFAULT_GID)] +
+                                               expected_chown_shapefile_calls)
+            utils.check_file_permissions(workspace_path, 0o700)
+            for file in shapefile_list:
+                utils.check_file_permissions(file, 0o700)
+
+            # TODO: add test case sur service
 
             # # Delete file on storage, it should be redownloaded from Geoserver during a permission_created event.
             # TODO: expect error
             # os.remove(workspace_path + f"/{shapefile_name}.shp")
-
-            # Update shapefile write permissions
-            new_permission.name = "createstoredquery"
-            new_permission.resource_full_name = f"/geoserver/{workspace_name}/{shapefile_name}"
-            geoserver.permission_created(new_permission)
-            for file in shapefile_list:
-                utils.check_file_permissions(file, 0o600)
 
             # Remove shapefile
             response = geoserver._remove_shapefile_request(workspace_name, datastore_name, shapefile_name)
