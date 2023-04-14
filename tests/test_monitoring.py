@@ -19,6 +19,8 @@ def file_io(filename, mv_filename):
     # Update
     with open(filename, "a", encoding="utf-8") as f:
         f.write(" world!")
+    # Update on file permissions should also trigger a modified event
+    os.chmod(filename, 0o777)
     # Should create a delete and a create event
     os.rename(filename, mv_filename)
     # Delete
@@ -84,6 +86,7 @@ class TestMonitoring(unittest.TestCase):
             assert mon.created[1] == mv_test_subdir_file
             assert mon.created == mon.deleted
             assert sorted(set(mon.modified)) == [tmpdir, test_file]
+            assert len(mon.modified) == 9
 
             # Root dir recursive
             assert len(mon2.created) == 4
@@ -94,6 +97,7 @@ class TestMonitoring(unittest.TestCase):
             assert mon2.created == mon2.deleted
             assert sorted(set(mon2.modified)) == [tmpdir, test_subdir,
                                                   test_subdir_file, test_file]
+            assert len(mon2.modified) == 18
 
             # Subdir
             assert len(mon3.created) == 2
@@ -102,6 +106,7 @@ class TestMonitoring(unittest.TestCase):
             assert mon3.created == mon3.deleted
             assert sorted(set(mon3.modified)) == [test_subdir,
                                                   test_subdir_file]
+            assert len(mon3.modified) == 9
 
             # Validate cleanup
             Monitoring().unregister(tmpdir, mon)

@@ -246,7 +246,7 @@ class Geoserver(Handler, FSMonitor):
 
         :param filename: Relative filename of a new file
         """
-        # TODO: ajouter un cas pour un workspace (folder)?
+        # TODO: ajouter un case pour un workspace (folder)?
         # TODO: What happens if only the file permissions changes : event is not detected and Magpie is not updated?
         if filename.endswith(SHAPEFILE_MAIN_EXTENSION):
             workspace_name, shapefile_name = self._get_shapefile_info(filename)
