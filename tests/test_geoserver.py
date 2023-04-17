@@ -106,6 +106,13 @@ class TestGeoserverRequests:
                 pass
         for _, folder in self.folders.items():
             try:
+                # Make sure access permissions are enabled before deleting files
+                os.chmod(folder, 0o777)
+                for root, dirs, files in os.walk(folder):
+                    for d in dirs:
+                        os.chmod(os.path.join(root, d), 0o777)
+                    for f in files:
+                        os.chmod(os.path.join(root, f), 0o777)
                 if folder == "/":
                     raise PermissionError("Tests tried to remove the '/' path.")
                 shutil.rmtree(folder)
@@ -234,6 +241,7 @@ class TestGeoserverRequests:
             # Check if the user has the right permissions on Magpie
             user_permissions = magpie.get_user_permissions_by_res_id(user_name, shapefile_res_id, effective=True)
             read_permissions = set(WFS_READ_PERMISSIONS + WMS_READ_PERMISSIONS)
+            write_permissions = set(WFS_WRITE_PERMISSIONS)
             assert read_permissions == set([p["name"] for p in
                                             user_permissions["permissions"] if p["access"] == "allow"])
             expected_chown_shapefile_calls = [mock.call(file, DEFAULT_UID, DEFAULT_GID) for file in shapefile_list]
@@ -243,7 +251,7 @@ class TestGeoserverRequests:
                 os.chmod(file, 0o000)
 
             # Update shapefile read permissions
-            new_permission = Permission(
+            layer_read_permission = Permission(
                 service_name="geoserver",
                 resource_id=shapefile_res_id,
                 resource_full_name=f"/geoserver/{workspace_name}/{shapefile_name}",
@@ -252,7 +260,7 @@ class TestGeoserverRequests:
                 scope="recursive",
                 user=workspace_name
             )
-            geoserver.permission_created(new_permission)
+            geoserver.permission_created(layer_read_permission)
             utils.check_mock_has_calls_exactly(mock_chown, expected_chown_shapefile_calls)
             for file in shapefile_list:
                 utils.check_file_permissions(file, 0o500)
@@ -266,27 +274,61 @@ class TestGeoserverRequests:
                             "scope": "match"
                         }})
             # Update workspace with write permissions
-            new_permission.name = "createstoredquery"
-            new_permission.resource_id = workspace_res_id
-            new_permission.resource_full_name = f"/geoserver/{workspace_name}"
+            workspace_write_permission = Permission(
+                service_name="geoserver",
+                resource_id=workspace_res_id,
+                resource_full_name=f"/geoserver/{workspace_name}",
+                name="createstoredquery",
+                access="allow",
+                scope="recursive",
+                user=workspace_name
+            )
             magpie.create_permission_by_user_and_res_id(user_name, workspace_res_id, {
                         "permission": {
-                            "name": new_permission.name,
-                            "access": new_permission.access,
-                            "scope": new_permission.scope
-                        }})
-            geoserver.permission_created(new_permission)
+                            "name": "describefeaturetype",
+                            "access": "allow",
+                            "scope": "match"}})
+            magpie.create_permission_by_user_and_res_id(user_name, workspace_res_id, {
+                        "permission": {
+                            "name": workspace_write_permission.name,
+                            "access": workspace_write_permission.access,
+                            "scope": workspace_write_permission.scope}})
+            geoserver.permission_created(workspace_write_permission)
             utils.check_mock_has_calls_exactly(mock_chown, [mock.call(workspace_path, DEFAULT_UID, DEFAULT_GID)] +
                                                expected_chown_shapefile_calls)
             utils.check_file_permissions(workspace_path, 0o700)
             for file in shapefile_list:
                 utils.check_file_permissions(file, 0o700)
 
+            # Delete a permission on Magpie
+            magpie.delete_permission_by_user_and_res_id(user_name, workspace_res_id, workspace_write_permission.name)
+            geoserver.permission_deleted(workspace_write_permission)
+            utils.check_mock_has_calls_exactly(mock_chown, [mock.call(workspace_path, DEFAULT_UID, DEFAULT_GID)] +
+                                               expected_chown_shapefile_calls)
+            utils.check_file_permissions(workspace_path, 0o500)
+            for file in shapefile_list:
+                utils.check_file_permissions(file, 0o500)
+
+            # Test modifying a file's permissions
+            os.chmod(shapefile_list[0], 0o700)
+            geoserver.on_modified(os.path.join(workspace_path, shapefile_name + SHAPEFILE_MAIN_EXTENSION))
+
+            user_permissions = magpie.get_user_permissions_by_res_id(user_name, shapefile_res_id)
+            assert read_permissions.union(write_permissions) == \
+                   set([p["name"] for p in user_permissions["permissions"] if p["access"] == "allow"])
+            utils.check_mock_has_calls_exactly(mock_chown, expected_chown_shapefile_calls)
+
             # TODO: add test case sur service
 
             # # Delete file on storage, it should be redownloaded from Geoserver during a permission_created event.
             # TODO: expect error
             # os.remove(workspace_path + f"/{shapefile_name}.shp")
+
+
+            # Put back all user permission, so that files that deleted correctly
+            os.chmod(workspace_path, 0o700)
+            for file in shapefile_list:
+                os.chmod(file, 0o700)
 
             # Remove shapefile
             response = geoserver._remove_shapefile_request(workspace_name, datastore_name, shapefile_name)

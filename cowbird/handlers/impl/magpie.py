@@ -253,6 +253,8 @@ class Magpie(Handler):
                                   json=permission_data)
         if resp.status_code == 201:
             LOGGER.info("Permission creation was successful.")
+        elif resp.status_code == 409:
+            LOGGER.info("Similar permission already exist on resource for user.")
         else:
             raise HTTPError(f"Failed to create permission : {resp.text}")
 
@@ -262,6 +264,8 @@ class Magpie(Handler):
                                   json=permission_data)
         if resp.status_code == 201:
             LOGGER.info("Permission creation was successful.")
+        elif resp.status_code == 409:
+            LOGGER.info("Similar permission already exist on resource for group.")
         else:
             raise HTTPError(f"Failed to create permission : {resp.text}")
 

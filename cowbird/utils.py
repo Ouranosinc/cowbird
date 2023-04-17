@@ -589,7 +589,7 @@ def get_timeout(container=None):
 def update_permissions(permission, is_readable, is_writable, is_executable):
     # type: (int, bool, bool, bool) -> int
     """
-    Applies/remove read, write and execute permissions to the input permissions.
+    Applies/remove read, write and execute permissions (user only) to the input permissions.
     """
     for perm_enabled, perm_mode in zip([is_readable, is_writable, is_executable],
                                        [stat.S_IRUSR, stat.S_IWUSR, stat.S_IXUSR]):

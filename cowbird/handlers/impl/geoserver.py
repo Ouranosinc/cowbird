@@ -14,6 +14,7 @@ from cowbird.handlers.impl.filesystem import DEFAULT_GID, DEFAULT_UID
 from cowbird.handlers.impl.magpie import WFS_READ_PERMISSIONS, WFS_WRITE_PERMISSIONS, WMS_READ_PERMISSIONS
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
+from cowbird.permissions_synchronizer import Permission
 from cowbird.request_task import RequestTask
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger, update_permissions
 
@@ -194,7 +195,8 @@ class Geoserver(Handler, FSMonitor):
                                                            workspace_name=workspace_name,
                                                            layer_name=layer_name)
 
-    def permission_created(self, permission):
+    def update_permissions_on_filesystem(self, permission):
+        # type: (Permission) -> None
         LOGGER.info(permission.name)
         if permission.name not in WFS_READ_PERMISSIONS + WFS_WRITE_PERMISSIONS + WMS_READ_PERMISSIONS:
             LOGGER.info("Nothing to do, since it is not a permission for a Geoserver resource.")
@@ -226,10 +228,11 @@ class Geoserver(Handler, FSMonitor):
                                                        permission=permission,
                                                        workspace_name=workspace_name)
 
+    def permission_created(self, permission):
+        self.update_permissions_on_filesystem(permission)
+
     def permission_deleted(self, permission):
-        # TODO: modify permissions
-        #   delete if required
-        raise NotImplementedError
+        self.update_permissions_on_filesystem(permission)
 
     # FSMonitor class functions
     @staticmethod
@@ -247,40 +250,13 @@ class Geoserver(Handler, FSMonitor):
         :param filename: Relative filename of a new file
         """
         # TODO: ajouter un case pour un workspace (folder)?
-        # TODO: What happens if only the file permissions changes : event is not detected and Magpie is not updated?
         if filename.endswith(SHAPEFILE_MAIN_EXTENSION):
             workspace_name, shapefile_name = self._get_shapefile_info(filename)
             LOGGER.info("Starting Geoserver publishing process for [%s]", filename)
             res = chain(validate_shapefile.si(workspace_name, shapefile_name),
                         publish_shapefile.si(workspace_name, shapefile_name))
             res.delay()
-
-            magpie_handler = HandlerFactory().get_handler("Magpie")
-            shapefile_res_id = magpie_handler.get_or_create_layer_resource_id(workspace_name, shapefile_name)
-
-            # Get permissions of all files on the file system
-            is_readable, is_writable = self.get_shapefile_permissions(workspace_name, shapefile_name)
-            self.normalize_shapefile_permissions(workspace_name, shapefile_name, is_readable, is_writable)
-
-            permissions_to_add = set((WFS_READ_PERMISSIONS + WMS_READ_PERMISSIONS if is_readable else []) +
-                                     (WFS_WRITE_PERMISSIONS if is_writable else []))
-            for perm_name in permissions_to_add:
-                magpie_handler.create_permission_by_user_and_res_id(
-                    user_name=workspace_name,
-                    res_id=shapefile_res_id,
-                    permission_data={
-                        "permission": {
-                            "name": perm_name,
-                            "access": "allow",
-                            "scope": "match"
-                        }})
-            permissions_to_remove = set((WFS_READ_PERMISSIONS + WMS_READ_PERMISSIONS if not is_readable else []) +
-                                        (WFS_WRITE_PERMISSIONS if not is_writable else []))
-            for perm_name in permissions_to_remove:
-                magpie_handler.delete_permission_by_user_and_res_id(
-                    user_name=workspace_name,
-                    res_id=shapefile_res_id,
-                    permission_name=perm_name)
+            self.update_magpie_layer_permissions(workspace_name, shapefile_name)
 
     def on_deleted(self, filename):
         """
@@ -305,6 +281,44 @@ class Geoserver(Handler, FSMonitor):
         """
         # Nothing need to be done in this class as Catalog already logs file modifications.
         # Still needed to implement since part of parent FSMonitor class
+
+        # TODO: check if must include all type of extensions?
+        if filename.endswith(SHAPEFILE_MAIN_EXTENSION):
+            workspace_name, shapefile_name = self._get_shapefile_info(filename)
+            self.update_magpie_layer_permissions(workspace_name, shapefile_name)
+
+    def update_magpie_layer_permissions(self, workspace_name, layer_name):
+        # type: (str, str) -> None
+        """
+        Updates the permissions of a `layer` resource on Magpie to the current permissions found on the corresponding
+        shapefile.
+        """
+        magpie_handler = HandlerFactory().get_handler("Magpie")
+        layer_res_id = magpie_handler.get_or_create_layer_resource_id(workspace_name, layer_name)
+
+        # Get resolved permissions of all files on the file system
+        is_readable, is_writable = self.get_shapefile_permissions(workspace_name, layer_name)
+        self.normalize_shapefile_permissions(workspace_name, layer_name, is_readable, is_writable)
+
+        permissions_to_add = set((WFS_READ_PERMISSIONS + WMS_READ_PERMISSIONS if is_readable else []) +
+                                 (WFS_WRITE_PERMISSIONS if is_writable else []))
+        for perm_name in permissions_to_add:
+            magpie_handler.create_permission_by_user_and_res_id(
+                user_name=workspace_name,
+                res_id=layer_res_id,
+                permission_data={
+                    "permission": {
+                        "name": perm_name,
+                        "access": "allow",
+                        "scope": "match"
+                    }})
+        permissions_to_remove = set((WFS_READ_PERMISSIONS + WMS_READ_PERMISSIONS if not is_readable else []) +
+                                    (WFS_WRITE_PERMISSIONS if not is_writable else []))
+        for perm_name in permissions_to_remove:
+            magpie_handler.delete_permission_by_user_and_res_id(
+                user_name=workspace_name,
+                res_id=layer_res_id,
+                permission_name=perm_name)
 
     #
     # Geoserver class specific functions
@@ -387,23 +401,28 @@ class Geoserver(Handler, FSMonitor):
         LOGGER.info("Shapefile [%s] is valid", shapefile_name)
 
     def get_shapefile_permissions(self, workspace_name, shapefile_name):
-        files_to_check = [
-            f"{self._shapefile_folder_dir(workspace_name)}/{shapefile_name}{ext}" for ext in SHAPEFILE_ALL_EXTENSIONS
-        ]
-        is_read_permitted = False
-        is_write_permitted = False
-        # The files should normally all have the same permissions, but if any of them has a write/read permission, we
-        # will consider them all as writable/readable in the Magpie resource.
-        for file in files_to_check:
-            # TODO: Check which permissions (user, group or all) should be checked, depending of how we decide to handle
-            #  the file ownerships in the user_workspaces.
-            #  Maybe group permissions file system = grp permissions on Magpie?
-            #  And `all` permissions is never used???
-            if not is_read_permitted and os.access(file, os.R_OK):
-                is_read_permitted = True
-            if not is_write_permitted and os.access(file, os.W_OK):
-                is_write_permitted = True
-        return is_read_permitted, is_write_permitted
+
+        workspace_dir_path = self._shapefile_folder_dir(workspace_name)
+        workspace_status = os.stat(workspace_dir_path)[stat.ST_MODE]
+        is_workspace_readable = bool(workspace_status & stat.S_IRUSR and workspace_status & stat.S_IXUSR)
+
+        is_shapefile_readable = False
+        is_shapefile_writable = False
+
+        # If the parent directory is not readable, the user doesn't have read/write access to any contained files.
+        if is_workspace_readable:
+            files_to_check = [
+                f"{workspace_dir_path}/{shapefile_name}{ext}" for ext in SHAPEFILE_ALL_EXTENSIONS
+            ]
+            # The files should normally all have the same permissions, but if any of them has a write/read permission,
+            # we will consider them all as writable/readable in the Magpie resource.
+            for file in files_to_check:
+                file_status = os.stat(file)[stat.ST_MODE]
+                if not is_shapefile_readable and file_status & stat.S_IRUSR and file_status & stat.S_IXUSR:
+                    is_shapefile_readable = True
+                if not is_shapefile_writable and file_status & stat.S_IWUSR:
+                    is_shapefile_writable = True
+        return is_shapefile_readable, is_shapefile_writable
 
     def normalize_shapefile_permissions(self, workspace_name, shapefile_name, is_readable, is_writable):
         """
