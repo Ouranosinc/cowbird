@@ -129,8 +129,8 @@ class Magpie(Handler):
             raise RuntimeError("Could not find the input resource's children resources.")
         return resp.json()["resource"]["children"]
 
-    def get_or_create_layer_resource_id(self, workspace_name, layer_name):
-        # type: (str, str) -> int
+    def get_geoserver_resource_id(self, workspace_name, layer_name, create_if_missing=True):
+        # type: (str, str, bool) -> int
         """
         Tries to get the resource id of a specific layer, on `geoserver` type services, and creates the resource and
         workspace if they do not exist yet.
@@ -150,7 +150,7 @@ class Magpie(Handler):
                             layer_res_id = layer["resource_id"]
                             break
                     break
-        if not layer_res_id:
+        if not layer_res_id and create_if_missing:
             if not workspace_res_id:
                 workspace_res_id = self.create_resource(
                     resource_name=workspace_name,

@@ -320,22 +320,19 @@ class TestGeoserverRequests:
 
             # TODO: add test case sur service
 
-            # # Delete file on storage, it should be redownloaded from Geoserver during a permission_created event.
-            # TODO: expect error
-            # os.remove(workspace_path + f"/{shapefile_name}.shp")
-
-
-            # Put back all user permission, so that files that deleted correctly
-            os.chmod(workspace_path, 0o700)
-            for file in shapefile_list:
-                os.chmod(file, 0o700)
-
             # Remove shapefile
             response = geoserver._remove_shapefile_request(workspace_name, datastore_name, shapefile_name)
             assert response.status_code == 200
 
-            # Resource should only removed when the file is deleted from the filesystem?
-            # TODO: Check if resource was removed on Magpie
+            # If a file is missing, an update from Magpie's permissions should not trigger an error,
+            # the missing file is simply ignored.
+            os.chmod(workspace_path, 0o700)
+            os.remove(workspace_path + f"/{shapefile_name}.shp")
+            geoserver.permission_created(layer_read_permission)
+
+            geoserver.on_deleted(workspace_path + f"/{shapefile_name}.shp")
+            with pytest.raises(RuntimeError):
+                magpie.get_user_permissions_by_res_id(user_name, shapefile_res_id)
 
             magpie.delete_service("geoserver")
         utils.clear_handlers_instances()

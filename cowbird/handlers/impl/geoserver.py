@@ -2,6 +2,7 @@ import functools
 import os
 import re
 import stat
+from pathlib import Path
 from time import sleep
 from typing import TYPE_CHECKING, Tuple
 
@@ -250,7 +251,7 @@ class Geoserver(Handler, FSMonitor):
         :param filename: Relative filename of a new file
         """
         # TODO: ajouter un case pour un workspace (folder)?
-        if filename.endswith(SHAPEFILE_MAIN_EXTENSION):
+        if filename.endswith(tuple(SHAPEFILE_ALL_EXTENSIONS)):
             workspace_name, shapefile_name = self._get_shapefile_info(filename)
             LOGGER.info("Starting Geoserver publishing process for [%s]", filename)
             res = chain(validate_shapefile.si(workspace_name, shapefile_name),
@@ -264,13 +265,21 @@ class Geoserver(Handler, FSMonitor):
 
         :param filename: Relative filename of the removed file
         """
-        # TODO: Voir pour le cas groupe... Ilf audrait supprimer le fichier juste si pu personne l'utilise...?
-        #  Sinon, si seulement par user, on peut deleter systématiquement la resource Magpie équivalente ici.
         # TODO: voir pour le case folder
-        if filename.endswith(SHAPEFILE_MAIN_EXTENSION):
-            # TODO: remove other shapefile extensions?
+        if filename.endswith(tuple(SHAPEFILE_ALL_EXTENSIONS)):
             workspace_name, shapefile_name = self._get_shapefile_info(filename)
             remove_shapefile.delay(workspace_name, shapefile_name)
+
+            # Remove all the remaining shapefile related files
+            for file in self.get_shapefile_list(workspace_name, shapefile_name):
+                Path.unlink(Path(file), missing_ok=True)
+
+            # Remove the corresponding Magpie resource
+            magpie_handler = HandlerFactory().get_handler("Magpie")
+            layer_res_id = magpie_handler.get_geoserver_resource_id(workspace_name, shapefile_name,
+                                                                    create_if_missing=False)
+            if layer_res_id:
+                magpie_handler.delete_resource(layer_res_id)
 
     def on_modified(self, filename):
         # type: (str) -> None
@@ -294,7 +303,7 @@ class Geoserver(Handler, FSMonitor):
         shapefile.
         """
         magpie_handler = HandlerFactory().get_handler("Magpie")
-        layer_res_id = magpie_handler.get_or_create_layer_resource_id(workspace_name, layer_name)
+        layer_res_id = magpie_handler.get_geoserver_resource_id(workspace_name, layer_name)
 
         # Get resolved permissions of all files on the file system
         is_readable, is_writable = self.get_shapefile_permissions(workspace_name, layer_name)
@@ -392,7 +401,7 @@ class Geoserver(Handler, FSMonitor):
         # Small wait time to prevent unnecessary failure since shapefile is a multi file format
         sleep(1)
         files_to_find = [
-            f"{self._shapefile_folder_dir(workspace_name)}/{shapefile_name}{ext}" for ext in SHAPEFILE_OTHER_EXTENSIONS
+            f"{self._shapefile_folder_dir(workspace_name)}/{shapefile_name}{ext}" for ext in SHAPEFILE_ALL_EXTENSIONS
         ]
         for file in files_to_find:
             if not os.path.isfile(file):
