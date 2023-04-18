@@ -384,7 +384,30 @@ class TestGeoserverPermissions(TestGeoserver):
         # If a file is missing, an update from Magpie's permissions should not trigger an error,
         # the missing file is simply ignored.
         os.remove(self.datastore_path + f"/{self.test_shapefile_name}.shp")
-        self.geoserver.permission_created(layer_read_permission)
+        updated_shapefile_list = [f for f in self.shapefile_list if not f.endswith(".shp")]
+        updated_chown_checklist = [mock.call(file, DEFAULT_UID, DEFAULT_GID) for file in updated_shapefile_list]
+
+        # Change access to 'deny'
+        self.magpie.delete_permission_by_user_and_res_id(self.magpie_test_user, self.layer_id, "describefeaturetype")
+        layer_deny_permission = Permission(
+            service_name="geoserver",
+            resource_id=str(self.layer_id),
+            resource_full_name=f"/geoserver/{self.workspace_name}/{self.test_shapefile_name}",
+            name="describefeaturetype",
+            access="deny",
+            scope="match",
+            user=self.magpie_test_user
+        )
+        self.magpie.create_permission_by_user_and_res_id(self.magpie_test_user, self.layer_id, {
+            "permission": {
+                "name": layer_deny_permission.name,
+                "access": layer_deny_permission.access,
+                "scope": layer_deny_permission.scope
+            }})
+        self.geoserver.permission_created(layer_deny_permission)
+        utils.check_mock_has_calls_exactly(self.mock_chown, updated_chown_checklist)
+        for file in updated_shapefile_list:
+            utils.check_file_permissions(file, 0o000)
 
     def apply_and_check_recursive_permissions(self, resource_id, resource_name):
         # Initialize workspace as read-only
