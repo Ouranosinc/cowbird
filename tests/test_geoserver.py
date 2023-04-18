@@ -347,24 +347,19 @@ class TestGeoserverPermissions(TestGeoserver):
             self.magpie.get_user_permissions_by_res_id(self.magpie_test_user, self.layer_id)
 
 # TODO: implement and add test cases for workspace changes on file system
-    @pytest.skip()
+    @pytest.mark.skip()
     def test_workspace_on_created(self):
         pass
 
-    @pytest.skip()
+    @pytest.mark.skip()
     def test_workspace_on_modified(self):
         pass
 
-    @pytest.skip()
+    @pytest.mark.skip()
     def test_workspace_on_deleted(self):
         pass
 
     def test_magpie_layer_permission_created(self):
-        # Add user read permissions on Magpie
-
-        for file in self.shapefile_list:
-            os.chmod(file, 0o000)
-
         # Update shapefile read permissions
         layer_read_permission = Permission(
             service_name="geoserver",
@@ -373,7 +368,7 @@ class TestGeoserverPermissions(TestGeoserver):
             name="describefeaturetype",
             access="allow",
             scope="match",
-            user=self.workspace_name
+            user=self.magpie_test_user
         )
         self.magpie.create_permission_by_user_and_res_id(self.magpie_test_user, self.layer_id, {
             "permission": {
@@ -391,9 +386,7 @@ class TestGeoserverPermissions(TestGeoserver):
         os.remove(self.datastore_path + f"/{self.test_shapefile_name}.shp")
         self.geoserver.permission_created(layer_read_permission)
 
-    def test_magpie_workspace_permission(self):
-        for file in self.shapefile_list:
-            os.chmod(file, 0o000)
+    def apply_and_check_recursive_permissions(self, resource_id, resource_name):
         # Initialize workspace as read-only
         os.chmod(self.datastore_path, 0o500)
         self.magpie.create_permission_by_user_and_res_id(self.magpie_test_user, self.workspace_res_id, {
@@ -402,23 +395,23 @@ class TestGeoserverPermissions(TestGeoserver):
                 "access": "allow",
                 "scope": "match"
             }})
-        # Update workspace with write permissions
-        workspace_write_permission = Permission(
+        # Update resource with recursive write permissions
+        recursive_write_permission = Permission(
             service_name="geoserver",
-            resource_id=self.workspace_res_id,
-            resource_full_name=f"/geoserver/{self.workspace_name}",
+            resource_id=resource_id,
+            resource_full_name=resource_name,
             name="createstoredquery",
             access="allow",
             scope="recursive",
-            user=self.workspace_name
+            user=self.magpie_test_user
         )
-        self.magpie.create_permission_by_user_and_res_id(self.magpie_test_user, self.workspace_res_id, {
+        self.magpie.create_permission_by_user_and_res_id(self.magpie_test_user, resource_id, {
             "permission": {
-                "name": workspace_write_permission.name,
-                "access": workspace_write_permission.access,
-                "scope": workspace_write_permission.scope}})
+                "name": recursive_write_permission.name,
+                "access": recursive_write_permission.access,
+                "scope": recursive_write_permission.scope}})
 
-        self.geoserver.permission_created(workspace_write_permission)
+        self.geoserver.permission_created(recursive_write_permission)
 
         utils.check_mock_has_calls_exactly(self.mock_chown, [mock.call(self.datastore_path, DEFAULT_UID, DEFAULT_GID)] +
                                            self.expected_chown_shapefile_calls)
@@ -427,13 +420,17 @@ class TestGeoserverPermissions(TestGeoserver):
             utils.check_file_permissions(file, 0o200)
 
         # Delete a permission on Magpie
-        self.magpie.delete_permission_by_user_and_res_id(self.magpie_test_user, self.workspace_res_id,
-                                                         workspace_write_permission.name)
-        self.geoserver.permission_deleted(workspace_write_permission)
+        self.magpie.delete_permission_by_user_and_res_id(self.magpie_test_user, resource_id,
+                                                         recursive_write_permission.name)
+        self.geoserver.permission_deleted(recursive_write_permission)
         utils.check_mock_has_calls_exactly(self.mock_chown, [mock.call(self.datastore_path, DEFAULT_UID, DEFAULT_GID)] +
                                            self.expected_chown_shapefile_calls)
         utils.check_file_permissions(self.datastore_path, 0o500)
         for file in self.shapefile_list:
             utils.check_file_permissions(file, 0o000)
 
-    # TODO: add test case sur service
+    def test_magpie_workspace_permission(self):
+        self.apply_and_check_recursive_permissions(self.workspace_res_id, f"/geoserver/{self.workspace_name}")
+
+    def test_magpie_service_permission(self):
+        self.apply_and_check_recursive_permissions(self.test_service_id, "/geoserver")
