@@ -26,6 +26,9 @@ WMS_READ_PERMISSIONS = ["describelayer", "getcapabilities", "getfeatureinfo", "g
 WPS_READ_PERMISSIONS = ["describeprocess", "getcapabilities"]
 WPS_WRITE_PERMISSIONS = ["execute"]
 
+LAYER_READ_PERMISSIONS = WFS_READ_PERMISSIONS + WMS_READ_PERMISSIONS
+LAYER_WRITE_PERMISSIONS = WFS_WRITE_PERMISSIONS
+
 
 class Magpie(Handler):
     """

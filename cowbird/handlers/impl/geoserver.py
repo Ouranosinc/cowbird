@@ -12,7 +12,7 @@ from celery import chain, shared_task
 from cowbird.handlers.handler import HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PARAM, Handler
 from cowbird.handlers.handler_factory import HandlerFactory
 from cowbird.handlers.impl.filesystem import DEFAULT_GID, DEFAULT_UID
-from cowbird.handlers.impl.magpie import WFS_READ_PERMISSIONS, WFS_WRITE_PERMISSIONS, WMS_READ_PERMISSIONS
+from cowbird.handlers.impl.magpie import LAYER_READ_PERMISSIONS, LAYER_WRITE_PERMISSIONS
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
 from cowbird.permissions_synchronizer import Permission
@@ -157,8 +157,8 @@ class Geoserver(Handler, FSMonitor):
             permission.user, resource_id, effective=True)
 
         allowed_user_perm_names = set([p["name"] for p in user_permissions["permissions"] if p["access"] == "allow"])
-        is_readable = any(p in WFS_READ_PERMISSIONS + WMS_READ_PERMISSIONS for p in allowed_user_perm_names)
-        is_writable = any(p in WFS_WRITE_PERMISSIONS for p in allowed_user_perm_names)
+        is_readable = any(p in LAYER_READ_PERMISSIONS for p in allowed_user_perm_names)
+        is_writable = any(p in LAYER_WRITE_PERMISSIONS for p in allowed_user_perm_names)
 
         for file in file_list:
             if not os.path.exists(file):
@@ -199,7 +199,7 @@ class Geoserver(Handler, FSMonitor):
     def update_permissions_on_filesystem(self, permission):
         # type: (Permission) -> None
         LOGGER.info(permission.name)
-        if permission.name not in WFS_READ_PERMISSIONS + WFS_WRITE_PERMISSIONS + WMS_READ_PERMISSIONS:
+        if permission.name not in LAYER_READ_PERMISSIONS + LAYER_WRITE_PERMISSIONS:
             LOGGER.info("Nothing to do, since it is not a permission for a Geoserver resource.")
             return
 
@@ -309,8 +309,8 @@ class Geoserver(Handler, FSMonitor):
         is_readable, is_writable = self.get_shapefile_permissions(workspace_name, layer_name)
         self.normalize_shapefile_permissions(workspace_name, layer_name, is_readable, is_writable)
 
-        permissions_to_add = set((WFS_READ_PERMISSIONS + WMS_READ_PERMISSIONS if is_readable else []) +
-                                 (WFS_WRITE_PERMISSIONS if is_writable else []))
+        permissions_to_add = set((LAYER_READ_PERMISSIONS if is_readable else []) +
+                                 (LAYER_WRITE_PERMISSIONS if is_writable else []))
         for perm_name in permissions_to_add:
             magpie_handler.create_permission_by_user_and_res_id(
                 user_name=workspace_name,
@@ -321,8 +321,8 @@ class Geoserver(Handler, FSMonitor):
                         "access": "allow",
                         "scope": "match"
                     }})
-        permissions_to_remove = set((WFS_READ_PERMISSIONS + WMS_READ_PERMISSIONS if not is_readable else []) +
-                                    (WFS_WRITE_PERMISSIONS if not is_writable else []))
+        permissions_to_remove = set((LAYER_READ_PERMISSIONS if not is_readable else []) +
+                                    (LAYER_WRITE_PERMISSIONS if not is_writable else []))
         for perm_name in permissions_to_remove:
             magpie_handler.delete_permission_by_user_and_res_id(
                 user_name=workspace_name,
