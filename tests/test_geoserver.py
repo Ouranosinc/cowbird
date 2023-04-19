@@ -6,6 +6,7 @@ They are ignored by the `Make test` target and the CI, but are
 still useful for a developer working on the Geoserver requests. They can be run with the `Make test-geoserver` target.
 More integration tests should be in Jupyter Notebook format as is the case with Birdhouse-deploy / DACCS platform.
 """
+import getpass as gt
 import glob
 import os
 import shutil
@@ -81,7 +82,7 @@ def prepare_geoserver_test_workspace(test_instance, geoserver_handler, workspace
     datastore_path = get_datastore_path(test_instance.workspace_folders[workspace_key])
 
     LOGGER.info("**********************")
-    LOGGER.info("USER : %s", os.getlogin())
+    LOGGER.info("USER : %s", gt.getuser())
     LOGGER.info(oct(os.stat("/tmp")[0] & 0o777))
 
     if os.path.exists("/tmp/user_workspaces"):
