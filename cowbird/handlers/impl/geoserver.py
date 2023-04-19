@@ -20,7 +20,7 @@ from cowbird.request_task import RequestTask
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger, update_permissions
 
 if TYPE_CHECKING:
-    from typing import Any
+    from typing import Any, List, Optional
 
     # pylint: disable=W0611,unused-import
     from cowbird.typedefs import SettingsType
@@ -143,8 +143,12 @@ class Geoserver(Handler, FSMonitor):
         base_filename = self._shapefile_folder_dir(workspace_name) + "/" + shapefile_name
         return [base_filename + ext for ext in SHAPEFILE_ALL_EXTENSIONS]
 
-    def update_resource_files_permissions(self, resource_type, permission, resource_id, workspace_name,
-                                          layer_name=None):
+    def _update_resource_files_permissions(self, resource_type, permission, resource_id, workspace_name,
+                                           layer_name=None):
+        # type:(str, Permission, int, str, Optional[str]) -> None
+        """
+        Updates a Magpie resource's associated files according to its permissions found on Magpie.
+        """
         if resource_type == "layer":
             if not layer_name:
                 raise GeoserverError("Missing layer name to update permissions.")
@@ -179,26 +183,32 @@ class Geoserver(Handler, FSMonitor):
             except PermissionError as exc:
                 LOGGER.warning(f"Failed to change ownership of the {file} file:  {exc}")
 
-    def update_res_children_files_permissions(self, children_res_tree, permission, workspace_name, layer_name=None):
+    def _update_res_children_files_permissions(self, children_res_tree, permission, workspace_name, layer_name=None):
+        # type:(List, Permission, str, Optional[str]) -> None
+        """
+        Recursive method to update all the file permissions of a resource and its children resources as found on Magpie.
+        """
         for res_id, res_info in children_res_tree.items():
             res_type = res_info["resource_type"]
             if res_type == "layer":
                 layer_name = res_info["resource_name"]
 
-            self.update_resource_files_permissions(resource_type=res_type,
-                                                   permission=permission,
-                                                   resource_id=res_id,
-                                                   workspace_name=workspace_name,
-                                                   layer_name=layer_name)
+            self._update_resource_files_permissions(resource_type=res_type,
+                                                    permission=permission,
+                                                    resource_id=res_id,
+                                                    workspace_name=workspace_name,
+                                                    layer_name=layer_name)
             if res_type == "workspace":
-                self.update_res_children_files_permissions(children_res_tree=res_info["children"],
-                                                           permission=permission,
-                                                           workspace_name=workspace_name,
-                                                           layer_name=layer_name)
+                self._update_res_children_files_permissions(children_res_tree=res_info["children"],
+                                                            permission=permission,
+                                                            workspace_name=workspace_name,
+                                                            layer_name=layer_name)
 
-    def update_permissions_on_filesystem(self, permission):
+    def _update_permissions_on_filesystem(self, permission):
         # type: (Permission) -> None
-        LOGGER.info(permission.name)
+        """
+        Updates the permissions of files on the file system, after receiving a permission webhook event from Magpie.
+        """
         if permission.name not in LAYER_READ_PERMISSIONS + LAYER_WRITE_PERMISSIONS:
             LOGGER.info("Nothing to do, since it is not a permission for a Geoserver resource.")
             return
@@ -214,26 +224,31 @@ class Geoserver(Handler, FSMonitor):
         resource_tree = magpie_handler.get_parents_resource_tree(permission.resource_id)
         resource_type = resource_tree[-1]["resource_type"]
 
-        LOGGER.info(f"RESOURCE NAME IN PERMISSION : {permission.resource_full_name}")
         if resource_type in ["workspace", "layer"]:
             layer_name = permission.resource_full_name.split('/')[-1] if resource_type == "layer" else None
-            self.update_resource_files_permissions(resource_type=resource_type,
-                                                   permission=permission,
-                                                   resource_id=permission.resource_id,
-                                                   workspace_name=workspace_name,
-                                                   layer_name=layer_name)
+            self._update_resource_files_permissions(resource_type=resource_type,
+                                                    permission=permission,
+                                                    resource_id=permission.resource_id,
+                                                    workspace_name=workspace_name,
+                                                    layer_name=layer_name)
 
         if resource_type in ["service", "workspace"] and permission.scope == "recursive":
             children_res_tree = magpie_handler.get_children_resource_tree(permission.resource_id)
-            self.update_res_children_files_permissions(children_res_tree=children_res_tree,
-                                                       permission=permission,
-                                                       workspace_name=workspace_name)
+            self._update_res_children_files_permissions(children_res_tree=children_res_tree,
+                                                        permission=permission,
+                                                        workspace_name=workspace_name)
 
     def permission_created(self, permission):
-        self.update_permissions_on_filesystem(permission)
+        """
+        Called when Magpie sends a permission created webhook event.
+        """
+        self._update_permissions_on_filesystem(permission)
 
     def permission_deleted(self, permission):
-        self.update_permissions_on_filesystem(permission)
+        """
+        Called when Magpie sends a permission deleted webhook event.
+        """
+        self._update_permissions_on_filesystem(permission)
 
     # FSMonitor class functions
     @staticmethod
@@ -246,7 +261,7 @@ class Geoserver(Handler, FSMonitor):
 
     def on_created(self, filename):
         """
-        Call when a new file is found.
+        Called when a new file is found.
 
         :param filename: Relative filename of a new file
         """
@@ -260,11 +275,11 @@ class Geoserver(Handler, FSMonitor):
             res = chain(validate_shapefile.si(workspace_name, shapefile_name),
                         publish_shapefile.si(workspace_name, shapefile_name))
             res.delay()
-            self.update_magpie_layer_permissions(workspace_name, shapefile_name)
+            self._update_magpie_layer_permissions(workspace_name, shapefile_name)
 
     def on_deleted(self, filename):
         """
-        Call when a file is deleted.
+        Called when a file is deleted.
 
         :param filename: Relative filename of the removed file
         """
@@ -287,7 +302,7 @@ class Geoserver(Handler, FSMonitor):
     def on_modified(self, filename):
         # type: (str) -> None
         """
-        Call when a file is updated.
+        Called when a file is updated.
 
         :param filename: Relative filename of the updated file
         """
@@ -295,9 +310,9 @@ class Geoserver(Handler, FSMonitor):
         # Only need to update permissions on Magpie, in case the file permissions were modified.
         if filename.endswith(tuple(SHAPEFILE_ALL_EXTENSIONS)):
             workspace_name, shapefile_name = self._get_shapefile_info(filename)
-            self.update_magpie_layer_permissions(workspace_name, shapefile_name)
+            self._update_magpie_layer_permissions(workspace_name, shapefile_name)
 
-    def update_magpie_layer_permissions(self, workspace_name, layer_name):
+    def _update_magpie_layer_permissions(self, workspace_name, layer_name):
         # type: (str, str) -> None
         """
         Updates the permissions of a `layer` resource on Magpie to the current permissions found on the corresponding
@@ -307,8 +322,8 @@ class Geoserver(Handler, FSMonitor):
         layer_res_id = magpie_handler.get_geoserver_resource_id(workspace_name, layer_name)
 
         # Get resolved permissions of all files on the file system
-        is_readable, is_writable = self.get_shapefile_permissions(workspace_name, layer_name)
-        self.normalize_shapefile_permissions(workspace_name, layer_name, is_readable, is_writable)
+        is_readable, is_writable = self._get_shapefile_permissions(workspace_name, layer_name)
+        self._normalize_shapefile_permissions(workspace_name, layer_name, is_readable, is_writable)
 
         permissions_to_add = set((LAYER_READ_PERMISSIONS if is_readable else []) +
                                  (LAYER_WRITE_PERMISSIONS if is_writable else []))
@@ -410,10 +425,14 @@ class Geoserver(Handler, FSMonitor):
                 raise FileNotFoundError
         LOGGER.info("Shapefile [%s] is valid", shapefile_name)
 
-    def get_shapefile_permissions(self, workspace_name, shapefile_name):
-
-        workspace_dir_path = self._shapefile_folder_dir(workspace_name)
-        workspace_status = os.stat(workspace_dir_path)[stat.ST_MODE]
+    def _get_shapefile_permissions(self, workspace_name, shapefile_name):
+        # type:(str, str) -> (bool, bool)
+        """
+        Resolves the actual shapefile permissions on the file system, by checking the permissions of its parent
+        directory and by keeping the less restrictive permissions of the files associated with the shapefile.
+        """
+        datastore_dir_path = self._shapefile_folder_dir(workspace_name)
+        workspace_status = os.stat(datastore_dir_path)[stat.ST_MODE]
         is_workspace_readable = bool(workspace_status & stat.S_IRUSR and workspace_status & stat.S_IXUSR)
 
         is_shapefile_readable = False
@@ -422,7 +441,7 @@ class Geoserver(Handler, FSMonitor):
         # If the parent directory is not readable, the user doesn't have read/write access to any contained files.
         if is_workspace_readable:
             files_to_check = [
-                f"{workspace_dir_path}/{shapefile_name}{ext}" for ext in SHAPEFILE_ALL_EXTENSIONS
+                f"{datastore_dir_path}/{shapefile_name}{ext}" for ext in SHAPEFILE_ALL_EXTENSIONS
             ]
             # The files should normally all have the same permissions, but if any of them has a write/read permission,
             # we will consider them all as writable/readable in the Magpie resource.
@@ -434,7 +453,8 @@ class Geoserver(Handler, FSMonitor):
                     is_shapefile_writable = True
         return is_shapefile_readable, is_shapefile_writable
 
-    def normalize_shapefile_permissions(self, workspace_name, shapefile_name, is_readable, is_writable):
+    def _normalize_shapefile_permissions(self, workspace_name, shapefile_name, is_readable, is_writable):
+        # type: (str, str, bool, bool) -> None
         """
         Makes sure all files associated with a shapefile is owned by the default user/group
         and have the same permissions.

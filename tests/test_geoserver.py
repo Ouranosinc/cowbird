@@ -11,7 +11,6 @@ import mock
 import os
 import shutil
 import tempfile
-import unittest
 from pathlib import Path
 
 import pytest
@@ -61,6 +60,9 @@ def get_geoserver_settings():
 
 
 def prepare_geoserver_test_workspace(test_instance, geoserver_handler, workspace_key):
+    """
+    Prepares a workspace, its datastore and a test shapefile along with the associated Geoserver resources.
+    """
     # Creating workspace and datastore needed to publish a shapefile
     workspace_name = test_instance.workspaces[workspace_key]
     datastore_name = f"test-datastore-{workspace_key}"
@@ -79,7 +81,11 @@ def prepare_geoserver_test_workspace(test_instance, geoserver_handler, workspace
 
     return workspace_name, datastore_name
 
+
 def reset_geoserver_test_workspace(test_instance, geoserver_handler):
+    """
+    Removes a workspace on the file system and the associated resources on Geoserver.
+    """
     for _, workspace in test_instance.workspaces.items():
         try:
             geoserver_handler._remove_workspace_request(workspace_name=workspace)
@@ -233,6 +239,10 @@ class TestGeoserverRequests(TestGeoserver):
 @pytest.mark.geoserver
 @pytest.mark.magpie
 class TestGeoserverPermissions(TestGeoserver):
+    """
+    Test cases to validate the synchronization between Magpie permissions and file permissions in a Geoserver workspace.
+    """
+
     magpie_test_user = "test_user"
     workspaces = {
         magpie_test_user: magpie_test_user
@@ -241,13 +251,12 @@ class TestGeoserverPermissions(TestGeoserver):
         magpie_test_user: f"{TestGeoserver.geoserver_settings['workspace_dir']}/{magpie_test_user}"
     }
 
-    def setup_class(cls):
+    def setup_class(self):
         # Reset handlers instances in case any are left from other test cases
         utils.clear_handlers_instances()
 
-        cls.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)  # pylint: disable=R1732
-
-        with cls.cfg_file as f:
+        self.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)  # pylint: disable=R1732
+        with self.cfg_file as f:
             f.write(yaml.safe_dump({
                 "handlers": {
                     "Magpie": {
@@ -257,25 +266,25 @@ class TestGeoserverPermissions(TestGeoserver):
                         "admin_password": os.getenv("MAGPIE_ADMIN_PASSWORD")
                     }}}))
 
-        app = utils.get_test_app(settings={"cowbird.config_path": cls.cfg_file.name})
+        app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
 
         # Recreate new magpie handler instance with new config
-        cls.magpie = HandlerFactory().create_handler("Magpie")
+        self.magpie = HandlerFactory().create_handler("Magpie")
 
         # Mock the chown function to avoid fail in case the tests are run as non-root
-        cls.patcher = mock.patch("os.chown")
-        cls.mock_chown = cls.patcher.start()
+        self.patcher = mock.patch("os.chown")
+        self.mock_chown = self.patcher.start()
 
-    def teardown_class(cls):
-        os.unlink(cls.cfg_file.name)
+    def teardown_class(self):
+        os.unlink(self.cfg_file.name)
 
-        cls.magpie.delete_user(cls.magpie_test_user)
-        cls.magpie.delete_service("geoserver")
+        self.magpie.delete_user(self.magpie_test_user)
+        self.magpie.delete_service("geoserver")
         utils.clear_handlers_instances()
 
-        cls.patcher.stop()
+        self.patcher.stop()
 
-        TestGeoserver.teardown_class(cls)
+        TestGeoserver.teardown_class(self)
 
     @pytest.fixture(autouse=True)
     def setup(self):
@@ -296,17 +305,19 @@ class TestGeoserverPermissions(TestGeoserver):
 
         # Setup workspace files
         self.workspace_name, self.datastore_name = prepare_geoserver_test_workspace(self, self.geoserver,
-                                                                                  self.magpie_test_user)
+                                                                                    self.magpie_test_user)
         self.datastore_path = get_datastore_path(self.workspace_folders[self.magpie_test_user])
         self.shapefile_list = self.geoserver.get_shapefile_list(self.workspace_name, self.test_shapefile_name)
+
+        # Initialize workspace folder with all permissions and shapefile permissions with no permissions for a generic
+        # setup, but each test can adjust the permissions for specific cases.
         os.chmod(self.datastore_path, 0o700)
         for file in self.shapefile_list:
             os.chmod(file, 0o000)
 
-        # Setup service/resources
+        # Setup resources
         self.layer_id = self.magpie.get_geoserver_resource_id(self.workspace_name, self.test_shapefile_name)
         parents_tree = self.magpie.get_parents_resource_tree(self.layer_id)
-
         self.workspace_res_id = parents_tree[-1]["parent_id"]
 
         self.expected_chown_shapefile_calls = \
@@ -316,12 +327,17 @@ class TestGeoserverPermissions(TestGeoserver):
         # Teardown
         reset_geoserver_test_workspace(self, self.geoserver)
 
-    def check_magpie_permissions(self, layer_id, expected_perms, expected_chown_calls):
-        user_permissions = self.magpie.get_user_permissions_by_res_id(self.magpie_test_user, layer_id, effective=True)
+    def check_magpie_permissions(self, res_id, expected_perms):
+        """
+        Checks if a resource has the expected permissions on Magpie.
+        """
+        user_permissions = self.magpie.get_user_permissions_by_res_id(self.magpie_test_user, res_id, effective=True)
         assert expected_perms == set([p["name"] for p in user_permissions["permissions"] if p["access"] == "allow"])
-        utils.check_mock_has_calls_exactly(self.mock_chown, expected_chown_calls)
 
     def test_shapefile_on_created(self):
+        """
+        Tests if the right Magpie permissions are created upon a shapefile creation in a Geoserver workspace.
+        """
         # For this test, remove service and check if the Magpie service and resources are recreated
         self.magpie.delete_service(self.test_service_id)
 
@@ -331,20 +347,27 @@ class TestGeoserverPermissions(TestGeoserver):
 
         geoserver_resources = self.magpie.get_resources_by_service("geoserver")
         workspace_res = list(geoserver_resources["resources"].values())[0]
-        shapefile_res_id = list(workspace_res["children"])[0]
+        layer_res_id = list(workspace_res["children"])[0]
 
         # Check if the user has the right permissions on Magpie
-        self.check_magpie_permissions(shapefile_res_id, set(LAYER_READ_PERMISSIONS), self.expected_chown_shapefile_calls)
+        self.check_magpie_permissions(layer_res_id, set(LAYER_READ_PERMISSIONS))
+        utils.check_mock_has_calls_exactly(self.mock_chown, self.expected_chown_shapefile_calls)
 
     def test_shapefile_on_modified(self):
-        # Test modifying a file's permissions
+        """
+        Tests if the right Magpie permissions are updated upon a shapefile permission modification in a Geoserver
+        workspace.
+        """
         os.chmod(self.shapefile_list[0], 0o700)
         self.geoserver.on_modified(os.path.join(self.datastore_path, self.test_shapefile_name + SHAPEFILE_MAIN_EXTENSION))
 
-        self.check_magpie_permissions(self.layer_id, set(LAYER_READ_PERMISSIONS + LAYER_WRITE_PERMISSIONS),
-                                      self.expected_chown_shapefile_calls)
+        self.check_magpie_permissions(self.layer_id, set(LAYER_READ_PERMISSIONS + LAYER_WRITE_PERMISSIONS))
+        utils.check_mock_has_calls_exactly(self.mock_chown, self.expected_chown_shapefile_calls)
 
     def test_shapefile_on_deleted(self):
+        """
+        Tests if the right Magpie permissions are deleted upon a shapefile removal in a Geoserver workspace.
+        """
         self.geoserver.on_deleted(self.datastore_path + f"/{self.test_shapefile_name}.shp")
         for file in self.shapefile_list:
             assert not os.path.exists(file)
@@ -367,7 +390,11 @@ class TestGeoserverPermissions(TestGeoserver):
     def test_workspace_on_deleted(self):
         pass
 
-    def test_magpie_layer_permission_created(self):
+    def test_magpie_layer_permissions(self):
+        """
+        Tests modifications on layer permissions on Magpie and the resulting updates of the permissions on
+        the related files.
+        """
         # Update shapefile read permissions
         layer_read_permission = Permission(
             service_name="geoserver",
@@ -417,7 +444,24 @@ class TestGeoserverPermissions(TestGeoserver):
         for file in updated_shapefile_list:
             utils.check_file_permissions(file, 0o000)
 
+        # Case for a deleted permission on Magpie
+        for file in updated_shapefile_list:
+            os.chmod(file, 0o500)
+
+        # Remove the existing 'deny' permission
+        self.magpie.delete_permission_by_user_and_res_id(self.magpie_test_user, self.layer_id, "describefeaturetype")
+        # Test as if the first 'allow' permission was deleted
+        self.geoserver.permission_deleted(layer_read_permission)
+
+        utils.check_mock_has_calls_exactly(self.mock_chown, updated_chown_checklist)
+        for file in updated_shapefile_list:
+            utils.check_file_permissions(file, 0o000)
+
     def apply_and_check_recursive_permissions(self, resource_id, resource_name):
+        """
+        Used in different test cases to check the creation and deletion of a recursive permission on Magpie, validating
+        if the resource's files and all the children resources' files are updated.
+        """
         # Initialize workspace as read-only
         os.chmod(self.datastore_path, 0o500)
         self.magpie.create_permission_by_user_and_res_id(self.magpie_test_user, self.workspace_res_id, {
@@ -461,7 +505,13 @@ class TestGeoserverPermissions(TestGeoserver):
             utils.check_file_permissions(file, 0o000)
 
     def test_magpie_workspace_permission(self):
+        """
+        Tests modifications on a workspace's recursive permissions on Magpie and the updates of the related files.
+        """
         self.apply_and_check_recursive_permissions(self.workspace_res_id, f"/geoserver/{self.workspace_name}")
 
     def test_magpie_service_permission(self):
+        """
+        Tests modifications on a service's recursive permissions on Magpie and the updates of the related files.
+        """
         self.apply_and_check_recursive_permissions(self.test_service_id, "/geoserver")
