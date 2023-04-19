@@ -2,7 +2,6 @@ import functools
 import os
 import re
 import stat
-from pathlib import Path
 from time import sleep
 from typing import TYPE_CHECKING, Tuple
 
@@ -290,7 +289,8 @@ class Geoserver(Handler, FSMonitor):
 
             # Remove all the remaining shapefile related files
             for file in self.get_shapefile_list(workspace_name, shapefile_name):
-                Path(file).unlink(missing_ok=True)
+                if os.path.exists(file):
+                    os.remove(file)
 
             # Remove the corresponding Magpie resource
             magpie_handler = HandlerFactory().get_handler("Magpie")
