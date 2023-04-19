@@ -65,11 +65,6 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: get user info and permissions
-        run: |
-          id -u -n
-          id -g -n
-          ls -la /tmp
       - name: Start containers
         run: make docker-up-dev-detached
       - name: Install Dependencies
@@ -84,6 +79,13 @@ jobs:
         run: |
           hash -r
           env | sort
+      - name: get user info and permissions
+        run: |
+          id -u -n
+          id -g -n
+          ls -lRa /tmp
+          chown -R /tmp/user_workspaces runner:docker
+          ls -lRa /tmp
       - name: Run Tests
         run: make stop ${{ matrix.test-case }}
       - name: Upload coverage report
