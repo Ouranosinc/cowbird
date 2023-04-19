@@ -23,8 +23,10 @@ from cowbird.handlers.impl.filesystem import DEFAULT_GID, DEFAULT_UID
 from cowbird.handlers.impl.geoserver import SHAPEFILE_MAIN_EXTENSION, Geoserver, GeoserverError
 from cowbird.handlers.impl.magpie import LAYER_READ_PERMISSIONS, LAYER_WRITE_PERMISSIONS
 from cowbird.permissions_synchronizer import Permission
+from cowbird.utils import get_logger
 from tests import utils
 
+LOGGER = get_logger(__name__)
 CURR_DIR = Path(__file__).resolve().parent
 
 
@@ -77,6 +79,14 @@ def prepare_geoserver_test_workspace(test_instance, geoserver_handler, workspace
 
     # Preparations needed to make tests work without all the other handlers running
     datastore_path = get_datastore_path(test_instance.workspace_folders[workspace_key])
+
+    LOGGER.info("**********************")
+    LOGGER.info("USER : %s", os.getlogin())
+    LOGGER.info(oct(os.stat("/tmp")[0] & 0o777))
+
+    if os.path.exists("/tmp/user_workspaces"):
+        LOGGER.info(oct(os.stat("/tmp/user_workspaces")[0] & 0o777))
+
     # This next part can fail if the user running this test doesn't have write access to the directory
     copy_shapefile(basename=test_instance.test_shapefile_name, destination=datastore_path)
 
