@@ -290,7 +290,7 @@ class Geoserver(Handler, FSMonitor):
 
             # Remove all the remaining shapefile related files
             for file in self.get_shapefile_list(workspace_name, shapefile_name):
-                Path.unlink(Path(file), missing_ok=True)
+                Path(file).unlink(missing_ok=True)
 
             # Remove the corresponding Magpie resource
             magpie_handler = HandlerFactory().get_handler("Magpie")
