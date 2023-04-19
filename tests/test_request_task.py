@@ -186,7 +186,7 @@ class TestRequestTask(unittest.TestCase):
         geoserver = Geoserver.get_instance()
 
         # geoserver should call create_workspace and then create_datastore
-        geoserver.on_created(test_file)
+        Geoserver.publish_shapefile_task_chain(workspace_name=test_user_name, shapefile_name=shapefile_name)
 
         # current implementation doesn't give any handler on which we could wait
         sleep(2)
@@ -205,7 +205,7 @@ class TestRequestTask(unittest.TestCase):
         geoserver = Geoserver.get_instance()
 
         # geoserver should call create_workspace and then create_datastore
-        geoserver.on_deleted(test_file)
+        Geoserver.remove_shapefile_task(workspace_name=test_user_name, shapefile_name=shapefile_name)
 
         # current implementation doesn't give any handler on which we could wait
         sleep(2)

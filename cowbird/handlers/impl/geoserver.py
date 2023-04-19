@@ -258,6 +258,16 @@ class Geoserver(Handler, FSMonitor):
         """
         return HandlerFactory().get_handler("Geoserver")
 
+    @staticmethod
+    def publish_shapefile_task_chain(workspace_name, shapefile_name):
+        # type: (str, str) -> None
+        """
+        Applies the chain of tasks required to publish a new file to Geoserver.
+        """
+        res = chain(validate_shapefile.si(workspace_name, shapefile_name),
+                    publish_shapefile.si(workspace_name, shapefile_name))
+        res.delay()
+
     def on_created(self, filename):
         """
         Called when a new file is found.
@@ -270,11 +280,19 @@ class Geoserver(Handler, FSMonitor):
         #  workspace à ajouter à Geoserver et à Magpie?
         if filename.endswith(tuple(SHAPEFILE_ALL_EXTENSIONS)):
             workspace_name, shapefile_name = self._get_shapefile_info(filename)
+
             LOGGER.info("Starting Geoserver publishing process for [%s]", filename)
-            res = chain(validate_shapefile.si(workspace_name, shapefile_name),
-                        publish_shapefile.si(workspace_name, shapefile_name))
-            res.delay()
+            Geoserver.publish_shapefile_task_chain(workspace_name, shapefile_name)
+
             self._update_magpie_layer_permissions(workspace_name, shapefile_name)
+
+    @staticmethod
+    def remove_shapefile_task(workspace_name, shapefile_name):
+        # type: (str, str) -> None
+        """
+        Applies the celery task required to remove a shapefile from Geoserver.
+        """
+        remove_shapefile.delay(workspace_name, shapefile_name)
 
     def on_deleted(self, filename):
         """
@@ -285,7 +303,7 @@ class Geoserver(Handler, FSMonitor):
         # TODO: voir pour le case workspace (folder)
         if filename.endswith(tuple(SHAPEFILE_ALL_EXTENSIONS)):
             workspace_name, shapefile_name = self._get_shapefile_info(filename)
-            remove_shapefile.delay(workspace_name, shapefile_name)
+            Geoserver.remove_shapefile_task(workspace_name, shapefile_name)
 
             # Remove all the remaining shapefile related files
             for file in self.get_shapefile_list(workspace_name, shapefile_name):
