@@ -138,7 +138,6 @@ class TestGeoserver():
         return geoserver
 
 
-@pytest.mark.online
 @pytest.mark.geoserver
 class TestGeoserverRequests(TestGeoserver):
 
@@ -235,7 +234,6 @@ class TestGeoserverRequests(TestGeoserver):
 
 
 # pylint: disable=W0201
-@pytest.mark.online
 @pytest.mark.geoserver
 @pytest.mark.magpie
 class TestGeoserverPermissions(TestGeoserver):
