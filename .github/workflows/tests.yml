@@ -84,7 +84,7 @@ jobs:
           id -u -n
           id -g -n
           ls -lRa /tmp/user_workspaces
-          sudo chown -R /tmp/user_workspaces runner:docker
+          sudo chown -R runner:docker /tmp/user_workspaces
           ls -lRa /tmp/user_workspaces
       - name: Run Tests
         run: make stop ${{ matrix.test-case }}
