@@ -182,8 +182,9 @@ class TestRequestTask(unittest.TestCase):
         test_user_name = "test_user"
         shapefile_name = "test_shapefile"
         datastore_name = f"shapefile_datastore_{test_user_name}"
-        test_file = f"/tmp/user_workspaces/{test_user_name}/shapefile_datastore/{shapefile_name}.shp"
-        geoserver = Geoserver.get_instance()
+
+        # initialize geoserver instance
+        Geoserver.get_instance()
 
         # geoserver should call create_workspace and then create_datastore
         Geoserver.publish_shapefile_task_chain(workspace_name=test_user_name, shapefile_name=shapefile_name)
@@ -201,8 +202,9 @@ class TestRequestTask(unittest.TestCase):
         test_user_name = "test_user"
         shapefile_name = "test_shapefile"
         datastore_name = f"shapefile_datastore_{test_user_name}"
-        test_file = f"/tmp/user_workspaces/{test_user_name}/shapefile_datastore/{shapefile_name}.shp"
-        geoserver = Geoserver.get_instance()
+
+        # initialize geoserver instance
+        Geoserver.get_instance()
 
         # geoserver should call create_workspace and then create_datastore
         Geoserver.remove_shapefile_task(workspace_name=test_user_name, shapefile_name=shapefile_name)
