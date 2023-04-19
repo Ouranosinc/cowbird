@@ -68,7 +68,8 @@ class TestSyncPermissions(unittest.TestCase):
         }
         with self.cfg_file as f:
             f.write(yaml.safe_dump(self.data))
-        app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
+        # Set environment variables with config
+        utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
         # Create new magpie handler instance with new config
         self.magpie = HandlerFactory().create_handler("Magpie")
         # Create test service
@@ -173,7 +174,7 @@ class TestSyncPermissions(unittest.TestCase):
                                         "Thredds4 : read -> Thredds1 : [write]"]
             }
         }
-        with open(self.cfg_file.name, mode="w") as f:
+        with open(self.cfg_file.name, mode="w", encoding="utf-8") as f:
             f.write(yaml.safe_dump(self.data))
         app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
         # Recreate new magpie handler instance with new config
@@ -413,7 +414,7 @@ class TestSyncPermissions(unittest.TestCase):
                                         "Thredds_named_dir_src : read <-> Thredds_named_dir_target : read"]
             }
         }
-        with open(self.cfg_file.name, mode="w") as f:
+        with open(self.cfg_file.name, mode="w", encoding="utf-8") as f:
             f.write(yaml.safe_dump(self.data))
         app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
         # Recreate new magpie handler instance with new config
@@ -496,7 +497,7 @@ class TestSyncPermissions(unittest.TestCase):
                 "permissions_mapping": ["Thredds_match1 : read -> Thredds_match2 : read"]
             }
         }
-        with open(self.cfg_file.name, mode="w") as f:
+        with open(self.cfg_file.name, mode="w", encoding="utf-8") as f:
             f.write(yaml.safe_dump(self.data))
         app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
         # Recreate new magpie handler instance with new config
@@ -544,7 +545,7 @@ class TestSyncPermissions(unittest.TestCase):
                 "permissions_mapping": ["Thredds_match1 : read -> Thredds_match2 : read"]
             }
         }
-        with open(self.cfg_file.name, mode="w") as f:
+        with open(self.cfg_file.name, mode="w", encoding="utf-8") as f:
             f.write(yaml.safe_dump(self.data))
         app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
         # Recreate new magpie handler instance with new config
@@ -587,7 +588,7 @@ class TestSyncPermissions(unittest.TestCase):
                 "permissions_mapping": []
             }
         }
-        with open(self.cfg_file.name, mode="w") as f:
+        with open(self.cfg_file.name, mode="w", encoding="utf-8") as f:
             f.write(yaml.safe_dump(self.data))
 
         utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})

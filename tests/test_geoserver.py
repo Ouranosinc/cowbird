@@ -7,20 +7,20 @@ still useful for a developer working on the Geoserver requests. They can be run 
 More integration tests should be in Jupyter Notebook format as is the case with Birdhouse-deploy / DACCS platform.
 """
 import glob
-import mock
 import os
 import shutil
 import tempfile
 from pathlib import Path
 
+import mock
 import pytest
 import yaml
 from dotenv import load_dotenv
 
 from cowbird.constants import COWBIRD_ROOT
 from cowbird.handlers import HandlerFactory
-from cowbird.handlers.impl.filesystem import DEFAULT_UID, DEFAULT_GID
-from cowbird.handlers.impl.geoserver import Geoserver, GeoserverError, SHAPEFILE_MAIN_EXTENSION
+from cowbird.handlers.impl.filesystem import DEFAULT_GID, DEFAULT_UID
+from cowbird.handlers.impl.geoserver import SHAPEFILE_MAIN_EXTENSION, Geoserver, GeoserverError
 from cowbird.handlers.impl.magpie import LAYER_READ_PERMISSIONS, LAYER_WRITE_PERMISSIONS
 from cowbird.permissions_synchronizer import Permission
 from tests import utils
@@ -35,7 +35,8 @@ def get_geoserver_settings():
     """
     load_dotenv(CURR_DIR / "../docker/.env.example")
     config_path = os.path.join(COWBIRD_ROOT, "config/config.example.yml")
-    app = utils.get_test_app(settings={"cowbird.config_path": config_path})
+    # Set environment variables with config
+    utils.get_test_app(settings={"cowbird.config_path": config_path})
     with open(config_path, "r", encoding="utf-8") as f:
         settings_dictionary = yaml.safe_load(f)
     geoserver_settings = settings_dictionary["handlers"]["Geoserver"]
@@ -97,10 +98,8 @@ def reset_geoserver_test_workspace(test_instance, geoserver_handler):
             # Make sure access permissions are enabled before deleting files
             os.chmod(folder, 0o777)
             for root, dirs, files in os.walk(folder):
-                for d in dirs:
-                    os.chmod(os.path.join(root, d), 0o777)
-                for f in files:
-                    os.chmod(os.path.join(root, f), 0o777)
+                for resource in dirs + files:
+                    os.chmod(os.path.join(root, resource), 0o777)
             if folder == "/":
                 raise PermissionError("Tests tried to remove the '/' path.")
             shutil.rmtree(folder)
@@ -235,6 +234,7 @@ class TestGeoserverRequests(TestGeoserver):
         assert response.status_code == 200
 
 
+# pylint: disable=W0201
 @pytest.mark.online
 @pytest.mark.geoserver
 @pytest.mark.magpie
@@ -242,15 +242,6 @@ class TestGeoserverPermissions(TestGeoserver):
     """
     Test cases to validate the synchronization between Magpie permissions and file permissions in a Geoserver workspace.
     """
-
-    magpie_test_user = "test_user"
-    workspaces = {
-        magpie_test_user: magpie_test_user
-    }
-    workspace_folders = {
-        magpie_test_user: f"{TestGeoserver.geoserver_settings['workspace_dir']}/{magpie_test_user}"
-    }
-
     def setup_class(self):
         # Reset handlers instances in case any are left from other test cases
         utils.clear_handlers_instances()
@@ -266,10 +257,21 @@ class TestGeoserverPermissions(TestGeoserver):
                         "admin_password": os.getenv("MAGPIE_ADMIN_PASSWORD")
                     }}}))
 
-        app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
+        # Set environment variables with config
+        utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
 
         # Recreate new magpie handler instance with new config
         self.magpie = HandlerFactory().create_handler("Magpie")
+
+        self.magpie_test_user = "test_user"
+        self.workspace_name = self.magpie_test_user
+
+        self.workspaces = {self.magpie_test_user: self.magpie_test_user}
+        self.workspace_folders = {
+            self.magpie_test_user: f"{TestGeoserver.geoserver_settings['workspace_dir']}/{self.workspace_name}"
+        }
+
+        self.datastore_path = get_datastore_path(self.workspace_folders[self.magpie_test_user])
 
         # Mock the chown function to avoid fail in case the tests are run as non-root
         self.patcher = mock.patch("os.chown")
@@ -297,16 +299,14 @@ class TestGeoserverPermissions(TestGeoserver):
         data = {
             "service_name": "geoserver",
             "service_type": "geoserver",
-            "service_url": f"http://localhost:9000/geoserver",
+            "service_url": "http://localhost:9000/geoserver",
         }
         self.test_service_id = self.magpie.create_service(data)
 
         self.geoserver = TestGeoserver.get_geoserver()
 
         # Setup workspace files
-        self.workspace_name, self.datastore_name = prepare_geoserver_test_workspace(self, self.geoserver,
-                                                                                    self.magpie_test_user)
-        self.datastore_path = get_datastore_path(self.workspace_folders[self.magpie_test_user])
+        prepare_geoserver_test_workspace(self, self.geoserver, self.magpie_test_user)
         self.shapefile_list = self.geoserver.get_shapefile_list(self.workspace_name, self.test_shapefile_name)
 
         # Initialize workspace folder with all permissions and shapefile permissions with no permissions for a generic
@@ -332,7 +332,7 @@ class TestGeoserverPermissions(TestGeoserver):
         Checks if a resource has the expected permissions on Magpie.
         """
         user_permissions = self.magpie.get_user_permissions_by_res_id(self.magpie_test_user, res_id, effective=True)
-        assert expected_perms == set([p["name"] for p in user_permissions["permissions"] if p["access"] == "allow"])
+        assert expected_perms == {p["name"] for p in user_permissions["permissions"] if p["access"] == "allow"}
 
     def test_shapefile_on_created(self):
         """
@@ -343,7 +343,8 @@ class TestGeoserverPermissions(TestGeoserver):
 
         for file in self.shapefile_list:
             os.chmod(file, 0o500)
-        self.geoserver.on_created(os.path.join(self.datastore_path, self.test_shapefile_name + SHAPEFILE_MAIN_EXTENSION))
+        self.geoserver.on_created(os.path.join(self.datastore_path,
+                                               self.test_shapefile_name + SHAPEFILE_MAIN_EXTENSION))
 
         geoserver_resources = self.magpie.get_resources_by_service("geoserver")
         workspace_res = list(geoserver_resources["resources"].values())[0]
@@ -359,7 +360,8 @@ class TestGeoserverPermissions(TestGeoserver):
         workspace.
         """
         os.chmod(self.shapefile_list[0], 0o700)
-        self.geoserver.on_modified(os.path.join(self.datastore_path, self.test_shapefile_name + SHAPEFILE_MAIN_EXTENSION))
+        self.geoserver.on_modified(os.path.join(self.datastore_path,
+                                                self.test_shapefile_name + SHAPEFILE_MAIN_EXTENSION))
 
         self.check_magpie_permissions(self.layer_id, set(LAYER_READ_PERMISSIONS + LAYER_WRITE_PERMISSIONS))
         utils.check_mock_has_calls_exactly(self.mock_chown, self.expected_chown_shapefile_calls)

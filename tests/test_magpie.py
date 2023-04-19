@@ -1,10 +1,8 @@
-import contextlib
 import os
 import tempfile
 import unittest
 from pathlib import Path
 
-import mock
 import pytest
 import yaml
 from dotenv import load_dotenv
@@ -50,7 +48,8 @@ class TestMagpie(unittest.TestCase):
         }
         with self.cfg_file as f:
             f.write(yaml.safe_dump(self.data))
-        app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
+        # Set environment variables with config
+        utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
         # Create new magpie handler instance with new config
         self.magpie = HandlerFactory().create_handler("Magpie")
         # Reset all magpie services for testing
@@ -76,7 +75,7 @@ class TestMagpie(unittest.TestCase):
             "service_name": "geoserver1",
             "service_type": "geoserver",
             "service_sync_type": "geoserver",
-            "service_url": f"http://localhost:9000/geoserver",
+            "service_url": "http://localhost:9000/geoserver",
             "configuration": {}
         }
         svc1_id = self.magpie.create_service(data)

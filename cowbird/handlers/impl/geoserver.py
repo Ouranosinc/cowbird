@@ -160,13 +160,13 @@ class Geoserver(Handler, FSMonitor):
         user_permissions = HandlerFactory().get_handler("Magpie").get_user_permissions_by_res_id(
             permission.user, resource_id, effective=True)
 
-        allowed_user_perm_names = set([p["name"] for p in user_permissions["permissions"] if p["access"] == "allow"])
+        allowed_user_perm_names = {p["name"] for p in user_permissions["permissions"] if p["access"] == "allow"}
         is_readable = any(p in LAYER_READ_PERMISSIONS for p in allowed_user_perm_names)
         is_writable = any(p in LAYER_WRITE_PERMISSIONS for p in allowed_user_perm_names)
 
         for file in file_list:
             if not os.path.exists(file):
-                LOGGER.warning(f"{file} could not be found and its permissions could not be updated.")
+                LOGGER.warning("%s could not be found and its permissions could not be updated.", file)
                 continue
             new_perms = os.stat(file)[stat.ST_MODE]
             new_perms = update_permissions(new_perms,
@@ -176,12 +176,12 @@ class Geoserver(Handler, FSMonitor):
             try:
                 os.chmod(file, new_perms)
             except PermissionError as exc:
-                LOGGER.warning(f"Failed to change permissions on the {file} file: {exc}")
+                LOGGER.warning("Failed to change permissions on the %s file: %s", file, exc)
             try:
                 # This operation only works as root.
                 os.chown(file, DEFAULT_UID, DEFAULT_GID)
             except PermissionError as exc:
-                LOGGER.warning(f"Failed to change ownership of the {file} file:  {exc}")
+                LOGGER.warning("Failed to change ownership of the %s file: %s", file, exc)
 
     def _update_res_children_files_permissions(self, children_res_tree, permission, workspace_name, layer_name=None):
         # type:(List, Permission, str, Optional[str]) -> None
@@ -225,7 +225,7 @@ class Geoserver(Handler, FSMonitor):
         resource_type = resource_tree[-1]["resource_type"]
 
         if resource_type in ["workspace", "layer"]:
-            layer_name = permission.resource_full_name.split('/')[-1] if resource_type == "layer" else None
+            layer_name = permission.resource_full_name.split("/")[-1] if resource_type == "layer" else None
             self._update_resource_files_permissions(resource_type=resource_type,
                                                     permission=permission,
                                                     resource_id=permission.resource_id,
@@ -463,7 +463,7 @@ class Geoserver(Handler, FSMonitor):
             try:
                 os.chown(shapefile, DEFAULT_UID, DEFAULT_GID)
             except PermissionError as exc:
-                LOGGER.warning(f"Failed to change ownership of the {shapefile} file: {exc}")
+                LOGGER.warning("Failed to change ownership of the %s file: %s", shapefile, exc)
             new_perms = os.stat(shapefile)[stat.ST_MODE]
             new_perms = update_permissions(new_perms, is_readable=is_readable, is_writable=is_writable,
                                            is_executable=is_readable)

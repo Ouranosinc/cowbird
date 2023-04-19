@@ -323,11 +323,10 @@ class Magpie(Handler):
             "parent_id": parent_id
         }
         resp = self._send_request(method="POST", url=f"{self.url}/resources", json=resource_data)
-        if resp.status_code == 201:
-            LOGGER.info("Resource creation was successful.")
-            return resp.json()["resource"]["resource_id"]
-        else:
+        if resp.status_code != 201:
             raise HTTPError(f"Failed to create resource : {resp.text}")
+        LOGGER.info("Resource creation was successful.")
+        return resp.json()["resource"]["resource_id"]
 
     def delete_resource(self, resource_id):
         resp = self._send_request(method="DELETE", url=f"{self.url}/resources/{resource_id}")
@@ -341,11 +340,10 @@ class Magpie(Handler):
     def create_service(self, service_data):
         # type (Dict[str, str]) -> str
         resp = self._send_request(method="POST", url=f"{self.url}/services", json=service_data)
-        if resp.status_code == 201:
-            LOGGER.info("Service creation was successful.")
-            return resp.json()["service"]["resource_id"]
-        else:
+        if resp.status_code != 201:
             raise HTTPError(f"Failed to create service : {resp.text}")
+        LOGGER.info("Service creation was successful.")
+        return resp.json()["service"]["resource_id"]
 
     def delete_service(self, service_name):
         resp = self._send_request(method="DELETE", url=f"{self.url}/services/{service_name}")
@@ -363,7 +361,7 @@ class Magpie(Handler):
                 for svc in services_by_svc_type.values():
                     self.delete_service(svc["service_name"])
         else:
-            raise HTTPError(f"Failed to find Magpie services.")
+            raise HTTPError("Failed to find Magpie services.")
 
     def login(self):
         # type: () -> RequestsCookieJar
