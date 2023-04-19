@@ -83,9 +83,9 @@ jobs:
         run: |
           id -u -n
           id -g -n
-          ls -lRa /tmp
-          chown -R /tmp/user_workspaces runner:docker
-          ls -lRa /tmp
+          ls -lRa /tmp/user_workspaces
+          sudo chown -R /tmp/user_workspaces runner:docker
+          ls -lRa /tmp/user_workspaces
       - name: Run Tests
         run: make stop ${{ matrix.test-case }}
       - name: Upload coverage report
