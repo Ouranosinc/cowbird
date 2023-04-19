@@ -79,6 +79,28 @@ def prepare_geoserver_test_workspace(test_instance, geoserver_handler, workspace
 
     return workspace_name, datastore_name
 
+def reset_geoserver_test_workspace(test_instance, geoserver_handler):
+    for _, workspace in test_instance.workspaces.items():
+        try:
+            geoserver_handler._remove_workspace_request(workspace_name=workspace)
+        except GeoserverError:
+            # Making sure all test workspaces are removed
+            pass
+    for _, folder in test_instance.workspace_folders.items():
+        try:
+            # Make sure access permissions are enabled before deleting files
+            os.chmod(folder, 0o777)
+            for root, dirs, files in os.walk(folder):
+                for d in dirs:
+                    os.chmod(os.path.join(root, d), 0o777)
+                for f in files:
+                    os.chmod(os.path.join(root, f), 0o777)
+            if folder == "/":
+                raise PermissionError("Tests tried to remove the '/' path.")
+            shutil.rmtree(folder)
+        except FileNotFoundError:
+            pass
+
 
 def copy_shapefile(basename, destination):
     full_filename = f"{COWBIRD_ROOT}/tests/resources/{basename}"
@@ -102,26 +124,7 @@ class TestGeoserver():
         # Couldn't pass fixture to teardown function.
         teardown_gs = Geoserver(settings={}, name="Geoserver", **self.geoserver_settings)
         teardown_gs.ssl_verify = self.geoserver_settings["ssl_verify"]
-        for _, workspace in self.workspaces.items():
-            try:
-                teardown_gs._remove_workspace_request(workspace_name=workspace)
-            except GeoserverError:
-                # Making sure all test workspaces are removed
-                pass
-        for _, folder in self.workspace_folders.items():
-            try:
-                # Make sure access permissions are enabled before deleting files
-                os.chmod(folder, 0o777)
-                for root, dirs, files in os.walk(folder):
-                    for d in dirs:
-                        os.chmod(os.path.join(root, d), 0o777)
-                    for f in files:
-                        os.chmod(os.path.join(root, f), 0o777)
-                if folder == "/":
-                    raise PermissionError("Tests tried to remove the '/' path.")
-                shutil.rmtree(folder)
-            except FileNotFoundError:
-                pass
+        reset_geoserver_test_workspace(self, teardown_gs)
 
     @staticmethod
     def get_geoserver():
@@ -309,6 +312,10 @@ class TestGeoserverPermissions(TestGeoserver):
         self.expected_chown_shapefile_calls = \
             [mock.call(file, DEFAULT_UID, DEFAULT_GID) for file in self.shapefile_list]
 
+        yield
+        # Teardown
+        reset_geoserver_test_workspace(self, self.geoserver)
+
     def check_magpie_permissions(self, layer_id, expected_perms, expected_chown_calls):
         user_permissions = self.magpie.get_user_permissions_by_res_id(self.magpie_test_user, layer_id, effective=True)
         assert expected_perms == set([p["name"] for p in user_permissions["permissions"] if p["access"] == "allow"])
@@ -346,7 +353,8 @@ class TestGeoserverPermissions(TestGeoserver):
         with pytest.raises(RuntimeError):
             self.magpie.get_user_permissions_by_res_id(self.magpie_test_user, self.layer_id)
 
-# TODO: implement and add test cases for workspace changes on file system
+# TODO: implement and add test cases for workspace changes on file system, determine if needed or not
+#  (see comment in Geoserver::on_created())
     @pytest.mark.skip()
     def test_workspace_on_created(self):
         pass

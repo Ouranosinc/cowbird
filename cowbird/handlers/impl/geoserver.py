@@ -251,6 +251,9 @@ class Geoserver(Handler, FSMonitor):
         :param filename: Relative filename of a new file
         """
         # TODO: ajouter un case pour un workspace (folder)?
+        #  On a normalement un workspace par user et ils sont déjà créés et ajoutés à Geoserver lors de la création d'un
+        #  user. Est-ce qu'on supporte un cas où un folder serait créé manuellement? Est-ce que c'est automatiquement un
+        #  workspace à ajouter à Geoserver et à Magpie?
         if filename.endswith(tuple(SHAPEFILE_ALL_EXTENSIONS)):
             workspace_name, shapefile_name = self._get_shapefile_info(filename)
             LOGGER.info("Starting Geoserver publishing process for [%s]", filename)
@@ -265,7 +268,7 @@ class Geoserver(Handler, FSMonitor):
 
         :param filename: Relative filename of the removed file
         """
-        # TODO: voir pour le case folder
+        # TODO: voir pour le case workspace (folder)
         if filename.endswith(tuple(SHAPEFILE_ALL_EXTENSIONS)):
             workspace_name, shapefile_name = self._get_shapefile_info(filename)
             remove_shapefile.delay(workspace_name, shapefile_name)
@@ -288,11 +291,9 @@ class Geoserver(Handler, FSMonitor):
 
         :param filename: Relative filename of the updated file
         """
-        # Nothing need to be done in this class as Catalog already logs file modifications.
-        # Still needed to implement since part of parent FSMonitor class
-
-        # TODO: check if must include all type of extensions?
-        if filename.endswith(SHAPEFILE_MAIN_EXTENSION):
+        # Nothing needs to be done specifically for Geoserver as Catalog already logs file modifications.
+        # Only need to update permissions on Magpie, in case the file permissions were modified.
+        if filename.endswith(tuple(SHAPEFILE_ALL_EXTENSIONS)):
             workspace_name, shapefile_name = self._get_shapefile_info(filename)
             self.update_magpie_layer_permissions(workspace_name, shapefile_name)
 
