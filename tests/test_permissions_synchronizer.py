@@ -447,7 +447,7 @@ class TestSyncPermissions(unittest.TestCase):
             data = {
                 "event": ValidOperations.CreateOperation.value,
                 "service_name": "thredds",
-                "resource_id": str(dir_src_res_id),
+                "resource_id": dir_src_res_id,
                 "resource_full_name": f"/{self.test_service_name}/private",
                 "name": "read",
                 "access": "allow",
@@ -463,7 +463,7 @@ class TestSyncPermissions(unittest.TestCase):
             self.check_user_permissions(file_target_res_id, [])
 
             # Create and check permissions with 2nd mapping case
-            data["resource_id"] = str(file_src_res_id)
+            data["resource_id"] = file_src_res_id
             data["resource_full_name"] = f"/{self.test_service_name}/private/dir1/dir2/workspace_file"
 
             resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
@@ -471,7 +471,7 @@ class TestSyncPermissions(unittest.TestCase):
             self.check_user_permissions(file_target_res_id, ["read", "read-allow-recursive"])
 
             # Create and check permissions with 3rd mapping case
-            data["resource_id"] = str(named_dir_src_res_id)
+            data["resource_id"] = named_dir_src_res_id
             data["resource_full_name"] = f"/{self.test_service_name}/named_dir1/dir1/dir2"
 
             resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
@@ -513,7 +513,7 @@ class TestSyncPermissions(unittest.TestCase):
             data = {
                 "event": ValidOperations.CreateOperation.value,
                 "service_name": "thredds",
-                "resource_id": str(src_res_id),
+                "resource_id": src_res_id,
                 "resource_full_name": f"/{self.test_service_name}/dir1/dir2",
                 "name": "read",
                 "access": "allow",
@@ -560,7 +560,7 @@ class TestSyncPermissions(unittest.TestCase):
             data = {
                 "event": ValidOperations.CreateOperation.value,
                 "service_name": "thredds",
-                "resource_id": str(src_res_id),
+                "resource_id": src_res_id,
                 "resource_full_name": f"/{self.test_service_name}/dir",
                 "name": "read",
                 "access": "allow",

@@ -7,7 +7,9 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add permission synchronization between Magpie's permissions and Geoserver files permissions.
 
 `1.1.0 <https://github.com/Ouranosinc/cowbird/tree/1.1.0>`_ (2023-03-14)
 ------------------------------------------------------------------------------------
