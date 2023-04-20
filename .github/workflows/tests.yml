@@ -79,13 +79,9 @@ jobs:
         run: |
           hash -r
           env | sort
-      - name: get user info and permissions
+      - name: Prepare workspace dir for tests that require access permissions
         run: |
-          id -u -n
-          id -g -n
-          ls -lRa /tmp/user_workspaces
-          sudo chown -R runner:docker /tmp/user_workspaces
-          ls -lRa /tmp/user_workspaces
+          sudo chown -R runner:docker $(cat ./docker/.env.example | grep WORKSPACE_DIR | cut -d "=" -f2)
       - name: Run Tests
         run: make stop ${{ matrix.test-case }}
       - name: Upload coverage report
