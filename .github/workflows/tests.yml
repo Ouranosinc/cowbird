@@ -79,7 +79,8 @@ jobs:
         run: |
           hash -r
           env | sort
-      - name: Prepare workspace dir for tests that require access permissions
+        # Prepare workspace dir for tests that require access permissions
+      - name: Prepare Workspace
         run: |
           sudo chown -R runner:docker $(cat ./docker/.env.example | grep WORKSPACE_DIR | cut -d "=" -f2)
       - name: Run Tests
