@@ -45,7 +45,7 @@ class UnreliableRequestTask(RequestTask, ABC):
 
 @shared_task(bind=True, base=UnreliableRequestTask)
 def unreliable_request_task(self, param1, param2):
-    # type (int, int) -> int
+    # type: (RequestTask, int, int) -> int
     if self.request.retries < UnreliableRequestTask.test_max_retries:
         raise RequestException()
     return param1 + param2
@@ -53,14 +53,14 @@ def unreliable_request_task(self, param1, param2):
 
 @shared_task(bind=True, base=RequestTask)
 def abort_sum_task(self, param1, param2):
-    # type (int, int) -> int
+    # type: (RequestTask, int, int) -> int
     self.abort_chain()
     return param1 + param2
 
 
 @shared_task(base=RequestTask)
 def sum_task(param1, param2):
-    # type (int, int) -> int
+    # type: (int, int) -> int
     return param1 + param2
 
 

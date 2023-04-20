@@ -11,6 +11,18 @@ Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add permission synchronization between Magpie's permissions and Geoserver files permissions.
 
+`1.1.1 <https://github.com/Ouranosinc/cowbird/tree/1.1.1>`_ (2023-03-24)
+------------------------------------------------------------------------------------
+
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Return `HTTP 424 (Failed Dependency)` when the `celery` worker version cannot be retrieved on ``GET /version``.
+  Also, provide better error logs and detail messages in case of error to help debug the cause of the problem.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix incorrect typings and typographic errors.
+
 `1.1.0 <https://github.com/Ouranosinc/cowbird/tree/1.1.0>`_ (2023-03-14)
 ------------------------------------------------------------------------------------
 

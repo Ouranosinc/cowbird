@@ -43,7 +43,7 @@ def get_app(global_config=None, **settings):
         for sync_cfg in sync_perm_config.values():
             validate_sync_config(sync_cfg)
     if not sync_perm_cfgs:
-        LOGGER.warning("No permssion mapping configuration found in [%s]", config_path)
+        LOGGER.warning("No permission mapping configuration found in [%s]", config_path)
 
     print_log("Starting Cowbird app...", LOGGER)
     wsgi_app = config.make_wsgi_app()
