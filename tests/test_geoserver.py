@@ -131,6 +131,7 @@ class TestGeoserver():
         teardown_gs = Geoserver(settings={}, name="Geoserver", **self.geoserver_settings)
         teardown_gs.ssl_verify = self.geoserver_settings["ssl_verify"]
         reset_geoserver_test_workspace(self, teardown_gs)
+        utils.clear_handlers_instances()
 
     @staticmethod
     def get_geoserver():
@@ -281,7 +282,6 @@ class TestGeoserverPermissions(TestGeoserver):
 
         self.magpie.delete_user(self.magpie_test_user)
         self.magpie.delete_service("geoserver")
-        utils.clear_handlers_instances()
 
         self.patcher.stop()
 

@@ -40,6 +40,7 @@ class TestMonitoring(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        Monitoring().store.clear_services()
         utils.clear_handlers_instances()
         os.unlink(cls.cfg_file.name)
 

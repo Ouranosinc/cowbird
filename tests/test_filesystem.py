@@ -21,6 +21,7 @@ class TestFileSystem(unittest.TestCase):
         self.test_username = "test_username"
         self.callback_url = "callback_url"
         self.jupyterhub_user_data_dir = "/jupyterhub_user_data"
+        utils.clear_handlers_instances()
 
     def tearDown(self):
         utils.clear_handlers_instances()
