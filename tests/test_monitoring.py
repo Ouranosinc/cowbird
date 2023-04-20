@@ -35,6 +35,8 @@ class TestMonitoring(unittest.TestCase):
         with cls.cfg_file as f:
             f.write(yaml.safe_dump({"handlers": {"FileSystem": {"active": True, "workspace_dir": "/workspace"}}}))
         cls.app = utils.get_test_app(settings={"cowbird.config_path": cls.cfg_file.name})
+        # clear up monitors collection from db
+        Monitoring().store.clear_services()
 
     @classmethod
     def tearDownClass(cls):
