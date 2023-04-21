@@ -98,14 +98,14 @@ class Magpie(Handler):
         raise NotImplementedError
 
     def get_services_by_type(self, service_type):
-        # type: (str) -> List
+        # type: (str) -> Dict
         resp = self._send_request(method="GET", url=f"{self.url}/services/types/{service_type}")
         if resp.status_code != 200:
             raise RuntimeError("Could not find the input type's services.")
         return resp.json()["services"][service_type]
 
     def get_resources_by_service(self, service_name):
-        # type: (str) -> List
+        # type: (str) -> Dict
         resp = self._send_request(method="GET", url=f"{self.url}/services/{service_name}/resources")
         if resp.status_code != 200:
             raise RuntimeError("Could not find the input service's resources.")
@@ -123,7 +123,7 @@ class Magpie(Handler):
         return resp.json()["resources"]
 
     def get_children_resource_tree(self, resource_id):
-        # type: (int) -> List
+        # type: (int) -> Dict
         """
         Returns the associated Magpie Resource object and all its children.
         """

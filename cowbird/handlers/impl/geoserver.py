@@ -16,7 +16,7 @@ from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
 from cowbird.permissions_synchronizer import Permission
 from cowbird.request_task import RequestTask
-from cowbird.utils import CONTENT_TYPE_JSON, get_logger, update_permissions
+from cowbird.utils import CONTENT_TYPE_JSON, get_logger, update_filesystem_permissions
 
 if TYPE_CHECKING:
     from typing import Any, List, Optional
@@ -169,10 +169,10 @@ class Geoserver(Handler, FSMonitor):
                 LOGGER.warning("%s could not be found and its permissions could not be updated.", path)
                 continue
             new_perms = os.stat(path)[stat.ST_MODE]
-            new_perms = update_permissions(new_perms,
-                                           is_readable=is_readable,
-                                           is_writable=is_writable,
-                                           is_executable=is_executable)
+            new_perms = update_filesystem_permissions(new_perms,
+                                                      is_readable=is_readable,
+                                                      is_writable=is_writable,
+                                                      is_executable=is_executable)
             try:
                 os.chmod(path, new_perms)
             except PermissionError as exc:
@@ -276,10 +276,9 @@ class Geoserver(Handler, FSMonitor):
 
         :param filename: Relative filename of a new file
         """
-        # TODO: ajouter un case pour un workspace (folder)?
-        #  On a normalement un workspace par user et ils sont déjà créés et ajoutés à Geoserver lors de la création d'un
-        #  user. Est-ce qu'on supporte un cas où un folder serait créé manuellement? Est-ce que c'est automatiquement un
-        #  workspace à ajouter à Geoserver et à Magpie?
+        # Note that the workspace case is not implemented here, since a workspace directory is created during the user
+        # creation (user_created()) and other directories should not be created manually for Geoserver.
+        # The Magpie workspace resource will be automatically created if needed upon a shapefile creation.
         if filename.endswith(tuple(SHAPEFILE_ALL_EXTENSIONS)):
             workspace_name, shapefile_name = self._get_shapefile_info(filename)
 
@@ -482,8 +481,8 @@ class Geoserver(Handler, FSMonitor):
             except PermissionError as exc:
                 LOGGER.warning("Failed to change ownership of the %s file: %s", shapefile, exc)
             new_perms = os.stat(shapefile)[stat.ST_MODE]
-            new_perms = update_permissions(new_perms, is_readable=is_readable, is_writable=is_writable,
-                                           is_executable=False)
+            new_perms = update_filesystem_permissions(new_perms, is_readable=is_readable, is_writable=is_writable,
+                                                      is_executable=False)
             os.chmod(shapefile, new_perms)
 
     def remove_shapefile(self, workspace_name, filename):

@@ -586,10 +586,10 @@ def get_timeout(container=None):
                             raise_missing=False, raise_not_set=False))
 
 
-def update_permissions(permission, is_readable, is_writable, is_executable):
+def update_filesystem_permissions(permission, is_readable, is_writable, is_executable):
     # type: (int, bool, bool, bool) -> int
     """
-    Applies/remove read, write and execute permissions (user only) to the input permissions.
+    Applies/remove read, write and execute permissions (user only) to the input file system permissions.
     """
     for perm_enabled, perm_mode in zip([is_readable, is_writable, is_executable],
                                        [stat.S_IRUSR, stat.S_IWUSR, stat.S_IXUSR]):
