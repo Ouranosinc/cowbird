@@ -342,9 +342,13 @@ class TestGeoserverPermissions(TestGeoserver):
         self.magpie.delete_service(self.test_service_id)
 
         for file in self.shapefile_list:
-            os.chmod(file, 0o400)
+            os.chmod(file, 0o477)
         self.geoserver.on_created(os.path.join(self.datastore_path,
                                                self.test_shapefile_name + SHAPEFILE_MAIN_EXTENSION))
+
+        # Permissions should have been normalized, removing any `group` or `other` permissions.
+        for file in self.shapefile_list:
+            utils.check_path_permissions(file, 0o400)
 
         geoserver_resources = self.magpie.get_resources_by_service("geoserver")
         workspace_res = list(geoserver_resources["resources"].values())[0]

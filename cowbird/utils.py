@@ -594,4 +594,5 @@ def update_permissions(permission, is_readable, is_writable, is_executable):
     for perm_enabled, perm_mode in zip([is_readable, is_writable, is_executable],
                                        [stat.S_IRUSR, stat.S_IWUSR, stat.S_IXUSR]):
         permission = permission | perm_mode if perm_enabled else permission & ~perm_mode
+    permission = permission & 0o700
     return permission
