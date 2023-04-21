@@ -102,17 +102,17 @@ the other section :ref:`permissions_mapping`.
 services
 ________
 
-This section contains the different resources that can be synchronized, ordered by service. The services found in
-this section of the config should also exist in `Magpie`_.
+This section contains the different resources that can be synchronized, ordered by service type. The service types
+found in this section of the config should also exist in `Magpie`_.
 
 .. seealso::
 
-    For more details on available services on `Magpie`_, refer to these pages :
+    For more details on available service types on `Magpie`_, refer to these pages :
 
     - `Magpie available services <https://pavics-magpie.readthedocs.io/en/latest/services.html#available-services>`_
     - `Magpie services API <https://pavics-magpie.readthedocs.io/en/latest/autoapi/magpie/services/index.html>`_
 
-Each service defines a list of resource keys, which are custom names that define a resource path.
+Each service type defines a list of resource keys, which are custom names that define a resource path.
 They should correspond to the names used in the :ref:`permissions_mapping` section below.
 Each resource path contains the list of its segments, with their corresponding name and type.
 

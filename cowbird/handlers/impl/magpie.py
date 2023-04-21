@@ -89,7 +89,7 @@ class Magpie(Handler):
         if not self.service_types:
             resp = self._send_request(method="GET", url=f"{self.url}/services/types")
             if resp.status_code != 200:
-                raise RuntimeError("Could not get Magpie's services.")
+                raise RuntimeError("Could not get Magpie's service types.")
             self.service_types = list(resp.json()["service_types"])
         return self.service_types
 
