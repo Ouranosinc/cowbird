@@ -496,7 +496,31 @@ class TestGeoserverPermissions(TestGeoserver):
         for file in self.shapefile_list:
             utils.check_path_permissions(file, 0o200)
 
+        # Adding `match` permissions on the layer and changing the recursive permission to `deny`
+        # The layer should keep its write permission, but the workspace should lose its write permission.
+        self.magpie.create_permission_by_user_and_res_id(self.magpie_test_user, self.layer_id, {
+            "permission": {
+                "name": "createstoredquery",
+                "access": "allow",
+                "scope": "match"}})
+        self.magpie.delete_permission_by_user_and_res_id(self.magpie_test_user, resource_id,
+                                                         recursive_write_permission.name)
+        recursive_write_permission.access = "deny"
+        self.magpie.create_permission_by_user_and_res_id(self.magpie_test_user, resource_id, {
+            "permission": {
+                "name": recursive_write_permission.name,
+                "access": recursive_write_permission.access,
+                "scope": recursive_write_permission.scope}})
+        self.geoserver.permission_created(recursive_write_permission)
+
+        utils.check_mock_has_calls_exactly(self.mock_chown, [mock.call(self.datastore_path, DEFAULT_UID, DEFAULT_GID)] +
+                                           self.expected_chown_shapefile_calls)
+        utils.check_path_permissions(self.datastore_path, 0o500)
+        for file in self.shapefile_list:
+            utils.check_path_permissions(file, 0o200)
+
         # Delete a permission on Magpie
+        self.magpie.delete_permission_by_user_and_res_id(self.magpie_test_user, self.layer_id, "createstoredquery")
         self.magpie.delete_permission_by_user_and_res_id(self.magpie_test_user, resource_id,
                                                          recursive_write_permission.name)
         self.geoserver.permission_deleted(recursive_write_permission)
