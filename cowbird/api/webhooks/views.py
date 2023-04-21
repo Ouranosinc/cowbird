@@ -102,7 +102,10 @@ def post_permission_webhook_view(request):
                     is_in=True,
                     http_error=HTTPBadRequest,
                     msg_on_fail=s.PermissionWebhook_POST_BadRequestResponseSchema.description)
+    # Use raw value for service name, to avoid errors with `None` values
+    # when the permission is not applied to a `service` type resource.
     service_name = ar.get_multiformat_body_raw(request, "service_name")
+
     resource_id = ar.get_multiformat_body(request, "resource_id", check_type=int)
     param_regex_with_slashes = r"^/?[A-Za-z0-9]+(?:[\s_\-\./:][A-Za-z0-9]+)*$"
     resource_full_name = ar.get_multiformat_body(request, "resource_full_name",

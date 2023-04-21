@@ -664,12 +664,12 @@ def check_error_param_structure(body,                                   # type: 
             check_val_equal(body["param"]["compare"], param_compare)
 
 
-def check_file_permissions(file_path, permissions):
+def check_path_permissions(path, permissions):
     # type: (Union[str, os.PathLike], int) -> None
     """
-    Checks if the file has the right permissions, by verifying the last digits of the octal permissions.
+    Checks if the path has the right permissions, by verifying the last digits of the octal permissions.
     """
-    assert oct(os.stat(file_path)[ST_MODE] & 0o777) == oct(permissions & 0o777)
+    assert oct(os.stat(path)[ST_MODE] & 0o777) == oct(permissions & 0o777)
 
 
 def check_mock_has_calls_exactly(mocked_fct, calls):
