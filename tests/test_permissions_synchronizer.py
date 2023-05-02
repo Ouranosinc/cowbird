@@ -20,6 +20,9 @@ from cowbird.config import (
     ConfigErrorInvalidTokens
 )
 from cowbird.handlers import HandlerFactory
+from magpie.models import Directory, File, Service, Workspace
+from magpie.permissions import Access, Permission, Scope
+from magpie.services import ServiceGeoserver, ServiceTHREDDS
 from tests import utils
 
 if TYPE_CHECKING:
@@ -90,8 +93,8 @@ class TestSyncPermissions(unittest.TestCase):
         # Create service
         data = {
             "service_name": self.test_service_name,
-            "service_type": "thredds",
-            "service_sync_type": "thredds",
+            "service_type": ServiceTHREDDS.service_type,
+            "service_sync_type": ServiceTHREDDS.service_type,
             "service_url": f"http://localhost:9000/{self.test_service_name}",
             "configuration": {}
         }
@@ -147,31 +150,36 @@ class TestSyncPermissions(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "thredds": {
+                    ServiceTHREDDS.service_type: {
                         "Thredds0": [
-                            {"name": self.test_service_name, "type": "service"},
-                            {"name": "private-dir", "type": "directory"},
-                            {"name": "workspace:file0", "type": "file"}],
+                            {"name": self.test_service_name, "type": Service.resource_type_name},
+                            {"name": "private-dir", "type": Directory.resource_type_name},
+                            {"name": "workspace:file0", "type": File.resource_type_name}],
                         "Thredds1": [
-                            {"name": self.test_service_name, "type": "service"},
-                            {"name": "private-dir", "type": "directory"},
-                            {"name": "workspace:file1", "type": "file"}],
+                            {"name": self.test_service_name, "type": Service.resource_type_name},
+                            {"name": "private-dir", "type": Directory.resource_type_name},
+                            {"name": "workspace:file1", "type": File.resource_type_name}],
                         "Thredds2": [
-                            {"name": self.test_service_name, "type": "service"},
-                            {"name": "workspace:file2", "type": "file"}],
+                            {"name": self.test_service_name, "type": Service.resource_type_name},
+                            {"name": "workspace:file2", "type": File.resource_type_name}],
                         "Thredds3": [
-                            {"name": self.test_service_name, "type": "service"},
-                            {"name": "workspace:file3", "type": "file"}],
+                            {"name": self.test_service_name, "type": Service.resource_type_name},
+                            {"name": "workspace:file3", "type": File.resource_type_name}],
                         "Thredds4": [
-                            {"name": self.test_service_name, "type": "service"},
-                            {"name": "workspace:file4", "type": "file"}]}},
-                "permissions_mapping": ["Thredds0 : read <-> Thredds1 : [read-match, write]",  # test implicit formats
-                                        # partial duplicate with previous line, should still work
-                                        "Thredds0 : read -> Thredds1 : write",
-                                        # test explicit permission format in Thredds 2
-                                        "Thredds1 : [read-match, write] -> Thredds2 : read-deny-match",
-                                        "Thredds3 : read <- Thredds2 : read-deny-match",
-                                        "Thredds4 : read -> Thredds1 : [write]"]
+                            {"name": self.test_service_name, "type": Service.resource_type_name},
+                            {"name": "workspace:file4", "type": File.resource_type_name}]}},
+                "permissions_mapping": [
+                    # test implicit formats
+                    f"Thredds0 : {Permission.READ.value} <-> "
+                        f"Thredds1 : [{Permission.READ.value}-{Scope.MATCH.value}, {Permission.WRITE.value}]",
+                    # partial duplicate with previous line, should still work
+                    f"Thredds0 : {Permission.READ.value} -> Thredds1 : {Permission.WRITE.value}",
+                    # test explicit permission format in Thredds 2
+                    f"Thredds1 : [{Permission.READ.value}-{Scope.MATCH.value}, {Permission.WRITE.value}] -> "
+                        f"Thredds2 : {Permission.READ.value}-{Access.DENY.value}-{Scope.MATCH.value}",
+                    f"Thredds3 : {Permission.READ.value} <- "
+                        f"Thredds2 : {Permission.READ.value}-{Access.DENY.value}-{Scope.MATCH.value}",
+                    f"Thredds4 : {Permission.READ.value} -> Thredds1 : [{Permission.WRITE.value}]"]
             }
         }
         with open(self.cfg_file.name, mode="w", encoding="utf-8") as f:
@@ -185,13 +193,15 @@ class TestSyncPermissions(unittest.TestCase):
                                            side_effect=utils.MockAnyHandler))
 
             # Create test resources
-            private_dir_res_id = self.magpie.create_resource("private-dir", "directory", self.test_service_id)
-            res_ids = [self.magpie.create_resource(f"workspace:file{i}", "file", private_dir_res_id) for i in range(2)]
-            res_ids += [self.magpie.create_resource(f"workspace:file{i}", "file", self.test_service_id)
+            private_dir_res_id = self.magpie.create_resource("private-dir", Directory.resource_type_name, self.test_service_id)
+            res_ids = [self.magpie.create_resource(f"workspace:file{i}", File.resource_type_name, private_dir_res_id) for i in range(2)]
+            res_ids += [self.magpie.create_resource(f"workspace:file{i}", File.resource_type_name, self.test_service_id)
                         for i in range(2, 5)]
 
-            default_read_permission = ["read", "read-allow-recursive"]
-            default_write_permission = ["write", "write-allow-recursive"]
+            default_read_permission = [Permission.READ.value,
+                                       f"{Permission.READ.value}-{Access.ALLOW.value}-{Scope.RECURSIVE.value}"]
+            default_write_permission = [Permission.WRITE.value,
+                                        f"{Permission.WRITE.value}-{Access.ALLOW.value}-{Scope.RECURSIVE.value}"]
 
             test_cases = [
                 {"user": self.usr, "group": None},
@@ -208,30 +218,30 @@ class TestSyncPermissions(unittest.TestCase):
                     res_ids[0]: {
                         "res_full_name": f"/{self.test_service_name}/private-dir/workspace:file0",
                         "perms": {
-                            "read": {"access": "allow",
-                                     "scope": "recursive"}}},
+                            Permission.READ.value: {"access": Access.ALLOW.value,
+                                                    "scope": Scope.RECURSIVE.value}}},
                     res_ids[1]: {
                         "res_full_name": f"/{self.test_service_name}/private-dir/workspace:file1",
                         "perms": {
-                            "read": {"access": "allow",
-                                     "scope": "match"},
-                            "write": {"access": "allow",
-                                      "scope": "recursive"}}},
+                            Permission.READ.value: {"access": Access.ALLOW.value,
+                                                    "scope": Scope.MATCH.value},
+                            Permission.WRITE.value: {"access": Access.ALLOW.value,
+                                                     "scope": Scope.RECURSIVE.value}}},
                     res_ids[2]: {
                         "res_full_name": f"/{self.test_service_name}/workspace:file2",
                         "perms": {
-                            "read": {"access": "deny",
-                                     "scope": "match"}}},
+                            Permission.READ.value: {"access": Access.DENY.value,
+                                                    "scope": Scope.MATCH.value}}},
                     res_ids[3]: {
                         "res_full_name": f"/{self.test_service_name}/workspace:file3",
                         "perms": {
-                            "read": {"access": "allow",
-                                     "scope": "recursive"}}},
+                            Permission.READ.value: {"access": Access.ALLOW.value,
+                                                    "scope": Scope.RECURSIVE.value}}},
                     res_ids[4]: {
                         "res_full_name": f"/{self.test_service_name}/workspace:file4",
                         "perms": {
-                            "read": {"access": "allow",
-                                     "scope": "recursive"}}}
+                            Permission.READ.value: {"access": Access.ALLOW.value,
+                                                    "scope": Scope.RECURSIVE.value}}}
                 }
 
                 def check_permission_sync(event, src_res_id, perm_name, expected_perm_dict):
@@ -271,44 +281,48 @@ class TestSyncPermissions(unittest.TestCase):
                 # Check create permission 0 (0 <-> 1 towards right)
                 check_permission_sync(event=ValidOperations.CreateOperation.value,
                                       src_res_id=res_ids[0],
-                                      perm_name="read",
+                                      perm_name=Permission.READ.value,
                                       expected_perm_dict={
-                                          1: default_write_permission + ["read-match", "read-allow-match"]})
+                                          1: default_write_permission +
+                                          [f"{Permission.READ.value}-{Scope.MATCH.value}",
+                                              f"{Permission.READ.value}-{Access.ALLOW.value}-{Scope.MATCH.value}"]})
 
                 # Check create permission 1 (0 <-> 1 towards left, and 1 -> 2)
                 check_permission_sync(event=ValidOperations.CreateOperation.value,
                                       src_res_id=res_ids[1],
-                                      perm_name="read",
+                                      perm_name=Permission.READ.value,
                                       expected_perm_dict={
                                           0: default_read_permission,
-                                          2: ["read-deny-match"]})
+                                          2: [f"{Permission.READ.value}-{Access.DENY.value}-{Scope.MATCH.value}"]})
 
                 # Check create permission 2 (3 <- 2)
                 check_permission_sync(event=ValidOperations.CreateOperation.value,
                                       src_res_id=res_ids[2],
-                                      perm_name="read",
+                                      perm_name=Permission.READ.value,
                                       expected_perm_dict={
                                           3: default_read_permission})
 
                 # Force create the permission 4, required for the following test.
-                self.create_test_permission(res_ids[4], {"name": "read", "access": "allow", "scope": "recursive"},
+                self.create_test_permission(res_ids[4], {"name": Permission.READ.value,
+                                                         "access": Access.ALLOW.value,
+                                                         "scope": Scope.RECURSIVE.value},
                                             test_case_usr_grp["user"], test_case_usr_grp["group"])
 
                 # Check delete write permission 1 (0 <-> 1 towards left and 1 -> 2), 0 and 2 should not be deleted,
                 # since read permission 1 still exists
                 check_permission_sync(event=ValidOperations.DeleteOperation.value,
                                       src_res_id=res_ids[1],
-                                      perm_name="write",
+                                      perm_name=Permission.WRITE.value,
                                       expected_perm_dict={
                                           0: default_read_permission,
-                                          2: ["read-deny-match"]})
+                                          2: [f"{Permission.READ.value}-{Access.DENY.value}-{Scope.MATCH.value}"]})
 
                 # Check delete permission 0 (0 <-> 1 towards right), read permission 1 only should be deleted and
                 # write permission 1 should not be deleted, since there is also the mapping 4 -> 1(write),
                 # and the permission 4 still exists.
                 check_permission_sync(event=ValidOperations.DeleteOperation.value,
                                       src_res_id=res_ids[0],
-                                      perm_name="read",
+                                      perm_name=Permission.READ.value,
                                       expected_perm_dict={
                                           1: default_write_permission})
 
@@ -322,32 +336,37 @@ class TestSyncPermissions(unittest.TestCase):
                     self.check_group_permissions(res_ids[1], default_write_permission)
                 check_permission_sync(event=ValidOperations.DeleteOperation.value,
                                       src_res_id=res_ids[1],
-                                      perm_name="write",
+                                      perm_name=Permission.WRITE.value,
                                       expected_perm_dict={
                                           0: [],
                                           2: []})
 
                 # Recreate permissions 0 and 2, required for the following tests.
-                self.create_test_permission(res_ids[0], {"name": "read", "access": "allow", "scope": "recursive"},
+                self.create_test_permission(res_ids[0], {"name": Permission.READ.value,
+                                                         "access": Access.ALLOW.value,
+                                                         "scope": Scope.RECURSIVE.value},
                                             test_case_usr_grp["user"], test_case_usr_grp["group"])
-                self.create_test_permission(res_ids[2], {"name": "read", "access": "allow", "scope": "match"},
+                self.create_test_permission(res_ids[2], {"name": Permission.READ.value,
+                                                         "access": Access.ALLOW.value,
+                                                         "scope": Scope.MATCH.value},
                                             test_case_usr_grp["user"], test_case_usr_grp["group"])
 
                 # Force delete the permission 4.
-                self.delete_test_permission(res_ids[4], "read", test_case_usr_grp["user"], test_case_usr_grp["group"])
+                self.delete_test_permission(res_ids[4], Permission.READ.value,
+                                            test_case_usr_grp["user"], test_case_usr_grp["group"])
 
                 # Check delete permission 0 (0 <-> 1 towards right), which should now work,
                 # since permission 4 was deleted.
                 check_permission_sync(event=ValidOperations.DeleteOperation.value,
                                       src_res_id=res_ids[0],
-                                      perm_name="read",
+                                      perm_name=Permission.READ.value,
                                       expected_perm_dict={
                                           1: []})
 
                 # Check delete permission 1 (0 <-> 1 towards left and 1 -> 2)
                 check_permission_sync(event=ValidOperations.DeleteOperation.value,
                                       src_res_id=res_ids[1],
-                                      perm_name="read",
+                                      perm_name=Permission.READ.value,
                                       expected_perm_dict={
                                           0: [],
                                           2: []})
@@ -355,14 +374,18 @@ class TestSyncPermissions(unittest.TestCase):
                 # Check delete permission 2 (3 <- 2)
                 check_permission_sync(event=ValidOperations.DeleteOperation.value,
                                       src_res_id=res_ids[2],
-                                      perm_name="read",
+                                      perm_name=Permission.READ.value,
                                       expected_perm_dict={
                                           3: []})
 
                 # Check delete permission 2 (3 <- 2) with permission types different than those from config
-                self.create_test_permission(res_ids[3], {"name": "read", "access": "deny", "scope": "recursive"},
+                self.create_test_permission(res_ids[3], {"name": Permission.READ.value,
+                                                         "access": Access.DENY.value,
+                                                         "scope": Scope.RECURSIVE.value},
                                             test_case_usr_grp["user"], test_case_usr_grp["group"])
-                self.create_test_permission(res_ids[3], {"name": "write", "access": "allow", "scope": "recursive"},
+                self.create_test_permission(res_ids[3], {"name": Permission.WRITE.value,
+                                                         "access": Access.ALLOW.value,
+                                                         "scope": Scope.RECURSIVE.value},
                                             test_case_usr_grp["user"], test_case_usr_grp["group"])
                 # Read permission is deleted, even if its 'access' (deny) differs with the one sent to Magpie (allow).
                 # Magpie deletes the permission even if the access or the scope is different than the one sent
@@ -370,10 +393,11 @@ class TestSyncPermissions(unittest.TestCase):
                 # Only the write permission remains.
                 check_permission_sync(event=ValidOperations.DeleteOperation.value,
                                       src_res_id=res_ids[2],
-                                      perm_name="read",
+                                      perm_name=Permission.READ.value,
                                       expected_perm_dict={
                                           3: default_write_permission})
-                self.delete_test_permission(res_ids[3], "write", test_case_usr_grp["user"], test_case_usr_grp["group"])
+                self.delete_test_permission(res_ids[3], Permission.WRITE.value,
+                                            test_case_usr_grp["user"], test_case_usr_grp["group"])
 
     def test_webhooks_valid_tokens(self):
         """
@@ -382,36 +406,39 @@ class TestSyncPermissions(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "thredds": {
+                    ServiceTHREDDS.service_type: {
                         "Thredds_file_src": [
-                            {"name": self.test_service_name, "type": "service"},
-                            {"name": "private", "type": "directory"},
-                            {"name": MULTI_TOKEN, "type": "directory"},
-                            {"name": "{file}", "type": "file"}],
+                            {"name": self.test_service_name, "type": Service.resource_type_name},
+                            {"name": "private", "type": Directory.resource_type_name},
+                            {"name": MULTI_TOKEN, "type": Directory.resource_type_name},
+                            {"name": "{file}", "type": File.resource_type_name}],
                         "Thredds_file_target": [
-                            {"name": self.test_service_name, "type": "service"},
-                            {"name": MULTI_TOKEN, "type": "directory"},
-                            {"name": "{file}", "type": "file"}],
+                            {"name": self.test_service_name, "type": Service.resource_type_name},
+                            {"name": MULTI_TOKEN, "type": Directory.resource_type_name},
+                            {"name": "{file}", "type": File.resource_type_name}],
                         "Thredds_dir_src": [
-                            {"name": self.test_service_name, "type": "service"},
-                            {"name": "private", "type": "directory"},
-                            {"name": MULTI_TOKEN, "type": "directory"}],
+                            {"name": self.test_service_name, "type": Service.resource_type_name},
+                            {"name": "private", "type": Directory.resource_type_name},
+                            {"name": MULTI_TOKEN, "type": Directory.resource_type_name}],
                         "Thredds_dir_target": [
-                            {"name": self.test_service_name, "type": "service"},
-                            {"name": MULTI_TOKEN, "type": "directory"}],
+                            {"name": self.test_service_name, "type": Service.resource_type_name},
+                            {"name": MULTI_TOKEN, "type": Directory.resource_type_name}],
                         "Thredds_named_dir_src": [
-                            {"name": self.test_service_name, "type": "service"},
-                            {"name": "named_dir1", "type": "directory"},
-                            {"name": "{dir1}", "type": "directory"},
-                            {"name": "{dir2}", "type": "directory"}],
+                            {"name": self.test_service_name, "type": Service.resource_type_name},
+                            {"name": "named_dir1", "type": Directory.resource_type_name},
+                            {"name": "{dir1}", "type": Directory.resource_type_name},
+                            {"name": "{dir2}", "type": Directory.resource_type_name}],
                         "Thredds_named_dir_target": [
-                            {"name": self.test_service_name, "type": "service"},
-                            {"name": "named_dir2", "type": "directory"},
-                            {"name": "{dir2}", "type": "directory"},
-                            {"name": "{dir1}", "type": "directory"}]}},
-                "permissions_mapping": ["Thredds_file_src : read <-> Thredds_file_target : read",
-                                        "Thredds_dir_src : read <-> Thredds_dir_target : read",
-                                        "Thredds_named_dir_src : read <-> Thredds_named_dir_target : read"]
+                            {"name": self.test_service_name, "type": Service.resource_type_name},
+                            {"name": "named_dir2", "type": Directory.resource_type_name},
+                            {"name": "{dir2}", "type": Directory.resource_type_name},
+                            {"name": "{dir1}", "type": Directory.resource_type_name}]}},
+                "permissions_mapping": [f"Thredds_file_src : {Permission.READ.value} <-> "
+                                            f"Thredds_file_target : {Permission.READ.value}",
+                                        f"Thredds_dir_src : {Permission.READ.value} <-> "
+                                            f"Thredds_dir_target : {Permission.READ.value}",
+                                        f"Thredds_named_dir_src : {Permission.READ.value} <-> "
+                                            f"Thredds_named_dir_target : {Permission.READ.value}"]
             }
         }
         with open(self.cfg_file.name, mode="w", encoding="utf-8") as f:
@@ -425,33 +452,33 @@ class TestSyncPermissions(unittest.TestCase):
                                            side_effect=utils.MockAnyHandler))
 
             # Create test resources
-            dir_src_res_id = self.magpie.create_resource("private", "directory", self.test_service_id)
-            parent_res_id = self.magpie.create_resource("dir1", "directory", dir_src_res_id)
-            parent_res_id = self.magpie.create_resource("dir2", "directory", parent_res_id)
-            file_src_res_id = self.magpie.create_resource("workspace_file", "file", parent_res_id)
+            dir_src_res_id = self.magpie.create_resource("private", Directory.resource_type_name, self.test_service_id)
+            parent_res_id = self.magpie.create_resource("dir1", Directory.resource_type_name, dir_src_res_id)
+            parent_res_id = self.magpie.create_resource("dir2", Directory.resource_type_name, parent_res_id)
+            file_src_res_id = self.magpie.create_resource("workspace_file", File.resource_type_name, parent_res_id)
 
             dir_target_res_id = self.test_service_id
-            parent_res_id = self.magpie.create_resource("dir1", "directory", self.test_service_id)
-            parent_res_id = self.magpie.create_resource("dir2", "directory", parent_res_id)
-            file_target_res_id = self.magpie.create_resource("workspace_file", "file", parent_res_id)
+            parent_res_id = self.magpie.create_resource("dir1", Directory.resource_type_name, self.test_service_id)
+            parent_res_id = self.magpie.create_resource("dir2", Directory.resource_type_name, parent_res_id)
+            file_target_res_id = self.magpie.create_resource("workspace_file", File.resource_type_name, parent_res_id)
 
-            parent_res_id = self.magpie.create_resource("named_dir1", "directory", self.test_service_id)
-            parent_res_id = self.magpie.create_resource("dir1", "directory", parent_res_id)
-            named_dir_src_res_id = self.magpie.create_resource("dir2", "directory", parent_res_id)
-            parent_res_id = self.magpie.create_resource("named_dir2", "directory", self.test_service_id)
-            parent_res_id = self.magpie.create_resource("dir2", "directory", parent_res_id)
-            named_dir_target_res_id = self.magpie.create_resource("dir1", "directory", parent_res_id)
+            parent_res_id = self.magpie.create_resource("named_dir1", Directory.resource_type_name, self.test_service_id)
+            parent_res_id = self.magpie.create_resource("dir1", Directory.resource_type_name, parent_res_id)
+            named_dir_src_res_id = self.magpie.create_resource("dir2", Directory.resource_type_name, parent_res_id)
+            parent_res_id = self.magpie.create_resource("named_dir2", Directory.resource_type_name, self.test_service_id)
+            parent_res_id = self.magpie.create_resource("dir2", Directory.resource_type_name, parent_res_id)
+            named_dir_target_res_id = self.magpie.create_resource("dir1", Directory.resource_type_name, parent_res_id)
 
             # Create permissions for 1st mapping case, src resource should match with a MULTI_TOKEN that
             # uses 0 segment occurrence
             data = {
                 "event": ValidOperations.CreateOperation.value,
-                "service_name": "thredds",
+                "service_name": ServiceTHREDDS.service_type,
                 "resource_id": dir_src_res_id,
                 "resource_full_name": f"/{self.test_service_name}/private",
-                "name": "read",
-                "access": "allow",
-                "scope": "recursive",
+                "name": Permission.READ.value,
+                "access": Access.ALLOW.value,
+                "scope": Scope.RECURSIVE.value,
                 "user": self.usr,
                 "group": None
             }
@@ -459,7 +486,9 @@ class TestSyncPermissions(unittest.TestCase):
             utils.check_response_basic_info(resp, 200, expected_method="POST")
 
             # Check if only corresponding permissions were created
-            self.check_user_permissions(dir_target_res_id, ["read", "read-allow-recursive"])
+            self.check_user_permissions(dir_target_res_id,
+                                        [Permission.READ.value,
+                                         f"{Permission.READ.value}-{Access.ALLOW.value}-{Scope.RECURSIVE.value}"])
             self.check_user_permissions(file_target_res_id, [])
 
             # Create and check permissions with 2nd mapping case
@@ -468,7 +497,9 @@ class TestSyncPermissions(unittest.TestCase):
 
             resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
             utils.check_response_basic_info(resp, 200, expected_method="POST")
-            self.check_user_permissions(file_target_res_id, ["read", "read-allow-recursive"])
+            self.check_user_permissions(file_target_res_id,
+                                        [Permission.READ.value,
+                                         f"{Permission.READ.value}-{Access.ALLOW.value}-{Scope.RECURSIVE.value}"])
 
             # Create and check permissions with 3rd mapping case
             data["resource_id"] = named_dir_src_res_id
@@ -476,7 +507,9 @@ class TestSyncPermissions(unittest.TestCase):
 
             resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
             utils.check_response_basic_info(resp, 200, expected_method="POST")
-            self.check_user_permissions(named_dir_target_res_id, ["read", "read-allow-recursive"])
+            self.check_user_permissions(named_dir_target_res_id,
+                                        [Permission.READ.value,
+                                         f"{Permission.READ.value}-{Access.ALLOW.value}-{Scope.RECURSIVE.value}"])
 
     def test_webhooks_invalid_multimatch(self):
         """
@@ -485,16 +518,17 @@ class TestSyncPermissions(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "thredds": {
+                    ServiceTHREDDS.service_type: {
                         "Thredds_match1": [
-                            {"name": self.test_service_name, "type": "service"},
-                            {"name": "{dir1}", "type": "directory"},
-                            {"name": "{dir2}", "type": "directory"}],
+                            {"name": self.test_service_name, "type": Service.resource_type_name},
+                            {"name": "{dir1}", "type": Directory.resource_type_name},
+                            {"name": "{dir2}", "type": Directory.resource_type_name}],
                         "Thredds_match2": [
-                            {"name": self.test_service_name, "type": "service"},
-                            {"name": "{dir2}", "type": "directory"},
-                            {"name": "{dir1}", "type": "directory"}]}},
-                "permissions_mapping": ["Thredds_match1 : read -> Thredds_match2 : read"]
+                            {"name": self.test_service_name, "type": Service.resource_type_name},
+                            {"name": "{dir2}", "type": Directory.resource_type_name},
+                            {"name": "{dir1}", "type": Directory.resource_type_name}]}},
+                "permissions_mapping": [f"Thredds_match1 : {Permission.READ.value} -> "
+                                        f"Thredds_match2 : {Permission.READ.value}"]
             }
         }
         with open(self.cfg_file.name, mode="w", encoding="utf-8") as f:
@@ -507,17 +541,17 @@ class TestSyncPermissions(unittest.TestCase):
             stack.enter_context(mock.patch("cowbird.handlers.impl.thredds.Thredds",
                                            side_effect=utils.MockAnyHandler))
             # Create test resources
-            parent_id = self.magpie.create_resource("dir1", "directory", self.test_service_id)
-            src_res_id = self.magpie.create_resource("dir2", "directory", parent_id)
+            parent_id = self.magpie.create_resource("dir1", Directory.resource_type_name, self.test_service_id)
+            src_res_id = self.magpie.create_resource("dir2", Directory.resource_type_name, parent_id)
 
             data = {
                 "event": ValidOperations.CreateOperation.value,
-                "service_name": "thredds",
+                "service_name": ServiceTHREDDS.service_type,
                 "resource_id": src_res_id,
                 "resource_full_name": f"/{self.test_service_name}/dir1/dir2",
-                "name": "read",
-                "access": "allow",
-                "scope": "recursive",
+                "name": Permission.READ.value,
+                "access": Access.ALLOW.value,
+                "scope": Scope.RECURSIVE.value,
                 "user": self.usr,
                 "group": None
             }
@@ -534,15 +568,16 @@ class TestSyncPermissions(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "thredds": {
+                    ServiceTHREDDS.service_type: {
                         "Thredds_match1": [
-                            {"name": self.test_service_name, "type": "service"},
-                            {"name": MULTI_TOKEN, "type": "directory"}],
+                            {"name": self.test_service_name, "type": Service.resource_type_name},
+                            {"name": MULTI_TOKEN, "type": Directory.resource_type_name}],
                         "Thredds_match2": [
-                            {"name": self.test_service_name, "type": "service"},
-                            {"name": "dir", "type": "directory"},
-                            {"name": MULTI_TOKEN, "type": "directory"}]}},
-                "permissions_mapping": ["Thredds_match1 : read -> Thredds_match2 : read"]
+                            {"name": self.test_service_name, "type": Service.resource_type_name},
+                            {"name": "dir", "type": Directory.resource_type_name},
+                            {"name": MULTI_TOKEN, "type": Directory.resource_type_name}]}},
+                "permissions_mapping": [f"Thredds_match1 : {Permission.READ.value} -> "
+                                        f"Thredds_match2 : {Permission.READ.value}"]
             }
         }
         with open(self.cfg_file.name, mode="w", encoding="utf-8") as f:
@@ -555,16 +590,16 @@ class TestSyncPermissions(unittest.TestCase):
             stack.enter_context(mock.patch("cowbird.handlers.impl.thredds.Thredds",
                                            side_effect=utils.MockAnyHandler))
             # Create test resources
-            src_res_id = self.magpie.create_resource("dir", "file", self.test_service_id)
+            src_res_id = self.magpie.create_resource("dir", File.resource_type_name, self.test_service_id)
 
             data = {
                 "event": ValidOperations.CreateOperation.value,
-                "service_name": "thredds",
+                "service_name": ServiceTHREDDS.service_type,
                 "resource_id": src_res_id,
                 "resource_full_name": f"/{self.test_service_name}/dir",
-                "name": "read",
-                "access": "allow",
-                "scope": "recursive",
+                "name": Permission.READ.value,
+                "access": Access.ALLOW.value,
+                "scope": Scope.RECURSIVE.value,
                 "user": self.usr,
                 "group": None
             }
@@ -583,8 +618,8 @@ class TestSyncPermissions(unittest.TestCase):
                 "services": {
                     "NotAMagpieService": {
                         "Invalid": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": "dir", "type": "directory"}]}},
+                            {"name": "catalog", "type": Service.resource_type_name},
+                            {"name": "dir", "type": Directory.resource_type_name}]}},
                 "permissions_mapping": []
             }
         }
@@ -636,10 +671,10 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "thredds": {
+                    ServiceTHREDDS.service_type: {
                         "Valid_multitoken": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": MULTI_TOKEN, "type": "directory"}
+                            {"name": "catalog", "type": Service.resource_type_name},
+                            {"name": MULTI_TOKEN, "type": Directory.resource_type_name}
                         ]}},
                 "permissions_mapping": []
             }
@@ -649,11 +684,11 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "thredds": {
+                    ServiceTHREDDS.service_type: {
                         "Invalid_multitoken": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": MULTI_TOKEN, "type": "directory"},
-                            {"name": MULTI_TOKEN, "type": "directory"}
+                            {"name": "catalog", "type": Service.resource_type_name},
+                            {"name": MULTI_TOKEN, "type": Directory.resource_type_name},
+                            {"name": MULTI_TOKEN, "type": Directory.resource_type_name}
                         ]}},
                 "permissions_mapping": []
             }
@@ -667,11 +702,11 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "thredds": {
+                    ServiceTHREDDS.service_type: {
                         "Duplicate_tokens": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": "{dir_var}", "type": "directory"},
-                            {"name": "{dir_var}", "type": "directory"}
+                            {"name": "catalog", "type": Service.resource_type_name},
+                            {"name": "{dir_var}", "type": Directory.resource_type_name},
+                            {"name": "{dir_var}", "type": Directory.resource_type_name}
                         ]}},
                 "permissions_mapping": []
             }
@@ -685,11 +720,12 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "thredds": {
+                    ServiceTHREDDS.service_type: {
                         "ValidResource": [
-                            {"name": "catalog", "type": "service"}
+                            {"name": "catalog", "type": Service.resource_type_name}
                         ]}},
-                "permissions_mapping": ["ValidResource : read <-> UnknownResource : read"]
+                "permissions_mapping": [f"ValidResource : {Permission.READ.value} <-> "
+                                        f"UnknownResource : f{Permission.READ.value}"]
             }
         }
         check_config(self.data, ConfigErrorInvalidResourceKey)
@@ -701,19 +737,20 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "thredds": {
+                    ServiceTHREDDS.service_type: {
                         "DuplicateResource": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": "dir", "type": "directory"}],
+                            {"name": "catalog", "type": Service.resource_type_name},
+                            {"name": "dir", "type": Directory.resource_type_name}],
                         "OtherResource": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": "file", "type": "file"}]},
-                    "geoserver": {
+                            {"name": "catalog", "type": Service.resource_type_name},
+                            {"name": "file", "type": File.resource_type_name}]},
+                    ServiceGeoserver.service_type: {
                         "DuplicateResource": [
-                            {"name": "catalog", "type": "workspace"},
-                            {"name": "dir", "type": "workspace"}]}
+                            {"name": "catalog", "type": Workspace.resource_type_name},
+                            {"name": "dir", "type": Workspace.resource_type_name}]}
                 },
-                "permissions_mapping": ["DuplicateResource : read <-> OtherResource : read"]
+                "permissions_mapping": [f"DuplicateResource : {Permission.READ.value} <-> "
+                                        f"OtherResource : {Permission.READ.value}"]
             }
         }
         check_config(self.data, ConfigErrorInvalidResourceKey)
@@ -725,14 +762,14 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "thredds": {
+                    ServiceTHREDDS.service_type: {
                         "ValidResource": [
-                            {"name": "catalog", "type": "service"}
+                            {"name": "catalog", "type": Service.resource_type_name}
                         ],
                         "ValidResource2": [
-                            {"name": "catalog", "type": "service"}
+                            {"name": "catalog", "type": Service.resource_type_name}
                         ]}},
-                "permissions_mapping": ["ValidResource : read <-> Invalid-format"]
+                "permissions_mapping": [f"ValidResource : {Permission.READ.value} <-> Invalid-format"]
             }
         }
         check_config(self.data, SchemaError)
@@ -744,16 +781,17 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "thredds": {
+                    ServiceTHREDDS.service_type: {
                         "TokenizedResource1": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": MULTI_TOKEN, "type": "directory"}],
+                            {"name": "catalog", "type": Service.resource_type_name},
+                            {"name": MULTI_TOKEN, "type": Directory.resource_type_name}],
                         "TokenizedResource2": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": MULTI_TOKEN, "type": "directory"},
-                            {"name": "file", "type": "file"}
+                            {"name": "catalog", "type": Service.resource_type_name},
+                            {"name": MULTI_TOKEN, "type": Directory.resource_type_name},
+                            {"name": "file", "type": File.resource_type_name}
                         ]}},
-                "permissions_mapping": ["TokenizedResource1 : read <-> TokenizedResource2 : read"]
+                "permissions_mapping": [f"TokenizedResource1 : {Permission.READ.value} <-> "
+                                        f"TokenizedResource2 : {Permission.READ.value}"]
             }
         }
         check_config(self.data)
@@ -761,15 +799,16 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "thredds": {
+                    ServiceTHREDDS.service_type: {
                         "TokenizedResource": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": MULTI_TOKEN, "type": "directory"}],
+                            {"name": "catalog", "type": Service.resource_type_name},
+                            {"name": MULTI_TOKEN, "type": Directory.resource_type_name}],
                         "UntokenizedResource": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": "file", "type": "file"}
+                            {"name": "catalog", "type": Service.resource_type_name},
+                            {"name": "file", "type": File.resource_type_name}
                         ]}},
-                "permissions_mapping": ["TokenizedResource : read <-> UntokenizedResource : read"]
+                "permissions_mapping": [f"TokenizedResource : {Permission.READ.value} <-> "
+                                        f"UntokenizedResource : {Permission.READ.value}"]
             }
         }
         check_config(self.data, ConfigErrorInvalidTokens)
@@ -781,29 +820,30 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "thredds": {
+                    ServiceTHREDDS.service_type: {
                         "TokenizedResource": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": MULTI_TOKEN, "type": "directory"}],
+                            {"name": "catalog", "type": Service.resource_type_name},
+                            {"name": MULTI_TOKEN, "type": Directory.resource_type_name}],
                         "UntokenizedResource": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": "file", "type": "file"}
+                            {"name": "catalog", "type": Service.resource_type_name},
+                            {"name": "file", "type": File.resource_type_name}
                         ]}},
-                "permissions_mapping": ["TokenizedResource : read -> UntokenizedResource : read"]
+                "permissions_mapping": [f"TokenizedResource : {Permission.READ.value} -> "
+                                        f"UntokenizedResource : {Permission.READ.value}"]
             }
         }
         check_config(self.data)
 
         self.data["sync_permissions"]["user_workspace"]["permissions_mapping"] = \
-            ["UntokenizedResource : read -> TokenizedResource : read"]
+            [f"UntokenizedResource : {Permission.READ.value} -> TokenizedResource : {Permission.READ.value}"]
         check_config(self.data, ConfigErrorInvalidTokens)
 
         self.data["sync_permissions"]["user_workspace"]["permissions_mapping"] = \
-            ["TokenizedResource : read <- UntokenizedResource : read"]
+            [f"TokenizedResource : {Permission.READ.value} <- UntokenizedResource : {Permission.READ.value}"]
         check_config(self.data, ConfigErrorInvalidTokens)
 
         self.data["sync_permissions"]["user_workspace"]["permissions_mapping"] = \
-            ["UntokenizedResource : read <- TokenizedResource : read"]
+            [f"UntokenizedResource : {Permission.READ.value} <- TokenizedResource : {Permission.READ.value}"]
         check_config(self.data)
 
     def test_bidirectional_named_tokens(self):
@@ -813,18 +853,18 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "thredds": {
+                    ServiceTHREDDS.service_type: {
                         "Resource1": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": "{dir1_var}", "type": "directory"},
-                            {"name": "{dir2_var}", "type": "directory"}],
+                            {"name": "catalog", "type": Service.resource_type_name},
+                            {"name": "{dir1_var}", "type": Directory.resource_type_name},
+                            {"name": "{dir2_var}", "type": Directory.resource_type_name}],
                         "Resource2": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": "{dir2_var}", "type": "directory"},
-                            {"name": "{dir1_var}", "type": "directory"},
-                            {"name": "dir2", "type": "directory"}
+                            {"name": "catalog", "type": Service.resource_type_name},
+                            {"name": "{dir2_var}", "type": Directory.resource_type_name},
+                            {"name": "{dir1_var}", "type": Directory.resource_type_name},
+                            {"name": "dir2", "type": Directory.resource_type_name}
                         ]}},
-                "permissions_mapping": ["Resource1 : read <-> Resource2 : read"]
+                "permissions_mapping": [f"Resource1 : {Permission.READ.value} <-> Resource2 : {Permission.READ.value}"]
             }
         }
         check_config(self.data)
@@ -832,17 +872,17 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "thredds": {
+                    ServiceTHREDDS.service_type: {
                         "Resource1": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": "{dir1_var}", "type": "directory"},
-                            {"name": "{dir2_var}", "type": "directory"}],
+                            {"name": "catalog", "type": Service.resource_type_name},
+                            {"name": "{dir1_var}", "type": Directory.resource_type_name},
+                            {"name": "{dir2_var}", "type": Directory.resource_type_name}],
                         "Resource2": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": "{dir1_var}", "type": "directory"},
-                            {"name": "dir2", "type": "directory"}
+                            {"name": "catalog", "type": Service.resource_type_name},
+                            {"name": "{dir1_var}", "type": Directory.resource_type_name},
+                            {"name": "dir2", "type": Directory.resource_type_name}
                         ]}},
-                "permissions_mapping": ["Resource1 : read <-> Resource2 : read"]
+                "permissions_mapping": [f"Resource1 : {Permission.READ.value} <-> Resource2 : {Permission.READ.value}"]
             }
         }
         check_config(self.data, ConfigErrorInvalidTokens)
@@ -854,31 +894,31 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "thredds": {
+                    ServiceTHREDDS.service_type: {
                         "Resource1": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": "{dir1_var}", "type": "directory"},
-                            {"name": "{dir2_var}", "type": "directory"}],
+                            {"name": "catalog", "type": Service.resource_type_name},
+                            {"name": "{dir1_var}", "type": Directory.resource_type_name},
+                            {"name": "{dir2_var}", "type": Directory.resource_type_name}],
                         "Resource2": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": "{dir1_var}", "type": "directory"},
-                            {"name": "dir2", "type": "directory"}
+                            {"name": "catalog", "type": Service.resource_type_name},
+                            {"name": "{dir1_var}", "type": Directory.resource_type_name},
+                            {"name": "dir2", "type": Directory.resource_type_name}
                         ]}},
-                "permissions_mapping": ["Resource1 : read -> Resource2 : read"]
+                "permissions_mapping": [f"Resource1 : {Permission.READ.value} -> Resource2 : {Permission.READ.value}"]
             }
         }
         check_config(self.data)
 
         self.data["sync_permissions"]["user_workspace"]["permissions_mapping"] = \
-            ["Resource2 : read -> Resource1 : read"]
+            [f"Resource2 : {Permission.READ.value} -> Resource1 : {Permission.READ.value}"]
         check_config(self.data, ConfigErrorInvalidTokens)
 
         self.data["sync_permissions"]["user_workspace"]["permissions_mapping"] = \
-            ["Resource1 : read <- Resource2 : read"]
+            [f"Resource1 : {Permission.READ.value} <- Resource2 : {Permission.READ.value}"]
         check_config(self.data, ConfigErrorInvalidTokens)
 
         self.data["sync_permissions"]["user_workspace"]["permissions_mapping"] = \
-            ["Resource2 : read <- Resource1 : read"]
+            [f"Resource2 : {Permission.READ.value} <- Resource1 : {Permission.READ.value}"]
         check_config(self.data)
 
     def test_cross_service_mappings(self):
@@ -888,37 +928,42 @@ class TestSyncPermissionsConfig(unittest.TestCase):
         self.data["sync_permissions"] = {
             "user_workspace": {
                 "services": {
-                    "thredds": {
+                    ServiceTHREDDS.service_type: {
                         "ThreddsMultiTokenResource": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": MULTI_TOKEN, "type": "directory"}],
+                            {"name": "catalog", "type": Service.resource_type_name},
+                            {"name": MULTI_TOKEN, "type": Directory.resource_type_name}],
                         "ThreddsNamedTokenResource": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": "{dir1_var}", "type": "directory"},
-                            {"name": "{dir2_var}", "type": "directory"}
+                            {"name": "catalog", "type": Service.resource_type_name},
+                            {"name": "{dir1_var}", "type": Directory.resource_type_name},
+                            {"name": "{dir2_var}", "type": Directory.resource_type_name}
                         ]},
-                    "geoserver": {
+                    ServiceGeoserver.service_type: {
                         "GeoserverMultiTokenResource": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": MULTI_TOKEN, "type": "directory"},
-                            {"name": "file", "type": "file"}],
+                            {"name": "catalog", "type": Service.resource_type_name},
+                            {"name": MULTI_TOKEN, "type": Directory.resource_type_name},
+                            {"name": "file", "type": File.resource_type_name}],
                         "GeoserverUntokenizedResource": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": "file", "type": "file"}],
+                            {"name": "catalog", "type": Service.resource_type_name},
+                            {"name": "file", "type": File.resource_type_name}],
                         "GeoserverNamedTokenResource1": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": "{dir1_var}", "type": "directory"},
-                            {"name": "dir2", "type": "directory"}],
+                            {"name": "catalog", "type": Service.resource_type_name},
+                            {"name": "{dir1_var}", "type": Directory.resource_type_name},
+                            {"name": "dir2", "type": Directory.resource_type_name}],
                         "GeoserverNamedTokenResource2": [
-                            {"name": "catalog", "type": "service"},
-                            {"name": "{dir1_var}", "type": "directory"},
-                            {"name": "{dir2_var}", "type": "directory"}]
+                            {"name": "catalog", "type": Service.resource_type_name},
+                            {"name": "{dir1_var}", "type": Directory.resource_type_name},
+                            {"name": "{dir2_var}", "type": Directory.resource_type_name}]
                     }},
-                "permissions_mapping": ["ThreddsMultiTokenResource : read -> GeoserverUntokenizedResource : read",
-                                        "ThreddsMultiTokenResource : read <-> GeoserverMultiTokenResource : read",
-                                        "ThreddsNamedTokenResource : read -> GeoserverUntokenizedResource : read",
-                                        "ThreddsNamedTokenResource : read -> GeoserverNamedTokenResource1 : read",
-                                        "ThreddsNamedTokenResource : read <-> GeoserverNamedTokenResource2 : read"]
+                "permissions_mapping": [f"ThreddsMultiTokenResource : {Permission.READ.value} -> "
+                                            f"GeoserverUntokenizedResource : {Permission.READ.value}",
+                                        f"ThreddsMultiTokenResource : {Permission.READ.value} <-> "
+                                            f"GeoserverMultiTokenResource : {Permission.READ.value}",
+                                        f"ThreddsNamedTokenResource : {Permission.READ.value} -> "
+                                            f"GeoserverUntokenizedResource : {Permission.READ.value}",
+                                        f"ThreddsNamedTokenResource : {Permission.READ.value} -> "
+                                            f"GeoserverNamedTokenResource1 : {Permission.READ.value}",
+                                        f"ThreddsNamedTokenResource : {Permission.READ.value} <-> "
+                                            f"GeoserverNamedTokenResource2 : {Permission.READ.value}"]
             }
         }
         check_config(self.data)

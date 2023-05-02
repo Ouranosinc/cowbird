@@ -9,6 +9,10 @@ from cowbird.config import ConfigError
 from cowbird.handlers.handler import HANDLER_URL_PARAM, Handler
 from cowbird.permissions_synchronizer import PermissionSynchronizer
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger
+from magpie.models import Layer, Workspace
+from magpie.permissions import Permission
+from magpie.services import ServiceGeoserver
+
 
 if TYPE_CHECKING:
     from typing import Any, Dict, List, Optional
@@ -19,12 +23,25 @@ LOGGER = get_logger(__name__)
 
 COOKIES_TIMEOUT = 60
 
-WFS_READ_PERMISSIONS = ["describefeaturetype", "describestoredqueries", "getcapabilities", "getfeature", "getgmlobject",
-                        "getpropertyvalue", "liststoredqueries"]
-WFS_WRITE_PERMISSIONS = ["createstoredquery", "dropstoredquery", "getfeaturewithlock", "lockfeature", "transaction"]
-WMS_READ_PERMISSIONS = ["describelayer", "getcapabilities", "getfeatureinfo", "getlegendgraphic", "getmap"]
-WPS_READ_PERMISSIONS = ["describeprocess", "getcapabilities"]
-WPS_WRITE_PERMISSIONS = ["execute"]
+WFS_READ_PERMISSIONS = [Permission.DESCRIBE_FEATURE_TYPE.value,
+                        Permission.DESCRIBE_STORED_QUERIES.value,
+                        Permission.GET_CAPABILITIES.value,
+                        Permission.GET_FEATURE.value,
+                        Permission.GET_GML_OBJECT.value,
+                        Permission.GET_PROPERTY_VALUE.value,
+                        Permission.LIST_STORED_QUERIES.value]
+WFS_WRITE_PERMISSIONS = [Permission.CREATE_STORED_QUERY.value,
+                         Permission.DROP_STORED_QUERY.value,
+                         Permission.GET_FEATURE_WITH_LOCK.value,
+                         Permission.LOCK_FEATURE.value,
+                         Permission.TRANSACTION.value]
+WMS_READ_PERMISSIONS = [Permission.DESCRIBE_LAYER.value,
+                        Permission.GET_CAPABILITIES.value,
+                        Permission.GET_FEATURE_INFO.value,
+                        Permission.GET_LEGEND_GRAPHIC.value,
+                        Permission.GET_MAP.value]
+WPS_READ_PERMISSIONS = [Permission.DESCRIBE_PROCESS.value, Permission.GET_CAPABILITIES.value]
+WPS_WRITE_PERMISSIONS = [Permission.EXECUTE.value]
 
 LAYER_READ_PERMISSIONS = WFS_READ_PERMISSIONS + WMS_READ_PERMISSIONS
 LAYER_WRITE_PERMISSIONS = WFS_WRITE_PERMISSIONS
@@ -139,9 +156,10 @@ class Magpie(Handler):
         workspace if they do not exist yet.
         """
         layer_res_id, workspace_res_id = None, None
-        geoserver_type_services = self.get_services_by_type("geoserver")
+        geoserver_type_services = self.get_services_by_type(ServiceGeoserver.service_type)
         if not geoserver_type_services:
-            raise ValueError("No service of type `geoserver` found on Magpie while trying to get a layer resource id.")
+            raise ValueError(f"No service of type `{ServiceGeoserver.service_type}` found on Magpie while trying to get"
+                             " a layer resource id.")
         for svc in geoserver_type_services.values():
             if layer_res_id:
                 break
@@ -157,11 +175,11 @@ class Magpie(Handler):
             if not workspace_res_id:
                 workspace_res_id = self.create_resource(
                     resource_name=workspace_name,
-                    resource_type="workspace",
+                    resource_type=Workspace.resource_type_name,
                     parent_id=list(geoserver_type_services.values())[0]["resource_id"])
             layer_res_id = self.create_resource(
                 resource_name=layer_name,
-                resource_type="layer",
+                resource_type=Layer.resource_type_name,
                 parent_id=workspace_res_id)
         return layer_res_id
 

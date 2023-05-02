@@ -17,6 +17,8 @@ from cowbird.monitoring.monitoring import Monitoring
 from cowbird.permissions_synchronizer import Permission
 from cowbird.request_task import RequestTask
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger, update_filesystem_permissions
+from magpie.models import Layer, Service, Workspace
+from magpie.permissions import Access, Scope
 
 if TYPE_CHECKING:
     from typing import Any, List, Optional
@@ -148,7 +150,7 @@ class Geoserver(Handler, FSMonitor):
         """
         Updates a Magpie resource's associated paths according to its permissions found on Magpie.
         """
-        if resource_type == "layer":
+        if resource_type == Layer.resource_type_name:
             if not layer_name:
                 raise GeoserverError("Missing layer name to update permissions.")
             path_list = self.get_shapefile_list(workspace_name, layer_name)
@@ -159,10 +161,11 @@ class Geoserver(Handler, FSMonitor):
         user_permissions = HandlerFactory().get_handler("Magpie").get_user_permissions_by_res_id(
             permission.user, resource_id, effective=True)
 
-        allowed_user_perm_names = {p["name"] for p in user_permissions["permissions"] if p["access"] == "allow"}
+        allowed_user_perm_names = {p["name"] for p in user_permissions["permissions"]
+                                   if p["access"] == Access.ALLOW.value}
         is_readable = any(p in LAYER_READ_PERMISSIONS for p in allowed_user_perm_names)
         is_writable = any(p in LAYER_WRITE_PERMISSIONS for p in allowed_user_perm_names)
-        is_executable = is_readable if resource_type == "workspace" else False
+        is_executable = is_readable if resource_type == Workspace.resource_type_name else False
 
         for path in path_list:
             if not os.path.exists(path):
@@ -190,7 +193,7 @@ class Geoserver(Handler, FSMonitor):
         """
         for res_id, res_info in children_res_tree.items():
             res_type = res_info["resource_type"]
-            if res_type == "layer":
+            if res_type == Layer.resource_type_name:
                 layer_name = res_info["resource_name"]
 
             self._update_resource_paths_permissions(resource_type=res_type,
@@ -198,7 +201,7 @@ class Geoserver(Handler, FSMonitor):
                                                     resource_id=res_id,
                                                     workspace_name=workspace_name,
                                                     layer_name=layer_name)
-            if res_type == "workspace":
+            if res_type == Workspace.resource_type_name:
                 self._update_res_children_paths_permissions(children_res_tree=res_info["children"],
                                                             permission=permission,
                                                             workspace_name=workspace_name,
@@ -225,15 +228,17 @@ class Geoserver(Handler, FSMonitor):
         resource_tree = magpie_handler.get_parents_resource_tree(permission.resource_id)
         resource_type = resource_tree[-1]["resource_type"]
 
-        if resource_type in ["workspace", "layer"]:
-            layer_name = permission.resource_full_name.split("/")[-1] if resource_type == "layer" else None
+        if resource_type in [Workspace.resource_type_name, Layer.resource_type_name]:
+            layer_name = permission.resource_full_name.split("/")[-1] \
+                if resource_type == Layer.resource_type_name else None
             self._update_resource_paths_permissions(resource_type=resource_type,
                                                     permission=permission,
                                                     resource_id=permission.resource_id,
                                                     workspace_name=workspace_name,
                                                     layer_name=layer_name)
 
-        if resource_type in ["service", "workspace"] and permission.scope == "recursive":
+        if (resource_type in [Service.resource_type_name, Workspace.resource_type_name]
+                and permission.scope == Scope.RECURSIVE.name):
             children_res_tree = magpie_handler.get_children_resource_tree(permission.resource_id)
             self._update_res_children_paths_permissions(children_res_tree=children_res_tree,
                                                         permission=permission,
@@ -353,8 +358,8 @@ class Geoserver(Handler, FSMonitor):
                 permission_data={
                     "permission": {
                         "name": perm_name,
-                        "access": "allow",
-                        "scope": "match"
+                        "access": Access.ALLOW.value,
+                        "scope": Scope.MATCH.value
                     }})
         permissions_to_remove = set((LAYER_READ_PERMISSIONS if not is_readable else []) +
                                     (LAYER_WRITE_PERMISSIONS if not is_writable else []))

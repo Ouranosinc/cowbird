@@ -21,6 +21,7 @@ RUN apk update \
     gcc \
     libffi-dev \
     musl-dev \
+    git \
     && pip install --no-cache-dir --upgrade -r requirements-sys.txt \
     && pip install --no-cache-dir -e ${COWBIRD_DIR} \
     && apk --purge del .build-deps

@@ -23,6 +23,8 @@ from cowbird.handlers.impl.filesystem import DEFAULT_GID, DEFAULT_UID
 from cowbird.handlers.impl.geoserver import SHAPEFILE_MAIN_EXTENSION, Geoserver, GeoserverError
 from cowbird.handlers.impl.magpie import LAYER_READ_PERMISSIONS, LAYER_WRITE_PERMISSIONS
 from cowbird.permissions_synchronizer import Permission
+from magpie.permissions import Access, Permission as MagpiePermission, Scope
+from magpie.services import ServiceGeoserver
 from tests import utils
 
 CURR_DIR = Path(__file__).resolve().parent
@@ -297,7 +299,7 @@ class TestGeoserverPermissions(TestGeoserver):
         self.magpie.delete_service("geoserver")
         data = {
             "service_name": "geoserver",
-            "service_type": "geoserver",
+            "service_type": ServiceGeoserver.service_type,
             "service_url": "http://localhost:9000/geoserver",
         }
         self.test_service_id = self.magpie.create_service(data)
@@ -332,7 +334,8 @@ class TestGeoserverPermissions(TestGeoserver):
         Checks if a resource has the expected permissions on Magpie.
         """
         user_permissions = self.magpie.get_user_permissions_by_res_id(self.magpie_test_user, res_id, effective=True)
-        assert expected_perms == {p["name"] for p in user_permissions["permissions"] if p["access"] == "allow"}
+        assert expected_perms == {p["name"] for p in user_permissions["permissions"]
+                                  if p["access"] == Access.ALLOW.value}
 
     def test_shapefile_on_created(self):
         """
@@ -406,9 +409,9 @@ class TestGeoserverPermissions(TestGeoserver):
             service_name="geoserver",
             resource_id=str(self.layer_id),
             resource_full_name=f"/geoserver/{self.workspace_name}/{self.test_shapefile_name}",
-            name="describefeaturetype",
-            access="allow",
-            scope="match",
+            name=MagpiePermission.DESCRIBE_FEATURE_TYPE.value,
+            access=Access.ALLOW.value,
+            scope=Scope.MATCH.value,
             user=self.magpie_test_user
         )
         self.magpie.create_permission_by_user_and_res_id(self.magpie_test_user, self.layer_id, {
@@ -429,14 +432,15 @@ class TestGeoserverPermissions(TestGeoserver):
         updated_chown_checklist = [mock.call(file, DEFAULT_UID, DEFAULT_GID) for file in updated_shapefile_list]
 
         # Change access to 'deny'
-        self.magpie.delete_permission_by_user_and_res_id(self.magpie_test_user, self.layer_id, "describefeaturetype")
+        self.magpie.delete_permission_by_user_and_res_id(self.magpie_test_user, self.layer_id,
+                                                         MagpiePermission.DESCRIBE_FEATURE_TYPE.value)
         layer_deny_permission = Permission(
             service_name="geoserver",
             resource_id=str(self.layer_id),
             resource_full_name=f"/geoserver/{self.workspace_name}/{self.test_shapefile_name}",
-            name="describefeaturetype",
-            access="deny",
-            scope="match",
+            name=MagpiePermission.DESCRIBE_FEATURE_TYPE.value,
+            access=Access.DENY.value,
+            scope=Scope.MATCH.value,
             user=self.magpie_test_user
         )
         self.magpie.create_permission_by_user_and_res_id(self.magpie_test_user, self.layer_id, {
@@ -455,7 +459,8 @@ class TestGeoserverPermissions(TestGeoserver):
             os.chmod(file, 0o400)
 
         # Remove the existing 'deny' permission
-        self.magpie.delete_permission_by_user_and_res_id(self.magpie_test_user, self.layer_id, "describefeaturetype")
+        self.magpie.delete_permission_by_user_and_res_id(self.magpie_test_user, self.layer_id,
+                                                         MagpiePermission.DESCRIBE_FEATURE_TYPE.value)
         # Test as if the first 'allow' permission was deleted
         self.geoserver.permission_deleted(layer_read_permission)
 
@@ -472,18 +477,18 @@ class TestGeoserverPermissions(TestGeoserver):
         os.chmod(self.datastore_path, 0o500)
         self.magpie.create_permission_by_user_and_res_id(self.magpie_test_user, self.workspace_res_id, {
             "permission": {
-                "name": "describefeaturetype",
-                "access": "allow",
-                "scope": "match"
+                "name": MagpiePermission.DESCRIBE_FEATURE_TYPE.value,
+                "access": Access.ALLOW.value,
+                "scope": Scope.MATCH.value
             }})
         # Update resource with recursive write permissions
         recursive_write_permission = Permission(
             service_name="geoserver",
             resource_id=resource_id,
             resource_full_name=resource_name,
-            name="createstoredquery",
-            access="allow",
-            scope="recursive",
+            name=MagpiePermission.CREATE_STORED_QUERY.value,
+            access=Access.ALLOW.value,
+            scope=Scope.RECURSIVE.value,
             user=self.magpie_test_user
         )
         self.magpie.create_permission_by_user_and_res_id(self.magpie_test_user, resource_id, {
@@ -504,12 +509,12 @@ class TestGeoserverPermissions(TestGeoserver):
         # The layer should keep its write permission, but the workspace should lose its write permission.
         self.magpie.create_permission_by_user_and_res_id(self.magpie_test_user, self.layer_id, {
             "permission": {
-                "name": "createstoredquery",
-                "access": "allow",
-                "scope": "match"}})
+                "name": MagpiePermission.CREATE_STORED_QUERY.value,
+                "access": Access.ALLOW.value,
+                "scope": Scope.MATCH.value}})
         self.magpie.delete_permission_by_user_and_res_id(self.magpie_test_user, resource_id,
                                                          recursive_write_permission.name)
-        recursive_write_permission.access = "deny"
+        recursive_write_permission.access = Access.DENY.value
         self.magpie.create_permission_by_user_and_res_id(self.magpie_test_user, resource_id, {
             "permission": {
                 "name": recursive_write_permission.name,
@@ -524,7 +529,8 @@ class TestGeoserverPermissions(TestGeoserver):
             utils.check_path_permissions(file, 0o200)
 
         # Delete a permission on Magpie
-        self.magpie.delete_permission_by_user_and_res_id(self.magpie_test_user, self.layer_id, "createstoredquery")
+        self.magpie.delete_permission_by_user_and_res_id(self.magpie_test_user, self.layer_id,
+                                                         MagpiePermission.CREATE_STORED_QUERY.value)
         self.magpie.delete_permission_by_user_and_res_id(self.magpie_test_user, resource_id,
                                                          recursive_write_permission.name)
         self.geoserver.permission_deleted(recursive_write_permission)

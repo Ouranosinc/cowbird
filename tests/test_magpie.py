@@ -8,6 +8,8 @@ import yaml
 from dotenv import load_dotenv
 
 from cowbird.handlers import HandlerFactory
+from magpie.models import Layer, Workspace
+from magpie.services import ServiceGeoserver
 from tests import utils
 
 CURR_DIR = Path(__file__).resolve().parent
@@ -73,8 +75,8 @@ class TestMagpie(unittest.TestCase):
 
         data = {
             "service_name": "geoserver1",
-            "service_type": "geoserver",
-            "service_sync_type": "geoserver",
+            "service_type": ServiceGeoserver.service_type,
+            "service_sync_type": ServiceGeoserver.service_type,
             "service_url": "http://localhost:9000/geoserver",
             "configuration": {}
         }
@@ -92,8 +94,8 @@ class TestMagpie(unittest.TestCase):
         assert existing_id == layer1_id
 
         # If another layer with the same name exists in another workspace, it should return the first id found.
-        workspace2_id = self.magpie.create_resource(workspace_name, "workspace", svc2_id)
-        layer2_id = self.magpie.create_resource(layer_name, "layer", workspace2_id)
+        workspace2_id = self.magpie.create_resource(workspace_name, Workspace.resource_type_name, svc2_id)
+        layer2_id = self.magpie.create_resource(layer_name, Layer.resource_type_name, workspace2_id)
         existing_id = self.magpie.get_geoserver_resource_id(workspace_name, layer_name)
         assert existing_id == layer1_id
 
