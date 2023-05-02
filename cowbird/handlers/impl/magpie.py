@@ -17,7 +17,7 @@ from magpie.services import ServiceGeoserver
 if TYPE_CHECKING:
     from typing import Any, Dict, List, Optional
 
-    from cowbird.typedefs import SettingsType
+    from cowbird.typedefs import JSON, SettingsType
 
 LOGGER = get_logger(__name__)
 
@@ -99,7 +99,7 @@ class Magpie(Handler):
         return resp
 
     def get_service_types(self):
-        # type: () -> List
+        # type: () -> List[str]
         """
         Returns the list of service types available on Magpie.
         """
@@ -115,21 +115,21 @@ class Magpie(Handler):
         raise NotImplementedError
 
     def get_services_by_type(self, service_type):
-        # type: (str) -> Dict
+        # type: (str) -> Dict[str, JSON]
         resp = self._send_request(method="GET", url=f"{self.url}/services/types/{service_type}")
         if resp.status_code != 200:
             raise RuntimeError("Could not find the input type's services.")
         return resp.json()["services"][service_type]
 
     def get_resources_by_service(self, service_name):
-        # type: (str) -> Dict
+        # type: (str) -> Dict[str, JSON]
         resp = self._send_request(method="GET", url=f"{self.url}/services/{service_name}/resources")
         if resp.status_code != 200:
             raise RuntimeError("Could not find the input service's resources.")
         return resp.json()[service_name]
 
     def get_parents_resource_tree(self, resource_id):
-        # type: (int) -> List
+        # type: (int) -> List[JSON]
         """
         Returns the associated Magpie Resource object and all its parents in a list ordered from parent to child.
         """
@@ -140,7 +140,7 @@ class Magpie(Handler):
         return resp.json()["resources"]
 
     def get_children_resource_tree(self, resource_id):
-        # type: (int) -> Dict
+        # type: (int) -> Dict[str, JSON]
         """
         Returns the associated Magpie Resource object and all its children.
         """
@@ -184,7 +184,7 @@ class Magpie(Handler):
         return layer_res_id
 
     def get_user_permissions(self, user):
-        # type: (str) -> Dict
+        # type: (str) -> Dict[str, JSON]
         """
         Gets all user resource permissions.
         """
@@ -194,23 +194,15 @@ class Magpie(Handler):
         return resp.json()["resources"]
 
     def get_user_permissions_by_res_id(self, user, res_id, effective=False):
-        # type: (str, int, bool) -> Dict
+        # type: (str, int, bool) -> Dict[str, JSON]
         resp = self._send_request(method="GET", url=f"{self.url}/users/{user}/resources/{res_id}/permissions",
                                   params={"effective": effective})
         if resp.status_code != 200:
             raise RuntimeError(f"Could not find the user `{user}` permissions for the resource `{res_id}`.")
         return resp.json()
 
-    def get_group_permissions_by_res_id(self, grp, res_id, effective=False):
-        # type: (str, int, bool) -> Dict
-        resp = self._send_request(method="GET", url=f"{self.url}/groups/{grp}/resources/{res_id}/permissions",
-                                  params={"effective": effective})
-        if resp.status_code != 200:
-            raise RuntimeError(f"Could not find the group `{grp}` permissions for the resource `{res_id}`.")
-        return resp.json()
-
     def get_group_permissions(self, grp):
-        # type: (str) -> Dict
+        # type: (str) -> Dict[str, JSON]
         """
         Gets all group resource permissions.
         """
@@ -218,6 +210,14 @@ class Magpie(Handler):
         if resp.status_code != 200:
             raise RuntimeError(f"Could not find the group `{grp}` resource permissions.")
         return resp.json()["resources"]
+
+    def get_group_permissions_by_res_id(self, grp, res_id, effective=False):
+        # type: (str, int, bool) -> Dict[str, JSON]
+        resp = self._send_request(method="GET", url=f"{self.url}/groups/{grp}/resources/{res_id}/permissions",
+                                  params={"effective": effective})
+        if resp.status_code != 200:
+            raise RuntimeError(f"Could not find the group `{grp}` permissions for the resource `{res_id}`.")
+        return resp.json()
 
     def user_created(self, user_name):
         raise NotImplementedError
@@ -327,6 +327,7 @@ class Magpie(Handler):
         return resp.json()["resource"]["resource_id"]
 
     def delete_resource(self, resource_id):
+        # type: (int) -> None
         resp = self._send_request(method="DELETE", url=f"{self.url}/resources/{resource_id}")
         if resp.status_code == 200:
             LOGGER.info("Delete resource successful.")
