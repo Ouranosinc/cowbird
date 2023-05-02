@@ -183,26 +183,6 @@ class Magpie(Handler):
                 parent_id=workspace_res_id)
         return layer_res_id
 
-    def create_user(self, user_name, email, password, group_name):
-        resp = self._send_request(method="POST", url=f"{self.url}/users",
-                                  json={
-                                      "user_name": user_name,
-                                      "email": email,
-                                      "password": password,
-                                      "group_name": group_name
-                                  })
-        if resp.status_code != 201:
-            raise RuntimeError(f"Failed to create user `{user_name}`.")
-
-    def delete_user(self, user_name):
-        resp = self._send_request(method="DELETE", url=f"{self.url}/users/{user_name}")
-        if resp.status_code == 200:
-            LOGGER.info("Delete user successful.")
-        elif resp.status_code == 404:
-            LOGGER.info("User name was not found. No user to delete.")
-        else:
-            raise HTTPError(f"Failed to delete resource : {resp.text}")
-
     def get_user_permissions(self, user):
         # type: (str) -> Dict
         """
@@ -354,32 +334,6 @@ class Magpie(Handler):
             LOGGER.info("Resource id was not found. No resource to delete.")
         else:
             raise HTTPError(f"Failed to delete resource : {resp.text}")
-
-    def create_service(self, service_data):
-        # type (Dict[str, str]) -> str
-        resp = self._send_request(method="POST", url=f"{self.url}/services", json=service_data)
-        if resp.status_code != 201:
-            raise HTTPError(f"Failed to create service : {resp.text}")
-        LOGGER.info("Service creation was successful.")
-        return resp.json()["service"]["resource_id"]
-
-    def delete_service(self, service_name):
-        resp = self._send_request(method="DELETE", url=f"{self.url}/services/{service_name}")
-        if resp.status_code == 200:
-            LOGGER.info("Delete service successful.")
-        elif resp.status_code == 404:
-            LOGGER.info("Service name was not found. No service to delete.")
-        else:
-            raise HTTPError(f"Failed to delete resource : {resp.text}")
-
-    def delete_all_services(self):
-        resp = self._send_request(method="GET", url=f"{self.url}/services")
-        if resp.status_code == 200:
-            for services_by_svc_type in resp.json()["services"].values():
-                for svc in services_by_svc_type.values():
-                    self.delete_service(svc["service_name"])
-        else:
-            raise HTTPError("Failed to find Magpie services.")
 
     def login(self):
         # type: () -> RequestsCookieJar

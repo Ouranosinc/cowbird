@@ -23,6 +23,7 @@ from cowbird.handlers import HandlerFactory
 from magpie.models import Directory, File, Service, Workspace
 from magpie.permissions import Access, Permission, Scope
 from magpie.services import ServiceGeoserver, ServiceTHREDDS
+from tests import test_magpie
 from tests import utils
 
 if TYPE_CHECKING:
@@ -98,13 +99,13 @@ class TestSyncPermissions(unittest.TestCase):
             "service_url": f"http://localhost:9000/{self.test_service_name}",
             "configuration": {}
         }
-        return self.magpie.create_service(data)
+        return test_magpie.create_service(self.magpie, data)
 
     def delete_test_service(self):
         """
         Deletes the test service if it exists.
         """
-        self.magpie.delete_service(self.test_service_name)
+        test_magpie.delete_service(self.magpie, self.test_service_name)
 
     def create_test_permission(self, resource_id, permission, user_name, group_name):
         # type: (int, Dict, str, str) -> None

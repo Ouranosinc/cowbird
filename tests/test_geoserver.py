@@ -25,6 +25,7 @@ from cowbird.handlers.impl.magpie import LAYER_READ_PERMISSIONS, LAYER_WRITE_PER
 from cowbird.permissions_synchronizer import Permission
 from magpie.permissions import Access, Permission as MagpiePermission, Scope
 from magpie.services import ServiceGeoserver
+from tests import test_magpie
 from tests import utils
 
 CURR_DIR = Path(__file__).resolve().parent
@@ -282,8 +283,8 @@ class TestGeoserverPermissions(TestGeoserver):
     def teardown_class(self):
         os.unlink(self.cfg_file.name)
 
-        self.magpie.delete_user(self.magpie_test_user)
-        self.magpie.delete_service("geoserver")
+        test_magpie.delete_user(self.magpie, self.magpie_test_user)
+        test_magpie.delete_service(self.magpie, "geoserver")
 
         self.patcher.stop()
 
@@ -292,17 +293,17 @@ class TestGeoserverPermissions(TestGeoserver):
     @pytest.fixture(autouse=True)
     def setup(self):
         # Reset test user
-        self.magpie.delete_user(self.magpie_test_user)
-        self.magpie.create_user(self.magpie_test_user, "test@test.com", "qwertyqwerty", "users")
+        test_magpie.delete_user(self.magpie, self.magpie_test_user)
+        test_magpie.create_user(self.magpie, self.magpie_test_user, "test@test.com", "qwertyqwerty", "users")
 
         # Reset geoserver service
-        self.magpie.delete_service("geoserver")
+        test_magpie.delete_service(self.magpie, "geoserver")
         data = {
             "service_name": "geoserver",
             "service_type": ServiceGeoserver.service_type,
             "service_url": "http://localhost:9000/geoserver",
         }
-        self.test_service_id = self.magpie.create_service(data)
+        self.test_service_id = test_magpie.create_service(self.magpie, data)
 
         self.geoserver = TestGeoserver.get_geoserver()
 
@@ -342,7 +343,7 @@ class TestGeoserverPermissions(TestGeoserver):
         Tests if the right Magpie permissions are created upon a shapefile creation in a Geoserver workspace.
         """
         # For this test, remove service and check if the Magpie service and resources are recreated
-        self.magpie.delete_service(self.test_service_id)
+        test_magpie.delete_service(self.magpie, self.test_service_id)
 
         for file in self.shapefile_list:
             os.chmod(file, 0o477)

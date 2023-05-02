@@ -2,17 +2,62 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 import yaml
 from dotenv import load_dotenv
 
 from cowbird.handlers import HandlerFactory
+from cowbird.handlers.impl.magpie import Magpie
 from magpie.models import Layer, Workspace
 from magpie.services import ServiceGeoserver
 from tests import utils
 
+if TYPE_CHECKING:
+    from typing import Dict
+
 CURR_DIR = Path(__file__).resolve().parent
+
+
+def create_user(magpie, user_name, email, password, group_name):
+    # type: (Magpie, str, str, str, str) -> None
+    resp = magpie._send_request(method="POST", url=f"{magpie.url}/users",
+                                json={
+                                    "user_name": user_name,
+                                    "email": email,
+                                    "password": password,
+                                    "group_name": group_name
+                                })
+    assert resp.status_code == 201
+
+
+def delete_user(magpie, user_name):
+    # type: (Magpie, str) -> None
+    resp = magpie._send_request(method="DELETE", url=f"{magpie.url}/users/{user_name}")
+    assert resp.status_code in [200, 404]
+
+
+def create_service(magpie, service_data):
+    # type: (Magpie, Dict[str, str]) -> str
+    resp = magpie._send_request(method="POST", url=f"{magpie.url}/services", json=service_data)
+    assert resp.status_code == 201
+    return resp.json()["service"]["resource_id"]
+
+
+def delete_service(magpie, service_name):
+    # type: (Magpie, str) -> None
+    resp = magpie._send_request(method="DELETE", url=f"{magpie.url}/services/{service_name}")
+    assert resp.status_code in [200, 404]
+
+
+def delete_all_services(magpie):
+    # type: (Magpie) -> None
+    resp = magpie._send_request(method="GET", url=f"{magpie.url}/services")
+    assert resp.status_code == 200
+    for services_by_svc_type in resp.json()["services"].values():
+        for svc in services_by_svc_type.values():
+            delete_service(magpie, svc["service_name"])
 
 
 @pytest.mark.magpie
@@ -55,7 +100,7 @@ class TestMagpie(unittest.TestCase):
         # Create new magpie handler instance with new config
         self.magpie = HandlerFactory().create_handler("Magpie")
         # Reset all magpie services for testing
-        self.magpie.delete_all_services()
+        delete_all_services(self.magpie)
 
     def tearDown(self):
         utils.clear_handlers_instances()
@@ -80,9 +125,9 @@ class TestMagpie(unittest.TestCase):
             "service_url": "http://localhost:9000/geoserver",
             "configuration": {}
         }
-        svc1_id = self.magpie.create_service(data)
+        svc1_id = create_service(self.magpie, data)
         data["service_name"] = "geoserver2"
-        svc2_id = self.magpie.create_service(data)
+        svc2_id = create_service(self.magpie, data)
 
         # If workspace and layer don't yet exist, it should create both of them in the first service found.
         layer1_id = self.magpie.get_geoserver_resource_id(workspace_name, layer_name)
