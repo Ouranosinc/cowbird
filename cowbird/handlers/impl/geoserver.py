@@ -21,10 +21,10 @@ from magpie.models import Layer, Service, Workspace
 from magpie.permissions import Access, Scope
 
 if TYPE_CHECKING:
-    from typing import Any, List, Optional
+    from typing import Any, Dict, List, Optional
 
     # pylint: disable=W0611,unused-import
-    from cowbird.typedefs import SettingsType
+    from cowbird.typedefs import JSON, SettingsType
 
 HANDLER_ADMIN_USER = "admin_user"  # nosec: B105
 HANDLER_ADMIN_PASSWORD = "admin_password"  # nosec: B105
@@ -144,11 +144,11 @@ class Geoserver(Handler, FSMonitor):
         base_filename = self._shapefile_folder_dir(workspace_name) + "/" + shapefile_name
         return [base_filename + ext for ext in SHAPEFILE_ALL_EXTENSIONS]
 
-    def _update_resource_paths_permissions(self, resource_type, permission, resource_id, workspace_name,
-                                           layer_name=None):
+    def _update_file_paths_permissions(self, resource_type, permission, resource_id, workspace_name,
+                                       layer_name=None):
         # type:(str, Permission, int, str, Optional[str]) -> None
         """
-        Updates a Magpie resource's associated paths according to its permissions found on Magpie.
+        Updates a single Magpie resource's associated paths according to its permissions found on Magpie.
         """
         if resource_type == Layer.resource_type_name:
             if not layer_name:
@@ -186,26 +186,25 @@ class Geoserver(Handler, FSMonitor):
             except PermissionError as exc:
                 LOGGER.warning("Failed to change ownership of the %s path: %s", path, exc)
 
-    def _update_res_children_paths_permissions(self, children_res_tree, permission, workspace_name, layer_name=None):
-        # type:(List, Permission, str, Optional[str]) -> None
+    def _update_file_paths_permissions_recursive(self, resource, permission, workspace_name):
+        # type:(Dict[str, JSON], Permission, str) -> None
         """
         Recursive method to update all the path permissions of a resource and its children resources as found on Magpie.
         """
-        for res_id, res_info in children_res_tree.items():
-            res_type = res_info["resource_type"]
-            if res_type == Layer.resource_type_name:
-                layer_name = res_info["resource_name"]
+        resource_type = resource["resource_type"]
+        if resource_type in [Workspace.resource_type_name, Layer.resource_type_name]:
+            layer_name = resource["resource_name"] if resource_type == Layer.resource_type_name else None
+            self._update_file_paths_permissions(resource_type=resource_type,
+                                                permission=permission,
+                                                resource_id=permission.resource_id,
+                                                workspace_name=workspace_name,
+                                                layer_name=layer_name)
 
-            self._update_resource_paths_permissions(resource_type=res_type,
-                                                    permission=permission,
-                                                    resource_id=res_id,
-                                                    workspace_name=workspace_name,
-                                                    layer_name=layer_name)
-            if res_type == Workspace.resource_type_name:
-                self._update_res_children_paths_permissions(children_res_tree=res_info["children"],
-                                                            permission=permission,
-                                                            workspace_name=workspace_name,
-                                                            layer_name=layer_name)
+        if permission.scope == Scope.RECURSIVE.name:
+            for children_res in resource["children"].values():
+                self._update_file_paths_permissions_recursive(resource=children_res,
+                                                              permission=permission,
+                                                              workspace_name=workspace_name)
 
     def _update_permissions_on_filesystem(self, permission):
         # type: (Permission) -> None
@@ -224,25 +223,9 @@ class Geoserver(Handler, FSMonitor):
                                       "workspaces are based on users only.")
         workspace_name = permission.user
 
-        # Get resource type with resource id
-        resource_tree = magpie_handler.get_parents_resource_tree(permission.resource_id)
-        resource_type = resource_tree[-1]["resource_type"]
-
-        if resource_type in [Workspace.resource_type_name, Layer.resource_type_name]:
-            layer_name = permission.resource_full_name.split("/")[-1] \
-                if resource_type == Layer.resource_type_name else None
-            self._update_resource_paths_permissions(resource_type=resource_type,
-                                                    permission=permission,
-                                                    resource_id=permission.resource_id,
-                                                    workspace_name=workspace_name,
-                                                    layer_name=layer_name)
-
-        if (resource_type in [Service.resource_type_name, Workspace.resource_type_name]
-                and permission.scope == Scope.RECURSIVE.name):
-            children_res_tree = magpie_handler.get_children_resource_tree(permission.resource_id)
-            self._update_res_children_paths_permissions(children_res_tree=children_res_tree,
-                                                        permission=permission,
-                                                        workspace_name=workspace_name)
+        self._update_file_paths_permissions_recursive(resource=magpie_handler.get_resource(permission.resource_id),
+                                                      permission=permission,
+                                                      workspace_name=workspace_name)
 
     def permission_created(self, permission):
         """

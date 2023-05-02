@@ -139,15 +139,15 @@ class Magpie(Handler):
             raise RuntimeError("Could not find the input resource's parent resources.")
         return resp.json()["resources"]
 
-    def get_children_resource_tree(self, resource_id):
+    def get_resource(self, resource_id):
         # type: (int) -> Dict[str, JSON]
         """
-        Returns the associated Magpie Resource object and all its children.
+        Returns the associated Magpie Resource object.
         """
         resp = self._send_request(method="GET", url=f"{self.url}/resources/{resource_id}", params={"parent": "false"})
         if resp.status_code != 200:
-            raise RuntimeError("Could not find the input resource's children resources.")
-        return resp.json()["resource"]["children"]
+            raise RuntimeError("Could not find the input resource.")
+        return resp.json()["resource"]
 
     def get_geoserver_resource_id(self, workspace_name, layer_name, create_if_missing=True):
         # type: (str, str, bool) -> int
@@ -163,7 +163,7 @@ class Magpie(Handler):
         for svc in geoserver_type_services.values():
             if layer_res_id:
                 break
-            for workspace in self.get_children_resource_tree(svc["resource_id"]).values():
+            for workspace in self.get_resource(svc["resource_id"])["children"].values():
                 if workspace["resource_name"] == workspace_name:
                     workspace_res_id = workspace["resource_id"]
                     for layer in workspace["children"].values():
