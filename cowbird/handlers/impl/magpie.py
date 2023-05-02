@@ -244,7 +244,7 @@ class Magpie(Handler):
             if resp.status_code == 200:
                 LOGGER.info("Permission creation was successful.")
             else:
-                raise HTTPError(f"Failed to create permissions : {resp.text}")
+                raise HTTPError(f"HTTPError {resp.status_code} - Failed to create permissions : {resp.text}")
         else:
             LOGGER.warning("Empty permission data, no permissions to create.")
 
@@ -257,7 +257,7 @@ class Magpie(Handler):
         elif resp.status_code == 409:
             LOGGER.info("Similar permission already exist on resource for user.")
         else:
-            raise HTTPError(f"Failed to create permission : {resp.text}")
+            raise HTTPError(f"HTTPError {resp.status_code} - Failed to create permission : {resp.text}")
 
     def create_permission_by_grp_and_res_id(self, grp_name, res_id, permission_data):
         # type: (str, int, Dict[str,Dict[str,str]]) -> None
@@ -268,7 +268,7 @@ class Magpie(Handler):
         elif resp.status_code == 409:
             LOGGER.info("Similar permission already exist on resource for group.")
         else:
-            raise HTTPError(f"Failed to create permission : {resp.text}")
+            raise HTTPError(f"HTTPError {resp.status_code} - Failed to create permission : {resp.text}")
 
     def delete_permission_by_user_and_res_id(self, user_name, res_id, permission_name):
         # type: (str, int, str) -> None
@@ -279,7 +279,7 @@ class Magpie(Handler):
         elif resp.status_code == 404:
             LOGGER.info("No permission found to delete.")
         else:
-            raise HTTPError(f"Failed to delete permission : {resp.text}")
+            raise HTTPError(f"HTTPError {resp.status_code} - Failed to delete permission : {resp.text}")
 
     def delete_permission_by_grp_and_res_id(self, grp_name, res_id, permission_name):
         # type: (str, int, str) -> None
@@ -290,7 +290,7 @@ class Magpie(Handler):
         elif resp.status_code == 404:
             LOGGER.info("No permission found to delete.")
         else:
-            raise HTTPError(f"Failed to delete permission : {resp.text}")
+            raise HTTPError(f"HTTPError {resp.status_code} - Failed to delete permission : {resp.text}")
 
     def delete_permission(self, permissions_data):
         # type: (List[Dict[str,str]]) -> None
@@ -305,7 +305,7 @@ class Magpie(Handler):
             if resp.status_code == 200:
                 LOGGER.info("Permission removal was successful.")
             else:
-                raise HTTPError(f"Failed to remove permissions : {resp.text}")
+                raise HTTPError(f"HTTPError {resp.status_code} - Failed to remove permissions : {resp.text}")
         else:
             LOGGER.warning("Empty permission data, no permissions to remove.")
 
@@ -322,7 +322,7 @@ class Magpie(Handler):
         }
         resp = self._send_request(method="POST", url=f"{self.url}/resources", json=resource_data)
         if resp.status_code != 201:
-            raise HTTPError(f"Failed to create resource : {resp.text}")
+            raise HTTPError(f"HTTPError {resp.status_code} - Failed to create resource : {resp.text}")
         LOGGER.info("Resource creation was successful.")
         return resp.json()["resource"]["resource_id"]
 
@@ -334,7 +334,7 @@ class Magpie(Handler):
         elif resp.status_code == 404:
             LOGGER.info("Resource id was not found. No resource to delete.")
         else:
-            raise HTTPError(f"Failed to delete resource : {resp.text}")
+            raise HTTPError(f"HTTPError {resp.status_code} - Failed to delete resource : {resp.text}")
 
     def login(self):
         # type: () -> RequestsCookieJar
