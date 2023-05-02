@@ -317,7 +317,8 @@ class TestGeoserverPermissions(TestGeoserver):
             os.chmod(file, 0o000)
 
         # Setup resources
-        self.layer_id = self.magpie.get_geoserver_resource_id(self.workspace_name, self.test_shapefile_name)
+        self.layer_id = self.magpie.get_geoserver_resource_id(self.workspace_name, self.test_shapefile_name,
+                                                              create_if_missing=True)
         parents_tree = self.magpie.get_parents_resource_tree(self.layer_id)
         self.workspace_res_id = parents_tree[-1]["parent_id"]
 

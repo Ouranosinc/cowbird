@@ -301,8 +301,7 @@ class Geoserver(Handler, FSMonitor):
 
             # Remove the corresponding Magpie resource
             magpie_handler = HandlerFactory().get_handler("Magpie")
-            layer_res_id = magpie_handler.get_geoserver_resource_id(workspace_name, shapefile_name,
-                                                                    create_if_missing=False)
+            layer_res_id = magpie_handler.get_geoserver_resource_id(workspace_name, shapefile_name)
             if layer_res_id:
                 magpie_handler.delete_resource(layer_res_id)
 
@@ -326,7 +325,7 @@ class Geoserver(Handler, FSMonitor):
         shapefile.
         """
         magpie_handler = HandlerFactory().get_handler("Magpie")
-        layer_res_id = magpie_handler.get_geoserver_resource_id(workspace_name, layer_name)
+        layer_res_id = magpie_handler.get_geoserver_resource_id(workspace_name, layer_name, create_if_missing=True)
 
         # Get resolved permissions of all files on the file system
         is_readable, is_writable = self._get_shapefile_permissions(workspace_name, layer_name)

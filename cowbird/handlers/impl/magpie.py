@@ -149,11 +149,11 @@ class Magpie(Handler):
             raise RuntimeError("Could not find the input resource.")
         return resp.json()["resource"]
 
-    def get_geoserver_resource_id(self, workspace_name, layer_name, create_if_missing=True):
+    def get_geoserver_resource_id(self, workspace_name, layer_name, create_if_missing=False):
         # type: (str, str, bool) -> int
         """
-        Tries to get the resource id of a specific layer, on `geoserver` type services, and creates the resource and
-        workspace if they do not exist yet.
+        Tries to get the resource id of a specific layer, on `geoserver` type services, and
+        if requested, creates the resource and workspace if they do not exist yet.
         """
         layer_res_id, workspace_res_id = None, None
         geoserver_type_services = self.get_services_by_type(ServiceGeoserver.service_type)
