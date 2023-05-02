@@ -98,13 +98,14 @@ def reset_geoserver_test_workspace(test_instance, geoserver_handler):
             pass
     for _, folder in test_instance.workspace_folders.items():
         try:
+            if not folder.startswith("/tmp/"):
+                raise PermissionError("Aborting test workspace reset. The test workspace path should be in the `/tmp`"
+                                      f"directory, but was instead found at the path `{folder}`.")
             # Make sure access permissions are enabled before deleting files
             os.chmod(folder, 0o777)
             for root, dirs, files in os.walk(folder):
                 for resource in dirs + files:
                     os.chmod(os.path.join(root, resource), 0o777)
-            if folder == "/":
-                raise PermissionError("Tests tried to remove the '/' path.")
             shutil.rmtree(folder)
         except FileNotFoundError:
             pass
