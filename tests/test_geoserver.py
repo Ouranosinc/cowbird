@@ -17,9 +17,8 @@ import pytest
 import yaml
 from dotenv import load_dotenv
 
-from cowbird.constants import COWBIRD_ROOT
+from cowbird.constants import COWBIRD_ROOT, DEFAULT_GID, DEFAULT_UID
 from cowbird.handlers import HandlerFactory
-from cowbird.handlers.impl.filesystem import DEFAULT_GID, DEFAULT_UID
 from cowbird.handlers.impl.geoserver import SHAPEFILE_MAIN_EXTENSION, Geoserver, GeoserverError
 from cowbird.handlers.impl.magpie import LAYER_READ_PERMISSIONS, LAYER_WRITE_PERMISSIONS
 from cowbird.permissions_synchronizer import Permission

@@ -15,11 +15,6 @@ LOGGER = get_logger(__name__)
 
 NOTEBOOKS_DIR_NAME = "notebooks"
 
-# UID/GID used in birdhouse. We should assign the user's resources to this owner, so that the resources can be
-# accessible to the user via JupyterHub.
-DEFAULT_UID = 1000
-DEFAULT_GID = 1000
-
 
 class FileSystem(Handler):
     """

@@ -8,16 +8,16 @@ from typing import TYPE_CHECKING, Tuple
 import requests
 from celery import chain, shared_task
 
+from cowbird.constants import DEFAULT_GID, DEFAULT_UID
 from cowbird.handlers.handler import HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PARAM, Handler
 from cowbird.handlers.handler_factory import HandlerFactory
-from cowbird.handlers.impl.filesystem import DEFAULT_GID, DEFAULT_UID
 from cowbird.handlers.impl.magpie import LAYER_READ_PERMISSIONS, LAYER_WRITE_PERMISSIONS
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
 from cowbird.permissions_synchronizer import Permission
 from cowbird.request_task import RequestTask
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger, update_filesystem_permissions
-from magpie.models import Layer, Service, Workspace
+from magpie.models import Layer, Workspace
 from magpie.permissions import Access, Scope
 
 if TYPE_CHECKING:
