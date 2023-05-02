@@ -118,14 +118,14 @@ class Magpie(Handler):
         # type: (str) -> Dict[str, JSON]
         resp = self._send_request(method="GET", url=f"{self.url}/services/types/{service_type}")
         if resp.status_code != 200:
-            raise RuntimeError("Could not find the input type's services.")
+            raise RuntimeError(f"Failed to get the services of type `{service_type}`.")
         return resp.json()["services"][service_type]
 
     def get_resources_by_service(self, service_name):
         # type: (str) -> Dict[str, JSON]
         resp = self._send_request(method="GET", url=f"{self.url}/services/{service_name}/resources")
         if resp.status_code != 200:
-            raise RuntimeError("Could not find the input service's resources.")
+            raise RuntimeError(f"Could not find the `{service_name}` service's resources.")
         return resp.json()[service_name]
 
     def get_parents_resource_tree(self, resource_id):
@@ -136,7 +136,7 @@ class Magpie(Handler):
         data = {"parent": "true", "invert": "true", "flatten": "true"}
         resp = self._send_request(method="GET", url=f"{self.url}/resources/{resource_id}", params=data)
         if resp.status_code != 200:
-            raise RuntimeError("Could not find the input resource's parent resources.")
+            raise RuntimeError(f"Could not find the parent resources of the resource id `{resource_id}`.")
         return resp.json()["resources"]
 
     def get_resource(self, resource_id):
@@ -146,7 +146,7 @@ class Magpie(Handler):
         """
         resp = self._send_request(method="GET", url=f"{self.url}/resources/{resource_id}", params={"parent": "false"})
         if resp.status_code != 200:
-            raise RuntimeError("Could not find the input resource.")
+            raise RuntimeError(f"Could not find the resource with the id `{resource_id}.")
         return resp.json()["resource"]
 
     def get_geoserver_resource_id(self, workspace_name, layer_name, create_if_missing=False):
@@ -159,7 +159,7 @@ class Magpie(Handler):
         geoserver_type_services = self.get_services_by_type(ServiceGeoserver.service_type)
         if not geoserver_type_services:
             raise ValueError(f"No service of type `{ServiceGeoserver.service_type}` found on Magpie while trying to get"
-                             " a layer resource id.")
+                             f" the layer resource id `{layer_res_id}`.")
         for svc in geoserver_type_services.values():
             if layer_res_id:
                 break
