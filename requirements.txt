@@ -1,3 +1,4 @@
+-r requirements-sys.txt
 celery[mongodb]>=5.2.2
 colander
 cornice>=5
