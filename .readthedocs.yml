@@ -11,8 +11,9 @@ formats:
   #- pdf
   #- epub
 python:
-  version: 3.7
+  version: "3.7"
   install:
+    - requirements: requirements-sys.txt
     - requirements: requirements-doc.txt
     # required for OpenAPI generation
     - requirements: requirements.txt
