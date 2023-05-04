@@ -11,3 +11,4 @@ sphinx>=3.1,<4
 sphinxcontrib-redoc>=1.6.0
 sphinx_autodoc_typehints[type_comments]>=1.11.0
 sphinx_rtd_theme
+setuptools>=65.5.1 # not directly required, pinned by Snyk to avoid a vulnerability
