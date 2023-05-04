@@ -1,6 +1,7 @@
 ## Docker
 Dockerfile
 .dockerignore
+docker
 
 ## Git
 .git
@@ -42,16 +43,24 @@ dist
 pip-selfcheck.json
 
 ## CI/Test/Deploy
+.[a-z]*
 ci
 hooks
 tests
+
+## Docs
+docs
+
+## Celery
+celeryconfig*.py
+celerybeat-schedule.*
+.run
 
 ## Project
 **/custom.ini
 **/config.yml
 **/config.yaml
 **/cowbird.ini
-docs
 cowbirdenv
 cowbird/bin
 cowbird/include
