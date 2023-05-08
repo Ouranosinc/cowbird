@@ -1,6 +1,5 @@
 import os
-import tempfile
-import unittest
+import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -61,27 +60,26 @@ def delete_all_services(magpie):
 
 
 @pytest.mark.magpie
-class TestMagpie(unittest.TestCase):
+class TestMagpie:
     """
     Tests different methods found in the Magpie handler.
     These tests require a running instance of Magpie.
     """
 
-    @classmethod
-    def setUpClass(cls):
+    def setup_class(self):
 
         load_dotenv(CURR_DIR / "../docker/.env.example")
 
-        cls.grp = "administrators"
-        cls.usr = os.getenv("MAGPIE_ADMIN_USER")
-        cls.pwd = os.getenv("MAGPIE_ADMIN_PASSWORD")
-        cls.url = os.getenv("COWBIRD_TEST_MAGPIE_URL")
+        self.grp = "administrators"
+        self.usr = os.getenv("MAGPIE_ADMIN_USER")
+        self.pwd = os.getenv("MAGPIE_ADMIN_PASSWORD")
+        self.url = os.getenv("COWBIRD_TEST_MAGPIE_URL")
 
         # Reset handlers instances in case any are left from other test cases
         utils.clear_handlers_instances()
 
-    def setUp(self):
-        self.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)  # pylint: disable=R1732
+    @pytest.fixture(autouse=True)
+    def setup(self, tmpdir):
         self.data = {
             "handlers": {
                 "Magpie": {
@@ -93,18 +91,18 @@ class TestMagpie(unittest.TestCase):
                 "Thredds": {"active": True}
             }
         }
-        with self.cfg_file as f:
+        self.cfg_filepath = tmpdir.strpath + "/test.cfg"
+        with open(self.cfg_filepath, "w") as f:
             f.write(yaml.safe_dump(self.data))
+
         # Set environment variables with config
-        utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
+        utils.get_test_app(settings={"cowbird.config_path": self.cfg_filepath})
         # Create new magpie handler instance with new config
         self.magpie = HandlerFactory().create_handler("Magpie")
         # Reset all magpie services for testing
         delete_all_services(self.magpie)
-
-    def tearDown(self):
+        yield
         utils.clear_handlers_instances()
-        os.unlink(self.cfg_file.name)
 
     def test_get_or_create_layer_resource_id(self):
         """

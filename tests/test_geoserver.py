@@ -9,7 +9,6 @@ More integration tests should be in Jupyter Notebook format as is the case with 
 import glob
 import os
 import shutil
-import tempfile
 from pathlib import Path
 
 import mock
@@ -122,7 +121,7 @@ def get_datastore_path(workspace_path):
     return workspace_path + "/shapefile_datastore"
 
 
-class TestGeoserver():
+class TestGeoserver:
     geoserver_settings = get_geoserver_settings()
     workspaces = {}
     workspace_folders = {}
@@ -246,26 +245,6 @@ class TestGeoserverPermissions(TestGeoserver):
     Test cases to validate the synchronization between Magpie permissions and file permissions in a Geoserver workspace.
     """
     def setup_class(self):
-        # Reset handlers instances in case any are left from other test cases
-        utils.clear_handlers_instances()
-
-        self.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)  # pylint: disable=R1732
-        with self.cfg_file as f:
-            f.write(yaml.safe_dump({
-                "handlers": {
-                    "Magpie": {
-                        "active": True,
-                        "url": os.getenv("COWBIRD_TEST_MAGPIE_URL"),
-                        "admin_user": os.getenv("MAGPIE_ADMIN_USER"),
-                        "admin_password": os.getenv("MAGPIE_ADMIN_PASSWORD")
-                    }}}))
-
-        # Set environment variables with config
-        utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
-
-        # Recreate new magpie handler instance with new config
-        self.magpie = HandlerFactory().create_handler("Magpie")
-
         self.magpie_test_user = "test_user"
         self.workspace_name = self.magpie_test_user
 
@@ -281,17 +260,31 @@ class TestGeoserverPermissions(TestGeoserver):
         self.mock_chown = self.patcher.start()
 
     def teardown_class(self):
-        os.unlink(self.cfg_file.name)
-
-        test_magpie.delete_user(self.magpie, self.magpie_test_user)
-        test_magpie.delete_service(self.magpie, "geoserver")
-
         self.patcher.stop()
-
         TestGeoserver.teardown_class(self)
 
     @pytest.fixture(autouse=True)
-    def setup(self):
+    def setup(self, tmpdir):
+        self.cfg_filepath = tmpdir.strpath + "/test.cfg"
+        with open(self.cfg_filepath, "w") as f:
+            f.write(yaml.safe_dump({
+                "handlers": {
+                    "Magpie": {
+                        "active": True,
+                        "url": os.getenv("COWBIRD_TEST_MAGPIE_URL"),
+                        "admin_user": os.getenv("MAGPIE_ADMIN_USER"),
+                        "admin_password": os.getenv("MAGPIE_ADMIN_PASSWORD")
+                    }}}))
+
+        # Reset handlers instances in case any are left from other test cases
+        utils.clear_handlers_instances()
+
+        # Set environment variables with config
+        utils.get_test_app(settings={"cowbird.config_path": self.cfg_filepath})
+
+        # Recreate new magpie handler instance with new config
+        self.magpie = HandlerFactory().create_handler("Magpie")
+
         # Reset test user
         test_magpie.delete_user(self.magpie, self.magpie_test_user)
         test_magpie.create_user(self.magpie, self.magpie_test_user, "test@test.com", "qwertyqwerty", "users")
@@ -326,10 +319,11 @@ class TestGeoserverPermissions(TestGeoserver):
         self.expected_chown_shapefile_calls = [
             mock.call(file, DEFAULT_UID, DEFAULT_GID) for file in self.shapefile_list
         ]
-
         yield
         # Teardown
         reset_geoserver_test_workspace(self, self.geoserver)
+        test_magpie.delete_user(self.magpie, self.magpie_test_user)
+        test_magpie.delete_service(self.magpie, "geoserver")
 
     def check_magpie_permissions(self, res_id, expected_perms):
         """
