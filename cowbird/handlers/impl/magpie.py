@@ -15,7 +15,7 @@ from magpie.services import ServiceGeoserver
 
 
 if TYPE_CHECKING:
-    from typing import Any, Dict, List, Optional
+    from typing import Any, Dict, List, Optional, Union
 
     from cowbird.typedefs import JSON, SettingsType
 
@@ -149,7 +149,23 @@ class Magpie(Handler):
             raise RuntimeError(f"Could not find the resource with the id `{resource_id}.")
         return resp.json()["resource"]
 
-    def get_geoserver_resource_id(self, workspace_name, layer_name, create_if_missing=False):
+    def get_geoserver_workspace_res_id(self, workspace_name):
+        # type: (str) -> Union[int, None]
+        """
+        Finds the resource id of a workspace resource from the `geoserver` type services.
+        """
+        workspace_res_id = None
+        geoserver_type_services = self.get_services_by_type(ServiceGeoserver.service_type)
+        if not geoserver_type_services:
+            raise ValueError(f"No service of type `{ServiceGeoserver.service_type}` found on Magpie while trying to get"
+                             f" the workspace resource `{workspace_name}`.")
+        for svc in geoserver_type_services.values():
+            for workspace in self.get_resource(svc["resource_id"])["children"].values():
+                if workspace["resource_name"] == workspace_name:
+                    workspace_res_id = workspace["resource_id"]
+        return workspace_res_id
+
+    def get_geoserver_layer_res_id(self, workspace_name, layer_name, create_if_missing=False):
         # type: (str, str, bool) -> int
         """
         Tries to get the resource id of a specific layer, on `geoserver` type services, and
@@ -159,7 +175,7 @@ class Magpie(Handler):
         geoserver_type_services = self.get_services_by_type(ServiceGeoserver.service_type)
         if not geoserver_type_services:
             raise ValueError(f"No service of type `{ServiceGeoserver.service_type}` found on Magpie while trying to get"
-                             f" the layer resource id `{layer_res_id}`.")
+                             f" the layer resource `{layer_name}`.")
         for svc in geoserver_type_services.values():
             if layer_res_id:
                 break

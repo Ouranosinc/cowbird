@@ -33,6 +33,8 @@ SHAPEFILE_MAIN_EXTENSION = ".shp"
 SHAPEFILE_OTHER_EXTENSIONS = [".prj", ".dbf", ".shx"]
 SHAPEFILE_ALL_EXTENSIONS = SHAPEFILE_OTHER_EXTENSIONS + [SHAPEFILE_MAIN_EXTENSION]
 
+DEFAULT_DATASTORE_DIR_NAME = "shapefile_datastore"
+
 LOGGER = get_logger(__name__)
 
 
@@ -135,6 +137,14 @@ class Geoserver(Handler, FSMonitor):
         remove_workspace.delay(user_name)
         LOGGER.info("Stop monitoring datastore of created user [%s]", user_name)
         Monitoring().unregister(self._shapefile_folder_dir(user_name), self)
+
+        # Attempt to delete the corresponding resources in Magpie
+        magpie_handler = HandlerFactory().get_handler("Magpie")
+        workspace_res_id = magpie_handler.get_geoserver_workspace_res_id(user_name)
+        if not workspace_res_id:
+            LOGGER.debug(f"No workspace resource named `{user_name}` to delete in Magpie.")
+        else:
+            magpie_handler.delete_resource(workspace_res_id)
 
     def get_shapefile_list(self, workspace_name, shapefile_name):
         # type:(str, str) -> List[str]
@@ -258,19 +268,19 @@ class Geoserver(Handler, FSMonitor):
                     publish_shapefile.si(workspace_name, shapefile_name))
         res.delay()
 
-    def on_created(self, filename):
+    def on_created(self, path):
         """
-        Called when a new file is found.
+        Call when a new path is found.
 
-        :param filename: Relative filename of a new file
+        :param path: Absolute path of a new file/directory
         """
         # Note that the workspace case is not implemented here, since a workspace directory is created during the user
         # creation (user_created()) and other directories should not be created manually for Geoserver.
         # The Magpie workspace resource will be automatically created if needed upon a shapefile creation.
-        if filename.endswith(tuple(SHAPEFILE_ALL_EXTENSIONS)):
-            workspace_name, shapefile_name = self._get_shapefile_info(filename)
+        if path.endswith(tuple(SHAPEFILE_ALL_EXTENSIONS)):
+            workspace_name, shapefile_name = self._get_shapefile_info(path)
 
-            LOGGER.info("Starting Geoserver publishing process for [%s]", filename)
+            LOGGER.info("Starting Geoserver publishing process for [%s]", path)
             Geoserver.publish_shapefile_task_chain(workspace_name, shapefile_name)
 
             self._update_magpie_layer_permissions(workspace_name, shapefile_name)
@@ -283,15 +293,22 @@ class Geoserver(Handler, FSMonitor):
         """
         remove_shapefile.delay(workspace_name, shapefile_name)
 
-    def on_deleted(self, filename):
+    def on_deleted(self, path):
         """
-        Called when a file is deleted.
+        Called when a path is deleted.
 
-        :param filename: Relative filename of the removed file
+        :param path: Absolute path of a new file/directory
         """
-        # TODO: voir pour le case workspace (folder)
-        if filename.endswith(tuple(SHAPEFILE_ALL_EXTENSIONS)):
-            workspace_name, shapefile_name = self._get_shapefile_info(filename)
+        datastore_regex = rf"^{self.workspace_dir}/\w+/{DEFAULT_DATASTORE_DIR_NAME}/?$"
+        if (os.path.isdir(path) and
+                re.match(datastore_regex, path)):
+            # Note that the geoserver workspace and corresponding Magpie resources are only removed when the user is
+            # deleted. The manual deletion of a datastore folder should be avoided.
+            LOGGER.warning(f"An event was triggered for the deletion of the folder `{path}`. The folder should "
+                           "not be removed manually, but only when a user is deleted. This event invalidates the still "
+                           "existing Geoserver workspace and corresponding Magpie resources.")
+        if path.endswith(tuple(SHAPEFILE_ALL_EXTENSIONS)):
+            workspace_name, shapefile_name = self._get_shapefile_info(path)
             Geoserver.remove_shapefile_task(workspace_name, shapefile_name)
 
             # Remove all the remaining shapefile related files
@@ -301,21 +318,21 @@ class Geoserver(Handler, FSMonitor):
 
             # Remove the corresponding Magpie resource
             magpie_handler = HandlerFactory().get_handler("Magpie")
-            layer_res_id = magpie_handler.get_geoserver_resource_id(workspace_name, shapefile_name)
+            layer_res_id = magpie_handler.get_geoserver_layer_res_id(workspace_name, shapefile_name)
             if layer_res_id:
                 magpie_handler.delete_resource(layer_res_id)
 
-    def on_modified(self, filename):
+    def on_modified(self, path):
         # type: (str) -> None
         """
-        Called when a file is updated.
+        Called when a path is updated.
 
-        :param filename: Relative filename of the updated file
+        :param path: Absolute path of a new file/directory
         """
         # Nothing needs to be done specifically for Geoserver as Catalog already logs file modifications.
         # Only need to update permissions on Magpie, in case the file permissions were modified.
-        if filename.endswith(tuple(SHAPEFILE_ALL_EXTENSIONS)):
-            workspace_name, shapefile_name = self._get_shapefile_info(filename)
+        if path.endswith(tuple(SHAPEFILE_ALL_EXTENSIONS)):
+            workspace_name, shapefile_name = self._get_shapefile_info(path)
             self._update_magpie_layer_permissions(workspace_name, shapefile_name)
 
     def _update_magpie_layer_permissions(self, workspace_name, layer_name):
@@ -325,7 +342,7 @@ class Geoserver(Handler, FSMonitor):
         shapefile.
         """
         magpie_handler = HandlerFactory().get_handler("Magpie")
-        layer_res_id = magpie_handler.get_geoserver_resource_id(workspace_name, layer_name, create_if_missing=True)
+        layer_res_id = magpie_handler.get_geoserver_layer_res_id(workspace_name, layer_name, create_if_missing=True)
 
         # Get resolved permissions of all files on the file system
         is_readable, is_writable = self._get_shapefile_permissions(workspace_name, layer_name)
@@ -530,7 +547,7 @@ class Geoserver(Handler, FSMonitor):
         """
         Returns the path to the user's shapefile datastore inside the file system.
         """
-        return os.path.join(self.workspace_dir, workspace_name, "shapefile_datastore")
+        return os.path.join(self.workspace_dir, workspace_name, DEFAULT_DATASTORE_DIR_NAME)
 
     @staticmethod
     def _geoserver_user_datastore_dir(user_name):
@@ -540,7 +557,7 @@ class Geoserver(Handler, FSMonitor):
 
         Uses the ``WORKSPACE_DIR`` env variable mapped in the Geoserver container.
         """
-        return os.path.join("/user_workspaces", user_name, "shapefile_datastore")
+        return os.path.join("/user_workspaces", user_name, DEFAULT_DATASTORE_DIR_NAME)
 
     @geoserver_response_handling
     def _create_workspace_request(self, workspace_name):

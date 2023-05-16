@@ -114,7 +114,7 @@ class TestMagpie:
 
         # Should fail if no service exists in Magpie.
         with pytest.raises(ValueError):
-            self.magpie.get_geoserver_resource_id(workspace_name, layer_name, create_if_missing=True)
+            self.magpie.get_geoserver_layer_res_id(workspace_name, layer_name, create_if_missing=True)
 
         data = {
             "service_name": "geoserver1",
@@ -128,23 +128,23 @@ class TestMagpie:
         svc2_id = create_service(self.magpie, data)
 
         # If workspace and layer don't yet exist, it should create both of them in the first service found.
-        layer1_id = self.magpie.get_geoserver_resource_id(workspace_name, layer_name, create_if_missing=True)
+        layer1_id = self.magpie.get_geoserver_layer_res_id(workspace_name, layer_name, create_if_missing=True)
         created_id_parent_tree = self.magpie.get_parents_resource_tree(layer1_id)
         assert created_id_parent_tree[0]["resource_id"] == svc1_id
 
         # If the layer already exists, it should simply return the id found.
-        existing_id = self.magpie.get_geoserver_resource_id(workspace_name, layer_name, create_if_missing=True)
+        existing_id = self.magpie.get_geoserver_layer_res_id(workspace_name, layer_name, create_if_missing=True)
         assert existing_id == layer1_id
 
         # If another layer with the same name exists in another workspace, it should return the first id found.
         workspace2_id = self.magpie.create_resource(workspace_name, Workspace.resource_type_name, svc2_id)
         layer2_id = self.magpie.create_resource(layer_name, Layer.resource_type_name, workspace2_id)
-        existing_id = self.magpie.get_geoserver_resource_id(workspace_name, layer_name, create_if_missing=True)
+        existing_id = self.magpie.get_geoserver_layer_res_id(workspace_name, layer_name, create_if_missing=True)
         assert existing_id == layer1_id
 
         # If the layer does not exist yet, but the workspace exists, it creates the layer in the last workspace found.
         self.magpie.delete_resource(layer1_id)
         self.magpie.delete_resource(layer2_id)
-        new_layer_id = self.magpie.get_geoserver_resource_id(workspace_name, layer_name, create_if_missing=True)
+        new_layer_id = self.magpie.get_geoserver_layer_res_id(workspace_name, layer_name, create_if_missing=True)
         new_layer_parent_tree = self.magpie.get_parents_resource_tree(new_layer_id)
         assert new_layer_parent_tree[1]["resource_id"] == workspace2_id

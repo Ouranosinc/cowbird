@@ -11,6 +11,7 @@ import os
 import shutil
 from pathlib import Path
 
+import logging
 import mock
 import pytest
 import yaml
@@ -311,8 +312,8 @@ class TestGeoserverPermissions(TestGeoserver):
             os.chmod(file, 0o000)
 
         # Setup resources
-        self.layer_id = self.magpie.get_geoserver_resource_id(self.workspace_name, self.test_shapefile_name,
-                                                              create_if_missing=True)
+        self.layer_id = self.magpie.get_geoserver_layer_res_id(self.workspace_name, self.test_shapefile_name,
+                                                               create_if_missing=True)
         parents_tree = self.magpie.get_parents_resource_tree(self.layer_id)
         self.workspace_res_id = parents_tree[-1]["parent_id"]
 
@@ -391,9 +392,25 @@ class TestGeoserverPermissions(TestGeoserver):
     def test_workspace_on_modified(self):
         pass
 
-    @pytest.mark.skip()
-    def test_workspace_on_deleted(self):
-        pass
+    def test_workspace_on_deleted(self, caplog):
+        """
+        Tests if Magpie resources associated with the user workspace are deleted only when a `user_deleted` event is
+        triggered.
+        """
+        # Check that `on_deleted` events do not remove the corresponding Magpie resources, since manual deletion
+        # of the workspace should not happen and is not supported.
+        self.geoserver.on_deleted("/test_path_from_other_service")
+        assert len(caplog.records) == 0
+        self.geoserver.on_deleted(self.datastore_path)
+        assert len(caplog.records) == 1 and caplog.records[0].levelno == logging.WARNING
+
+        # check that magpie resource still exists after the `on_deleted` events
+        self.magpie.get_resource(self.workspace_res_id)
+
+        # Check that the user workspace magpie resources are deleted after a `user_deleted` event
+        self.geoserver.user_deleted(self.magpie_test_user)
+        with pytest.raises(RuntimeError):
+            self.magpie.get_resource(self.workspace_res_id)
 
     def test_magpie_layer_permissions(self):
         """
