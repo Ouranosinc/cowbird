@@ -303,7 +303,10 @@ class TestGeoserverPermissions(TestGeoserver):
 
         # Setup workspace files
         prepare_geoserver_test_workspace(self, self.geoserver, self.magpie_test_user)
-        self.shapefile_list = self.geoserver.get_shapefile_list(self.workspace_name, self.test_shapefile_name)
+        self.shapefile_list = [
+            f for f in self.geoserver.get_shapefile_list(self.workspace_name, self.test_shapefile_name)
+            if os.path.exists(f)
+        ]
 
         # Initialize workspace folder with all permissions and shapefile permissions with no permissions for a generic
         # setup, but each test can adjust the permissions for specific cases.

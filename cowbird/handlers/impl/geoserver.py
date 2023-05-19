@@ -30,8 +30,9 @@ HANDLER_ADMIN_USER = "admin_user"  # nosec: B105
 HANDLER_ADMIN_PASSWORD = "admin_password"  # nosec: B105
 
 SHAPEFILE_MAIN_EXTENSION = ".shp"
-SHAPEFILE_OTHER_EXTENSIONS = [".prj", ".dbf", ".shx"]
-SHAPEFILE_ALL_EXTENSIONS = SHAPEFILE_OTHER_EXTENSIONS + [SHAPEFILE_MAIN_EXTENSION]
+SHAPEFILE_REQUIRED_EXTENSIONS = [SHAPEFILE_MAIN_EXTENSION, ".prj", ".dbf", ".shx"]
+SHAPEFILE_OPTIONAL_EXTENSIONS = [".atx", ".sbx", ".qix", ".aih", ".ain", ".shp.xml", ".cpg"]
+SHAPEFILE_ALL_EXTENSIONS = SHAPEFILE_OPTIONAL_EXTENSIONS + SHAPEFILE_REQUIRED_EXTENSIONS
 
 DEFAULT_DATASTORE_DIR_NAME = "shapefile_datastore"
 
@@ -180,7 +181,8 @@ class Geoserver(Handler, FSMonitor):
 
         for path in path_list:
             if not os.path.exists(path):
-                LOGGER.warning("%s could not be found and its permissions could not be updated.", path)
+                if path.endswith(tuple(SHAPEFILE_REQUIRED_EXTENSIONS)):
+                    LOGGER.warning("%s could not be found and its permissions could not be updated.", path)
                 continue
             new_perms = os.stat(path)[stat.ST_MODE]
             new_perms = update_filesystem_permissions(new_perms,
@@ -278,7 +280,7 @@ class Geoserver(Handler, FSMonitor):
         # Note that the workspace case is not implemented here, since a workspace directory is created during the user
         # creation (user_created()) and other directories should not be created manually for Geoserver.
         # The Magpie workspace resource will be automatically created if needed upon a shapefile creation.
-        if path.endswith(tuple(SHAPEFILE_ALL_EXTENSIONS)):
+        if path.endswith(SHAPEFILE_MAIN_EXTENSION):
             workspace_name, shapefile_name = self._get_shapefile_info(path)
 
             LOGGER.info("Starting Geoserver publishing process for [%s]", path)
@@ -307,7 +309,7 @@ class Geoserver(Handler, FSMonitor):
             LOGGER.warning("An event was triggered for the deletion of the folder `%s`. The folder should "
                            "not be removed manually, but only when a user is deleted. This event invalidates the still "
                            "existing Geoserver workspace and corresponding Magpie resources.", path)
-        if path.endswith(tuple(SHAPEFILE_ALL_EXTENSIONS)):
+        elif path.endswith(SHAPEFILE_MAIN_EXTENSION):
             workspace_name, shapefile_name = self._get_shapefile_info(path)
             Geoserver.remove_shapefile_task(workspace_name, shapefile_name)
 
@@ -334,7 +336,7 @@ class Geoserver(Handler, FSMonitor):
         if os.path.isdir(path) and re.match(self.datastore_regex, path):
             workspace_name = path.split("/")[-2]
             self._update_magpie_workspace_permissions(workspace_name)
-        elif path.endswith(tuple(SHAPEFILE_ALL_EXTENSIONS)):
+        elif path.endswith(SHAPEFILE_MAIN_EXTENSION):
             workspace_name, shapefile_name = self._get_shapefile_info(path)
             self._update_magpie_workspace_permissions(workspace_name)
             self._update_magpie_layer_permissions(workspace_name, shapefile_name)
@@ -486,9 +488,8 @@ class Geoserver(Handler, FSMonitor):
         """
         # Small wait time to prevent unnecessary failure since shapefile is a multi file format
         sleep(1)
-        files_to_find = [
-            f"{self._shapefile_folder_dir(workspace_name)}/{shapefile_name}{ext}" for ext in SHAPEFILE_ALL_EXTENSIONS
-        ]
+        files_to_find = [f"{self._shapefile_folder_dir(workspace_name)}/{shapefile_name}{ext}"
+                         for ext in SHAPEFILE_REQUIRED_EXTENSIONS]
         for file in files_to_find:
             if not os.path.isfile(file):
                 LOGGER.warning("Shapefile is incomplete: Missing [%s]", file)
@@ -513,11 +514,12 @@ class Geoserver(Handler, FSMonitor):
             # The files should normally all have the same permissions, but if any of them has a write/read permission,
             # we will consider them all as writable/readable in the Magpie resource.
             for file in self.get_shapefile_list(workspace_name, shapefile_name):
-                file_status = os.stat(file)[stat.ST_MODE]
-                if not is_shapefile_readable and file_status & stat.S_IRUSR:
-                    is_shapefile_readable = True
-                if not is_shapefile_writable and file_status & stat.S_IWUSR:
-                    is_shapefile_writable = True
+                if os.path.exists(file):
+                    file_status = os.stat(file)[stat.ST_MODE]
+                    if not is_shapefile_readable and file_status & stat.S_IRUSR:
+                        is_shapefile_readable = True
+                    if not is_shapefile_writable and file_status & stat.S_IWUSR:
+                        is_shapefile_writable = True
         return is_shapefile_readable, is_shapefile_writable
 
     def _normalize_shapefile_permissions(self, workspace_name, shapefile_name, is_readable, is_writable):
@@ -527,14 +529,15 @@ class Geoserver(Handler, FSMonitor):
         and have the same permissions.
         """
         for shapefile in self.get_shapefile_list(workspace_name, shapefile_name):
-            try:
-                os.chown(shapefile, DEFAULT_UID, DEFAULT_GID)
-            except PermissionError as exc:
-                LOGGER.warning("Failed to change ownership of the %s file: %s", shapefile, exc)
-            new_perms = os.stat(shapefile)[stat.ST_MODE]
-            new_perms = update_filesystem_permissions(new_perms, is_readable=is_readable, is_writable=is_writable,
-                                                      is_executable=False)
-            os.chmod(shapefile, new_perms)
+            if os.path.exists(shapefile):
+                try:
+                    os.chown(shapefile, DEFAULT_UID, DEFAULT_GID)
+                except PermissionError as exc:
+                    LOGGER.warning("Failed to change ownership of the %s file: %s", shapefile, exc)
+                new_perms = os.stat(shapefile)[stat.ST_MODE]
+                new_perms = update_filesystem_permissions(new_perms, is_readable=is_readable, is_writable=is_writable,
+                                                          is_executable=False)
+                os.chmod(shapefile, new_perms)
 
     def remove_shapefile(self, workspace_name, filename):
         # type:(Geoserver, str, str) -> None
