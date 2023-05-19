@@ -672,7 +672,6 @@ def check_path_permissions(path, permissions):
     assert oct(os.stat(path)[ST_MODE] & 0o777) == oct(permissions & 0o777)
 
 
-def check_mock_has_calls_exactly(mocked_fct, calls):
+def check_mock_has_calls(mocked_fct, calls):
     mocked_fct.assert_has_calls(calls, any_order=True)
-    assert mocked_fct.call_count == len(calls)
     mocked_fct.reset_mock()

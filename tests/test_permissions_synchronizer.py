@@ -194,8 +194,10 @@ class TestSyncPermissions(unittest.TestCase):
                                            side_effect=utils.MockAnyHandler))
 
             # Create test resources
-            private_dir_res_id = self.magpie.create_resource("private-dir", Directory.resource_type_name, self.test_service_id)
-            res_ids = [self.magpie.create_resource(f"workspace:file{i}", File.resource_type_name, private_dir_res_id) for i in range(2)]
+            private_dir_res_id = self.magpie.create_resource("private-dir", Directory.resource_type_name,
+                                                             self.test_service_id)
+            res_ids = [self.magpie.create_resource(f"workspace:file{i}", File.resource_type_name, private_dir_res_id)
+                       for i in range(2)]
             res_ids += [self.magpie.create_resource(f"workspace:file{i}", File.resource_type_name, self.test_service_id)
                         for i in range(2, 5)]
 
@@ -434,12 +436,13 @@ class TestSyncPermissions(unittest.TestCase):
                             {"name": "named_dir2", "type": Directory.resource_type_name},
                             {"name": "{dir2}", "type": Directory.resource_type_name},
                             {"name": "{dir1}", "type": Directory.resource_type_name}]}},
-                "permissions_mapping": [f"Thredds_file_src : {Permission.READ.value} <-> "
-                                            f"Thredds_file_target : {Permission.READ.value}",
-                                        f"Thredds_dir_src : {Permission.READ.value} <-> "
-                                            f"Thredds_dir_target : {Permission.READ.value}",
-                                        f"Thredds_named_dir_src : {Permission.READ.value} <-> "
-                                            f"Thredds_named_dir_target : {Permission.READ.value}"]
+                "permissions_mapping": [
+                    f"Thredds_file_src : {Permission.READ.value} <-> "
+                        f"Thredds_file_target : {Permission.READ.value}",
+                    f"Thredds_dir_src : {Permission.READ.value} <-> "
+                        f"Thredds_dir_target : {Permission.READ.value}",
+                    f"Thredds_named_dir_src : {Permission.READ.value} <-> "
+                        f"Thredds_named_dir_target : {Permission.READ.value}"]
             }
         }
         with open(self.cfg_file.name, mode="w", encoding="utf-8") as f:
@@ -463,10 +466,12 @@ class TestSyncPermissions(unittest.TestCase):
             parent_res_id = self.magpie.create_resource("dir2", Directory.resource_type_name, parent_res_id)
             file_target_res_id = self.magpie.create_resource("workspace_file", File.resource_type_name, parent_res_id)
 
-            parent_res_id = self.magpie.create_resource("named_dir1", Directory.resource_type_name, self.test_service_id)
+            parent_res_id = self.magpie.create_resource("named_dir1", Directory.resource_type_name,
+                                                        self.test_service_id)
             parent_res_id = self.magpie.create_resource("dir1", Directory.resource_type_name, parent_res_id)
             named_dir_src_res_id = self.magpie.create_resource("dir2", Directory.resource_type_name, parent_res_id)
-            parent_res_id = self.magpie.create_resource("named_dir2", Directory.resource_type_name, self.test_service_id)
+            parent_res_id = self.magpie.create_resource("named_dir2", Directory.resource_type_name,
+                                                        self.test_service_id)
             parent_res_id = self.magpie.create_resource("dir2", Directory.resource_type_name, parent_res_id)
             named_dir_target_res_id = self.magpie.create_resource("dir1", Directory.resource_type_name, parent_res_id)
 
@@ -955,16 +960,17 @@ class TestSyncPermissionsConfig(unittest.TestCase):
                             {"name": "{dir1_var}", "type": Directory.resource_type_name},
                             {"name": "{dir2_var}", "type": Directory.resource_type_name}]
                     }},
-                "permissions_mapping": [f"ThreddsMultiTokenResource : {Permission.READ.value} -> "
-                                            f"GeoserverUntokenizedResource : {Permission.READ.value}",
-                                        f"ThreddsMultiTokenResource : {Permission.READ.value} <-> "
-                                            f"GeoserverMultiTokenResource : {Permission.READ.value}",
-                                        f"ThreddsNamedTokenResource : {Permission.READ.value} -> "
-                                            f"GeoserverUntokenizedResource : {Permission.READ.value}",
-                                        f"ThreddsNamedTokenResource : {Permission.READ.value} -> "
-                                            f"GeoserverNamedTokenResource1 : {Permission.READ.value}",
-                                        f"ThreddsNamedTokenResource : {Permission.READ.value} <-> "
-                                            f"GeoserverNamedTokenResource2 : {Permission.READ.value}"]
+                "permissions_mapping": [
+                    f"ThreddsMultiTokenResource : {Permission.READ.value} -> "
+                    f"GeoserverUntokenizedResource : {Permission.READ.value}",
+                    f"ThreddsMultiTokenResource : {Permission.READ.value} <-> "
+                    f"GeoserverMultiTokenResource : {Permission.READ.value}",
+                    f"ThreddsNamedTokenResource : {Permission.READ.value} -> "
+                    f"GeoserverUntokenizedResource : {Permission.READ.value}",
+                    f"ThreddsNamedTokenResource : {Permission.READ.value} -> "
+                    f"GeoserverNamedTokenResource1 : {Permission.READ.value}",
+                    f"ThreddsNamedTokenResource : {Permission.READ.value} <-> "
+                    f"GeoserverNamedTokenResource2 : {Permission.READ.value}"]
             }
         }
         check_config(self.data)

@@ -43,8 +43,8 @@ WMS_READ_PERMISSIONS = [Permission.DESCRIBE_LAYER.value,
 WPS_READ_PERMISSIONS = [Permission.DESCRIBE_PROCESS.value, Permission.GET_CAPABILITIES.value]
 WPS_WRITE_PERMISSIONS = [Permission.EXECUTE.value]
 
-LAYER_READ_PERMISSIONS = WFS_READ_PERMISSIONS + WMS_READ_PERMISSIONS
-LAYER_WRITE_PERMISSIONS = WFS_WRITE_PERMISSIONS
+GEOSERVER_READ_PERMISSIONS = WFS_READ_PERMISSIONS + WMS_READ_PERMISSIONS
+GEOSERVER_WRITE_PERMISSIONS = WFS_WRITE_PERMISSIONS
 
 
 class Magpie(Handler):
@@ -149,7 +149,7 @@ class Magpie(Handler):
             raise RuntimeError(f"Could not find the resource with the id `{resource_id}.")
         return resp.json()["resource"]
 
-    def get_geoserver_workspace_res_id(self, workspace_name):
+    def get_geoserver_workspace_res_id(self, workspace_name, create_if_missing=False):
         # type: (str) -> Union[int, None]
         """
         Finds the resource id of a workspace resource from the `geoserver` type services.
@@ -163,6 +163,11 @@ class Magpie(Handler):
             for workspace in self.get_resource(svc["resource_id"])["children"].values():
                 if workspace["resource_name"] == workspace_name:
                     workspace_res_id = workspace["resource_id"]
+        if not workspace_res_id and create_if_missing:
+            workspace_res_id = self.create_resource(
+                resource_name=workspace_name,
+                resource_type=Workspace.resource_type_name,
+                parent_id=list(geoserver_type_services.values())[0]["resource_id"])
         return workspace_res_id
 
     def get_geoserver_layer_res_id(self, workspace_name, layer_name, create_if_missing=False):

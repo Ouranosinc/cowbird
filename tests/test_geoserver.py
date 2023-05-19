@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 from cowbird.constants import COWBIRD_ROOT, DEFAULT_GID, DEFAULT_UID
 from cowbird.handlers import HandlerFactory
 from cowbird.handlers.impl.geoserver import SHAPEFILE_MAIN_EXTENSION, Geoserver, GeoserverError
-from cowbird.handlers.impl.magpie import LAYER_READ_PERMISSIONS, LAYER_WRITE_PERMISSIONS
+from cowbird.handlers.impl.magpie import GEOSERVER_READ_PERMISSIONS, GEOSERVER_WRITE_PERMISSIONS
 from cowbird.permissions_synchronizer import Permission
 from magpie.permissions import Access, Permission as MagpiePermission, Scope
 from magpie.services import ServiceGeoserver
@@ -267,7 +267,7 @@ class TestGeoserverPermissions(TestGeoserver):
     @pytest.fixture(autouse=True)
     def setup(self, tmpdir):
         self.cfg_filepath = tmpdir.strpath + "/test.cfg"
-        with open(self.cfg_filepath, "w") as f:
+        with open(self.cfg_filepath, "w", encoding="utf-8") as f:
             f.write(yaml.safe_dump({
                 "handlers": {
                     "Magpie": {
@@ -320,26 +320,30 @@ class TestGeoserverPermissions(TestGeoserver):
         self.expected_chown_shapefile_calls = [
             mock.call(file, DEFAULT_UID, DEFAULT_GID) for file in self.shapefile_list
         ]
+        self.expected_chown_datastore_call = [mock.call(self.datastore_path, DEFAULT_UID, DEFAULT_GID)]
         yield
         # Teardown
         reset_geoserver_test_workspace(self, self.geoserver)
         test_magpie.delete_user(self.magpie, self.magpie_test_user)
         test_magpie.delete_service(self.magpie, "geoserver")
 
-    def check_magpie_permissions(self, res_id, expected_perms):
+    def check_magpie_permissions(self, res_id, expected_perms, expected_access=Access.ALLOW.value,
+                                 expected_scope=Scope.MATCH.value, effective=True):
         """
-        Checks if a resource has the expected permissions on Magpie.
+        Checks if a resource has the expected permissions on Magpie for a specific access and scope value.
         """
-        user_permissions = self.magpie.get_user_permissions_by_res_id(self.magpie_test_user, res_id, effective=True)
-        assert expected_perms == {p["name"] for p in user_permissions["permissions"]
-                                  if p["access"] == Access.ALLOW.value}
+        user_permissions = self.magpie.get_user_permissions_by_res_id(self.magpie_test_user,
+                                                                      res_id,
+                                                                      effective=effective)
+        assert set(expected_perms) == {p["name"] for p in user_permissions["permissions"]
+                                       if p["access"] == expected_access and p["scope"] == expected_scope}
 
     def test_shapefile_on_created(self):
         """
         Tests if the right Magpie permissions are created upon a shapefile creation in a Geoserver workspace.
         """
-        # For this test, remove service and check if the Magpie service and resources are recreated
-        test_magpie.delete_service(self.magpie, self.test_service_id)
+        # For this test, remove workspace resource and check if required resources are recreated
+        self.magpie.delete_resource(self.workspace_res_id)
 
         for file in self.shapefile_list:
             os.chmod(file, 0o477)
@@ -355,8 +359,8 @@ class TestGeoserverPermissions(TestGeoserver):
         layer_res_id = list(workspace_res["children"])[0]
 
         # Check if the user has the right permissions on Magpie
-        self.check_magpie_permissions(layer_res_id, set(LAYER_READ_PERMISSIONS))
-        utils.check_mock_has_calls_exactly(self.mock_chown, self.expected_chown_shapefile_calls)
+        self.check_magpie_permissions(layer_res_id, set(GEOSERVER_READ_PERMISSIONS))
+        utils.check_mock_has_calls(self.mock_chown, self.expected_chown_shapefile_calls)
 
     def test_shapefile_on_modified(self):
         """
@@ -367,8 +371,8 @@ class TestGeoserverPermissions(TestGeoserver):
         self.geoserver.on_modified(os.path.join(self.datastore_path,
                                                 self.test_shapefile_name + SHAPEFILE_MAIN_EXTENSION))
 
-        self.check_magpie_permissions(self.layer_id, set(LAYER_READ_PERMISSIONS + LAYER_WRITE_PERMISSIONS))
-        utils.check_mock_has_calls_exactly(self.mock_chown, self.expected_chown_shapefile_calls)
+        self.check_magpie_permissions(self.layer_id, set(GEOSERVER_READ_PERMISSIONS + GEOSERVER_WRITE_PERMISSIONS))
+        utils.check_mock_has_calls(self.mock_chown, self.expected_chown_shapefile_calls)
 
     def test_shapefile_on_deleted(self):
         """
@@ -382,15 +386,46 @@ class TestGeoserverPermissions(TestGeoserver):
         with pytest.raises(RuntimeError):
             self.magpie.get_user_permissions_by_res_id(self.magpie_test_user, self.layer_id)
 
-# TODO: implement and add test cases for workspace changes on file system, determine if needed or not
-#  (see comment in Geoserver::on_created())
-    @pytest.mark.skip()
     def test_workspace_on_created(self):
-        pass
+        # For this test, remove workspace resource and check if required resources are recreated
+        self.magpie.delete_resource(self.workspace_res_id)
 
-    @pytest.mark.skip()
+        # No Magpie resources should be created if only a created folder event is triggered
+        self.geoserver.on_created(os.path.join(self.datastore_path))
+        geoserver_resources = self.magpie.get_resources_by_service("geoserver")
+        assert len(geoserver_resources["resources"]) == 0
+
+        # If a created file event is triggered, the workspace resource should be created, with `deny` permissions if
+        # a r/w/x file permission is not available to the user.
+        os.chmod(self.datastore_path, 0o500)
+        self.geoserver.on_created(os.path.join(self.datastore_path,
+                                               self.test_shapefile_name + SHAPEFILE_MAIN_EXTENSION))
+        geoserver_resources = self.magpie.get_resources_by_service("geoserver")
+        workspace_res_id = list(geoserver_resources["resources"])[0]
+
+        # Check if the user has the right permissions on Magpie
+        self.check_magpie_permissions(res_id=workspace_res_id,
+                                      expected_perms=GEOSERVER_WRITE_PERMISSIONS,
+                                      expected_access=Access.DENY.value,
+                                      expected_scope=Scope.RECURSIVE.value,
+                                      effective=False)
+        utils.check_mock_has_calls(self.mock_chown,
+                                   self.expected_chown_datastore_call + self.expected_chown_shapefile_calls)
+
     def test_workspace_on_modified(self):
-        pass
+        """
+        Tests if Magpie resources associated with the user workspace are updated correctly, applying `deny` permissions
+        for any r/w/x file permission that is not available to the user.
+        """
+        os.chmod(self.datastore_path, 0o500)
+        self.geoserver.on_modified(self.datastore_path)
+
+        self.check_magpie_permissions(res_id=self.workspace_res_id,
+                                      expected_perms=GEOSERVER_WRITE_PERMISSIONS,
+                                      expected_access=Access.DENY.value,
+                                      expected_scope=Scope.RECURSIVE.value,
+                                      effective=False)
+        utils.check_mock_has_calls(self.mock_chown, self.expected_chown_datastore_call)
 
     def test_workspace_on_deleted(self, caplog):
         """
@@ -434,7 +469,7 @@ class TestGeoserverPermissions(TestGeoserver):
                 "scope": layer_read_permission.scope
             }})
         self.geoserver.permission_created(layer_read_permission)
-        utils.check_mock_has_calls_exactly(self.mock_chown, self.expected_chown_shapefile_calls)
+        utils.check_mock_has_calls(self.mock_chown, self.expected_chown_shapefile_calls)
         for file in self.shapefile_list:
             utils.check_path_permissions(file, 0o400)
 
@@ -463,7 +498,7 @@ class TestGeoserverPermissions(TestGeoserver):
                 "scope": layer_deny_permission.scope
             }})
         self.geoserver.permission_created(layer_deny_permission)
-        utils.check_mock_has_calls_exactly(self.mock_chown, updated_chown_checklist)
+        utils.check_mock_has_calls(self.mock_chown, updated_chown_checklist)
         for file in updated_shapefile_list:
             utils.check_path_permissions(file, 0o000)
 
@@ -477,7 +512,7 @@ class TestGeoserverPermissions(TestGeoserver):
         # Test as if the first 'allow' permission was deleted
         self.geoserver.permission_deleted(layer_read_permission)
 
-        utils.check_mock_has_calls_exactly(self.mock_chown, updated_chown_checklist)
+        utils.check_mock_has_calls(self.mock_chown, updated_chown_checklist)
         for file in updated_shapefile_list:
             utils.check_path_permissions(file, 0o000)
 
@@ -512,8 +547,8 @@ class TestGeoserverPermissions(TestGeoserver):
 
         self.geoserver.permission_created(recursive_write_permission)
 
-        utils.check_mock_has_calls_exactly(self.mock_chown, [mock.call(self.datastore_path, DEFAULT_UID, DEFAULT_GID)] +
-                                           self.expected_chown_shapefile_calls)
+        utils.check_mock_has_calls(self.mock_chown,
+                                   self.expected_chown_datastore_call + self.expected_chown_shapefile_calls)
         utils.check_path_permissions(self.datastore_path, 0o700)
         for file in self.shapefile_list:
             utils.check_path_permissions(file, 0o200)
@@ -535,8 +570,8 @@ class TestGeoserverPermissions(TestGeoserver):
                 "scope": recursive_write_permission.scope}})
         self.geoserver.permission_created(recursive_write_permission)
 
-        utils.check_mock_has_calls_exactly(self.mock_chown, [mock.call(self.datastore_path, DEFAULT_UID, DEFAULT_GID)] +
-                                           self.expected_chown_shapefile_calls)
+        utils.check_mock_has_calls(self.mock_chown,
+                                   self.expected_chown_datastore_call + self.expected_chown_shapefile_calls)
         utils.check_path_permissions(self.datastore_path, 0o500)
         for file in self.shapefile_list:
             utils.check_path_permissions(file, 0o200)
@@ -547,8 +582,8 @@ class TestGeoserverPermissions(TestGeoserver):
         self.magpie.delete_permission_by_user_and_res_id(self.magpie_test_user, resource_id,
                                                          recursive_write_permission.name)
         self.geoserver.permission_deleted(recursive_write_permission)
-        utils.check_mock_has_calls_exactly(self.mock_chown, [mock.call(self.datastore_path, DEFAULT_UID, DEFAULT_GID)] +
-                                           self.expected_chown_shapefile_calls)
+        utils.check_mock_has_calls(self.mock_chown,
+                                   self.expected_chown_datastore_call + self.expected_chown_shapefile_calls)
         utils.check_path_permissions(self.datastore_path, 0o500)
         for file in self.shapefile_list:
             utils.check_path_permissions(file, 0o000)

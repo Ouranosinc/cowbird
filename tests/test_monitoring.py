@@ -137,14 +137,14 @@ class TestMonitor(FSMonitor):
     def get_instance():
         return TestMonitor()
 
-    def on_created(self, filename):
-        self.created.append(filename)
+    def on_created(self, path):
+        self.created.append(path)
 
-    def on_deleted(self, filename):
-        self.deleted.append(filename)
+    def on_deleted(self, path):
+        self.deleted.append(path)
 
-    def on_modified(self, filename):
-        self.modified.append(filename)
+    def on_modified(self, path):
+        self.modified.append(path)
 
 
 class TestMonitor2(TestMonitor):

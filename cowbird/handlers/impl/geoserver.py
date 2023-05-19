@@ -11,7 +11,7 @@ from celery import chain, shared_task
 from cowbird.constants import DEFAULT_GID, DEFAULT_UID
 from cowbird.handlers.handler import HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PARAM, Handler
 from cowbird.handlers.handler_factory import HandlerFactory
-from cowbird.handlers.impl.magpie import LAYER_READ_PERMISSIONS, LAYER_WRITE_PERMISSIONS
+from cowbird.handlers.impl.magpie import GEOSERVER_READ_PERMISSIONS, GEOSERVER_WRITE_PERMISSIONS
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
 from cowbird.permissions_synchronizer import Permission
@@ -116,6 +116,7 @@ class Geoserver(Handler, FSMonitor):
         self.admin_user = kwargs.get(HANDLER_ADMIN_USER, None)
         self.admin_password = kwargs.get(HANDLER_ADMIN_PASSWORD, None)
         self.auth = (self.admin_user, self.admin_password)
+        self.datastore_regex = rf"^{self.workspace_dir}/\w+/{DEFAULT_DATASTORE_DIR_NAME}/?$"
 
     #
     # Implementation of parent classes' functions
@@ -142,7 +143,7 @@ class Geoserver(Handler, FSMonitor):
         magpie_handler = HandlerFactory().get_handler("Magpie")
         workspace_res_id = magpie_handler.get_geoserver_workspace_res_id(user_name)
         if not workspace_res_id:
-            LOGGER.debug(f"No workspace resource named `{user_name}` to delete in Magpie.")
+            LOGGER.debug("No workspace resource named `%s` to delete in Magpie.", user_name)
         else:
             magpie_handler.delete_resource(workspace_res_id)
 
@@ -173,8 +174,8 @@ class Geoserver(Handler, FSMonitor):
 
         allowed_user_perm_names = {p["name"] for p in user_permissions["permissions"]
                                    if p["access"] == Access.ALLOW.value}
-        is_readable = any(p in LAYER_READ_PERMISSIONS for p in allowed_user_perm_names)
-        is_writable = any(p in LAYER_WRITE_PERMISSIONS for p in allowed_user_perm_names)
+        is_readable = any(p in GEOSERVER_READ_PERMISSIONS for p in allowed_user_perm_names)
+        is_writable = any(p in GEOSERVER_WRITE_PERMISSIONS for p in allowed_user_perm_names)
         is_executable = is_readable if resource_type == Workspace.resource_type_name else False
 
         for path in path_list:
@@ -206,11 +207,11 @@ class Geoserver(Handler, FSMonitor):
             layer_name = resource["resource_name"] if resource_type == Layer.resource_type_name else None
             self._update_file_paths_permissions(resource_type=resource_type,
                                                 permission=permission,
-                                                resource_id=permission.resource_id,
+                                                resource_id=resource["resource_id"],
                                                 workspace_name=workspace_name,
                                                 layer_name=layer_name)
 
-        if permission.scope == Scope.RECURSIVE.name:
+        if permission.scope == Scope.RECURSIVE.value:
             for children_res in resource["children"].values():
                 self._update_file_paths_permissions_recursive(resource=children_res,
                                                               permission=permission,
@@ -221,7 +222,7 @@ class Geoserver(Handler, FSMonitor):
         """
         Updates the permissions of dir/files on the file system, after receiving a permission webhook event from Magpie.
         """
-        if permission.name not in LAYER_READ_PERMISSIONS + LAYER_WRITE_PERMISSIONS:
+        if permission.name not in GEOSERVER_READ_PERMISSIONS + GEOSERVER_WRITE_PERMISSIONS:
             LOGGER.info("Nothing to do, since the permission `%s` is not specific to a Geoserver type service.",
                         permission.name)
             return
@@ -283,6 +284,7 @@ class Geoserver(Handler, FSMonitor):
             LOGGER.info("Starting Geoserver publishing process for [%s]", path)
             Geoserver.publish_shapefile_task_chain(workspace_name, shapefile_name)
 
+            self._update_magpie_workspace_permissions(workspace_name)
             self._update_magpie_layer_permissions(workspace_name, shapefile_name)
 
     @staticmethod
@@ -299,14 +301,12 @@ class Geoserver(Handler, FSMonitor):
 
         :param path: Absolute path of a new file/directory
         """
-        datastore_regex = rf"^{self.workspace_dir}/\w+/{DEFAULT_DATASTORE_DIR_NAME}/?$"
-        if (os.path.isdir(path) and
-                re.match(datastore_regex, path)):
+        if os.path.isdir(path) and re.match(self.datastore_regex, path):
             # Note that the geoserver workspace and corresponding Magpie resources are only removed when the user is
             # deleted. The manual deletion of a datastore folder should be avoided.
-            LOGGER.warning(f"An event was triggered for the deletion of the folder `{path}`. The folder should "
+            LOGGER.warning("An event was triggered for the deletion of the folder `%s`. The folder should "
                            "not be removed manually, but only when a user is deleted. This event invalidates the still "
-                           "existing Geoserver workspace and corresponding Magpie resources.")
+                           "existing Geoserver workspace and corresponding Magpie resources.", path)
         if path.endswith(tuple(SHAPEFILE_ALL_EXTENSIONS)):
             workspace_name, shapefile_name = self._get_shapefile_info(path)
             Geoserver.remove_shapefile_task(workspace_name, shapefile_name)
@@ -331,9 +331,56 @@ class Geoserver(Handler, FSMonitor):
         """
         # Nothing needs to be done specifically for Geoserver as Catalog already logs file modifications.
         # Only need to update permissions on Magpie, in case the file permissions were modified.
-        if path.endswith(tuple(SHAPEFILE_ALL_EXTENSIONS)):
+        if os.path.isdir(path) and re.match(self.datastore_regex, path):
+            workspace_name = path.split("/")[-2]
+            self._update_magpie_workspace_permissions(workspace_name)
+        elif path.endswith(tuple(SHAPEFILE_ALL_EXTENSIONS)):
             workspace_name, shapefile_name = self._get_shapefile_info(path)
+            self._update_magpie_workspace_permissions(workspace_name)
             self._update_magpie_layer_permissions(workspace_name, shapefile_name)
+
+    def _update_magpie_workspace_permissions(self, workspace_name):
+        """
+        Updates the permissions of a `workspace` resource on Magpie to the current permissions found on the
+        corresponding datastore folder.
+
+        Note that we only add a recursive `deny` permission when the directory does not have a `r`/`x` or a `w`
+        permission. Else, the resource won't be assigned a specific permission.
+        """
+        magpie_handler = HandlerFactory().get_handler("Magpie")
+        workspace_res_id = magpie_handler.get_geoserver_workspace_res_id(workspace_name, create_if_missing=True)
+
+        datastore_dir_path = self._shapefile_folder_dir(workspace_name)
+        # Make sure the directory has the right ownership
+        try:
+            os.chown(datastore_dir_path, DEFAULT_UID, DEFAULT_GID)
+        except PermissionError as exc:
+            LOGGER.warning("Failed to change ownership of the %s directory: %s", datastore_dir_path, exc)
+
+        workspace_status = os.stat(datastore_dir_path)[stat.ST_MODE]
+        is_readable = bool(workspace_status & stat.S_IRUSR and workspace_status & stat.S_IXUSR)
+        is_writable = bool(workspace_status & stat.S_IWUSR)
+
+        # Only add `deny` permissions for workspaces
+        permissions_to_add = set((GEOSERVER_READ_PERMISSIONS if not is_readable else []) +
+                                 (GEOSERVER_WRITE_PERMISSIONS if not is_writable else []))
+        permissions_to_remove = set((GEOSERVER_READ_PERMISSIONS if is_readable else []) +
+                                    (GEOSERVER_WRITE_PERMISSIONS if is_writable else []))
+        for perm_name in permissions_to_remove:
+            magpie_handler.delete_permission_by_user_and_res_id(
+                user_name=workspace_name,
+                res_id=workspace_res_id,
+                permission_name=perm_name)
+        for perm_name in permissions_to_add:
+            magpie_handler.create_permission_by_user_and_res_id(
+                user_name=workspace_name,
+                res_id=workspace_res_id,
+                permission_data={
+                    "permission": {
+                        "name": perm_name,
+                        "access": Access.DENY.value,
+                        "scope": Scope.RECURSIVE.value
+                    }})
 
     def _update_magpie_layer_permissions(self, workspace_name, layer_name):
         # type: (str, str) -> None
@@ -348,8 +395,8 @@ class Geoserver(Handler, FSMonitor):
         is_readable, is_writable = self._get_shapefile_permissions(workspace_name, layer_name)
         self._normalize_shapefile_permissions(workspace_name, layer_name, is_readable, is_writable)
 
-        permissions_to_add = set((LAYER_READ_PERMISSIONS if is_readable else []) +
-                                 (LAYER_WRITE_PERMISSIONS if is_writable else []))
+        permissions_to_add = set((GEOSERVER_READ_PERMISSIONS if is_readable else []) +
+                                 (GEOSERVER_WRITE_PERMISSIONS if is_writable else []))
         for perm_name in permissions_to_add:
             magpie_handler.create_permission_by_user_and_res_id(
                 user_name=workspace_name,
@@ -360,8 +407,8 @@ class Geoserver(Handler, FSMonitor):
                         "access": Access.ALLOW.value,
                         "scope": Scope.MATCH.value
                     }})
-        permissions_to_remove = set((LAYER_READ_PERMISSIONS if not is_readable else []) +
-                                    (LAYER_WRITE_PERMISSIONS if not is_writable else []))
+        permissions_to_remove = set((GEOSERVER_READ_PERMISSIONS if not is_readable else []) +
+                                    (GEOSERVER_WRITE_PERMISSIONS if not is_writable else []))
         for perm_name in permissions_to_remove:
             magpie_handler.delete_permission_by_user_and_res_id(
                 user_name=workspace_name,

@@ -1,5 +1,4 @@
 import os
-import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -92,7 +91,7 @@ class TestMagpie:
             }
         }
         self.cfg_filepath = tmpdir.strpath + "/test.cfg"
-        with open(self.cfg_filepath, "w") as f:
+        with open(self.cfg_filepath, "w", encoding="utf-8") as f:
             f.write(yaml.safe_dump(self.data))
 
         # Set environment variables with config
