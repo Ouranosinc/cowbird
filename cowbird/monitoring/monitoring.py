@@ -55,7 +55,7 @@ class Monitoring(metaclass=SingletonMeta):
             mon.start()
 
     def register(self, path, recursive, cb_monitor):
-        # type: (str, bool, Union[FSMonitor, Type[FSMonitor], str]) -> Monitor
+        # type: (str, bool, Union[FSMonitor, Type[FSMonitor], str]) -> Union[Monitor, None]
         """
         Register a monitor for a specific path and start it. If a monitor already exists for the specific
         path/cb_monitor combination it is directly returned. If this monitor was not recursively monitoring its path and
@@ -71,24 +71,27 @@ class Monitoring(metaclass=SingletonMeta):
         """
         try:
             callback = Monitor.get_qualified_class_name(Monitor.get_fsmonitor_instance(cb_monitor))
-            mon = self.monitors[path][callback]
-            # If the monitor already exists but is not recursive, make it recursive if required
-            # (recursivity takes precedence)
-            if not mon.recursive and recursive:
-                mon.recursive = True
-                self.store.save_monitor(mon)
-            return mon
-        except KeyError:
-            # Doesn't already exist
-            try:
+            if path in self.monitors and callback in self.monitors[path]:
+                mon = self.monitors[path][callback]
+                # If the monitor already exists but is not recursive, make it recursive if required
+                # (recursivity takes precedence)
+                if not mon.recursive and recursive:
+                    mon.recursive = True
+            else:
+                # Doesn't already exist
                 mon = Monitor(path, recursive, cb_monitor)
-                mon.start()
                 self.monitors[mon.path][mon.callback] = mon
+
+            if not self.store.collection.find_one(
+                    {"callback": mon.callback, "path": mon.path, "recursive": mon.recursive}):
                 self.store.save_monitor(mon)
-                return mon
-            except MonitorException as exc:
-                LOGGER.warning("Failed to start monitoring the following path [%s] with this monitor [%s] : [%s]",
-                               path, callback, exc)
+
+            if not mon.is_alive:
+                mon.start()
+            return mon
+        except MonitorException as exc:
+            LOGGER.warning("Failed to start monitoring the following path [%s] with this monitor [%s] : [%s]",
+                           path, callback, exc)
         return None
 
     def unregister(self, path, cb_monitor):
@@ -102,14 +105,16 @@ class Monitoring(metaclass=SingletonMeta):
                            name.
         :returns: True if the monitor is found and successfully stopped, False otherwise
         """
+        mon_qualname = Monitor.get_qualified_class_name(Monitor.get_fsmonitor_instance(cb_monitor))
+        res = self.store.collection.delete_many({"callback": mon_qualname, "path": path})
+        LOGGER.info("%i monitor(s) deleted from database.", res.deleted_count)
+
         if path in self.monitors:
             try:
-                mon_qualname = Monitor.get_qualified_class_name(Monitor.get_fsmonitor_instance(cb_monitor))
                 mon = self.monitors[path].pop(mon_qualname)
                 if len(self.monitors[path]) == 0:
                     self.monitors.pop(path)
                 mon.stop()
-                self.store.delete_monitor(mon)
                 return True
             except KeyError:
                 pass

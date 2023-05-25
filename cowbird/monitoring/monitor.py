@@ -120,6 +120,14 @@ class Monitor(FileSystemEventHandler):
         """
         return {"callback": self.callback, "path": self.path}
 
+    @property
+    def is_alive(self):
+        # type: () -> bool
+        """
+        Returns true if the monitor observer exists and is currently running.
+        """
+        return bool(self.__event_observer) and self.__event_observer.is_alive()
+
     def params(self):
         # type: () -> Dict
         """
