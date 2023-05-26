@@ -140,7 +140,7 @@ class Monitor(FileSystemEventHandler):
         """
         Start the monitoring so that events can be fired.
         """
-        if self.__event_observer:
+        if self.is_alive:
             msg = f"This monitor [path={self.path}, callback={self.callback}] is already started"
             LOGGER.error(msg)
             raise MonitorException(msg)

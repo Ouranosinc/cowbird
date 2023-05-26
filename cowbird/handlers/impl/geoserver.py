@@ -156,6 +156,39 @@ class Geoserver(Handler, FSMonitor):
         base_filename = self._shapefile_folder_dir(workspace_name) + "/" + shapefile_name
         return [base_filename + ext for ext in SHAPEFILE_ALL_EXTENSIONS]
 
+    @staticmethod
+    def _apply_new_path_permissions(path, is_readable, is_writable, is_executable):
+        # type: (str, bool, bool, bool) -> None
+        """
+        Applies new permissions to a path, if required.
+        """
+        previous_perms = os.stat(path)[stat.ST_MODE] & 0o777
+        new_perms = update_filesystem_permissions(previous_perms,
+                                                  is_readable=is_readable,
+                                                  is_writable=is_writable,
+                                                  is_executable=is_executable)
+        # Only apply chmod if there is an actual change, to avoid looping events between Magpie and Cowbird
+        if new_perms != previous_perms:
+            try:
+                os.chmod(path, new_perms)
+            except PermissionError as exc:
+                LOGGER.warning("Failed to change permissions on the %s path: %s", path, exc)
+
+    @staticmethod
+    def _apply_default_path_ownership(path):
+        # type: (str) -> None
+        """
+        Applies default ownership to a path, if required.
+        """
+        path_stat = os.stat(path)
+        # Only apply chown if there is an actual change, to avoid looping events between Magpie and Cowbird
+        if path_stat.st_uid != DEFAULT_UID or path_stat.st_gid != DEFAULT_GID:
+            try:
+                # This operation only works as root.
+                os.chown(path, DEFAULT_UID, DEFAULT_GID)
+            except PermissionError as exc:
+                LOGGER.warning("Failed to change ownership of the %s path: %s", path, exc)
+
     def _update_file_paths_permissions(self, resource_type, permission, resource_id, workspace_name,
                                        layer_name=None):
         # type:(str, Permission, int, str, Optional[str]) -> None
@@ -184,20 +217,8 @@ class Geoserver(Handler, FSMonitor):
                 if path.endswith(tuple(SHAPEFILE_REQUIRED_EXTENSIONS)):
                     LOGGER.warning("%s could not be found and its permissions could not be updated.", path)
                 continue
-            new_perms = os.stat(path)[stat.ST_MODE]
-            new_perms = update_filesystem_permissions(new_perms,
-                                                      is_readable=is_readable,
-                                                      is_writable=is_writable,
-                                                      is_executable=is_executable)
-            try:
-                os.chmod(path, new_perms)
-            except PermissionError as exc:
-                LOGGER.warning("Failed to change permissions on the %s path: %s", path, exc)
-            try:
-                # This operation only works as root.
-                os.chown(path, DEFAULT_UID, DEFAULT_GID)
-            except PermissionError as exc:
-                LOGGER.warning("Failed to change ownership of the %s path: %s", path, exc)
+            Geoserver._apply_new_path_permissions(path, is_readable, is_writable, is_executable)
+            Geoserver._apply_default_path_ownership(path)
 
     def _update_file_paths_permissions_recursive(self, resource, permission, workspace_name):
         # type:(Dict[str, JSON], Permission, str) -> None
@@ -354,10 +375,7 @@ class Geoserver(Handler, FSMonitor):
 
         datastore_dir_path = self._shapefile_folder_dir(workspace_name)
         # Make sure the directory has the right ownership
-        try:
-            os.chown(datastore_dir_path, DEFAULT_UID, DEFAULT_GID)
-        except PermissionError as exc:
-            LOGGER.warning("Failed to change ownership of the %s directory: %s", datastore_dir_path, exc)
+        Geoserver._apply_default_path_ownership(datastore_dir_path)
 
         workspace_status = os.stat(datastore_dir_path)[stat.ST_MODE]
         is_readable = bool(workspace_status & stat.S_IRUSR and workspace_status & stat.S_IXUSR)
@@ -530,14 +548,9 @@ class Geoserver(Handler, FSMonitor):
         """
         for shapefile in self.get_shapefile_list(workspace_name, shapefile_name):
             if os.path.exists(shapefile):
-                try:
-                    os.chown(shapefile, DEFAULT_UID, DEFAULT_GID)
-                except PermissionError as exc:
-                    LOGGER.warning("Failed to change ownership of the %s file: %s", shapefile, exc)
-                new_perms = os.stat(shapefile)[stat.ST_MODE]
-                new_perms = update_filesystem_permissions(new_perms, is_readable=is_readable, is_writable=is_writable,
-                                                          is_executable=False)
-                os.chmod(shapefile, new_perms)
+                Geoserver._apply_default_path_ownership(shapefile)
+                Geoserver._apply_new_path_permissions(shapefile, is_readable=is_readable, is_writable=is_writable,
+                                                      is_executable=False)
 
     def remove_shapefile(self, workspace_name, filename):
         # type:(Geoserver, str, str) -> None

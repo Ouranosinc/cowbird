@@ -11,6 +11,11 @@ Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add permission synchronization between Magpie's permissions and Geoserver files permissions.
 
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* Fix bug where the monitors saved on the database and the intermal monitors dictionary from the `Monitoring` class
+  would be desynchronized, not always having the expected monitors, or having monitors that were not started properly.
+
 `1.1.1 <https://github.com/Ouranosinc/cowbird/tree/1.1.1>`_ (2023-03-24)
 ------------------------------------------------------------------------------------
 
