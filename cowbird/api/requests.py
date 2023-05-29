@@ -69,7 +69,7 @@ def get_multiformat_body_raw(request, key, default=None):
 
 def get_multiformat_body(request, key, default=None, check_type=str, pattern=ax.PARAM_REGEX,
                          http_error=None, msg_on_fail=None):
-    # type: (Request, str, Any, Any, Optional[Union[str, bool]], Optional[Type[HTTPError]], Optional[str]) -> str
+    # type: (Request, str, Any, Any, Optional[Union[str, bool]], Optional[Type[HTTPError]], Optional[str]) -> Any
     """
     Obtains and validates the matched value under :paramref:`key` element from the request body.
 

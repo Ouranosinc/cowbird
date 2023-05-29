@@ -121,6 +121,13 @@ class Magpie(Handler):
             raise RuntimeError(f"Failed to get the services of type `{service_type}`.")
         return resp.json()["services"][service_type]
 
+    def get_service_info(self, service_name):
+        # type: (str) -> Dict[str, JSON]
+        resp = self._send_request(method="GET", url=f"{self.url}/services/{service_name}")
+        if resp.status_code != 200:
+            raise RuntimeError(f"Could not find the `{service_name}` service info.")
+        return resp.json()["service"]
+
     def get_resources_by_service(self, service_name):
         # type: (str) -> Dict[str, JSON]
         resp = self._send_request(method="GET", url=f"{self.url}/services/{service_name}/resources")

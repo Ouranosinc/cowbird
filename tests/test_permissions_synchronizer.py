@@ -569,7 +569,7 @@ class TestSyncPermissions(unittest.TestCase):
 
     def test_webhooks_no_match(self):
         """
-        Tests the invalid case where a resource found in the incoming webhook finds no match in the config.
+        Tests the case where a resource found in the incoming webhook finds no match in the config.
         """
         self.data["sync_permissions"] = {
             "user_workspace": {
@@ -595,7 +595,7 @@ class TestSyncPermissions(unittest.TestCase):
         with contextlib.ExitStack() as stack:
             stack.enter_context(mock.patch("cowbird.handlers.impl.thredds.Thredds",
                                            side_effect=utils.MockAnyHandler))
-            # Create test resources
+            # Create test resource, but use a `file` type instead of `dir` to have a mismatch with the config.
             src_res_id = self.magpie.create_resource("dir", File.resource_type_name, self.test_service_id)
 
             data = {
@@ -611,9 +611,11 @@ class TestSyncPermissions(unittest.TestCase):
             }
 
             # Try creating permissions
-            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data, expect_errors=True)
-            # Should create an error since input resource doesn't match the type of resources found in config
-            utils.check_response_basic_info(resp, 500, expected_method="POST")
+            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
+            # Even if the permission is not defined in the sync config, no error should be triggered.
+            utils.check_response_basic_info(resp, 200, expected_method="POST")
+            # No permission should have been created.
+            self.check_user_permissions(src_res_id, [])
 
     def test_webhooks_invalid_service(self):
         """
