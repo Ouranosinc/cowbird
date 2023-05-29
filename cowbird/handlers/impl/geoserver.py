@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, Tuple
 
 import requests
 from celery import chain, shared_task
+from magpie.models import Layer, Workspace
+from magpie.permissions import Access, Scope
 
 from cowbird.constants import DEFAULT_GID, DEFAULT_UID
 from cowbird.handlers.handler import HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PARAM, Handler
@@ -17,8 +19,6 @@ from cowbird.monitoring.monitoring import Monitoring
 from cowbird.permissions_synchronizer import Permission
 from cowbird.request_task import RequestTask
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger, update_filesystem_permissions
-from magpie.models import Layer, Workspace
-from magpie.permissions import Access, Scope
 
 if TYPE_CHECKING:
     from typing import Any, Dict, List, Optional

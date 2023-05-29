@@ -10,6 +10,9 @@ import mock
 import pytest
 import yaml
 from dotenv import load_dotenv
+from magpie.models import Directory, File, Service, Workspace
+from magpie.permissions import Access, Permission, Scope
+from magpie.services import ServiceGeoserver, ServiceTHREDDS
 from schema import SchemaError
 
 from cowbird.api.schemas import ValidOperations
@@ -20,11 +23,7 @@ from cowbird.config import (
     ConfigErrorInvalidTokens
 )
 from cowbird.handlers import HandlerFactory
-from magpie.models import Directory, File, Service, Workspace
-from magpie.permissions import Access, Permission, Scope
-from magpie.services import ServiceGeoserver, ServiceTHREDDS
-from tests import test_magpie
-from tests import utils
+from tests import test_magpie, utils
 
 if TYPE_CHECKING:
     from typing import Dict, List, Type

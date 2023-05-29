@@ -7,25 +7,26 @@ still useful for a developer working on the Geoserver requests. They can be run 
 More integration tests should be in Jupyter Notebook format as is the case with Birdhouse-deploy / DACCS platform.
 """
 import glob
+import logging
 import os
 import shutil
 from pathlib import Path
 
-import logging
 import mock
 import pytest
 import yaml
 from dotenv import load_dotenv
+from magpie.permissions import Access
+from magpie.permissions import Permission as MagpiePermission
+from magpie.permissions import Scope
+from magpie.services import ServiceGeoserver
 
 from cowbird.constants import COWBIRD_ROOT, DEFAULT_GID, DEFAULT_UID
 from cowbird.handlers import HandlerFactory
 from cowbird.handlers.impl.geoserver import SHAPEFILE_MAIN_EXTENSION, Geoserver, GeoserverError
 from cowbird.handlers.impl.magpie import GEOSERVER_READ_PERMISSIONS, GEOSERVER_WRITE_PERMISSIONS
 from cowbird.permissions_synchronizer import Permission
-from magpie.permissions import Access, Permission as MagpiePermission, Scope
-from magpie.services import ServiceGeoserver
-from tests import test_magpie
-from tests import utils
+from tests import test_magpie, utils
 
 CURR_DIR = Path(__file__).resolve().parent
 
@@ -458,6 +459,7 @@ class TestGeoserverPermissions(TestGeoserver):
         # Update shapefile read permissions
         layer_read_permission = Permission(
             service_name="geoserver",
+            service_type=ServiceGeoserver.service_type,
             resource_id=str(self.layer_id),
             resource_full_name=f"/geoserver/{self.workspace_name}/{self.test_shapefile_name}",
             name=MagpiePermission.DESCRIBE_FEATURE_TYPE.value,
@@ -487,6 +489,7 @@ class TestGeoserverPermissions(TestGeoserver):
                                                          MagpiePermission.DESCRIBE_FEATURE_TYPE.value)
         layer_deny_permission = Permission(
             service_name="geoserver",
+            service_type=ServiceGeoserver.service_type,
             resource_id=str(self.layer_id),
             resource_full_name=f"/geoserver/{self.workspace_name}/{self.test_shapefile_name}",
             name=MagpiePermission.DESCRIBE_FEATURE_TYPE.value,
@@ -535,6 +538,7 @@ class TestGeoserverPermissions(TestGeoserver):
         # Update resource with recursive write permissions
         recursive_write_permission = Permission(
             service_name="geoserver",
+            service_type=ServiceGeoserver.service_type,
             resource_id=resource_id,
             resource_full_name=resource_name,
             name=MagpiePermission.CREATE_STORED_QUERY.value,

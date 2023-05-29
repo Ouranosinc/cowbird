@@ -9,7 +9,7 @@ from cowbird.api import exception as ax
 from cowbird.api import requests as ar
 from cowbird.api import schemas as s
 from cowbird.api.schemas import ValidOperations
-from cowbird.handlers import get_handlers, HandlerFactory
+from cowbird.handlers import HandlerFactory, get_handlers
 from cowbird.permissions_synchronizer import Permission
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger, get_ssl_verify, get_timeout
 

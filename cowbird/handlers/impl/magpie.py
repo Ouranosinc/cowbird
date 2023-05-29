@@ -2,6 +2,9 @@ import time
 from typing import TYPE_CHECKING
 
 import requests
+from magpie.models import Layer, Workspace
+from magpie.permissions import Permission
+from magpie.services import ServiceGeoserver
 from pyramid.httpexceptions import HTTPError
 from requests.cookies import RequestsCookieJar
 
@@ -9,10 +12,6 @@ from cowbird.config import ConfigError
 from cowbird.handlers.handler import HANDLER_URL_PARAM, Handler
 from cowbird.permissions_synchronizer import PermissionSynchronizer
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger
-from magpie.models import Layer, Workspace
-from magpie.permissions import Permission
-from magpie.services import ServiceGeoserver
-
 
 if TYPE_CHECKING:
     from typing import Any, Dict, List, Optional, Union

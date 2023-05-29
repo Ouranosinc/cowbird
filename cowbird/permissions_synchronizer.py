@@ -246,7 +246,7 @@ class SyncPoint:
             if len(max_matching_keys) == 1:
                 src_res_key = max_matching_keys[0]
                 return src_res_key, matched_groups_by_res[src_res_key]
-            elif len(max_matching_keys) > 1:
+            if len(max_matching_keys) > 1:
                 raise ValueError("Found 2 matching resources of the same length in the config. "
                                  f"Ambiguous config resources : {max_matching_keys}")
 

@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -5,11 +6,11 @@ from typing import TYPE_CHECKING
 import pytest
 import yaml
 from dotenv import load_dotenv
+from magpie.models import Layer, Workspace
+from magpie.services import ServiceGeoserver
 
 from cowbird.handlers import HandlerFactory
 from cowbird.handlers.impl.magpie import Magpie
-from magpie.models import Layer, Workspace
-from magpie.services import ServiceGeoserver
 from tests import utils
 
 if TYPE_CHECKING:
@@ -65,6 +66,7 @@ class TestMagpie:
     These tests require a running instance of Magpie.
     """
 
+    # pylint: disable=attribute-defined-outside-init
     def setup_class(self):
 
         load_dotenv(CURR_DIR / "../docker/.env.example")
@@ -77,6 +79,7 @@ class TestMagpie:
         # Reset handlers instances in case any are left from other test cases
         utils.clear_handlers_instances()
 
+    # pylint: disable=attribute-defined-outside-init
     @pytest.fixture(autouse=True)
     def setup(self, tmpdir):
         self.data = {
