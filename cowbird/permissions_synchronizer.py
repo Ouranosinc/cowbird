@@ -44,7 +44,7 @@ class Permission:
     def __init__(self,
                  service_name,        # type: str
                  service_type,        # type: str
-                 resource_id,         # type: str
+                 resource_id,         # type: int
                  resource_full_name,  # type: str
                  name,                # type: str
                  access,              # type: str

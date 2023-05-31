@@ -107,13 +107,8 @@ def post_permission_webhook_view(request):
     # Use raw value for service name, to avoid errors with `None` values
     # when the permission is not applied to a `service` type resource.
     service_name = ar.get_multiformat_body_raw(request, "service_name")
+    service_type = ar.get_multiformat_body(request, "service_type")
     resource_id = ar.get_multiformat_body(request, "resource_id", check_type=int)
-
-    # TODO: The service_type should probably be sent directly in the webhook from Magpie.
-    magpie = HandlerFactory().get_handler("Magpie")
-    res_tree = magpie.get_parents_resource_tree(resource_id)
-    service_type = magpie.get_service_info(res_tree[0]["resource_name"])["service_type"]
-
     param_regex_with_slashes = r"^/?[A-Za-z0-9]+(?:[\s_\-\./:][A-Za-z0-9]+)*$"
     resource_full_name = ar.get_multiformat_body(request, "resource_full_name",
                                                  pattern=param_regex_with_slashes)

@@ -79,6 +79,7 @@ class TestAPI(unittest.TestCase):
             data = {
                 "event": "created",
                 "service_name": "string",
+                "service_type": "string",
                 "resource_id": 1,
                 "resource_full_name": "thredds/birdhouse/file.nc",
                 "name": "read",

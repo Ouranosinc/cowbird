@@ -189,8 +189,8 @@ class Geoserver(Handler, FSMonitor):
             except PermissionError as exc:
                 LOGGER.warning("Failed to change ownership of the %s path: %s", path, exc)
 
-    def _update_file_paths_permissions(self, resource_type, permission, resource_id, workspace_name,
-                                       layer_name=None):
+    def _update_resource_paths_permissions(self, resource_type, permission, resource_id, workspace_name,
+                                           layer_name=None):
         # type:(str, Permission, int, str, Optional[str]) -> None
         """
         Updates a single Magpie resource's associated paths according to its permissions found on Magpie.
@@ -199,12 +199,16 @@ class Geoserver(Handler, FSMonitor):
             if not layer_name:
                 raise GeoserverError("Missing layer name to update permissions.")
             path_list = self.get_shapefile_list(workspace_name, layer_name)
+            # Get the actual effective user permissions
+            user_permissions = HandlerFactory().get_handler("Magpie").get_user_permissions_by_res_id(
+                permission.user, resource_id, effective=True)
         else:
             path_list = [self._shapefile_folder_dir(workspace_name)]
-
-        # Get the actual effective user permissions
-        user_permissions = HandlerFactory().get_handler("Magpie").get_user_permissions_by_res_id(
-            permission.user, resource_id, effective=True)
+            # Get only the permissions on the workspace, since we treat no permission as `Allow` instead of `Deny` which
+            # we would get if using `effective`.
+            # TODO: review if effective=False is valid
+            user_permissions = HandlerFactory().get_handler("Magpie").get_user_permissions_by_res_id(
+                permission.user, resource_id, effective=False)
 
         allowed_user_perm_names = {p["name"] for p in user_permissions["permissions"]
                                    if p["access"] == Access.ALLOW.value}
@@ -220,7 +224,7 @@ class Geoserver(Handler, FSMonitor):
             Geoserver._apply_new_path_permissions(path, is_readable, is_writable, is_executable)
             Geoserver._apply_default_path_ownership(path)
 
-    def _update_file_paths_permissions_recursive(self, resource, permission, workspace_name):
+    def _update_resource_paths_permissions_recursive(self, resource, permission, workspace_name):
         # type:(Dict[str, JSON], Permission, str) -> None
         """
         Recursive method to update all the path permissions of a resource and its children resources as found on Magpie.
@@ -228,17 +232,17 @@ class Geoserver(Handler, FSMonitor):
         resource_type = resource["resource_type"]
         if resource_type in [Workspace.resource_type_name, Layer.resource_type_name]:
             layer_name = resource["resource_name"] if resource_type == Layer.resource_type_name else None
-            self._update_file_paths_permissions(resource_type=resource_type,
-                                                permission=permission,
-                                                resource_id=resource["resource_id"],
-                                                workspace_name=workspace_name,
-                                                layer_name=layer_name)
+            self._update_resource_paths_permissions(resource_type=resource_type,
+                                                    permission=permission,
+                                                    resource_id=resource["resource_id"],
+                                                    workspace_name=workspace_name,
+                                                    layer_name=layer_name)
 
         if permission.scope == Scope.RECURSIVE.value:
             for children_res in resource["children"].values():
-                self._update_file_paths_permissions_recursive(resource=children_res,
-                                                              permission=permission,
-                                                              workspace_name=workspace_name)
+                self._update_resource_paths_permissions_recursive(resource=children_res,
+                                                                  permission=permission,
+                                                                  workspace_name=workspace_name)
 
     def _update_permissions_on_filesystem(self, permission):
         # type: (Permission) -> None
@@ -257,9 +261,9 @@ class Geoserver(Handler, FSMonitor):
                                       "workspaces are based on users only.")
         workspace_name = permission.user
 
-        self._update_file_paths_permissions_recursive(resource=magpie_handler.get_resource(permission.resource_id),
-                                                      permission=permission,
-                                                      workspace_name=workspace_name)
+        self._update_resource_paths_permissions_recursive(resource=magpie_handler.get_resource(permission.resource_id),
+                                                          permission=permission,
+                                                          workspace_name=workspace_name)
 
     def permission_created(self, permission):
         """
@@ -359,6 +363,7 @@ class Geoserver(Handler, FSMonitor):
             self._update_magpie_workspace_permissions(workspace_name)
         elif path.endswith(SHAPEFILE_MAIN_EXTENSION):
             workspace_name, shapefile_name = self._get_shapefile_info(path)
+            # Update the workspace permissions first, in case they were not already created
             self._update_magpie_workspace_permissions(workspace_name)
             self._update_magpie_layer_permissions(workspace_name, shapefile_name)
 

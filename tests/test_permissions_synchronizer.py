@@ -252,7 +252,8 @@ class TestSyncPermissions(unittest.TestCase):
                     """
                     data = {
                         "event": event,
-                        "service_name": "thredds",
+                        "service_name": ServiceTHREDDS.service_type,
+                        "service_type": ServiceTHREDDS.service_type,
                         "resource_id": src_res_id,
                         "resource_full_name": resources[src_res_id]["res_full_name"],
                         "name": perm_name,
@@ -479,6 +480,7 @@ class TestSyncPermissions(unittest.TestCase):
             data = {
                 "event": ValidOperations.CreateOperation.value,
                 "service_name": ServiceTHREDDS.service_type,
+                "service_type": ServiceTHREDDS.service_type,
                 "resource_id": dir_src_res_id,
                 "resource_full_name": f"/{self.test_service_name}/private",
                 "name": Permission.READ.value,
@@ -552,6 +554,7 @@ class TestSyncPermissions(unittest.TestCase):
             data = {
                 "event": ValidOperations.CreateOperation.value,
                 "service_name": ServiceTHREDDS.service_type,
+                "service_type": ServiceTHREDDS.service_type,
                 "resource_id": src_res_id,
                 "resource_full_name": f"/{self.test_service_name}/dir1/dir2",
                 "name": Permission.READ.value,
@@ -600,6 +603,7 @@ class TestSyncPermissions(unittest.TestCase):
             data = {
                 "event": ValidOperations.CreateOperation.value,
                 "service_name": ServiceTHREDDS.service_type,
+                "service_type": ServiceTHREDDS.service_type,
                 "resource_id": src_res_id,
                 "resource_full_name": f"/{self.test_service_name}/dir",
                 "name": Permission.READ.value,
