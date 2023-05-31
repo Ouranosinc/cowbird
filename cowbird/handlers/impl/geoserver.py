@@ -214,7 +214,13 @@ class Geoserver(Handler, FSMonitor):
                                    if p["access"] == Access.ALLOW.value}
         is_readable = any(p in GEOSERVER_READ_PERMISSIONS for p in allowed_user_perm_names)
         is_writable = any(p in GEOSERVER_WRITE_PERMISSIONS for p in allowed_user_perm_names)
-        is_executable = is_readable if resource_type == Workspace.resource_type_name else False
+        # Execute permissions are not required for shapefiles, so they will be disabled.
+        # Execute permissions are always left enabled for workspaces. (TODO: faire un lien à la doc pour l'explication)
+        # If the workspace has a `Deny` read permission, only its read permission is disabled, blocking the access to
+        # the directory's content via a file browser or in JupyterLab.
+        # In the case the children resource also has an `Allow` read permission, the folder will not be browsable,
+        # but the children resource will be kept accessible via a direct url or path.
+        is_executable = True if resource_type == Workspace.resource_type_name else False
 
         for path in path_list:
             if not os.path.exists(path):
