@@ -63,6 +63,7 @@ def delete_all_services(magpie):
 class TestMagpie:
     """
     Tests different methods found in the Magpie handler.
+
     These tests require a running instance of Magpie.
     """
 

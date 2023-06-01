@@ -453,8 +453,8 @@ class TestGeoserverPermissions(TestGeoserver):
 
     def test_magpie_layer_permissions(self):
         """
-        Tests modifications on layer permissions on Magpie and the resulting updates of the permissions on
-        the related files.
+        Tests modifications on layer permissions on Magpie and the resulting updates of the permissions on the related
+        files.
         """
         # Update shapefile read permissions
         layer_read_permission = Permission(

@@ -179,8 +179,8 @@ class Magpie(Handler):
     def get_geoserver_layer_res_id(self, workspace_name, layer_name, create_if_missing=False):
         # type: (str, str, bool) -> int
         """
-        Tries to get the resource id of a specific layer, on `geoserver` type services, and
-        if requested, creates the resource and workspace if they do not exist yet.
+        Tries to get the resource id of a specific layer, on `geoserver` type services, and if requested, creates the
+        resource and workspace if they do not exist yet.
         """
         layer_res_id, workspace_res_id = None, None
         geoserver_type_services = self.get_services_by_type(ServiceGeoserver.service_type)
@@ -282,7 +282,7 @@ class Magpie(Handler):
         if resp.status_code == 201:
             LOGGER.info("Permission creation was successful.")
         elif resp.status_code == 409:
-            LOGGER.info("Similar permission already exist on resource for user.")
+            LOGGER.debug("Similar permission already exist on resource for user.")
         else:
             raise HTTPError(f"HTTPError {resp.status_code} - Failed to create permission : {resp.text}")
 
@@ -293,7 +293,7 @@ class Magpie(Handler):
         if resp.status_code == 201:
             LOGGER.info("Permission creation was successful.")
         elif resp.status_code == 409:
-            LOGGER.info("Similar permission already exist on resource for group.")
+            LOGGER.debug("Similar permission already exist on resource for group.")
         else:
             raise HTTPError(f"HTTPError {resp.status_code} - Failed to create permission : {resp.text}")
 
@@ -304,7 +304,7 @@ class Magpie(Handler):
         if resp.status_code == 200:
             LOGGER.info("Permission deletion was successful.")
         elif resp.status_code == 404:
-            LOGGER.info("No permission found to delete.")
+            LOGGER.debug("No permission found to delete.")
         else:
             raise HTTPError(f"HTTPError {resp.status_code} - Failed to delete permission : {resp.text}")
 
@@ -315,7 +315,7 @@ class Magpie(Handler):
         if resp.status_code == 200:
             LOGGER.info("Permission deletion was successful.")
         elif resp.status_code == 404:
-            LOGGER.info("No permission found to delete.")
+            LOGGER.debug("No permission found to delete.")
         else:
             raise HTTPError(f"HTTPError {resp.status_code} - Failed to delete permission : {resp.text}")
 

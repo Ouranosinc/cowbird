@@ -220,7 +220,7 @@ class Geoserver(Handler, FSMonitor):
         # the directory's content via a file browser or in JupyterLab.
         # In the case the children resource also has an `Allow` read permission, the folder will not be browsable,
         # but the children resource will be kept accessible via a direct url or path.
-        is_executable = True if resource_type == Workspace.resource_type_name else False
+        is_executable = resource_type == Workspace.resource_type_name
 
         for path in path_list:
             if not os.path.exists(path):
@@ -554,8 +554,8 @@ class Geoserver(Handler, FSMonitor):
     def _normalize_shapefile_permissions(self, workspace_name, shapefile_name, is_readable, is_writable):
         # type: (str, str, bool, bool) -> None
         """
-        Makes sure all files associated with a shapefile is owned by the default user/group
-        and have the same permissions.
+        Makes sure all files associated with a shapefile is owned by the default user/group and have the same
+        permissions.
         """
         for shapefile in self.get_shapefile_list(workspace_name, shapefile_name):
             if os.path.exists(shapefile):
