@@ -137,7 +137,7 @@ redoc = [{
     }
 }]
 
-autoapi_dirs = [os.path.join(PROJECT_ROOT, __meta__.__package__)]
+autoapi_dirs = [os.path.join(PROJECT_ROOT, __meta__.__package__), os.path.join(PROJECT_ROOT, "tests")]
 autoapi_ignore = [os.path.join(PROJECT_ROOT, "cowbird/alembic/*")]
 autoapi_python_class_content = "both"
 

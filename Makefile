@@ -246,6 +246,7 @@ $(DOC_LOCATION):
 	@echo "Building docs..."
 	@bash -c '$(CONDA_CMD) \
 		sphinx-apidoc -o "$(APP_ROOT)/docs/" "$(APP_ROOT)/$(APP_NAME)"; \
+		sphinx-apidoc -o "$(APP_ROOT)/docs/" "$(APP_ROOT)/tests"; \
 		"$(MAKE)" -C "$(APP_ROOT)/docs" BUILDDIR=_build PACKAGE="$(APP_NAME)" html;'
 	@-echo "Documentation available: file://$(DOC_LOCATION)"
 
