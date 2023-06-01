@@ -55,6 +55,7 @@ Each handler must be further configured with one or more of the following parame
 a required parameter is missing for a handler it will throw a ``HandlerConfigurationException`` exception.
 Additional parameters can be used for some handlers, such as ``admin_user`` and ``admin_password`` for a `Magpie`_
 handler.
+See also the :ref:`components_handlers` section for more details on individual handlers.
 
 Parameters :
 
