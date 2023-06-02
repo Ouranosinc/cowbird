@@ -41,13 +41,15 @@ in order to reflect the actual user access permissions.
 Since the `Magpie`_ permissions on a resource of type `Geoserver` are not the same as traditional Unix permissions
 (ex.: ``rwx``), some design choices were done in order to have a coherent synchronization :
 
+.. _geoserver_general_notes:
+
 General notes
 #############
 
 Each permissions on `Magpie`_ on a resource of type `Geoserver` are classified as either ``read`` or ``write`` in
 order to associate them to the actual path permissions.
 If the path receives a ``read`` permission, every `Magpie`_ permissions fitting the ``read`` category will be enabled
-(see :py:func:`tests.test_geoserver.TestGeoserverPermissions.test_shapefile_on_created`).
+(see :func:`tests.test_geoserver.TestGeoserverPermissions.test_shapefile_on_created`).
 
 If a `Magpie`_ permissions of type ``read`` is added, the path will be updated to have ``read`` permissions. This
 update on the file system will trigger a synchronization with `Magpie`_, to add all other ``read`` type permissions on
@@ -58,6 +60,8 @@ group or for other users. The reason for this is that workspaces are separated b
 concept on the file system for now. This means that if a permission is applied to a group in `Magpie`_, `Cowbird`
 will detect the permission change but will not do anything, since the group on the file system does not correspond to
 the groups found on `Magpie`_.
+
+.. _geoserver_file_layer_permissions:
 
 File/Layer permissions
 ######################
@@ -78,6 +82,8 @@ The same would apply if we use ``write`` permissions in this last example.
 Shapefiles will only be assigned read or write permissions on the file system. ``execute`` permissions are not needed
 for shapefiles.
 
+.. _geoserver_folder_workspace_permissions:
+
 Folder/Workspace permissions
 ############################
 
@@ -96,6 +102,8 @@ to the file on the file system too. Note if the folder only has ``execute`` perm
 accessible via a direct path or url, and it will not be accessible via a file browser, or on the JupyterLab file
 browser. This should allow the user to still share its file using a path or url.
 
+.. _geoserver_operations_to_avoid:
+
 Operations to avoid
 ###################
 
@@ -103,7 +111,8 @@ Note also that some operations should be avoided, as they are undesirable and no
 
 - Renaming a folder :
     The folders associated with the `Geoserver` workspace are the user workspace (named by the user's name)
-    and the datastore folder (which uses a default value. Both of these values should never change. Note that in the
+    and the datastore folder (which uses a default value. Both of these values should never change and renaming them
+    manually might break the monitoring, preventing `Cowbird` from receiving future file events. Note that in the
     case of renaming a shapefile, it should be supported. It will trigger multiple events on the file system (an update
     on the parent directory, and a delete followed by a create events on the file), which should keep up to date
     info in `Geoserver` and `Magpie`_.

@@ -106,16 +106,25 @@ class TestSyncPermissions(unittest.TestCase):
         """
         test_magpie.delete_service(self.magpie, self.test_service_name)
 
-    def create_test_permission(self, resource_id, permission, user_name, group_name):
-        # type: (int, Dict, str, str) -> None
+    def create_test_permission(self, resource_id, perm_name, perm_access, perm_scope, user_name, group_name):
+        # type: (int, str, str, str, str, str) -> None
         """
         Creates a test permission in Magpie app.
         """
-        data = {"permission": permission}
         if user_name:
-            self.magpie.create_permission_by_user_and_res_id(user_name, resource_id, data)
+            self.magpie.create_permission_by_user_and_res_id(
+                user_name=user_name,
+                res_id=resource_id,
+                perm_name=perm_name,
+                perm_access=perm_access,
+                perm_scope=perm_scope)
         if group_name:
-            self.magpie.create_permission_by_grp_and_res_id(group_name, resource_id, data)
+            self.magpie.create_permission_by_grp_and_res_id(
+                grp_name=group_name,
+                res_id=resource_id,
+                perm_name=perm_name,
+                perm_access=perm_access,
+                perm_scope=perm_scope)
 
     def delete_test_permission(self, resource_id, permission_name, user_name, group_name):
         # type: (int, str, str, str) -> None

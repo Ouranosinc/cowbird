@@ -258,10 +258,10 @@ class Magpie(Handler):
     def permission_deleted(self, permission):
         self.permissions_synch.delete_permission(permission)
 
-    def create_permission(self, permissions_data):
+    def create_permissions(self, permissions_data):
         # type: (List[Dict[str,str]]) -> None
         """
-        Make sure that the specified permission exists on Magpie.
+        Make sure that the specified permissions exist on Magpie.
         """
         if permissions_data:
             permissions_data[-1]["action"] = "create"
@@ -275,27 +275,61 @@ class Magpie(Handler):
         else:
             LOGGER.warning("Empty permission data, no permissions to create.")
 
-    def create_permission_by_user_and_res_id(self, user_name, res_id, permission_data):
-        # type: (str, int, Dict[str,Dict[str,str]]) -> None
-        resp = self._send_request(method="POST", url=f"{self.url}/users/{user_name}/resources/{res_id}/permissions",
-                                  json=permission_data)
-        if resp.status_code == 201:
+    def create_permission_by_res_id(self, res_id, perm_name, perm_access, perm_scope, user_name="", grp_name=""):
+        # type: (int, str, str, str, Optional[str], Optional[str]) -> None
+
+        if user_name:
+            url = f"{self.url}/users/{user_name}/resources/{res_id}/permissions"
+        elif grp_name:
+            url = f"{self.url}/groups/{grp_name}/resources/{res_id}/permissions"
+        else:
+            raise ValueError("Trying to create a permission, but missing an input user name or group name.")
+
+        resp = self._send_request(method="GET", url=url)
+        if resp.status_code != 200:
+            raise HTTPError(f"HTTPError {resp.status_code} - Failed to find resource: {resp.text}")
+
+        # By default, POST to create a new permission, but check before if the permission already exists, to avoid
+        # unnecessary events in Magpie.
+        method = "POST"
+        for perm in resp.json()["permissions"]:
+            if perm["name"] == perm_name:
+                if perm["access"] == perm_access and perm["scope"] == perm_scope:
+                    LOGGER.debug("Similar permission already exist on resource for user/group.")
+                    return
+                # Permission already exists but an update is required to modify parameters
+                method = "PUT"
+                break
+
+        permission_data = {
+            "permission": {
+                "name": perm_name,
+                "access": perm_access,
+                "scope": perm_scope,
+            }
+        }
+        resp = self._send_request(method=method, url=url, json=permission_data)
+
+        if resp.status_code in [200, 201]:
             LOGGER.info("Permission creation was successful.")
-        elif resp.status_code == 409:
-            LOGGER.debug("Similar permission already exist on resource for user.")
         else:
             raise HTTPError(f"HTTPError {resp.status_code} - Failed to create permission : {resp.text}")
 
-    def create_permission_by_grp_and_res_id(self, grp_name, res_id, permission_data):
-        # type: (str, int, Dict[str,Dict[str,str]]) -> None
-        resp = self._send_request(method="POST", url=f"{self.url}/groups/{grp_name}/resources/{res_id}/permissions",
-                                  json=permission_data)
-        if resp.status_code == 201:
-            LOGGER.info("Permission creation was successful.")
-        elif resp.status_code == 409:
-            LOGGER.debug("Similar permission already exist on resource for group.")
-        else:
-            raise HTTPError(f"HTTPError {resp.status_code} - Failed to create permission : {resp.text}")
+    def create_permission_by_user_and_res_id(self, user_name, res_id, perm_name, perm_access, perm_scope):
+        # type: (str, int, str, str, str) -> None
+        self.create_permission_by_res_id(res_id=res_id,
+                                         perm_name=perm_name,
+                                         perm_access=perm_access,
+                                         perm_scope=perm_scope,
+                                         user_name=user_name)
+
+    def create_permission_by_grp_and_res_id(self, grp_name, res_id, perm_name, perm_access, perm_scope):
+        # type: (str, int, str, str, str) -> None
+        self.create_permission_by_res_id(res_id=res_id,
+                                         perm_name=perm_name,
+                                         perm_access=perm_access,
+                                         perm_scope=perm_scope,
+                                         grp_name=grp_name)
 
     def delete_permission_by_user_and_res_id(self, user_name, res_id, permission_name):
         # type: (str, int, str) -> None

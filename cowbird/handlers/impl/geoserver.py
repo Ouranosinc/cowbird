@@ -199,16 +199,11 @@ class Geoserver(Handler, FSMonitor):
             if not layer_name:
                 raise GeoserverError("Missing layer name to update permissions.")
             path_list = self.get_shapefile_list(workspace_name, layer_name)
-            # Get the actual effective user permissions
-            user_permissions = HandlerFactory().get_handler("Magpie").get_user_permissions_by_res_id(
-                permission.user, resource_id, effective=True)
         else:
             path_list = [self._shapefile_folder_dir(workspace_name)]
-            # Get only the permissions on the workspace, since we treat no permission as `Allow` instead of `Deny` which
-            # we would get if using `effective`.
-            # TODO: review if effective=False is valid
-            user_permissions = HandlerFactory().get_handler("Magpie").get_user_permissions_by_res_id(
-                permission.user, resource_id, effective=False)
+        # Get the actual effective user permissions
+        user_permissions = HandlerFactory().get_handler("Magpie").get_user_permissions_by_res_id(
+            permission.user, resource_id, effective=True)
 
         allowed_user_perm_names = {p["name"] for p in user_permissions["permissions"]
                                    if p["access"] == Access.ALLOW.value}
@@ -406,12 +401,9 @@ class Geoserver(Handler, FSMonitor):
             magpie_handler.create_permission_by_user_and_res_id(
                 user_name=workspace_name,
                 res_id=workspace_res_id,
-                permission_data={
-                    "permission": {
-                        "name": perm_name,
-                        "access": Access.DENY.value,
-                        "scope": Scope.RECURSIVE.value
-                    }})
+                perm_name=perm_name,
+                perm_access=Access.DENY.value,
+                perm_scope=Scope.RECURSIVE.value)
 
     def _update_magpie_layer_permissions(self, workspace_name, layer_name):
         # type: (str, str) -> None
@@ -422,7 +414,7 @@ class Geoserver(Handler, FSMonitor):
         magpie_handler = HandlerFactory().get_handler("Magpie")
         layer_res_id = magpie_handler.get_geoserver_layer_res_id(workspace_name, layer_name, create_if_missing=True)
 
-        # Get resolved permissions of all files on the file system
+        # Get permissions of the shapefile's main file
         is_readable, is_writable = self._get_shapefile_permissions(workspace_name, layer_name)
         self._normalize_shapefile_permissions(workspace_name, layer_name, is_readable, is_writable)
 
@@ -432,19 +424,18 @@ class Geoserver(Handler, FSMonitor):
             magpie_handler.create_permission_by_user_and_res_id(
                 user_name=workspace_name,
                 res_id=layer_res_id,
-                permission_data={
-                    "permission": {
-                        "name": perm_name,
-                        "access": Access.ALLOW.value,
-                        "scope": Scope.MATCH.value
-                    }})
+                perm_name=perm_name,
+                perm_access=Access.ALLOW.value,
+                perm_scope=Scope.MATCH.value)
         permissions_to_remove = set((GEOSERVER_READ_PERMISSIONS if not is_readable else []) +
                                     (GEOSERVER_WRITE_PERMISSIONS if not is_writable else []))
         for perm_name in permissions_to_remove:
-            magpie_handler.delete_permission_by_user_and_res_id(
+            magpie_handler.create_permission_by_user_and_res_id(
                 user_name=workspace_name,
                 res_id=layer_res_id,
-                permission_name=perm_name)
+                perm_name=perm_name,
+                perm_access=Access.DENY.value,
+                perm_scope=Scope.MATCH.value)
 
     #
     # Geoserver class specific functions
@@ -528,27 +519,18 @@ class Geoserver(Handler, FSMonitor):
     def _get_shapefile_permissions(self, workspace_name, shapefile_name):
         # type:(str, str) -> (bool, bool)
         """
-        Resolves the actual shapefile permissions on the file system, by checking the permissions of its parent
-        directory and by keeping the less restrictive permissions of the files associated with the shapefile.
+        Resolves the shapefile permissions on the file system, by checking the shapefile's main file permissions.
         """
-        datastore_dir_path = self._shapefile_folder_dir(workspace_name)
-        workspace_status = os.stat(datastore_dir_path)[stat.ST_MODE]
-        is_workspace_readable = bool(workspace_status & stat.S_IRUSR and workspace_status & stat.S_IXUSR)
-
         is_shapefile_readable = False
         is_shapefile_writable = False
 
-        # If the parent directory is not readable, the user doesn't have read/write access to any contained files.
-        if is_workspace_readable:
-            # The files should normally all have the same permissions, but if any of them has a write/read permission,
-            # we will consider them all as writable/readable in the Magpie resource.
-            for file in self.get_shapefile_list(workspace_name, shapefile_name):
-                if os.path.exists(file):
-                    file_status = os.stat(file)[stat.ST_MODE]
-                    if not is_shapefile_readable and file_status & stat.S_IRUSR:
-                        is_shapefile_readable = True
-                    if not is_shapefile_writable and file_status & stat.S_IWUSR:
-                        is_shapefile_writable = True
+        # Only consider the shapefile's main file for the permissions
+        shapefile_path = self._shapefile_folder_dir(workspace_name) + "/" + shapefile_name + SHAPEFILE_MAIN_EXTENSION
+
+        if os.path.exists(shapefile_path):
+            file_status = os.stat(shapefile_path)[stat.ST_MODE]
+            is_shapefile_readable = bool(file_status & stat.S_IRUSR)
+            is_shapefile_writable = bool(file_status & stat.S_IWUSR)
         return is_shapefile_readable, is_shapefile_writable
 
     def _normalize_shapefile_permissions(self, workspace_name, shapefile_name, is_readable, is_writable):

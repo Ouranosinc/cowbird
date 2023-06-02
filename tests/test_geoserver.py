@@ -345,6 +345,8 @@ class TestGeoserverPermissions(TestGeoserver):
     def test_shapefile_on_created(self):
         """
         Tests if the right Magpie permissions are created upon a shapefile creation in a Geoserver workspace.
+
+        see :ref:`geoserver_general_notes`
         """
         # For this test, remove workspace resource and check if required resources are recreated
         self.magpie.delete_resource(self.workspace_res_id)
@@ -363,19 +365,32 @@ class TestGeoserverPermissions(TestGeoserver):
         layer_res_id = list(workspace_res["children"])[0]
 
         # Check if the user has the right permissions on Magpie
-        self.check_magpie_permissions(layer_res_id, set(GEOSERVER_READ_PERMISSIONS))
+        self.check_magpie_permissions(layer_res_id, set(GEOSERVER_READ_PERMISSIONS), expected_access=Access.ALLOW.value)
+        self.check_magpie_permissions(layer_res_id, set(GEOSERVER_WRITE_PERMISSIONS), expected_access=Access.DENY.value)
         utils.check_mock_has_calls(self.mock_chown, self.expected_chown_shapefile_calls)
 
     def test_shapefile_on_modified(self):
         """
         Tests if the right Magpie permissions are updated upon a shapefile permission modification in a Geoserver
         workspace.
+
+        Tests if Magpie resources associated with the user workspace are updated correctly, applying `deny` permissions
+        for any r/w/x file permission that is not available to the user.
+
+        see :ref:`Geoserver general notes <geoserver_general_notes>`
         """
-        os.chmod(self.shapefile_list[0], 0o600)
-        self.geoserver.on_modified(os.path.join(self.datastore_path,
-                                                self.test_shapefile_name + SHAPEFILE_MAIN_EXTENSION))
+        main_shapefile_path = os.path.join(self.datastore_path, self.test_shapefile_name + SHAPEFILE_MAIN_EXTENSION)
+        os.chmod(main_shapefile_path, 0o600)
+        self.geoserver.on_modified(main_shapefile_path)
 
         self.check_magpie_permissions(self.layer_id, set(GEOSERVER_READ_PERMISSIONS + GEOSERVER_WRITE_PERMISSIONS))
+        utils.check_mock_has_calls(self.mock_chown, self.expected_chown_shapefile_calls)
+
+        os.chmod(main_shapefile_path, 0o000)
+        self.geoserver.on_modified(main_shapefile_path)
+
+        self.check_magpie_permissions(self.layer_id, set(GEOSERVER_READ_PERMISSIONS + GEOSERVER_WRITE_PERMISSIONS),
+                                      expected_access=Access.DENY.value)
         utils.check_mock_has_calls(self.mock_chown, self.expected_chown_shapefile_calls)
 
     def test_shapefile_on_deleted(self):
@@ -467,12 +482,12 @@ class TestGeoserverPermissions(TestGeoserver):
             scope=Scope.MATCH.value,
             user=self.magpie_test_user
         )
-        self.magpie.create_permission_by_user_and_res_id(self.magpie_test_user, self.layer_id, {
-            "permission": {
-                "name": layer_read_permission.name,
-                "access": layer_read_permission.access,
-                "scope": layer_read_permission.scope
-            }})
+        self.magpie.create_permission_by_user_and_res_id(
+            user_name=self.magpie_test_user,
+            res_id=self.layer_id,
+            perm_name=layer_read_permission.name,
+            perm_access=layer_read_permission.access,
+            perm_scope=layer_read_permission.scope)
         self.geoserver.permission_created(layer_read_permission)
         utils.check_mock_has_calls(self.mock_chown, self.expected_chown_shapefile_calls)
         for file in self.shapefile_list:
@@ -497,12 +512,12 @@ class TestGeoserverPermissions(TestGeoserver):
             scope=Scope.MATCH.value,
             user=self.magpie_test_user
         )
-        self.magpie.create_permission_by_user_and_res_id(self.magpie_test_user, self.layer_id, {
-            "permission": {
-                "name": layer_deny_permission.name,
-                "access": layer_deny_permission.access,
-                "scope": layer_deny_permission.scope
-            }})
+        self.magpie.create_permission_by_user_and_res_id(
+            user_name=self.magpie_test_user,
+            res_id=self.layer_id,
+            perm_name=layer_deny_permission.name,
+            perm_access=layer_deny_permission.access,
+            perm_scope=layer_deny_permission.scope)
         self.geoserver.permission_created(layer_deny_permission)
         utils.check_mock_has_calls(self.mock_chown, updated_chown_checklist)
         for file in updated_shapefile_list:
@@ -529,12 +544,12 @@ class TestGeoserverPermissions(TestGeoserver):
         """
         # Initialize workspace as read-only
         os.chmod(self.datastore_path, 0o500)
-        self.magpie.create_permission_by_user_and_res_id(self.magpie_test_user, self.workspace_res_id, {
-            "permission": {
-                "name": MagpiePermission.DESCRIBE_FEATURE_TYPE.value,
-                "access": Access.ALLOW.value,
-                "scope": Scope.MATCH.value
-            }})
+        self.magpie.create_permission_by_user_and_res_id(
+            user_name=self.magpie_test_user,
+            res_id=self.workspace_res_id,
+            perm_name=MagpiePermission.DESCRIBE_FEATURE_TYPE.value,
+            perm_access=Access.ALLOW.value,
+            perm_scope=Scope.MATCH.value)
         # Update resource with recursive write permissions
         recursive_write_permission = Permission(
             service_name="geoserver",
@@ -546,11 +561,12 @@ class TestGeoserverPermissions(TestGeoserver):
             scope=Scope.RECURSIVE.value,
             user=self.magpie_test_user
         )
-        self.magpie.create_permission_by_user_and_res_id(self.magpie_test_user, resource_id, {
-            "permission": {
-                "name": recursive_write_permission.name,
-                "access": recursive_write_permission.access,
-                "scope": recursive_write_permission.scope}})
+        self.magpie.create_permission_by_user_and_res_id(
+            user_name=self.magpie_test_user,
+            res_id=resource_id,
+            perm_name=recursive_write_permission.name,
+            perm_access=recursive_write_permission.access,
+            perm_scope=recursive_write_permission.scope)
 
         self.geoserver.permission_created(recursive_write_permission)
 
@@ -562,19 +578,21 @@ class TestGeoserverPermissions(TestGeoserver):
 
         # Adding `match` permissions on the layer and changing the recursive permission to `deny`
         # The layer should keep its write permission, but the workspace should lose its write permission.
-        self.magpie.create_permission_by_user_and_res_id(self.magpie_test_user, self.layer_id, {
-            "permission": {
-                "name": MagpiePermission.CREATE_STORED_QUERY.value,
-                "access": Access.ALLOW.value,
-                "scope": Scope.MATCH.value}})
+        self.magpie.create_permission_by_user_and_res_id(
+            user_name=self.magpie_test_user,
+            res_id=self.layer_id,
+            perm_name=MagpiePermission.CREATE_STORED_QUERY.value,
+            perm_access=Access.ALLOW.value,
+            perm_scope=Scope.MATCH.value)
         self.magpie.delete_permission_by_user_and_res_id(self.magpie_test_user, resource_id,
                                                          recursive_write_permission.name)
         recursive_write_permission.access = Access.DENY.value
-        self.magpie.create_permission_by_user_and_res_id(self.magpie_test_user, resource_id, {
-            "permission": {
-                "name": recursive_write_permission.name,
-                "access": recursive_write_permission.access,
-                "scope": recursive_write_permission.scope}})
+        self.magpie.create_permission_by_user_and_res_id(
+            user_name=self.magpie_test_user,
+            res_id=resource_id,
+            perm_name=recursive_write_permission.name,
+            perm_access=recursive_write_permission.access,
+            perm_scope=recursive_write_permission.scope)
         self.geoserver.permission_created(recursive_write_permission)
 
         utils.check_mock_has_calls(self.mock_chown,
