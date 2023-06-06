@@ -248,6 +248,7 @@ class TestGeoserverPermissions(TestGeoserver):
     """
     def setup_class(self):
         self.magpie_test_user = "test_user"
+        self.magpie_test_group = "users"
         self.workspace_name = self.magpie_test_user
 
         self.workspaces = {self.magpie_test_user: self.magpie_test_user}
@@ -289,7 +290,8 @@ class TestGeoserverPermissions(TestGeoserver):
 
         # Reset test user
         test_magpie.delete_user(self.magpie, self.magpie_test_user)
-        test_magpie.create_user(self.magpie, self.magpie_test_user, "test@test.com", "qwertyqwerty", "users")
+        test_magpie.create_user(self.magpie, self.magpie_test_user, "test@test.com", "qwertyqwerty",
+                                self.magpie_test_group)
 
         # Reset geoserver service
         test_magpie.delete_service(self.magpie, "geoserver")
@@ -415,6 +417,24 @@ class TestGeoserverPermissions(TestGeoserver):
                                       expected_access=Access.DENY.value, effective=False)
         self.check_magpie_permissions(self.layer_id, [], expected_access=Access.ALLOW.value, effective=False)
         utils.check_mock_has_calls(self.mock_chown, self.expected_chown_shapefile_calls)
+
+    def test_shapefile_on_modified_other_ext(self):
+        """
+        Tests modification events on any other file of the shapefile that does not have the main extension (.shp), which
+        should not trigger any other event or modification.
+        """
+        other_shapefile_path = os.path.join(self.datastore_path, self.test_shapefile_name + ".shx")
+        os.chmod(other_shapefile_path, 0o600)
+        self.geoserver.on_modified(other_shapefile_path)
+
+        for file in self.shapefile_list:
+            if not file.endswith(".shx"):
+                utils.check_path_permissions(file, 0o000)
+            else:
+                utils.check_path_permissions(file, 0o600)
+        self.check_magpie_permissions(self.layer_id, set(GEOSERVER_READ_PERMISSIONS + GEOSERVER_WRITE_PERMISSIONS),
+                                      expected_access=Access.DENY.value)
+        self.check_magpie_permissions(self.layer_id, [], expected_access=Access.DENY.value, effective=False)
 
     def test_shapefile_on_deleted(self):
         """
@@ -564,8 +584,8 @@ class TestGeoserverPermissions(TestGeoserver):
 
         # If a file is missing, an update from Magpie's permissions should not trigger an error,
         # the missing file is simply ignored.
-        os.remove(self.datastore_path + f"/{self.test_shapefile_name}.shp")
-        updated_shapefile_list = [f for f in self.shapefile_list if not f.endswith(".shp")]
+        os.remove(self.datastore_path + f"/{self.test_shapefile_name}.shx")
+        updated_shapefile_list = [f for f in self.shapefile_list if not f.endswith(".shx")]
         updated_chown_checklist = [mock.call(file, DEFAULT_UID, DEFAULT_GID) for file in updated_shapefile_list]
 
         # Change access to 'deny'
@@ -693,3 +713,29 @@ class TestGeoserverPermissions(TestGeoserver):
         Tests modifications on a service's recursive permissions on Magpie and the updates of the related files.
         """
         self.apply_and_check_recursive_permissions(self.test_service_id, "/geoserver")
+
+    def test_group_permission(self):
+        """
+        Tests modifications on a resource's group permission, which should not trigger any change to the associated
+        path on the file system, since the Geoserver handler does not support groups.
+        """
+        layer_read_permission = Permission(
+            service_name="geoserver",
+            service_type=ServiceGeoserver.service_type,
+            resource_id=self.layer_id,
+            resource_full_name=f"/geoserver/{self.workspace_name}/{self.test_shapefile_name}",
+            name=MagpiePermission.DESCRIBE_FEATURE_TYPE.value,
+            access=Access.ALLOW.value,
+            scope=Scope.MATCH.value,
+            group=self.magpie_test_group
+        )
+        self.magpie.create_permission_by_grp_and_res_id(
+            grp_name=layer_read_permission.group,
+            res_id=layer_read_permission.resource_id,
+            perm_name=layer_read_permission.name,
+            perm_access=layer_read_permission.access,
+            perm_scope=layer_read_permission.scope)
+
+        # Permission events on groups are not supported by the Geoserver handler.
+        with pytest.raises(NotImplementedError):
+            self.geoserver.permission_created(layer_read_permission)

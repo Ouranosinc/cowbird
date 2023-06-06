@@ -258,7 +258,7 @@ class Geoserver(Handler, FSMonitor):
         magpie_handler = HandlerFactory().get_handler("Magpie")
 
         if permission.user is None:
-            raise NotImplementedError("A permission change on a group is not supported for now on Geoserver, since"
+            raise NotImplementedError("A permission change on a group is not supported for now on Geoserver, since "
                                       "workspaces are based on users only.")
         workspace_name = permission.user
 
