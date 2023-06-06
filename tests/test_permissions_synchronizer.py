@@ -315,10 +315,12 @@ class TestSyncPermissions(unittest.TestCase):
                                           3: default_read_permission})
 
                 # Force create the permission 4, required for the following test.
-                self.create_test_permission(res_ids[4], {"name": Permission.READ.value,
-                                                         "access": Access.ALLOW.value,
-                                                         "scope": Scope.RECURSIVE.value},
-                                            test_case_usr_grp["user"], test_case_usr_grp["group"])
+                self.create_test_permission(resource_id=res_ids[4],
+                                            perm_name=Permission.READ.value,
+                                            perm_access=Access.ALLOW.value,
+                                            perm_scope=Scope.RECURSIVE.value,
+                                            user_name=test_case_usr_grp["user"],
+                                            group_name=test_case_usr_grp["group"])
 
                 # Check delete write permission 1 (0 <-> 1 towards left and 1 -> 2), 0 and 2 should not be deleted,
                 # since read permission 1 still exists
@@ -354,14 +356,18 @@ class TestSyncPermissions(unittest.TestCase):
                                           2: []})
 
                 # Recreate permissions 0 and 2, required for the following tests.
-                self.create_test_permission(res_ids[0], {"name": Permission.READ.value,
-                                                         "access": Access.ALLOW.value,
-                                                         "scope": Scope.RECURSIVE.value},
-                                            test_case_usr_grp["user"], test_case_usr_grp["group"])
-                self.create_test_permission(res_ids[2], {"name": Permission.READ.value,
-                                                         "access": Access.ALLOW.value,
-                                                         "scope": Scope.MATCH.value},
-                                            test_case_usr_grp["user"], test_case_usr_grp["group"])
+                self.create_test_permission(resource_id=res_ids[0],
+                                            perm_name=Permission.READ.value,
+                                            perm_access=Access.ALLOW.value,
+                                            perm_scope=Scope.RECURSIVE.value,
+                                            user_name=test_case_usr_grp["user"],
+                                            group_name=test_case_usr_grp["group"])
+                self.create_test_permission(resource_id=res_ids[2],
+                                            perm_name=Permission.READ.value,
+                                            perm_access=Access.ALLOW.value,
+                                            perm_scope=Scope.MATCH.value,
+                                            user_name=test_case_usr_grp["user"],
+                                            group_name=test_case_usr_grp["group"])
 
                 # Force delete the permission 4.
                 self.delete_test_permission(res_ids[4], Permission.READ.value,
@@ -391,14 +397,18 @@ class TestSyncPermissions(unittest.TestCase):
                                           3: []})
 
                 # Check delete permission 2 (3 <- 2) with permission types different than those from config
-                self.create_test_permission(res_ids[3], {"name": Permission.READ.value,
-                                                         "access": Access.DENY.value,
-                                                         "scope": Scope.RECURSIVE.value},
-                                            test_case_usr_grp["user"], test_case_usr_grp["group"])
-                self.create_test_permission(res_ids[3], {"name": Permission.WRITE.value,
-                                                         "access": Access.ALLOW.value,
-                                                         "scope": Scope.RECURSIVE.value},
-                                            test_case_usr_grp["user"], test_case_usr_grp["group"])
+                self.create_test_permission(resource_id=res_ids[3],
+                                            perm_name=Permission.READ.value,
+                                            perm_access=Access.DENY.value,
+                                            perm_scope=Scope.RECURSIVE.value,
+                                            user_name=test_case_usr_grp["user"],
+                                            group_name=test_case_usr_grp["group"])
+                self.create_test_permission(resource_id=res_ids[3],
+                                            perm_name=Permission.WRITE.value,
+                                            perm_access=Access.ALLOW.value,
+                                            perm_scope=Scope.RECURSIVE.value,
+                                            user_name=test_case_usr_grp["user"],
+                                            group_name=test_case_usr_grp["group"])
                 # Read permission is deleted, even if its 'access' (deny) differs with the one sent to Magpie (allow).
                 # Magpie deletes the permission even if the access or the scope is different than the one sent
                 # in the patch permissions Magpie request.
