@@ -54,16 +54,21 @@ If a `Magpie`_ permissions of type ``read`` is added, the path will be updated t
 update on the file system will trigger a synchronization with `Magpie`_, to add all other ``read`` type permissions on
 Magpie.
 
+Note that permissions are only added to `Magpie`_ if necessary. For example, if a file needs to allow a ``read``
+permission on `Magpie`_, but that permission already resolves to ``allow`` because of a recursive permission on a parent
+resource, no permission will be added. The permission is already resolving to the required permission and avoiding to
+add unnecessary permissions will simplify permission solving.
+
 The permissions applied on the files and folders are only applied for a user, and no permissions are enabled on the
 group or for other users. The reason for this is that workspaces are separated by user and we do not use a group
 concept on the file system for now. This means that if a permission is applied to a group in `Magpie`_, `Cowbird`
 will detect the permission change but will not do anything, since the group on the file system does not correspond to
-the groups found on `Magpie`_.
+the groups found on `Magpie`_. Also, it would not make sense to update the file associated to a resource for all the
+users of a group, since the file is supposed to be associated to a single user anyway.
 
-Note also that permissions are only added to `Magpie`_ if necessary. For example, if a file needs to allow a ``read``
-permission on `Magpie`_, but that permission already resolves to ``allow`` because of a recursive permission on a parent
-resource, no permission will be added. The permission is already resolving to the required permission and avoiding to
-add unnecessary permissions will simplify permission solving.
+Note that even if group permission changes on `Magpie`_ are not handled by `Cowbird`, a group permission could still
+have an impact on permission resolution. For example, if a shapefile needs to allow a ``read`` permission on `Magpie`_,
+but that permission already resolves to ``allow`` because of a group permission, no permission will be added.
 
 .. _geoserver_file_layer_permissions:
 
