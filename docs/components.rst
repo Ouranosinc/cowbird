@@ -108,10 +108,15 @@ Note also that some operations should be avoided, as they are undesirable and no
 - Renaming a folder :
     The folders associated with the `Geoserver` workspace are the user workspace (named by the user's name)
     and the datastore folder (which uses a default value. Both of these values should never change and renaming them
-    manually might break the monitoring, preventing `Cowbird` from receiving future file events. Note that in the
-    case of renaming a shapefile, it should be supported. It will trigger multiple events on the file system (an update
-    on the parent directory, and a delete followed by a create event on the file), which should keep up to date
-    info in `Geoserver` and `Magpie`_ by simply generating new resources.
+    manually might break the monitoring, preventing `Cowbird` from receiving future file events.
+
+- Renaming a shapefile (.shp only) :
+    This operation is actually supported, but it should be avoided if possible. It will trigger multiple events on the
+    file system (an update on the parent directory, and a delete followed by a create event on the file), which should
+    keep up to data info in `Geoserver` and `Magpie`_ by simply generating new resources. A risk with this is that the
+    delete event will delete the other shapefile files, and the user could lose some data. It is better to have a copy
+    of the shapefile before applying this operation. Note that renaming one of the other extension (not the .shp file)
+    will not trigger any event since only the main file triggers events.
 
 - Deleting a folder :
     This operation will only display a warning. It should never be done manually, since it will create inconsistencies
