@@ -312,7 +312,6 @@ class Geoserver(Handler, FSMonitor):
             LOGGER.info("Starting Geoserver publishing process for [%s]", path)
             Geoserver.publish_shapefile_task_chain(workspace_name, shapefile_name)
 
-            self._update_magpie_workspace_permissions(workspace_name)
             self._update_magpie_layer_permissions(workspace_name, shapefile_name)
 
     @staticmethod
@@ -358,23 +357,107 @@ class Geoserver(Handler, FSMonitor):
         :param path: Absolute path of a new file/directory
         """
         # Nothing needs to be done specifically for Geoserver as Catalog already logs file modifications.
-        # Only need to update permissions on Magpie, in case the file permissions were modified.
+        # Only need to update permissions on Magpie, in case the resource permissions were modified.
         if os.path.isdir(path) and re.match(self.datastore_regex, path):
             workspace_name = path.split("/")[-2]
             self._update_magpie_workspace_permissions(workspace_name)
         elif path.endswith(SHAPEFILE_MAIN_EXTENSION):
             workspace_name, shapefile_name = self._get_shapefile_info(path)
-            # Update the workspace permissions first, in case they were not already created
-            self._update_magpie_workspace_permissions(workspace_name)
             self._update_magpie_layer_permissions(workspace_name, shapefile_name)
+
+    @staticmethod
+    def _is_permission_update_required(effective_permissions, user_name, res_id, perm_name, perm_access, perm_scope,
+                                       delete_if_required=False):
+        # type: (List[Dict[str, str]], str, int, str, str, str, bool) -> bool
+        """
+        Checks if the required permission already exists on the resource, else returns true if an update is required.
+
+        Also, deletes the permission if the associated input argument is activated.
+        """
+        magpie_handler = HandlerFactory().get_handler("Magpie")
+        actual_perms_on_resource = []
+
+        if perm_scope == Scope.RECURSIVE.value:
+            # Special case for recursive permissions. We have to check the actual permission on the resource to verify
+            # the actual scope.
+            actual_perms_on_resource = magpie_handler.get_user_permissions_by_res_id(
+                user_name, res_id, effective=False)["permissions"]
+
+        for perm in effective_permissions:
+            if perm["name"] == perm_name:
+                if perm["access"] == perm_access and perm_scope == Scope.RECURSIVE.value:
+                    # We truly have a valid recursive permission only if the resource has the actual recursive
+                    # permission, or if the resource does not have the permission, which means the permission was
+                    # inherited by the parent resources, which is a valid case, that doesn't need an update.
+                    if (not any(p["name"] == perm_name for p in actual_perms_on_resource) or
+                        any(p["name"] == perm_name and p["scope"] == Scope.RECURSIVE.value
+                            for p in actual_perms_on_resource)):
+                        return False
+                elif perm["access"] == perm_access and perm["scope"] == perm_scope:
+                    return False
+
+                # Permission needs to be updated.
+                if delete_if_required:
+                    magpie_handler.delete_permission_by_user_and_res_id(user_name=user_name,
+                                                                        res_id=res_id,
+                                                                        permission_name=perm_name)
+                break
+        return True
+
+    @staticmethod
+    def _update_magpie_permissions(user_name, res_id, perm_scope, is_readable, is_writable):
+        # type: (str, int, str, bool, bool) -> None
+        """
+        Updates permissions on a Magpie resource (workspace/layer).
+        """
+        magpie_handler = HandlerFactory().get_handler("Magpie")
+
+        allowed_perms = set(GEOSERVER_READ_PERMISSIONS if is_readable else [])
+        allowed_perms = allowed_perms.union(GEOSERVER_WRITE_PERMISSIONS if is_writable else [])
+        denied_perms = set(GEOSERVER_READ_PERMISSIONS + GEOSERVER_WRITE_PERMISSIONS).difference(allowed_perms)
+        perm_names_and_access = ([(p, Access.ALLOW.value) for p in allowed_perms] +
+                                 [(p, Access.DENY.value) for p in denied_perms])
+
+        # Get resolved permissions on magpie
+        user_permissions = magpie_handler.get_user_permissions_by_res_id(
+            user_name, res_id, effective=True)["permissions"]
+
+        perms_to_update = set()
+        for perm_name, perm_access in perm_names_and_access:
+            # Find all permissions that actually need an update. If the permission already exists but still needs an
+            # update, delete the permission, and check in the next steps if the permission still needs an update
+            # according to the new effective permission solving.
+            if Geoserver._is_permission_update_required(effective_permissions=user_permissions,
+                                                        user_name=user_name,
+                                                        res_id=res_id,
+                                                        perm_name=perm_name,
+                                                        perm_access=perm_access,
+                                                        perm_scope=perm_scope,
+                                                        delete_if_required=True):
+                perms_to_update.add((perm_name, perm_access))
+
+        # Get new resolved permissions on magpie, after previous perms update were applied
+        user_permissions = magpie_handler.get_user_permissions_by_res_id(
+            user_name, res_id, effective=True)["permissions"]
+
+        # Only apply new allow/deny permissions if required. If parent resources already have the required recursive
+        # allow/deny, a new permission is not necessary and will not be created in order to simplify
+        # effective permission solving.
+        for perm_name, perm_access in perms_to_update:
+            # No need to check the scope, since only `match` scopes are returned when getting `effective` permissions,
+            # even if the permission comes from a `recursive` permission of a parent resource.
+            if not any(p["name"] == perm_name and p["access"] == perm_access for p in user_permissions):
+                magpie_handler.create_permission_by_user_and_res_id(
+                    user_name=user_name,
+                    res_id=res_id,
+                    perm_name=perm_name,
+                    perm_access=perm_access,
+                    perm_scope=perm_scope)
 
     def _update_magpie_workspace_permissions(self, workspace_name):
         """
         Updates the permissions of a `workspace` resource on Magpie to the current permissions found on the
         corresponding datastore folder.
-
-        Note that we only add a recursive `deny` permission when the directory does not have a `r`/`x` or a `w`
-        permission. Else, the resource won't be assigned a specific permission.
         """
         magpie_handler = HandlerFactory().get_handler("Magpie")
         workspace_res_id = magpie_handler.get_geoserver_workspace_res_id(workspace_name, create_if_missing=True)
@@ -387,23 +470,11 @@ class Geoserver(Handler, FSMonitor):
         is_readable = bool(workspace_status & stat.S_IRUSR and workspace_status & stat.S_IXUSR)
         is_writable = bool(workspace_status & stat.S_IWUSR)
 
-        # Only add `deny` permissions for workspaces
-        permissions_to_add = set((GEOSERVER_READ_PERMISSIONS if not is_readable else []) +
-                                 (GEOSERVER_WRITE_PERMISSIONS if not is_writable else []))
-        permissions_to_remove = set((GEOSERVER_READ_PERMISSIONS if is_readable else []) +
-                                    (GEOSERVER_WRITE_PERMISSIONS if is_writable else []))
-        for perm_name in permissions_to_remove:
-            magpie_handler.delete_permission_by_user_and_res_id(
-                user_name=workspace_name,
-                res_id=workspace_res_id,
-                permission_name=perm_name)
-        for perm_name in permissions_to_add:
-            magpie_handler.create_permission_by_user_and_res_id(
-                user_name=workspace_name,
-                res_id=workspace_res_id,
-                perm_name=perm_name,
-                perm_access=Access.DENY.value,
-                perm_scope=Scope.RECURSIVE.value)
+        Geoserver._update_magpie_permissions(user_name=workspace_name,
+                                             res_id=workspace_res_id,
+                                             perm_scope=Scope.RECURSIVE.value,
+                                             is_readable=is_readable,
+                                             is_writable=is_writable)
 
     def _update_magpie_layer_permissions(self, workspace_name, layer_name):
         # type: (str, str) -> None
@@ -417,25 +488,11 @@ class Geoserver(Handler, FSMonitor):
         # Get permissions of the shapefile's main file
         is_readable, is_writable = self._get_shapefile_permissions(workspace_name, layer_name)
         self._normalize_shapefile_permissions(workspace_name, layer_name, is_readable, is_writable)
-
-        permissions_to_add = set((GEOSERVER_READ_PERMISSIONS if is_readable else []) +
-                                 (GEOSERVER_WRITE_PERMISSIONS if is_writable else []))
-        for perm_name in permissions_to_add:
-            magpie_handler.create_permission_by_user_and_res_id(
-                user_name=workspace_name,
-                res_id=layer_res_id,
-                perm_name=perm_name,
-                perm_access=Access.ALLOW.value,
-                perm_scope=Scope.MATCH.value)
-        permissions_to_remove = set((GEOSERVER_READ_PERMISSIONS if not is_readable else []) +
-                                    (GEOSERVER_WRITE_PERMISSIONS if not is_writable else []))
-        for perm_name in permissions_to_remove:
-            magpie_handler.create_permission_by_user_and_res_id(
-                user_name=workspace_name,
-                res_id=layer_res_id,
-                perm_name=perm_name,
-                perm_access=Access.DENY.value,
-                perm_scope=Scope.MATCH.value)
+        Geoserver._update_magpie_permissions(user_name=workspace_name,
+                                             res_id=layer_res_id,
+                                             perm_scope=Scope.MATCH.value,
+                                             is_readable=is_readable,
+                                             is_writable=is_writable)
 
     #
     # Geoserver class specific functions

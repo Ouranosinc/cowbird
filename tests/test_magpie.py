@@ -38,7 +38,7 @@ def delete_user(magpie, user_name):
 
 
 def create_service(magpie, service_data):
-    # type: (Magpie, Dict[str, str]) -> str
+    # type: (Magpie, Dict[str, str]) -> int
     resp = magpie._send_request(method="POST", url=f"{magpie.url}/services", json=service_data)
     assert resp.status_code == 201
     return resp.json()["service"]["resource_id"]

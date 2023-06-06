@@ -340,7 +340,8 @@ class TestGeoserverPermissions(TestGeoserver):
                                                                       res_id,
                                                                       effective=effective)
         assert set(expected_perms) == {p["name"] for p in user_permissions["permissions"]
-                                       if p["access"] == expected_access and p["scope"] == expected_scope}
+                                       if p["access"] == expected_access and p["scope"] == expected_scope
+                                       and p["name"] in GEOSERVER_READ_PERMISSIONS + GEOSERVER_WRITE_PERMISSIONS}
 
     def test_shapefile_on_created(self):
         """
@@ -374,23 +375,45 @@ class TestGeoserverPermissions(TestGeoserver):
         Tests if the right Magpie permissions are updated upon a shapefile permission modification in a Geoserver
         workspace.
 
-        Tests if Magpie resources associated with the user workspace are updated correctly, applying `deny` permissions
-        for any r/w/x file permission that is not available to the user.
-
         see :ref:`Geoserver general notes <geoserver_general_notes>`
         """
         main_shapefile_path = os.path.join(self.datastore_path, self.test_shapefile_name + SHAPEFILE_MAIN_EXTENSION)
         os.chmod(main_shapefile_path, 0o600)
+
+        # Add some specific permissions on the parent service, to test other specific use cases.
+        self.magpie.create_permission_by_user_and_res_id(user_name=self.magpie_test_user,
+                                                         res_id=self.test_service_id,
+                                                         perm_name=MagpiePermission.DESCRIBE_FEATURE_TYPE.value,
+                                                         perm_access=Access.ALLOW.value,
+                                                         perm_scope=Scope.RECURSIVE.value)
+        self.magpie.create_permission_by_user_and_res_id(user_name=self.magpie_test_user,
+                                                         res_id=self.test_service_id,
+                                                         perm_name=MagpiePermission.DESCRIBE_LAYER.value,
+                                                         perm_access=Access.DENY.value,
+                                                         perm_scope=Scope.RECURSIVE.value)
+
         self.geoserver.on_modified(main_shapefile_path)
 
+        # `Allow` permissions should have been created for all read/write permissions, except for the one permission
+        # added above to the service. No permission is required on the resource since it already resolves as `Allow`.
         self.check_magpie_permissions(self.layer_id, set(GEOSERVER_READ_PERMISSIONS + GEOSERVER_WRITE_PERMISSIONS))
+        self.check_magpie_permissions(self.layer_id,
+                                      [p for p in GEOSERVER_READ_PERMISSIONS + GEOSERVER_WRITE_PERMISSIONS
+                                       if p != MagpiePermission.DESCRIBE_FEATURE_TYPE.value],
+                                      effective=False)
         utils.check_mock_has_calls(self.mock_chown, self.expected_chown_shapefile_calls)
 
         os.chmod(main_shapefile_path, 0o000)
         self.geoserver.on_modified(main_shapefile_path)
 
+        # All read/write permissions should have no permissions now, since it resolves automatically to `Deny` if no
+        # permission is present. The only exception is the one permission which was allowed recursively on the service,
+        # which now requires a specific `Deny` permission on the layer.
         self.check_magpie_permissions(self.layer_id, set(GEOSERVER_READ_PERMISSIONS + GEOSERVER_WRITE_PERMISSIONS),
                                       expected_access=Access.DENY.value)
+        self.check_magpie_permissions(self.layer_id, [MagpiePermission.DESCRIBE_FEATURE_TYPE.value],
+                                      expected_access=Access.DENY.value, effective=False)
+        self.check_magpie_permissions(self.layer_id, [], expected_access=Access.ALLOW.value, effective=False)
         utils.check_mock_has_calls(self.mock_chown, self.expected_chown_shapefile_calls)
 
     def test_shapefile_on_deleted(self):
@@ -414,8 +437,7 @@ class TestGeoserverPermissions(TestGeoserver):
         geoserver_resources = self.magpie.get_resources_by_service("geoserver")
         assert len(geoserver_resources["resources"]) == 0
 
-        # If a created file event is triggered, the workspace resource should be created, with `deny` permissions if
-        # a r/w/x file permission is not available to the user.
+        # If a created file event is triggered, the workspace resource should still have no permissions updated.
         os.chmod(self.datastore_path, 0o500)
         self.geoserver.on_created(os.path.join(self.datastore_path,
                                                self.test_shapefile_name + SHAPEFILE_MAIN_EXTENSION))
@@ -423,27 +445,74 @@ class TestGeoserverPermissions(TestGeoserver):
         workspace_res_id = list(geoserver_resources["resources"])[0]
 
         # Check if the user has the right permissions on Magpie
-        self.check_magpie_permissions(res_id=workspace_res_id,
-                                      expected_perms=GEOSERVER_WRITE_PERMISSIONS,
-                                      expected_access=Access.DENY.value,
-                                      expected_scope=Scope.RECURSIVE.value,
+        self.check_magpie_permissions(res_id=workspace_res_id, expected_perms=[],
+                                      expected_access=Access.DENY.value, expected_scope=Scope.RECURSIVE.value,
                                       effective=False)
-        utils.check_mock_has_calls(self.mock_chown,
-                                   self.expected_chown_datastore_call + self.expected_chown_shapefile_calls)
+        self.check_magpie_permissions(res_id=workspace_res_id, expected_perms=[],
+                                      expected_access=Access.ALLOW.value, expected_scope=Scope.RECURSIVE.value,
+                                      effective=False)
 
     def test_workspace_on_modified(self):
         """
-        Tests if Magpie resources associated with the user workspace are updated correctly, applying `deny` permissions
-        for any r/w/x file permission that is not available to the user.
+        Tests if Magpie resources associated with the user workspace are updated correctly.
         """
+
+        self.magpie.create_permission_by_user_and_res_id(user_name=self.magpie_test_user,
+                                                         res_id=self.workspace_res_id,
+                                                         perm_name=MagpiePermission.DESCRIBE_LAYER.value,
+                                                         perm_access=Access.ALLOW.value,
+                                                         perm_scope=Scope.RECURSIVE.value)
+        self.magpie.create_permission_by_user_and_res_id(user_name=self.magpie_test_user,
+                                                         res_id=self.workspace_res_id,
+                                                         perm_name=MagpiePermission.DESCRIBE_STORED_QUERIES.value,
+                                                         perm_access=Access.ALLOW.value,
+                                                         # This should be reset to `recursive` in modify event.
+                                                         perm_scope=Scope.MATCH.value)
+        # Add specific permissions on the parent service, to test other specific use cases.
+        self.magpie.create_permission_by_user_and_res_id(user_name=self.magpie_test_user,
+                                                         res_id=self.test_service_id,
+                                                         perm_name=MagpiePermission.DESCRIBE_FEATURE_TYPE.value,
+                                                         perm_access=Access.ALLOW.value,
+                                                         perm_scope=Scope.RECURSIVE.value)
+        self.magpie.create_permission_by_user_and_res_id(user_name=self.magpie_test_user,
+                                                         res_id=self.test_service_id,
+                                                         perm_name=MagpiePermission.DESCRIBE_STORED_QUERIES.value,
+                                                         perm_access=Access.DENY.value,
+                                                         perm_scope=Scope.RECURSIVE.value)
+
         os.chmod(self.datastore_path, 0o500)
         self.geoserver.on_modified(self.datastore_path)
 
-        self.check_magpie_permissions(res_id=self.workspace_res_id,
-                                      expected_perms=GEOSERVER_WRITE_PERMISSIONS,
+        # All read permissions should be explicitly set to `allow` here, except for the one permission set to `allow`
+        # recursively on the parent service resource.
+        self.check_magpie_permissions(
+            res_id=self.workspace_res_id,
+            expected_perms=[p for p in GEOSERVER_READ_PERMISSIONS if p != MagpiePermission.DESCRIBE_FEATURE_TYPE.value],
+            expected_access=Access.ALLOW.value,
+            expected_scope=Scope.RECURSIVE.value,
+            effective=False)
+        # No write permission should be explicitly set to `deny` in this case, since they already resolve to `deny`.
+        self.check_magpie_permissions(
+            res_id=self.workspace_res_id,
+            expected_perms=[],
+            expected_access=Access.DENY.value,
+            expected_scope=Scope.RECURSIVE.value,
+            effective=False)
+        utils.check_mock_has_calls(self.mock_chown, self.expected_chown_datastore_call)
+
+        os.chmod(self.datastore_path, 0o000)
+        self.geoserver.on_modified(self.datastore_path)
+
+        self.check_magpie_permissions(self.workspace_res_id,
+                                      set(GEOSERVER_READ_PERMISSIONS + GEOSERVER_WRITE_PERMISSIONS),
+                                      expected_access=Access.DENY.value)
+        # Only one permission requires an explicit `deny`, because of the `allow` permission on the parent service.
+        self.check_magpie_permissions(self.workspace_res_id,
+                                      [MagpiePermission.DESCRIBE_FEATURE_TYPE.value],
                                       expected_access=Access.DENY.value,
                                       expected_scope=Scope.RECURSIVE.value,
                                       effective=False)
+        self.check_magpie_permissions(self.workspace_res_id, [], expected_access=Access.ALLOW.value, effective=False)
         utils.check_mock_has_calls(self.mock_chown, self.expected_chown_datastore_call)
 
     def test_workspace_on_deleted(self, caplog):
@@ -475,7 +544,7 @@ class TestGeoserverPermissions(TestGeoserver):
         layer_read_permission = Permission(
             service_name="geoserver",
             service_type=ServiceGeoserver.service_type,
-            resource_id=str(self.layer_id),
+            resource_id=self.layer_id,
             resource_full_name=f"/geoserver/{self.workspace_name}/{self.test_shapefile_name}",
             name=MagpiePermission.DESCRIBE_FEATURE_TYPE.value,
             access=Access.ALLOW.value,
@@ -505,7 +574,7 @@ class TestGeoserverPermissions(TestGeoserver):
         layer_deny_permission = Permission(
             service_name="geoserver",
             service_type=ServiceGeoserver.service_type,
-            resource_id=str(self.layer_id),
+            resource_id=self.layer_id,
             resource_full_name=f"/geoserver/{self.workspace_name}/{self.test_shapefile_name}",
             name=MagpiePermission.DESCRIBE_FEATURE_TYPE.value,
             access=Access.DENY.value,
