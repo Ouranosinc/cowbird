@@ -245,6 +245,8 @@ class TestGeoserverRequests(TestGeoserver):
 class TestGeoserverPermissions(TestGeoserver):
     """
     Test cases to validate the synchronization between Magpie permissions and file permissions in a Geoserver workspace.
+
+    See :ref:`Components - Geoserver <components_geoserver>` for more details on the design/implemention choices.
     """
     def setup_class(self):
         self.magpie_test_user = "test_user"
@@ -348,8 +350,6 @@ class TestGeoserverPermissions(TestGeoserver):
     def test_shapefile_on_created(self):
         """
         Tests if the right Magpie permissions are created upon a shapefile creation in a Geoserver workspace.
-
-        see :ref:`geoserver_general_notes`
         """
         # For this test, remove workspace resource and check if required resources are recreated
         self.magpie.delete_resource(self.workspace_res_id)
@@ -376,8 +376,6 @@ class TestGeoserverPermissions(TestGeoserver):
         """
         Tests if the right Magpie permissions are updated upon a shapefile permission modification in a Geoserver
         workspace.
-
-        see :ref:`Geoserver general notes <geoserver_general_notes>`
         """
         main_shapefile_path = os.path.join(self.datastore_path, self.test_shapefile_name + SHAPEFILE_MAIN_EXTENSION)
         os.chmod(main_shapefile_path, 0o600)
