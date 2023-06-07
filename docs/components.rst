@@ -52,7 +52,7 @@ If the path receives a ``read`` permission, every `Magpie`_ permissions fitting 
 
 If a `Magpie`_ permissions of type ``read`` is added, the path will be updated to have ``read`` permissions. This
 update on the file system will trigger a synchronization with `Magpie`_, to add all other ``read`` type permissions on
-Magpie.
+`Magpie`_.
 
 Note that permissions are only added to `Magpie`_ if necessary. For example, if a file needs to allow a ``read``
 permission on `Magpie`_, but that permission already resolves to ``allow`` because of a recursive permission on a parent
@@ -81,7 +81,7 @@ event, and will only be updated in the case of a change on the ``.shp`` file.
 
 Note that in the case where a user has all the ``read`` permissions on `Magpie`_ for example, and a single one of
 them is deleted, `Cowbird` will not change the file permissions since other ``read`` permissions will still be found on
-Magpie. This means that a synchronization will not be triggered and `Magpie`_ permissions will stay the same, meaning
+`Magpie`_. This means that a synchronization will not be triggered and `Magpie`_ permissions will stay the same, meaning
 all the ``read`` permissions activated except for the one removed.
 If eventually a change is applied to the file (ex.: changing the permissions from ``r--`` to ``rw-``),
 it would trigger a synchronization, and the one `Magpie`_ permission that was removed earlier would be reenabled,
