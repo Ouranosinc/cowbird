@@ -102,6 +102,9 @@ class MockMagpieHandler(Handler):
     def get_resource_id(self, resource_full_name):
         pass
 
+    def get_geoserver_workspace_res_id(self, user_name):
+        pass
+
     def user_created(self, user_name):
         self.event_users.append(user_name)
 
@@ -122,6 +125,9 @@ class MockMagpieHandler(Handler):
             if perm == permission:
                 self.outbound_perms.remove(perm)
                 return
+
+    def delete_resource(self, res_id):
+        pass
 
     def get_service_types(self):
         # type: () -> List
