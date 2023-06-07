@@ -1,3 +1,4 @@
+-r requirements-sys.txt
 celery[mongodb]==5.2.7; python_version < "3.8"  # to avoid newer versions with dependency incompatible with latest python
 celery[mongodb]>=5.2.2; python_version >= "3.8"
 colander

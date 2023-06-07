@@ -44,8 +44,12 @@ docs/cowbird.tests.rst
 docs/cowbird.rst
 docs/tests.rst
 
+## Celery
+celeryconfig*.py
+celerybeat-schedule.*
+.run
+
 ## Repo
-celeryconfig.docker.py
 config.yml
 config.yaml
 cowbird*.ini
