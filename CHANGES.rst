@@ -16,7 +16,8 @@ Bug Fixes
 * Fix bug where the monitors saved on the database and the intermal monitors dictionary from the `Monitoring` class
   would be desynchronized, not always having the expected monitors, or having monitors that were not started properly.
 * Fix failing permissions synchronizer by adding `service_type` to the Magpie webhooks and ignoring permissions from
-  resources not defined in the config.
+  resources not defined in the config (relates to
+  `Ouranosinc/Magpie#582 <https://github.com/Ouranosinc/Magpie/pull/582>`_).
 
 `1.1.1 <https://github.com/Ouranosinc/cowbird/tree/1.1.1>`_ (2023-03-24)
 ------------------------------------------------------------------------------------

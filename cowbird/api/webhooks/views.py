@@ -106,7 +106,7 @@ def post_permission_webhook_view(request):
                     msg_on_fail=s.PermissionWebhook_POST_BadRequestResponseSchema.description)
     # Use raw value for service name, to avoid errors with `None` values
     # when the permission is not applied to a `service` type resource.
-    service_name = ar.get_multiformat_body_raw(request, "service_name")
+    service_name = ar.get_multiformat_body(request, "service_name", check_type=(str, type(None)))
     service_type = ar.get_multiformat_body(request, "service_type")
     resource_id = ar.get_multiformat_body(request, "resource_id", check_type=int)
     param_regex_with_slashes = r"^/?[A-Za-z0-9]+(?:[\s_\-\./:][A-Za-z0-9]+)*$"
@@ -115,8 +115,8 @@ def post_permission_webhook_view(request):
     name = ar.get_multiformat_body(request, "name")
     access = ar.get_multiformat_body(request, "access")
     scope = ar.get_multiformat_body(request, "scope")
-    user = ar.get_multiformat_body_raw(request, "user")
-    group = ar.get_multiformat_body_raw(request, "group")
+    user = ar.get_multiformat_body(request, "user", check_type=(str, type(None)))
+    group = ar.get_multiformat_body(request, "group", check_type=(str, type(None)))
     ax.verify_param(bool(user or group), is_true=True, http_error=HTTPBadRequest,
                     msg_on_fail=s.PermissionWebhook_POST_BadRequestResponseSchema.description)
 

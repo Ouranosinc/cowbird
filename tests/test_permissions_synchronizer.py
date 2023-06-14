@@ -261,7 +261,7 @@ class TestSyncPermissions(unittest.TestCase):
                     """
                     data = {
                         "event": event,
-                        "service_name": ServiceTHREDDS.service_type,
+                        "service_name": None,
                         "service_type": ServiceTHREDDS.service_type,
                         "resource_id": src_res_id,
                         "resource_full_name": resources[src_res_id]["res_full_name"],
@@ -498,7 +498,7 @@ class TestSyncPermissions(unittest.TestCase):
             # uses 0 segment occurrence
             data = {
                 "event": ValidOperations.CreateOperation.value,
-                "service_name": ServiceTHREDDS.service_type,
+                "service_name": None,
                 "service_type": ServiceTHREDDS.service_type,
                 "resource_id": dir_src_res_id,
                 "resource_full_name": f"/{self.test_service_name}/private",
@@ -572,7 +572,7 @@ class TestSyncPermissions(unittest.TestCase):
 
             data = {
                 "event": ValidOperations.CreateOperation.value,
-                "service_name": ServiceTHREDDS.service_type,
+                "service_name": None,
                 "service_type": ServiceTHREDDS.service_type,
                 "resource_id": src_res_id,
                 "resource_full_name": f"/{self.test_service_name}/dir1/dir2",
@@ -621,7 +621,7 @@ class TestSyncPermissions(unittest.TestCase):
 
             data = {
                 "event": ValidOperations.CreateOperation.value,
-                "service_name": ServiceTHREDDS.service_type,
+                "service_name": None,
                 "service_type": ServiceTHREDDS.service_type,
                 "resource_id": src_res_id,
                 "resource_full_name": f"/{self.test_service_name}/dir",

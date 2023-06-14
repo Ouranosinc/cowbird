@@ -35,7 +35,9 @@ def check_value(value, param_name, check_type=str, pattern=ax.PARAM_REGEX, http_
         http_error = HTTPUnprocessableEntity
     if not msg_on_fail:
         msg_on_fail = s.UnprocessableEntityResponseSchema.description
-    ax.verify_param(value, not_none=True, is_type=bool(check_type), param_compare=check_type, param_name=param_name,
+    not_none = (type(None) not in check_type if isinstance(check_type, tuple)
+                else not isinstance(check_type, type(None)))
+    ax.verify_param(value, not_none=not_none, is_type=bool(check_type), param_compare=check_type, param_name=param_name,
                     http_error=http_error, msg_on_fail=msg_on_fail)
     if bool(pattern) and check_type == str:
         ax.verify_param(value, not_empty=True, matches=True, param_name=param_name, param_compare=pattern,
