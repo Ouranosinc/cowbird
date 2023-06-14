@@ -21,7 +21,7 @@ from magpie.permissions import Permission as MagpiePermission
 from magpie.permissions import Scope
 from magpie.services import ServiceGeoserver
 
-from cowbird.constants import COWBIRD_ROOT, DEFAULT_GID, DEFAULT_UID
+from cowbird.constants import COWBIRD_ROOT, DEFAULT_ADMIN_GID, DEFAULT_ADMIN_UID
 from cowbird.handlers import HandlerFactory
 from cowbird.handlers.impl.geoserver import SHAPEFILE_MAIN_EXTENSION, Geoserver, GeoserverError
 from cowbird.handlers.impl.magpie import GEOSERVER_READ_PERMISSIONS, GEOSERVER_WRITE_PERMISSIONS
@@ -314,10 +314,11 @@ class TestGeoserverPermissions(TestGeoserver):
         ]
 
         # Initialize workspace folder with all permissions and shapefile permissions with no permissions for a generic
-        # setup, but each test can adjust the permissions for specific cases.
-        os.chmod(self.datastore_path, 0o700)
+        # setup, but each test can adjust the permissions for specific cases. Note that permissions are only changed for
+        # `others` since the user of the workspace is different than the admin user who is the owner of the files.
+        os.chmod(self.datastore_path, 0o777)
         for file in self.shapefile_list:
-            os.chmod(file, 0o000)
+            os.chmod(file, 0o660)
 
         # Setup resources
         self.layer_id = self.magpie.get_geoserver_layer_res_id(self.workspace_name, self.test_shapefile_name,
@@ -326,9 +327,9 @@ class TestGeoserverPermissions(TestGeoserver):
         self.workspace_res_id = parents_tree[-1]["parent_id"]
 
         self.expected_chown_shapefile_calls = [
-            mock.call(file, DEFAULT_UID, DEFAULT_GID) for file in self.shapefile_list
+            mock.call(file, DEFAULT_ADMIN_UID, DEFAULT_ADMIN_GID) for file in self.shapefile_list
         ]
-        self.expected_chown_datastore_call = [mock.call(self.datastore_path, DEFAULT_UID, DEFAULT_GID)]
+        self.expected_chown_datastore_call = [mock.call(self.datastore_path, DEFAULT_ADMIN_UID, DEFAULT_ADMIN_GID)]
         yield
         # Teardown
         reset_geoserver_test_workspace(self, self.geoserver)
@@ -355,13 +356,13 @@ class TestGeoserverPermissions(TestGeoserver):
         self.magpie.delete_resource(self.workspace_res_id)
 
         for file in self.shapefile_list:
-            os.chmod(file, 0o477)
+            os.chmod(file, 0o664)
         self.geoserver.on_created(os.path.join(self.datastore_path,
                                                self.test_shapefile_name + SHAPEFILE_MAIN_EXTENSION))
 
-        # Permissions should have been normalized, removing any `group` or `other` permissions.
+        # File permissions should still be the same.
         for file in self.shapefile_list:
-            utils.check_path_permissions(file, 0o400)
+            utils.check_path_permissions(file, 0o664)
 
         geoserver_resources = self.magpie.get_resources_by_service("geoserver")
         workspace_res = list(geoserver_resources["resources"].values())[0]
@@ -378,7 +379,7 @@ class TestGeoserverPermissions(TestGeoserver):
         workspace.
         """
         main_shapefile_path = os.path.join(self.datastore_path, self.test_shapefile_name + SHAPEFILE_MAIN_EXTENSION)
-        os.chmod(main_shapefile_path, 0o600)
+        os.chmod(main_shapefile_path, 0o666)
 
         # Add some specific permissions on the parent service, to test other specific use cases.
         self.magpie.create_permission_by_user_and_res_id(user_name=self.magpie_test_user,
@@ -403,7 +404,7 @@ class TestGeoserverPermissions(TestGeoserver):
                                       effective=False)
         utils.check_mock_has_calls(self.mock_chown, self.expected_chown_shapefile_calls)
 
-        os.chmod(main_shapefile_path, 0o000)
+        os.chmod(main_shapefile_path, 0o660)
         self.geoserver.on_modified(main_shapefile_path)
 
         # All read/write permissions should have no permissions now, since it resolves automatically to `Deny` if no
@@ -422,14 +423,14 @@ class TestGeoserverPermissions(TestGeoserver):
         should not trigger any other event or modification.
         """
         other_shapefile_path = os.path.join(self.datastore_path, self.test_shapefile_name + ".shx")
-        os.chmod(other_shapefile_path, 0o600)
+        os.chmod(other_shapefile_path, 0o666)
         self.geoserver.on_modified(other_shapefile_path)
 
         for file in self.shapefile_list:
-            if not file.endswith(".shx"):
-                utils.check_path_permissions(file, 0o000)
+            if file.endswith(".shx"):
+                utils.check_path_permissions(file, 0o666)
             else:
-                utils.check_path_permissions(file, 0o600)
+                utils.check_path_permissions(file, 0o660)
         self.check_magpie_permissions(self.layer_id, set(GEOSERVER_READ_PERMISSIONS + GEOSERVER_WRITE_PERMISSIONS),
                                       expected_access=Access.DENY.value)
         self.check_magpie_permissions(self.layer_id, [], expected_access=Access.DENY.value, effective=False)
@@ -456,7 +457,7 @@ class TestGeoserverPermissions(TestGeoserver):
         assert len(geoserver_resources["resources"]) == 0
 
         # If a created file event is triggered, the workspace resource should still have no permissions updated.
-        os.chmod(self.datastore_path, 0o500)
+        os.chmod(self.datastore_path, 0o775)
         self.geoserver.on_created(os.path.join(self.datastore_path,
                                                self.test_shapefile_name + SHAPEFILE_MAIN_EXTENSION))
         geoserver_resources = self.magpie.get_resources_by_service("geoserver")
@@ -498,7 +499,7 @@ class TestGeoserverPermissions(TestGeoserver):
                                                          perm_access=Access.DENY.value,
                                                          perm_scope=Scope.RECURSIVE.value)
 
-        os.chmod(self.datastore_path, 0o500)
+        os.chmod(self.datastore_path, 0o775)
         self.geoserver.on_modified(self.datastore_path)
 
         # All read permissions should be explicitly set to `allow` here, except for the one permission set to `allow`
@@ -518,7 +519,7 @@ class TestGeoserverPermissions(TestGeoserver):
             effective=False)
         utils.check_mock_has_calls(self.mock_chown, self.expected_chown_datastore_call)
 
-        os.chmod(self.datastore_path, 0o000)
+        os.chmod(self.datastore_path, 0o770)
         self.geoserver.on_modified(self.datastore_path)
 
         self.check_magpie_permissions(self.workspace_res_id,
@@ -545,7 +546,7 @@ class TestGeoserverPermissions(TestGeoserver):
         self.geoserver.on_deleted(self.datastore_path)
         assert len(caplog.records) == 1 and caplog.records[0].levelno == logging.WARNING
 
-        # check that magpie resource still exists after the `on_deleted` events
+        # Check that magpie resource still exists after the `on_deleted` events
         self.magpie.get_resource(self.workspace_res_id)
 
         # Check that the user workspace magpie resources are deleted after a `user_deleted` event
@@ -578,13 +579,14 @@ class TestGeoserverPermissions(TestGeoserver):
         self.geoserver.permission_created(layer_read_permission)
         utils.check_mock_has_calls(self.mock_chown, self.expected_chown_shapefile_calls)
         for file in self.shapefile_list:
-            utils.check_path_permissions(file, 0o400)
+            utils.check_path_permissions(file, 0o664)
 
         # If a file is missing, an update from Magpie's permissions should not trigger an error,
         # the missing file is simply ignored.
         os.remove(self.datastore_path + f"/{self.test_shapefile_name}.shx")
         updated_shapefile_list = [f for f in self.shapefile_list if not f.endswith(".shx")]
-        updated_chown_checklist = [mock.call(file, DEFAULT_UID, DEFAULT_GID) for file in updated_shapefile_list]
+        updated_chown_checklist = [mock.call(file, DEFAULT_ADMIN_UID, DEFAULT_ADMIN_GID)
+                                   for file in updated_shapefile_list]
 
         # Change access to 'deny'
         self.magpie.delete_permission_by_user_and_res_id(self.magpie_test_user, self.layer_id,
@@ -608,11 +610,11 @@ class TestGeoserverPermissions(TestGeoserver):
         self.geoserver.permission_created(layer_deny_permission)
         utils.check_mock_has_calls(self.mock_chown, updated_chown_checklist)
         for file in updated_shapefile_list:
-            utils.check_path_permissions(file, 0o000)
+            utils.check_path_permissions(file, 0o660)
 
         # Case for a deleted permission on Magpie
         for file in updated_shapefile_list:
-            os.chmod(file, 0o400)
+            os.chmod(file, 0o664)
 
         # Remove the existing 'deny' permission
         self.magpie.delete_permission_by_user_and_res_id(self.magpie_test_user, self.layer_id,
@@ -622,7 +624,7 @@ class TestGeoserverPermissions(TestGeoserver):
 
         utils.check_mock_has_calls(self.mock_chown, updated_chown_checklist)
         for file in updated_shapefile_list:
-            utils.check_path_permissions(file, 0o000)
+            utils.check_path_permissions(file, 0o660)
 
     def apply_and_check_recursive_permissions(self, resource_id, resource_name):
         """
@@ -630,7 +632,7 @@ class TestGeoserverPermissions(TestGeoserver):
         if the resource's files and all the children resources' files are updated.
         """
         # Initialize workspace as read-only
-        os.chmod(self.datastore_path, 0o500)
+        os.chmod(self.datastore_path, 0o775)
         self.magpie.create_permission_by_user_and_res_id(
             user_name=self.magpie_test_user,
             res_id=self.workspace_res_id,
@@ -659,9 +661,9 @@ class TestGeoserverPermissions(TestGeoserver):
 
         utils.check_mock_has_calls(self.mock_chown,
                                    self.expected_chown_datastore_call + self.expected_chown_shapefile_calls)
-        utils.check_path_permissions(self.datastore_path, 0o700)
+        utils.check_path_permissions(self.datastore_path, 0o777)
         for file in self.shapefile_list:
-            utils.check_path_permissions(file, 0o200)
+            utils.check_path_permissions(file, 0o662)
 
         # Adding `match` permissions on the layer and changing the recursive permission to `deny`
         # The layer should keep its write permission, but the workspace should lose its write permission.
@@ -684,9 +686,9 @@ class TestGeoserverPermissions(TestGeoserver):
 
         utils.check_mock_has_calls(self.mock_chown,
                                    self.expected_chown_datastore_call + self.expected_chown_shapefile_calls)
-        utils.check_path_permissions(self.datastore_path, 0o500)
+        utils.check_path_permissions(self.datastore_path, 0o775)
         for file in self.shapefile_list:
-            utils.check_path_permissions(file, 0o200)
+            utils.check_path_permissions(file, 0o662)
 
         # Delete a permission on Magpie
         self.magpie.delete_permission_by_user_and_res_id(self.magpie_test_user, self.layer_id,
@@ -696,9 +698,9 @@ class TestGeoserverPermissions(TestGeoserver):
         self.geoserver.permission_deleted(recursive_write_permission)
         utils.check_mock_has_calls(self.mock_chown,
                                    self.expected_chown_datastore_call + self.expected_chown_shapefile_calls)
-        utils.check_path_permissions(self.datastore_path, 0o500)
+        utils.check_path_permissions(self.datastore_path, 0o775)
         for file in self.shapefile_list:
-            utils.check_path_permissions(file, 0o000)
+            utils.check_path_permissions(file, 0o660)
 
     def test_magpie_workspace_permission(self):
         """

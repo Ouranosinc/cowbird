@@ -10,7 +10,7 @@ from celery import chain, shared_task
 from magpie.models import Layer, Workspace
 from magpie.permissions import Access, Scope
 
-from cowbird.constants import DEFAULT_GID, DEFAULT_UID
+from cowbird.constants import DEFAULT_ADMIN_GID, DEFAULT_ADMIN_UID
 from cowbird.handlers.handler import HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PARAM, Handler
 from cowbird.handlers.handler_factory import HandlerFactory
 from cowbird.handlers.impl.magpie import GEOSERVER_READ_PERMISSIONS, GEOSERVER_WRITE_PERMISSIONS
@@ -162,7 +162,9 @@ class Geoserver(Handler, FSMonitor):
         """
         Applies new permissions to a path, if required.
         """
+        # Only use the 3 last octal digits
         previous_perms = os.stat(path)[stat.ST_MODE] & 0o777
+
         new_perms = update_filesystem_permissions(previous_perms,
                                                   is_readable=is_readable,
                                                   is_writable=is_writable,
@@ -182,10 +184,10 @@ class Geoserver(Handler, FSMonitor):
         """
         path_stat = os.stat(path)
         # Only apply chown if there is an actual change, to avoid looping events between Magpie and Cowbird
-        if path_stat.st_uid != DEFAULT_UID or path_stat.st_gid != DEFAULT_GID:
+        if path_stat.st_uid != DEFAULT_ADMIN_UID or path_stat.st_gid != DEFAULT_ADMIN_GID:
             try:
                 # This operation only works as root.
-                os.chown(path, DEFAULT_UID, DEFAULT_GID)
+                os.chown(path, DEFAULT_ADMIN_UID, DEFAULT_ADMIN_GID)
             except PermissionError as exc:
                 LOGGER.warning("Failed to change ownership of the %s path: %s", path, exc)
 
@@ -467,8 +469,8 @@ class Geoserver(Handler, FSMonitor):
         Geoserver._apply_default_path_ownership(datastore_dir_path)
 
         workspace_status = os.stat(datastore_dir_path)[stat.ST_MODE]
-        is_readable = bool(workspace_status & stat.S_IRUSR and workspace_status & stat.S_IXUSR)
-        is_writable = bool(workspace_status & stat.S_IWUSR)
+        is_readable = bool(workspace_status & stat.S_IROTH and workspace_status & stat.S_IXOTH)
+        is_writable = bool(workspace_status & stat.S_IWOTH)
 
         Geoserver._update_magpie_permissions(user_name=workspace_name,
                                              res_id=workspace_res_id,
@@ -586,8 +588,8 @@ class Geoserver(Handler, FSMonitor):
 
         if os.path.exists(shapefile_path):
             file_status = os.stat(shapefile_path)[stat.ST_MODE]
-            is_shapefile_readable = bool(file_status & stat.S_IRUSR)
-            is_shapefile_writable = bool(file_status & stat.S_IWUSR)
+            is_shapefile_readable = bool(file_status & stat.S_IROTH)
+            is_shapefile_writable = bool(file_status & stat.S_IWOTH)
         return is_shapefile_readable, is_shapefile_writable
 
     def _normalize_shapefile_permissions(self, workspace_name, shapefile_name, is_readable, is_writable):

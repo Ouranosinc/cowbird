@@ -49,8 +49,11 @@ COWBIRD_INI_FILE_PATH = os.getenv(
 
 # UID/GID used in birdhouse. We should assign the user's resources to this owner, so that the resources can be
 # accessible to the user via JupyterHub.
-DEFAULT_UID = int(os.getenv("COWBIRD_FILESYSTEM_UID", 1000))
-DEFAULT_GID = int(os.getenv("COWBIRD_FILESYSTEM_GID", 1000))
+DEFAULT_USER_UID = int(os.getenv("COWBIRD_FILESYSTEM_USER_UID", 1000))
+DEFAULT_USER_GID = int(os.getenv("COWBIRD_FILESYSTEM_USER_GID", 1000))
+
+DEFAULT_ADMIN_UID = int(os.getenv("COWBIRD_FILESYSTEM_ADMIN_UID", 0))
+DEFAULT_ADMIN_GID = int(os.getenv("COWBIRD_FILESYSTEM_ADMIN_GID", 0))
 
 
 def _get_default_log_level():

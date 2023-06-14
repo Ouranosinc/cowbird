@@ -592,7 +592,8 @@ def update_filesystem_permissions(permission, is_readable, is_writable, is_execu
     Applies/remove read, write and execute permissions (user only) to the input file system permissions.
     """
     for perm_enabled, perm_mode in zip([is_readable, is_writable, is_executable],
-                                       [stat.S_IRUSR, stat.S_IWUSR, stat.S_IXUSR]):
+                                       [stat.S_IROTH, stat.S_IWOTH, stat.S_IXOTH]):
         permission = permission | perm_mode if perm_enabled else permission & ~perm_mode
-    permission = permission & 0o700
+    # Only use the 3 last octal digits
+    permission = permission & 0o777
     return permission
