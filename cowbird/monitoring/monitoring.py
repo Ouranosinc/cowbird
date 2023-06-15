@@ -8,7 +8,7 @@ from cowbird.utils import SingletonMeta, get_logger
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Type, Union
+    from typing import Optional, Type, Union
 
     from cowbird.monitoring.fsmonitor import FSMonitor
     from cowbird.typedefs import AnySettingsContainer
@@ -55,7 +55,7 @@ class Monitoring(metaclass=SingletonMeta):
             mon.start()
 
     def register(self, path, recursive, cb_monitor):
-        # type: (str, bool, Union[FSMonitor, Type[FSMonitor], str]) -> Union[Monitor, None]
+        # type: (str, bool, Union[FSMonitor, Type[FSMonitor], str]) -> Optional[Monitor]
         """
         Register a monitor for a specific path and start it. If a monitor already exists for the specific
         path/cb_monitor combination it is directly returned. If this monitor was not recursively monitoring its path and
@@ -67,7 +67,8 @@ class Monitoring(metaclass=SingletonMeta):
         :param cb_monitor: FSMonitor for which an instance is created and events are sent
                            Can be an object, a class type implementing FSMonitor or a string containing module and class
                            name.
-        :returns: The monitor registered or already existing for the specific path/cb_monitor combination.
+        :returns: The monitor registered or already existing for the specific path/cb_monitor combination. Note that
+                  the monitor is not created/returned if a MonitorException occurs.
         """
         try:
             callback = Monitor.get_qualified_class_name(Monitor.get_fsmonitor_instance(cb_monitor))
@@ -82,9 +83,10 @@ class Monitoring(metaclass=SingletonMeta):
                 mon = Monitor(path, recursive, cb_monitor)
                 self.monitors[mon.path][mon.callback] = mon
 
-            if not self.store.collection.find_one(
-                    {"callback": mon.callback, "path": mon.path, "recursive": mon.recursive}):
-                self.store.save_monitor(mon)
+            self.store.collection.update_one(
+                {"callback": mon.callback, "path": mon.path},
+                {"$set": {"callback": mon.callback, "path": mon.path, "recursive": mon.recursive}},
+                upsert=True)
 
             if not mon.is_alive:
                 mon.start()
@@ -106,8 +108,7 @@ class Monitoring(metaclass=SingletonMeta):
         :returns: True if the monitor is found and successfully stopped, False otherwise
         """
         mon_qualname = Monitor.get_qualified_class_name(Monitor.get_fsmonitor_instance(cb_monitor))
-        res = self.store.collection.delete_many({"callback": mon_qualname, "path": path})
-        LOGGER.info("%i monitor(s) deleted from database.", res.deleted_count)
+        self.store.collection.delete_one({"callback": mon_qualname, "path": path})
 
         if path in self.monitors:
             try:
