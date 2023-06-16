@@ -33,6 +33,7 @@ CURR_DIR = Path(__file__).resolve().parent
 
 @pytest.mark.permissions
 @pytest.mark.magpie
+@pytest.mark.online
 class TestSyncPermissions(unittest.TestCase):
     """
     Test permissions synchronization.

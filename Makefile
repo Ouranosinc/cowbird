@@ -668,12 +668,6 @@ test-magpie: install-dev install		## run Magpie requests tests against a configu
 	@echo "Running local tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "magpie" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
-# test target used by github's ci
-.PHONY: test-github
-test-github:  ## runs all tests except online tests, without prior dependency check and installation
-	@echo "Running tests..."
-	@bash -c '$(CONDA_CMD) pytest tests -vv -m "not online" --junitxml "$(APP_ROOT)/tests/results.xml"'
-
 .PHONY: test-custom
 test-custom: install-dev install	## run custom marker tests using SPEC="<marker-specification>"
 	@echo "Running custom tests..."

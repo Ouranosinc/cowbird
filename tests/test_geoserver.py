@@ -2,8 +2,7 @@
 """
 These tests require a working Geoserver instance.
 
-They are ignored by the `Make test` target and the CI, but are
-still useful for a developer working on the Geoserver requests. They can be run with the `Make test-geoserver` target.
+They can be run with the `Make test-geoserver` target.
 More integration tests should be in Jupyter Notebook format as is the case with Birdhouse-deploy / DACCS platform.
 """
 import glob
@@ -80,6 +79,9 @@ def prepare_geoserver_test_workspace(test_instance, geoserver_handler, workspace
 
     # Preparations needed to make tests work without all the other handlers running
     datastore_path = get_datastore_path(test_instance.workspace_folders[workspace_key])
+    if not datastore_path.startswith("/tmp/"):
+        raise PermissionError("Aborting test workspace preparation. The test datastore path should be in the `/tmp`"
+                              f"directory, but was instead found at the path `{datastore_path}`.")
 
     # This next part can fail if the user running this test doesn't have write access to the directory
     copy_shapefile(basename=test_instance.test_shapefile_name, destination=datastore_path)
@@ -145,6 +147,7 @@ class TestGeoserver:
 
 
 @pytest.mark.geoserver
+@pytest.mark.online
 class TestGeoserverRequests(TestGeoserver):
 
     workspaces = {
@@ -242,6 +245,7 @@ class TestGeoserverRequests(TestGeoserver):
 # pylint: disable=W0201
 @pytest.mark.geoserver
 @pytest.mark.magpie
+@pytest.mark.online
 class TestGeoserverPermissions(TestGeoserver):
     """
     Test cases to validate the synchronization between Magpie permissions and file permissions in a Geoserver workspace.
