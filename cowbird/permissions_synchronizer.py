@@ -247,8 +247,8 @@ class SyncPoint:
                 src_res_key = max_matching_keys[0]
                 return src_res_key, matched_groups_by_res[src_res_key]
             if len(max_matching_keys) > 1:
-                raise ValueError("Found 2 matching resources of the same length in the config. "
-                                 f"Ambiguous config resources : {max_matching_keys}")
+                raise ValueError("Found multiple matching resources of the same length in the config in the service "
+                                 f"type {service_type}. Ambiguous config resources : {max_matching_keys}")
 
         # No matching resources could be found in the config file, return empty values.
         return "", {}
