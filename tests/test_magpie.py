@@ -7,6 +7,7 @@ import pytest
 import yaml
 from dotenv import load_dotenv
 from magpie.models import Layer, Workspace
+from magpie.permissions import Access, Permission, Scope
 from magpie.services import ServiceGeoserver
 
 from cowbird.handlers import HandlerFactory
@@ -60,6 +61,7 @@ def delete_all_services(magpie):
 
 
 @pytest.mark.magpie
+@pytest.mark.online
 class TestMagpie:
     """
     Tests different methods found in the Magpie handler.
@@ -151,3 +153,52 @@ class TestMagpie:
         new_layer_id = self.magpie.get_geoserver_layer_res_id(workspace_name, layer_name, create_if_missing=True)
         new_layer_parent_tree = self.magpie.get_parents_resource_tree(new_layer_id)
         assert new_layer_parent_tree[1]["resource_id"] == workspace2_id
+
+    def test_create_permission_by_res_id(self):
+        """
+        Tests the method used to create a permission on a specific resource id.
+        """
+
+        workspace_name = "test_workspace"
+        layer_name = "test_layer"
+
+        data = {
+            "service_name": "geoserver",
+            "service_type": ServiceGeoserver.service_type,
+            "service_sync_type": ServiceGeoserver.service_type,
+            "service_url": "http://localhost:9000/geoserver",
+            "configuration": {}
+        }
+        create_service(self.magpie, data)
+        layer_id = self.magpie.get_geoserver_layer_res_id(workspace_name, layer_name, create_if_missing=True)
+
+        # Should fail if no user name or group name is used
+        with pytest.raises(ValueError):
+            self.magpie.create_permission_by_res_id(res_id=layer_id,
+                                                    perm_name=Permission.DESCRIBE_LAYER.value,
+                                                    perm_access=Access.ALLOW.value,
+                                                    perm_scope=Scope.MATCH.value)
+
+        resp = self.magpie.create_permission_by_res_id(res_id=layer_id,
+                                                       perm_name=Permission.DESCRIBE_LAYER.value,
+                                                       perm_access=Access.ALLOW.value,
+                                                       perm_scope=Scope.MATCH.value,
+                                                       user_name=self.usr)
+        # Permission created successfully
+        assert resp.status_code == 201
+
+        resp = self.magpie.create_permission_by_res_id(res_id=layer_id,
+                                                       perm_name=Permission.DESCRIBE_LAYER.value,
+                                                       perm_access=Access.ALLOW.value,
+                                                       perm_scope=Scope.MATCH.value,
+                                                       user_name=self.usr)
+        # No permission to create or to update, because it already exists
+        assert resp is None
+
+        resp = self.magpie.create_permission_by_res_id(res_id=layer_id,
+                                                       perm_name=Permission.DESCRIBE_LAYER.value,
+                                                       perm_access=Access.ALLOW.value,
+                                                       perm_scope=Scope.RECURSIVE.value,  # Modified scope
+                                                       user_name=self.usr)
+        # Existing permission updated successfully
+        assert resp.status_code == 200

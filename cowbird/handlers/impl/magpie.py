@@ -5,7 +5,7 @@ import requests
 from magpie.models import Layer, Workspace
 from magpie.permissions import Permission
 from magpie.services import ServiceGeoserver
-from pyramid.httpexceptions import HTTPError
+from pyramid.response import Response
 from requests.cookies import RequestsCookieJar
 
 from cowbird.config import ConfigError
@@ -105,7 +105,8 @@ class Magpie(Handler):
         if not self.service_types:
             resp = self._send_request(method="GET", url=f"{self.url}/services/types")
             if resp.status_code != 200:
-                raise RuntimeError("Could not get Magpie's service types.")
+                raise MagpieHttpError("Could not get Magpie's service types. "
+                                      f"HttpError {resp.status_code} : {resp.text}")
             self.service_types = list(resp.json()["service_types"])
         return self.service_types
 
@@ -117,21 +118,24 @@ class Magpie(Handler):
         # type: (str) -> Dict[str, JSON]
         resp = self._send_request(method="GET", url=f"{self.url}/services/types/{service_type}")
         if resp.status_code != 200:
-            raise RuntimeError(f"Failed to get the services of type `{service_type}`.")
+            raise MagpieHttpError(f"Failed to get the services of type `{service_type}`. "
+                                  f"HttpError {resp.status_code} : {resp.text}")
         return resp.json()["services"][service_type]
 
     def get_service_info(self, service_name):
         # type: (str) -> Dict[str, JSON]
         resp = self._send_request(method="GET", url=f"{self.url}/services/{service_name}")
         if resp.status_code != 200:
-            raise RuntimeError(f"Could not find the `{service_name}` service info.")
+            raise MagpieHttpError(f"Could not find the `{service_name}` service info. "
+                                  f"HttpError {resp.status_code} : {resp.text}")
         return resp.json()["service"]
 
     def get_resources_by_service(self, service_name):
         # type: (str) -> Dict[str, JSON]
         resp = self._send_request(method="GET", url=f"{self.url}/services/{service_name}/resources")
         if resp.status_code != 200:
-            raise RuntimeError(f"Could not find the `{service_name}` service's resources.")
+            raise MagpieHttpError(f"Could not find the `{service_name}` service's resources. "
+                                  f"HttpError {resp.status_code} : {resp.text}")
         return resp.json()[service_name]
 
     def get_parents_resource_tree(self, resource_id):
@@ -142,7 +146,8 @@ class Magpie(Handler):
         data = {"parent": "true", "invert": "true", "flatten": "true"}
         resp = self._send_request(method="GET", url=f"{self.url}/resources/{resource_id}", params=data)
         if resp.status_code != 200:
-            raise RuntimeError(f"Could not find the parent resources of the resource id `{resource_id}`.")
+            raise MagpieHttpError(f"Could not find the parent resources of the resource id `{resource_id}`. "
+                                  f"HttpError {resp.status_code} : {resp.text}")
         return resp.json()["resources"]
 
     def get_resource(self, resource_id):
@@ -152,11 +157,12 @@ class Magpie(Handler):
         """
         resp = self._send_request(method="GET", url=f"{self.url}/resources/{resource_id}", params={"parent": "false"})
         if resp.status_code != 200:
-            raise RuntimeError(f"Could not find the resource with the id `{resource_id}.")
+            raise MagpieHttpError(f"Could not find the resource with the id `{resource_id}. "
+                                  f"HttpError {resp.status_code} : {resp.text}")
         return resp.json()["resource"]
 
     def get_geoserver_workspace_res_id(self, workspace_name, create_if_missing=False):
-        # type: (str) -> Union[int, None]
+        # type: (str, Optional[bool]) -> Union[int, None]
         """
         Finds the resource id of a workspace resource from the `geoserver` type services.
         """
@@ -217,7 +223,8 @@ class Magpie(Handler):
         """
         resp = self._send_request(method="GET", url=f"{self.url}/users/{user}/resources")
         if resp.status_code != 200:
-            raise RuntimeError(f"Could not find the user `{user}` resource permissions.")
+            raise MagpieHttpError(f"Could not find the user `{user}` resource permissions. "
+                                  f"HttpError {resp.status_code} : {resp.text}")
         return resp.json()["resources"]
 
     def get_user_permissions_by_res_id(self, user, res_id, effective=False):
@@ -225,7 +232,8 @@ class Magpie(Handler):
         resp = self._send_request(method="GET", url=f"{self.url}/users/{user}/resources/{res_id}/permissions",
                                   params={"effective": effective})
         if resp.status_code != 200:
-            raise RuntimeError(f"Could not find the user `{user}` permissions for the resource `{res_id}`.")
+            raise MagpieHttpError(f"Could not find the user `{user}` permissions for the resource `{res_id}`. "
+                                  f"HttpError {resp.status_code} : {resp.text}")
         return resp.json()
 
     def get_group_permissions(self, grp):
@@ -235,7 +243,8 @@ class Magpie(Handler):
         """
         resp = self._send_request(method="GET", url=f"{self.url}/groups/{grp}/resources")
         if resp.status_code != 200:
-            raise RuntimeError(f"Could not find the group `{grp}` resource permissions.")
+            raise MagpieHttpError(f"Could not find the group `{grp}` resource permissions. "
+                                  f"HttpError {resp.status_code} : {resp.text}")
         return resp.json()["resources"]
 
     def get_group_permissions_by_res_id(self, grp, res_id, effective=False):
@@ -243,7 +252,8 @@ class Magpie(Handler):
         resp = self._send_request(method="GET", url=f"{self.url}/groups/{grp}/resources/{res_id}/permissions",
                                   params={"effective": effective})
         if resp.status_code != 200:
-            raise RuntimeError(f"Could not find the group `{grp}` permissions for the resource `{res_id}`.")
+            raise MagpieHttpError(f"Could not find the group `{grp}` permissions for the resource `{res_id}`. "
+                                  f"HttpError {resp.status_code} : {resp.text}")
         return resp.json()
 
     def user_created(self, user_name):
@@ -271,12 +281,12 @@ class Magpie(Handler):
             if resp.status_code == 200:
                 LOGGER.info("Permission creation was successful.")
             else:
-                raise HTTPError(f"HTTPError {resp.status_code} - Failed to create permissions : {resp.text}")
+                raise MagpieHttpError(f"HttpError {resp.status_code} - Failed to create permissions : {resp.text}")
         else:
             LOGGER.warning("Empty permission data, no permissions to create.")
 
     def create_permission_by_res_id(self, res_id, perm_name, perm_access, perm_scope, user_name="", grp_name=""):
-        # type: (int, str, str, str, Optional[str], Optional[str]) -> None
+        # type: (int, str, str, str, Optional[str], Optional[str]) -> Union[Response, None]
 
         if user_name:
             url = f"{self.url}/users/{user_name}/resources/{res_id}/permissions"
@@ -287,7 +297,7 @@ class Magpie(Handler):
 
         resp = self._send_request(method="GET", url=url)
         if resp.status_code != 200:
-            raise HTTPError(f"HTTPError {resp.status_code} - Failed to find resource: {resp.text}")
+            raise MagpieHttpError(f"HttpError {resp.status_code} - Failed to find resource: {resp.text}")
 
         # By default, POST to create a new permission, but check before if the permission already exists, to avoid
         # unnecessary events in Magpie.
@@ -296,7 +306,7 @@ class Magpie(Handler):
             if perm["name"] == perm_name:
                 if perm["access"] == perm_access and perm["scope"] == perm_scope:
                     LOGGER.debug("Similar permission already exist on resource for user/group.")
-                    return
+                    return None  # No request to apply
                 # Permission already exists but an update is required to modify parameters
                 method = "PUT"
                 break
@@ -313,23 +323,24 @@ class Magpie(Handler):
         if resp.status_code in [200, 201]:
             LOGGER.info("Permission creation was successful.")
         else:
-            raise HTTPError(f"HTTPError {resp.status_code} - Failed to create permission : {resp.text}")
+            raise MagpieHttpError(f"HttpError {resp.status_code} - Failed to create permission : {resp.text}")
+        return resp
 
     def create_permission_by_user_and_res_id(self, user_name, res_id, perm_name, perm_access, perm_scope):
-        # type: (str, int, str, str, str) -> None
-        self.create_permission_by_res_id(res_id=res_id,
-                                         perm_name=perm_name,
-                                         perm_access=perm_access,
-                                         perm_scope=perm_scope,
-                                         user_name=user_name)
+        # type: (str, int, str, str, str) -> Union[Response, None]
+        return self.create_permission_by_res_id(res_id=res_id,
+                                                perm_name=perm_name,
+                                                perm_access=perm_access,
+                                                perm_scope=perm_scope,
+                                                user_name=user_name)
 
     def create_permission_by_grp_and_res_id(self, grp_name, res_id, perm_name, perm_access, perm_scope):
-        # type: (str, int, str, str, str) -> None
-        self.create_permission_by_res_id(res_id=res_id,
-                                         perm_name=perm_name,
-                                         perm_access=perm_access,
-                                         perm_scope=perm_scope,
-                                         grp_name=grp_name)
+        # type: (str, int, str, str, str) -> Union[Response, None]
+        return self.create_permission_by_res_id(res_id=res_id,
+                                                perm_name=perm_name,
+                                                perm_access=perm_access,
+                                                perm_scope=perm_scope,
+                                                grp_name=grp_name)
 
     def delete_permission_by_user_and_res_id(self, user_name, res_id, permission_name):
         # type: (str, int, str) -> None
@@ -340,7 +351,7 @@ class Magpie(Handler):
         elif resp.status_code == 404:
             LOGGER.debug("No permission found to delete.")
         else:
-            raise HTTPError(f"HTTPError {resp.status_code} - Failed to delete permission : {resp.text}")
+            raise MagpieHttpError(f"HttpError {resp.status_code} - Failed to delete permission : {resp.text}")
 
     def delete_permission_by_grp_and_res_id(self, grp_name, res_id, permission_name):
         # type: (str, int, str) -> None
@@ -351,7 +362,7 @@ class Magpie(Handler):
         elif resp.status_code == 404:
             LOGGER.debug("No permission found to delete.")
         else:
-            raise HTTPError(f"HTTPError {resp.status_code} - Failed to delete permission : {resp.text}")
+            raise MagpieHttpError(f"HttpError {resp.status_code} - Failed to delete permission : {resp.text}")
 
     def delete_permission(self, permissions_data):
         # type: (List[Dict[str,str]]) -> None
@@ -366,7 +377,7 @@ class Magpie(Handler):
             if resp.status_code == 200:
                 LOGGER.info("Permission removal was successful.")
             else:
-                raise HTTPError(f"HTTPError {resp.status_code} - Failed to remove permissions : {resp.text}")
+                raise MagpieHttpError(f"HttpError {resp.status_code} - Failed to remove permissions : {resp.text}")
         else:
             LOGGER.warning("Empty permission data, no permissions to remove.")
 
@@ -383,7 +394,7 @@ class Magpie(Handler):
         }
         resp = self._send_request(method="POST", url=f"{self.url}/resources", json=resource_data)
         if resp.status_code != 201:
-            raise HTTPError(f"HTTPError {resp.status_code} - Failed to create resource : {resp.text}")
+            raise MagpieHttpError(f"HttpError {resp.status_code} - Failed to create resource : {resp.text}")
         LOGGER.info("Resource creation was successful.")
         return resp.json()["resource"]["resource_id"]
 
@@ -395,7 +406,7 @@ class Magpie(Handler):
         elif resp.status_code == 404:
             LOGGER.info("Resource id was not found. No resource to delete.")
         else:
-            raise HTTPError(f"HTTPError {resp.status_code} - Failed to delete resource : {resp.text}")
+            raise MagpieHttpError(f"HttpError {resp.status_code} - Failed to delete resource : {resp.text}")
 
     def login(self):
         # type: () -> RequestsCookieJar
@@ -413,3 +424,9 @@ class Magpie(Handler):
             self.cookies = resp.cookies
             self.last_cookies_update_time = time.time()
         return self.cookies
+
+
+class MagpieHttpError(Exception):
+    """
+    Exception related to http requests done by the Magpie handler.
+    """
