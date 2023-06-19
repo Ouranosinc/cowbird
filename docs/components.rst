@@ -86,9 +86,9 @@ The same would apply if we use ``write`` permissions in this last example.
 
 The permissions applied on the files/directories are only applied to ``others``, and the permissions on the ``user``
 and on the ``group`` are not modified by the Geoserver handler. The user and group associated with the files will be
-the admin user/group (``root`` by default), while the user who will interact with the files, for example in `JupyterHub`,
-is a distinct user, hence why the permissions are applied to ``others``. This will also prevent the user from
-changing the permissions if he decides to interact with the terminal accessible via `JupyterLab`.
+the admin user/group (``root`` by default), while the user who will interact with the files, for example in
+`JupyterHub`, is a distinct user, hence why the permissions are applied to ``others``. This will also prevent the user
+from changing the permissions if he decides to interact with the terminal accessible via `JupyterLab`.
 Note that, consequently, the concept of a `Magpie`_ group is not used on the file system for now. This means that if a
 permission is applied to a group in `Magpie`_, `Cowbird` will detect the permission change but will not do anything,
 since the group on the file system does not correspond to the groups found on `Magpie`_. Also, it would not make sense
@@ -114,7 +114,7 @@ needed for shapefiles.
 .. _geoserver_directory_workspace_permissions:
 
 Directory/Workspace permissions
-############################
+###############################
 
 Workspaces will always keep their ``execute`` permissions even if they don't have any permissions enabled on `Magpie`_.
 This enables accessing the children files, in case the children resource has permissions enabled on `Magpie`_.

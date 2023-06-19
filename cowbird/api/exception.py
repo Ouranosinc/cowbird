@@ -156,8 +156,8 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
             raise TypeError("'param_compare' cannot be 'None' with specified test flags")
         is_str_typ = param_compare is str
         is_cmp_typ = isinstance(param_compare, type) or (
-                hasattr(param_compare, "__iter__") and
-                all(isinstance(cmp, type) for cmp in param_compare)
+            hasattr(param_compare, "__iter__") and
+            all(isinstance(cmp, type) for cmp in param_compare)
         )
         if needs_compare and not needs_iterable:
             # allow 'different' string literals for comparison, otherwise types between value/compare must match exactly

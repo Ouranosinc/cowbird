@@ -23,7 +23,7 @@ from magpie.services import ServiceGeoserver
 from cowbird.constants import COWBIRD_ROOT, DEFAULT_ADMIN_GID, DEFAULT_ADMIN_UID
 from cowbird.handlers import HandlerFactory
 from cowbird.handlers.impl.geoserver import SHAPEFILE_MAIN_EXTENSION, Geoserver, GeoserverError
-from cowbird.handlers.impl.magpie import GEOSERVER_READ_PERMISSIONS, GEOSERVER_WRITE_PERMISSIONS
+from cowbird.handlers.impl.magpie import GEOSERVER_READ_PERMISSIONS, GEOSERVER_WRITE_PERMISSIONS, MagpieHttpError
 from cowbird.permissions_synchronizer import Permission
 from tests import test_magpie, utils
 
@@ -448,7 +448,7 @@ class TestGeoserverPermissions(TestGeoserver):
             assert not os.path.exists(file)
 
         # Check that magpie layer resource was removed
-        with pytest.raises(RuntimeError):
+        with pytest.raises(MagpieHttpError):
             self.magpie.get_user_permissions_by_res_id(self.magpie_test_user, self.layer_id)
 
     def test_workspace_on_created(self):
@@ -555,7 +555,7 @@ class TestGeoserverPermissions(TestGeoserver):
 
         # Check that the user workspace magpie resources are deleted after a `user_deleted` event
         self.geoserver.user_deleted(self.magpie_test_user)
-        with pytest.raises(RuntimeError):
+        with pytest.raises(MagpieHttpError):
             self.magpie.get_resource(self.workspace_res_id)
 
     def test_magpie_layer_permissions(self):
