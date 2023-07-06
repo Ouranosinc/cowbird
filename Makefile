@@ -483,8 +483,10 @@ docker-clean: docker-down  ## remove all built docker images (only matching curr
 mkdir-reports:
 	@mkdir -p "$(REPORTS_DIR)"
 
+# autogen check variants with pre-install of dependencies using the '-only' target references
 CHECKS := pep8 lint security doc8 links imports css
 CHECKS := $(addprefix check-, $(CHECKS))
+$(CHECKS): check-%: install-dev check-%-only
 
 .PHONY: check
 check: check-all	## alias for 'check-all' target
@@ -492,15 +494,18 @@ check: check-all	## alias for 'check-all' target
 .PHONY: check-all
 check-all: $(CHECKS)	## run every code style checks
 
-.PHONY: check-pep8
-check-pep8: mkdir-reports install-dev		## run PEP8 code style checks
+.PHONY: check-only
+check-only: $(addsuffix -only, $(CHECKS))	## run all linting checks without development dependencies pre-install
+
+.PHONY: check-pep8-only
+check-pep8-only: mkdir-reports		## run PEP8 code style checks
 	@echo "Running PEP8 code style checks..."
 	@-rm -fr "$(REPORTS_DIR)/check-pep8.txt"
 	@bash -c '$(CONDA_CMD) \
 		flake8 --config="$(APP_ROOT)/setup.cfg" --output-file="$(REPORTS_DIR)/check-pep8.txt" --tee'
 
-.PHONY: check-lint
-check-lint: mkdir-reports install-dev		## run linting code style checks
+.PHONY: check-lint-only
+check-lint-only: mkdir-reports		## run linting code style checks
 	@echo "Running linting code style checks..."
 	@-rm -fr "$(REPORTS_DIR)/check-lint.txt"
 	@bash -c '$(CONDA_CMD) \
@@ -511,27 +516,27 @@ check-lint: mkdir-reports install-dev		## run linting code style checks
 			"$(APP_ROOT)/$(APP_NAME)" "$(APP_ROOT)/docs" "$(APP_ROOT)/tests" \
 		1> >(tee "$(REPORTS_DIR)/check-lint.txt")'
 
-.PHONY: check-security
-check-security: mkdir-reports install-dev	## run security code checks
+.PHONY: check-security-only
+check-security-only: mkdir-reports	## run security code checks
 	@echo "Running security code checks..."
 	@-rm -fr "$(REPORTS_DIR)/check-security.txt"
 	@bash -c '$(CONDA_CMD) \
 		bandit -v --ini "$(APP_ROOT)/setup.cfg" -r \
 		1> >(tee "$(REPORTS_DIR)/check-security.txt")'
 
-.PHONY: check-docs
-check-docs: check-doc8 check-docf	## run every code documentation checks
+.PHONY: check-docs-only
+check-docs-only: check-doc8-only check-docf-only	## run every code documentation checks
 
-.PHONY: check-doc8
-check-doc8:	mkdir-reports install-dev		## run PEP8 documentation style checks
+.PHONY: check-doc8-only
+check-doc8-only: mkdir-reports		## run PEP8 documentation style checks
 	@echo "Running PEP8 doc style checks..."
 	@-rm -fr "$(REPORTS_DIR)/check-doc8.txt"
 	@bash -c '$(CONDA_CMD) \
 		doc8 --config "$(APP_ROOT)/setup.cfg" "$(APP_ROOT)/docs" \
 		1> >(tee "$(REPORTS_DIR)/check-doc8.txt")'
 
-.PHONY: check-docf
-check-docf: mkdir-reports install-dev	## run PEP8 code documentation format checks
+.PHONY: check-docf-only
+check-docf-only: mkdir-reports	## run PEP8 code documentation format checks
 	@echo "Checking PEP8 doc formatting problems..."
 	@-rm -fr "$(REPORTS_DIR)/check-docf.txt"
 	@bash -c '$(CONDA_CMD) \
@@ -542,13 +547,13 @@ check-docf: mkdir-reports install-dev	## run PEP8 code documentation format chec
 			"$(APP_ROOT)" \
 		1>&2 2> >(tee "$(REPORTS_DIR)/check-docf.txt")'
 
-.PHONY: check-links
-check-links: install-dev	## check all external links in documentation for integrity
+.PHONY: check-links-only
+check-links-only:	## check all external links in documentation for integrity
 	@echo "Running link checks on docs..."
 	@bash -c '$(CONDA_CMD) $(MAKE) -C "$(APP_ROOT)/docs" linkcheck'
 
-.PHONY: check-imports
-check-imports: mkdir-reports install-dev	## run imports code checks
+.PHONY: check-imports-only
+check-imports-only: mkdir-reports	## run imports code checks
 	@echo "Running import checks..."
 	@-rm -fr "$(REPORTS_DIR)/check-imports.txt"
 	@bash -c '$(CONDA_CMD) \
@@ -556,15 +561,20 @@ check-imports: mkdir-reports install-dev	## run imports code checks
 		1> >(tee "$(REPORTS_DIR)/check-imports.txt")'
 
 .PHONY: check-css
-check-css: mkdir-reports install-npm
+check-css: install-npm check-css-only
+
+.PHONY: check-css-only
+check-css-only: mkdir-reports install-npm
 	@echo "Running CSS style checks..."
 	@npx stylelint \
 		--config "$(APP_ROOT)/.stylelintrc.json" \
 		--output-file "$(REPORTS_DIR)/fixed-css.txt" \
 		"$(APP_ROOT)/**/*.css"
 
+# autogen fix variants with pre-install of dependencies using the '-only' target references
 FIXES := imports lint docf fstring css
 FIXES := $(addprefix fix-, $(FIXES))
+$(FIXES): fix-%: install-dev fix-%-only
 
 .PHONY: fix
 fix: fix-all	## alias for 'fix-all' target
@@ -572,24 +582,27 @@ fix: fix-all	## alias for 'fix-all' target
 .PHONY: fix-all
 fix-all: $(FIXES)	## fix all applicable code check corrections automatically
 
-.PHONY: fix-imports
-fix-imports: install-dev	## fix import code checks corrections automatically
+.PHONY: fix-only
+fix-only: $(addsuffix -only, $(FIXES))	## run all automatic fixes without development dependencies pre-install
+
+.PHONY: fix-imports-only
+fix-imports-only:	## fix import code checks corrections automatically
 	@echo "Fixing flagged import checks..."
 	@-rm -fr "$(REPORTS_DIR)/fixed-imports.txt"
 	@bash -c '$(CONDA_CMD) \
 		isort $(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/fixed-imports.txt")'
 
-.PHONY: fix-lint
-fix-lint: install-dev	## fix some PEP8 code style problems automatically
+.PHONY: fix-lint-only
+fix-lint-only:	## fix some PEP8 code style problems automatically
 	@echo "Fixing PEP8 code style problems..."
 	@-rm -fr "$(REPORTS_DIR)/fixed-lint.txt"
 	@bash -c '$(CONDA_CMD) \
 		autopep8 -v -j 0 -i -r $(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/fixed-lint.txt")'
 
-.PHONY: fix-docf
-fix-docf: install-dev	## fix some PEP8 code documentation style problems automatically
+.PHONY: fix-docf-only
+fix-docf-only:	## fix some PEP8 code documentation style problems automatically
 	@echo "Fixing PEP8 code documentation problems..."
 	@-rm -fr "$(REPORTS_DIR)/fixed-docf.txt"
 	@bash -c '$(CONDA_CMD) \
@@ -600,8 +613,8 @@ fix-docf: install-dev	## fix some PEP8 code documentation style problems automat
 			$(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/fixed-docf.txt")'
 
-.PHONY: fix-fstring
-fix-fstring: mkdir-reports install-dev    ## fix code string formats substitutions to f-string definitions automatically
+.PHONY: fix-fstring-only
+fix-fstring-only: mkdir-reports		## fix code string formats substitutions to f-string definitions automatically
 	@echo "Fixing code string formats substitutions to f-string definitions..."
 	@-rm -f "$(REPORTS_DIR)/fixed-fstring.txt"
 	@bash -c '$(CONDA_CMD) \
@@ -609,7 +622,10 @@ fix-fstring: mkdir-reports install-dev    ## fix code string formats substitutio
 		1> >(tee "$(REPORTS_DIR)/fixed-fstring.txt")'
 
 .PHONY: fix-css
-fix-css: mkdir-reports install-npm		## fix CSS styles problems automatically
+fix-css: install-npm fix-css-only
+
+.PHONY: fix-css-only
+fix-css-only: mkdir-reports		## fix CSS styles problems automatically
 	@echo "Fixing CSS style problems..."
 	@npx stylelint \
 		--fix \
