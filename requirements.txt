@@ -1,5 +1,5 @@
 -r requirements-sys.txt
-celery[mongodb]>=5.2.2
+celery[mongodb]>=5.3.1,<5.4
 colander
 cornice>=5
 cornice_swagger>=0.7.0
