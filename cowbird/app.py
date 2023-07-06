@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # coding: utf-8
-
 """
 Cowbird is a middleware that manages interactions between various birds of the bird-house stack.
 """

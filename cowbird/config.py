@@ -82,11 +82,10 @@ def _load_config(path_or_dict, section, allow_missing=False):
 def get_all_configs(path_or_dict, section, allow_missing=False):
     # type: (Union[str, ConfigDict], str, bool) -> List[ConfigDict]
     """
-    Loads all configuration files specified by the path (if a directory),
-    a single configuration (if a file) or directly
+    Loads all configuration files specified by the path (if a directory), a single configuration (if a file) or directly
     returns the specified dictionary section (if a configuration dictionary).
-    :returns:
 
+    :returns:
         - list of configurations loaded if input was a directory path
         - list of single configuration if input was a file path
         - list of single configuration if input was a JSON dict
