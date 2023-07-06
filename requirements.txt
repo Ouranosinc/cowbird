@@ -1,5 +1,6 @@
 -r requirements-sys.txt
-celery[mongodb]>=5.3.1,<5.4
+celery[mongodb]>=5.2.2; python_version < "3.8"  # pyup: ignore  # no more support for older versions
+celery[mongodb]>=5.3.1,<5.4; python_version >= "3.8"
 colander
 cornice>=5
 cornice_swagger>=0.7.0

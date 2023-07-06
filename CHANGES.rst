@@ -7,6 +7,8 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Update Docker image to use ``python:3.10-alpine`` instead of ``python:3.7-alpine`` for
+  latest security updates and performance improvements.
 * Update multiple package dependencies flagged by PyUp.
 
 `1.1.1 <https://github.com/Ouranosinc/cowbird/tree/1.1.1>`_ (2023-03-24)
