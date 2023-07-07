@@ -8,15 +8,23 @@ from cowbird.utils import CONTENT_TYPE_JSON, get_logger
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Any, Iterable, Optional, Type, Union
+    from typing import Any, Iterable, Optional, Tuple, Type, Union
 
     from pyramid.request import Request
+
+    from cowbird.typedefs import JSON
 
 LOGGER = get_logger(__name__)
 
 
-def check_value(value, param_name, check_type=str, pattern=ax.PARAM_REGEX, http_error=None, msg_on_fail=None):
-    # type: (Any, str, Any, Optional[Union[str, bool]], Optional[Type[HTTPError]], Optional[str]) -> None
+def check_value(value,                  # type: Any
+                param_name,             # type: str
+                check_type=str,         # type: Union[Type[Any], Tuple[Type[Any], ...]]
+                pattern=ax.PARAM_REGEX, # type: Optional[Union[str, bool]]
+                http_error=None,        # type: Optional[Type[HTTPError]]
+                msg_on_fail=None        # type: Optional[str]
+                ):
+    # type: (...) -> None
     """
     Validates the value against specified type and pattern.
 
@@ -69,9 +77,15 @@ def get_multiformat_body_raw(request, key, default=None):
                             http_error=HTTPInternalServerError, msg_on_fail=msg)
 
 
-def get_multiformat_body(request, key, default=None, check_type=str, pattern=ax.PARAM_REGEX,
-                         http_error=None, msg_on_fail=None):
-    # type: (Request, str, Any, Any, Optional[Union[str, bool]], Optional[Type[HTTPError]], Optional[str]) -> Any
+def get_multiformat_body(request,                   # type: Request
+                         key,                       # type: str
+                         default=None,              # type: Any
+                         check_type=str,            # type: Union[Type[Any], Tuple[Type[Any], ...]]
+                         pattern=ax.PARAM_REGEX,    # type: Optional[Union[str, bool]]
+                         http_error=None,           # type: Optional[Type[HTTPError]]
+                         msg_on_fail=None           # type: Optional[str]
+                         ):
+    # type: (...) -> JSON
     """
     Obtains and validates the matched value under :paramref:`key` element from the request body.
 
