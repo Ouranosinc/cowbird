@@ -1,5 +1,4 @@
 import inspect
-import traceback
 
 import requests
 from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError, HTTPOk

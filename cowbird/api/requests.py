@@ -17,12 +17,12 @@ if TYPE_CHECKING:
 LOGGER = get_logger(__name__)
 
 
-def check_value(value,                  # type: Any
-                param_name,             # type: str
-                check_type=str,         # type: Union[Type[Any], Tuple[Type[Any], ...]]
-                pattern=ax.PARAM_REGEX, # type: Optional[Union[str, bool]]
-                http_error=None,        # type: Optional[Type[HTTPError]]
-                msg_on_fail=None        # type: Optional[str]
+def check_value(value,                      # type: Any
+                param_name,                 # type: str
+                check_type=str,             # type: Union[Type[Any], Tuple[Type[Any], ...]]
+                pattern=ax.PARAM_REGEX,     # type: Optional[Union[str, bool]]
+                http_error=None,            # type: Optional[Type[HTTPError]]
+                msg_on_fail=None            # type: Optional[str]
                 ):
     # type: (...) -> None
     """
