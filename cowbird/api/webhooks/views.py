@@ -34,8 +34,7 @@ def dispatch(handler_fct):
         except Exception as exception:  # noqa
             exceptions.append(exception)
             LOGGER.error("Exception raised while handling event [%s] for handler [%s] : [%r].",
-                         event_name, handler.name, exception)
-            traceback.print_exc()
+                         event_name, handler.name, exception, exc_info=True)
     if not handlers:
         LOGGER.warning("No handlers matched for dispatch of event [%s].", event_name)
     if exceptions:
