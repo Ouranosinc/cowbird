@@ -564,7 +564,7 @@ check-imports-only: mkdir-reports	## run imports code checks
 check-css: install-npm check-css-only
 
 .PHONY: check-css-only
-check-css-only: mkdir-reports install-npm
+check-css-only: mkdir-reports
 	@echo "Running CSS style checks..."
 	@npx stylelint \
 		--config "$(APP_ROOT)/.stylelintrc.json" \
