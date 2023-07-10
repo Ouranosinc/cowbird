@@ -4,6 +4,7 @@ import importlib
 import json
 import logging
 import os
+import stat
 import subprocess  # nosec B404
 import sys
 import types
@@ -583,3 +584,16 @@ def get_timeout(container=None):
     return int(get_constant("COWBIRD_REQUEST_TIMEOUT", container,
                             default_value=5,
                             raise_missing=False, raise_not_set=False))
+
+
+def update_filesystem_permissions(permission, is_readable, is_writable, is_executable):
+    # type: (int, bool, bool, bool) -> int
+    """
+    Applies/remove read, write and execute permissions (user only) to the input file system permissions.
+    """
+    for perm_enabled, perm_mode in zip([is_readable, is_writable, is_executable],
+                                       [stat.S_IROTH, stat.S_IWOTH, stat.S_IXOTH]):
+        permission = permission | perm_mode if perm_enabled else permission & ~perm_mode
+    # Only use the 3 last octal digits
+    permission = permission & 0o777
+    return permission

@@ -43,7 +43,8 @@ class Permission:
 
     def __init__(self,
                  service_name,        # type: str
-                 resource_id,         # type: str
+                 service_type,        # type: str
+                 resource_id,         # type: int
                  resource_full_name,  # type: str
                  name,                # type: str
                  access,              # type: str
@@ -52,6 +53,7 @@ class Permission:
                  group=None           # type: str
                  ):                   # type: (...) -> None
         self.service_name = service_name
+        self.service_type = service_type
         self.resource_id = resource_id
         self.resource_full_name = resource_full_name
         self.name = name
@@ -63,6 +65,7 @@ class Permission:
     def __eq__(self, other):
         # type: (Permission) -> bool
         return (self.service_name == other.service_name and
+                self.service_type == other.service_type and
                 self.resource_id == other.resource_id and
                 self.resource_full_name == other.resource_full_name and
                 self.name == other.name and
@@ -95,8 +98,8 @@ class SyncPoint:
         Init the sync point, holding services with their respective resources root and how access are mapped between
         them.
 
-        :param services: Dict containing the resource keys by service and all the names/types of each segment of those
-                         resource keys
+        :param services: Dict containing the resource keys by service type and all the names/types of each segment of
+                         those resource keys
         :param permissions_mapping_list: List of strings representing a permission mapping between two resource keys
         """
         self.services = {svc: svc_cfg for svc, svc_cfg in services.items()}
@@ -193,61 +196,62 @@ class SyncPoint:
                 formatted_path += "/" + segment.split(RES_NAMETYPE_SEPARATOR)[0]
         return formatted_path
 
-    def _find_matching_res(self, service_name, resource_nametype_path):
+    def _find_matching_res(self, service_type, resource_nametype_path):
         # type: (str, str) -> (str, Dict[str, str])
         """
         Finds a resource key that matches the input resource path, in the sync_permissions config. Note that it returns
         the longest match and only the named segments of the path are included in the length value. Any tokenized
         segment is ignored in the length.
 
-        :param service_name: Name of the service associated with the input resource.
+        :param service_type: Type of the service associated with the input resource.
         :param resource_nametype_path: Full resource path name, which includes the type of each segment
                                        (ex.: /name1::type1/name2::type2)
         """
-        service_resources = self.services[service_name]
+        if service_type in self.services:
+            # Find which resource from the config matches with the input permission's resource tree
+            # The length of a match is determined by the number of named segments matching the input resource.
+            # Tokens are ignored from the match length since we favor a match with specific names over another with
+            # generic tokens.
+            #
+            # Example cases:
+            # 1:
+            # - /dir1/**
+            # - /dir1/dir2/dir3/** # We favor this path if it matches since it is more specific.
+            # 2:
+            # - /dir/file # We favor this path if it matches since it is more specific.
+            # - /dir/{var}
+            # 3:
+            # Here both paths can match with the input resource_path `/file` and would result in an ambiguous match.
+            # An error would be raised because 2 matches of the same length would be found.
+            # - /**/file
+            # - /file
 
-        # Find which resource from the config matches with the input permission's resource tree
-        # The length of a match is determined by the number of named segments matching the input resource.
-        # Tokens are ignored from the match length since we favor a match with specific names over another with
-        # generic tokens.
-        #
-        # Example cases:
-        # 1:
-        # - /dir1/**
-        # - /dir1/dir2/dir3/** # We favor this path if it matches since it is more specific.
-        # 2:
-        # - /dir/file # We favor this path if it matches since it is more specific.
-        # - /dir/{var}
-        # 3:
-        # Here both paths can match with the input resource_path `/file` and would result in an ambiguous match.
-        # An error would be raised because 2 matches of the same length would be found.
-        # - /**/file
-        # - /file
+            matched_length_by_res = {}
+            matched_groups_by_res = {}
+            service_resources = self.services[service_type]
+            for res_key, res_segments in service_resources.items():
+                res_regex, named_segments_count = SyncPoint._generate_regex_from_segments(res_segments)
+                matched_groups = re.match(res_regex, resource_nametype_path)
+                if matched_groups:
+                    matched_groups = matched_groups.groupdict()
+                    if "multi_token" in matched_groups:
+                        matched_groups["multi_token"] = \
+                            SyncPoint._remove_type_from_nametype_path(matched_groups["multi_token"])
+                    matched_groups_by_res[res_key] = matched_groups
+                    matched_length_by_res[res_key] = named_segments_count
 
-        matched_length_by_res = {}
-        matched_groups_by_res = {}
-        for res_key, res_segments in service_resources.items():
-            res_regex, named_segments_count = SyncPoint._generate_regex_from_segments(res_segments)
-            matched_groups = re.match(res_regex, resource_nametype_path)
-            if matched_groups:
-                matched_groups = matched_groups.groupdict()
-                if "multi_token" in matched_groups:
-                    matched_groups["multi_token"] = \
-                        SyncPoint._remove_type_from_nametype_path(matched_groups["multi_token"])
-                matched_groups_by_res[res_key] = matched_groups
-                matched_length_by_res[res_key] = named_segments_count
+            # Find the longest match
+            max_match_len = max(matched_length_by_res.values(), default=0)
+            max_matching_keys = [res for res, match_len in matched_length_by_res.items() if match_len == max_match_len]
+            if len(max_matching_keys) == 1:
+                src_res_key = max_matching_keys[0]
+                return src_res_key, matched_groups_by_res[src_res_key]
+            if len(max_matching_keys) > 1:
+                raise ValueError("Found multiple matching resources of the same length in the config in the service "
+                                 f"type {service_type}. Ambiguous config resources : {max_matching_keys}")
 
-        # Find the longest match
-        max_match_len = max(matched_length_by_res.values())
-        max_matching_keys = [res for res, match_len in matched_length_by_res.items() if match_len == max_match_len]
-        if len(max_matching_keys) == 1:
-            src_res_key = max_matching_keys[0]
-        elif len(max_matching_keys) > 1:
-            raise ValueError("Found 2 matching resources of the same length in the config. Ambiguous config resources :"
-                             f" {max_matching_keys}")
-        else:
-            raise ValueError("No matching resources could be found in the config file.")
-        return src_res_key, matched_groups_by_res[src_res_key]
+        # No matching resources could be found in the config file, return empty values.
+        return "", {}
 
     @staticmethod
     def _create_res_data(target_segments, input_matched_groups):
@@ -502,7 +506,10 @@ class SyncPoint:
         for res in src_resource_tree:
             resource_nametype_path += f"/{res['resource_name']}{RES_NAMETYPE_SEPARATOR}{res['resource_type']}"
 
-        src_res_key, src_matched_groups = self._find_matching_res(permission.service_name, resource_nametype_path)
+        src_res_key, src_matched_groups = self._find_matching_res(permission.service_type, resource_nametype_path)
+        if not src_res_key:
+            # A matching resource was not found in the sync config, nothing to do.
+            return
         target_permissions = self._find_permissions_to_sync(src_res_key, src_matched_groups, permission, perm_operation)
 
         for target in target_permissions.values():
@@ -555,15 +562,15 @@ class PermissionSynchronizer(object):
         """
         Create the same permission on each service sharing the same resource.
         """
-        resource_tree = self.magpie_inst.get_resources_tree(permission.resource_id)
+        resource_tree = self.magpie_inst.get_parents_resource_tree(permission.resource_id)
         for point in self.sync_point:
-            point.sync(self.magpie_inst.create_permission, permission, resource_tree)
+            point.sync(self.magpie_inst.create_permissions, permission, resource_tree)
 
     def delete_permission(self, permission):
         # type: (Permission) -> None
         """
         Delete the same permission on each service sharing the same resource.
         """
-        resource_tree = self.magpie_inst.get_resources_tree(permission.resource_id)
+        resource_tree = self.magpie_inst.get_parents_resource_tree(permission.resource_id)
         for point in self.sync_point:
             point.sync(self.magpie_inst.delete_permission, permission, resource_tree)

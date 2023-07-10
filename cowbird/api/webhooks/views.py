@@ -33,7 +33,7 @@ def dispatch(handler_fct):
         except Exception as exception:  # noqa
             exceptions.append(exception)
             LOGGER.error("Exception raised while handling event [%s] for handler [%s] : [%r].",
-                         event_name, handler.name, exception)
+                         event_name, handler.name, exception, exc_info=True)
     if not handlers:
         LOGGER.warning("No handlers matched for dispatch of event [%s].", event_name)
     if exceptions:
@@ -102,21 +102,25 @@ def post_permission_webhook_view(request):
                     is_in=True,
                     http_error=HTTPBadRequest,
                     msg_on_fail=s.PermissionWebhook_POST_BadRequestResponseSchema.description)
-    service_name = ar.get_multiformat_body(request, "service_name")
-    resource_id = ar.get_multiformat_body(request, "resource_id")
+    # Use raw value for service name, to avoid errors with `None` values
+    # when the permission is not applied to a `service` type resource.
+    service_name = ar.get_multiformat_body(request, "service_name", check_type=(str, type(None)))
+    service_type = ar.get_multiformat_body(request, "service_type")
+    resource_id = ar.get_multiformat_body(request, "resource_id", check_type=int)
     param_regex_with_slashes = r"^/?[A-Za-z0-9]+(?:[\s_\-\./:][A-Za-z0-9]+)*$"
     resource_full_name = ar.get_multiformat_body(request, "resource_full_name",
                                                  pattern=param_regex_with_slashes)
     name = ar.get_multiformat_body(request, "name")
     access = ar.get_multiformat_body(request, "access")
     scope = ar.get_multiformat_body(request, "scope")
-    user = ar.get_multiformat_body_raw(request, "user")
-    group = ar.get_multiformat_body_raw(request, "group")
+    user = ar.get_multiformat_body(request, "user", check_type=(str, type(None)))
+    group = ar.get_multiformat_body(request, "group", check_type=(str, type(None)))
     ax.verify_param(bool(user or group), is_true=True, http_error=HTTPBadRequest,
                     msg_on_fail=s.PermissionWebhook_POST_BadRequestResponseSchema.description)
 
     permission = Permission(
         service_name=service_name,
+        service_type=service_type,
         resource_id=resource_id,
         resource_full_name=resource_full_name,
         name=name,

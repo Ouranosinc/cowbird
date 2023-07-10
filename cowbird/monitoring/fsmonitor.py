@@ -15,31 +15,31 @@ class FSMonitor(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def on_created(self, filename):
+    def on_created(self, path):
         # type: (str) -> None
         """
-        Call when a new file is found.
+        Called when a new path is found.
 
-        :param filename: Relative filename of a new file
+        :param path: Absolute path of a new file/directory
         """
         raise NotImplementedError
 
     @abc.abstractmethod
-    def on_deleted(self, filename):
+    def on_deleted(self, path):
         # type: (str) -> None
         """
-        Call when a file is deleted.
+        Called when a path is deleted.
 
-        :param filename: Relative filename of the removed file
+        :param path: Absolute path of a new file/directory
         """
         raise NotImplementedError
 
     @abc.abstractmethod
-    def on_modified(self, filename):
+    def on_modified(self, path):
         # type: (str) -> None
         """
-        Call when a file is updated.
+        Called when a path is updated.
 
-        :param filename: Relative filename of the updated file
+        :param path: Absolute path of a new file/directory
         """
         raise NotImplementedError
