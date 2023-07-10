@@ -21,6 +21,7 @@ class TestFileSystem(unittest.TestCase):
         self.test_username = "test_username"
         self.callback_url = "callback_url"
         self.jupyterhub_user_data_dir = "/jupyterhub_user_data"
+        utils.clear_handlers_instances()
 
     def tearDown(self):
         utils.clear_handlers_instances()
@@ -53,7 +54,7 @@ class TestFileSystem(unittest.TestCase):
             assert user_workspace_dir.exists()
             assert os.path.islink(user_symlink)
             assert os.readlink(user_symlink) == os.path.join(self.jupyterhub_user_data_dir, self.test_username)
-            assert utils.check_file_permissions(user_workspace_dir, 0o755)
+            utils.check_path_permissions(user_workspace_dir, 0o755)
 
             # Creating a user if its directory already exists should not trigger any errors.
             # The symlink should be recreated if it is missing.
@@ -62,18 +63,18 @@ class TestFileSystem(unittest.TestCase):
             resp = utils.test_request(app, "POST", "/webhooks/users", json=data)
             utils.check_response_basic_info(resp, 200, expected_method="POST")
             assert user_workspace_dir.exists()
-            assert utils.check_file_permissions(user_workspace_dir, 0o755)
+            utils.check_path_permissions(user_workspace_dir, 0o755)
             assert os.path.islink(user_symlink)
             assert os.readlink(user_symlink) == os.path.join(self.jupyterhub_user_data_dir, self.test_username)
 
             # If the directory already exists, it should correct the directory to have the right permissions.
             os.chmod(user_workspace_dir, 0o777)
-            assert utils.check_file_permissions(user_workspace_dir, 0o777)
+            utils.check_path_permissions(user_workspace_dir, 0o777)
 
             resp = utils.test_request(app, "POST", "/webhooks/users", json=data)
             utils.check_response_basic_info(resp, 200, expected_method="POST")
             assert user_workspace_dir.exists()
-            assert utils.check_file_permissions(user_workspace_dir, 0o755)
+            utils.check_path_permissions(user_workspace_dir, 0o755)
 
             # If the symlink path already exists, but is a normal directory instead of a symlink,
             # an exception should occur.

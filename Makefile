@@ -19,7 +19,7 @@ MAKEFILE_NAME := $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))
 # Application
 APP_ROOT    := $(abspath $(lastword $(MAKEFILE_NAME))/..)
 APP_NAME    := cowbird
-APP_VERSION ?= 1.1.1
+APP_VERSION ?= 1.2.0
 APP_INI     ?= $(APP_ROOT)/config/$(APP_NAME).ini
 APP_PORT    ?= 7000
 
@@ -246,6 +246,7 @@ $(DOC_LOCATION):
 	@echo "Building docs..."
 	@bash -c '$(CONDA_CMD) \
 		sphinx-apidoc -o "$(APP_ROOT)/docs/" "$(APP_ROOT)/$(APP_NAME)"; \
+		sphinx-apidoc -o "$(APP_ROOT)/docs/" "$(APP_ROOT)/tests"; \
 		"$(MAKE)" -C "$(APP_ROOT)/docs" BUILDDIR=_build PACKAGE="$(APP_NAME)" html;'
 	@-echo "Documentation available: file://$(DOC_LOCATION)"
 
@@ -669,12 +670,6 @@ test-geoserver: install-dev install		## run Geoserver requests tests against a c
 test-magpie: install-dev install		## run Magpie requests tests against a configured Magpie instance. Most of these tests are "online" tests
 	@echo "Running local tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "magpie" --junitxml "$(APP_ROOT)/tests/results.xml"'
-
-# test target used by github's ci
-.PHONY: test-github
-test-github:  ## runs all tests except online tests, without prior dependency check and installation
-	@echo "Running tests..."
-	@bash -c '$(CONDA_CMD) pytest tests -vv -m "not online" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-custom
 test-custom: install-dev install	## run custom marker tests using SPEC="<marker-specification>"

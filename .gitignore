@@ -42,6 +42,7 @@ tests/results.*
 docs/_build
 docs/cowbird.tests.rst
 docs/cowbird.rst
+docs/tests.rst
 
 ## Celery
 celeryconfig*.py

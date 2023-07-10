@@ -57,26 +57,26 @@ class Catalog(Handler, FSMonitor):
         from cowbird.handlers.handler_factory import HandlerFactory
         return HandlerFactory().get_handler("Catalog")
 
-    def on_created(self, filename):
+    def on_created(self, path):
         """
-        Call when a new file is found.
+        Called when a new path is found.
 
-        :param filename: Relative filename of a new file
+        :param path: Absolute path of a new file/directory
         """
-        LOGGER.info("The following file [%s] has just been created", filename)
+        LOGGER.info("The following path [%s] has just been created", path)
 
-    def on_deleted(self, filename):
+    def on_deleted(self, path):
         """
-        Call when a file is deleted.
+        Called when a path is deleted.
 
-        :param filename: Relative filename of the removed file
+        :param path: Absolute path of a new file/directory
         """
-        LOGGER.info("The following file [%s] has just been deleted", filename)
+        LOGGER.info("The following path [%s] has just been deleted", path)
 
-    def on_modified(self, filename):
+    def on_modified(self, path):
         """
-        Call when a file is updated.
+        Called when a path is updated.
 
-        :param filename: Relative filename of the updated file
+        :param path: Absolute path of a new file/directory
         """
-        LOGGER.info("The following file [%s] has just been modified", filename)
+        LOGGER.info("The following path [%s] has just been modified", path)

@@ -159,7 +159,7 @@ def validate_sync_perm_config_schema(sync_cfg):
     schema = Schema({
         Optional(str): {
             "services": {
-                str: {  # Service name, must correspond to an actual Magpie service
+                str: {  # Service type, must correspond to an actual Magpie service type
                     str: [  # Resource key, used to identify the resource here and in the permissions_mapping
                         {"name": str, "type": str}
                     ]

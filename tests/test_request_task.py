@@ -9,6 +9,7 @@ TL;DR :
 - Don't forget to use the shared_task decorator instead of the usual app.task because shared_task use a proxy allowing
   the task to be bound to any app (including the celery_session_app fixture).
 """
+import contextlib
 import unittest
 from abc import ABC
 from datetime import datetime
@@ -23,6 +24,7 @@ from requests.exceptions import RequestException
 from cowbird.handlers.impl.geoserver import Geoserver
 from cowbird.request_task import AbortException, RequestTask
 from tests import utils
+from tests.utils import MockMagpieHandler
 
 
 @pytest.fixture(scope="session")
@@ -154,26 +156,34 @@ class TestRequestTask(unittest.TestCase):
     @pytest.mark.geoserver
     @patch("cowbird.handlers.impl.geoserver.Geoserver.remove_workspace")
     def test_geoserver_user_deleted(self, remove_workspace_mock):
-        test_user_name = "test_user"
-        geoserver = Geoserver.get_instance()
-        geoserver.user_deleted(test_user_name)
+        with contextlib.ExitStack() as stack:
+            # Mocked Magpie required since deleting a user on Geoserver also deletes related Magpie resources
+            stack.enter_context(patch("cowbird.handlers.impl.magpie.Magpie", side_effect=MockMagpieHandler))
 
-        # current implementation doesn't give any handler on which we could wait
-        sleep(2)
+            test_user_name = "test_user"
+            geoserver = Geoserver.get_instance()
+            geoserver.user_deleted(test_user_name)
 
-        remove_workspace_mock.assert_called_with(test_user_name)
+            # current implementation doesn't give any handler on which we could wait
+            sleep(2)
+
+            remove_workspace_mock.assert_called_with(test_user_name)
 
     @pytest.mark.geoserver
     @patch("cowbird.handlers.impl.geoserver.Geoserver._remove_workspace_request")
     def test_geoserver_workspace_removed(self, remove_workspace_request_mock):
-        test_user_name = "test_user"
-        geoserver = Geoserver.get_instance()
-        geoserver.user_deleted(test_user_name)
+        with contextlib.ExitStack() as stack:
+            # Mocked Magpie required since deleting a user on Geoserver also deletes related Magpie resources
+            stack.enter_context(patch("cowbird.handlers.impl.magpie.Magpie", side_effect=MockMagpieHandler))
 
-        # current implementation doesn't give any handler on which we could wait
-        sleep(2)
+            test_user_name = "test_user"
+            geoserver = Geoserver.get_instance()
+            geoserver.user_deleted(test_user_name)
 
-        remove_workspace_request_mock.assert_called_with(test_user_name)
+            # current implementation doesn't give any handler on which we could wait
+            sleep(2)
+
+            remove_workspace_request_mock.assert_called_with(test_user_name)
 
     @pytest.mark.geoserver
     @patch("cowbird.handlers.impl.geoserver.Geoserver._publish_shapefile_request")
@@ -182,11 +192,12 @@ class TestRequestTask(unittest.TestCase):
         test_user_name = "test_user"
         shapefile_name = "test_shapefile"
         datastore_name = f"shapefile_datastore_{test_user_name}"
-        test_file = f"/tmp/user_workspaces/{test_user_name}/shapefile_datastore/{shapefile_name}.shp"
-        geoserver = Geoserver.get_instance()
+
+        # initialize geoserver instance
+        Geoserver.get_instance()
 
         # geoserver should call create_workspace and then create_datastore
-        geoserver.on_created(test_file)
+        Geoserver.publish_shapefile_task_chain(workspace_name=test_user_name, shapefile_name=shapefile_name)
 
         # current implementation doesn't give any handler on which we could wait
         sleep(2)
@@ -201,11 +212,12 @@ class TestRequestTask(unittest.TestCase):
         test_user_name = "test_user"
         shapefile_name = "test_shapefile"
         datastore_name = f"shapefile_datastore_{test_user_name}"
-        test_file = f"/tmp/user_workspaces/{test_user_name}/shapefile_datastore/{shapefile_name}.shp"
-        geoserver = Geoserver.get_instance()
+
+        # initialize geoserver instance
+        Geoserver.get_instance()
 
         # geoserver should call create_workspace and then create_datastore
-        geoserver.on_deleted(test_file)
+        Geoserver.remove_shapefile_task(workspace_name=test_user_name, shapefile_name=shapefile_name)
 
         # current implementation doesn't give any handler on which we could wait
         sleep(2)

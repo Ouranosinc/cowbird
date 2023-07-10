@@ -19,6 +19,8 @@ def file_io(filename, mv_filename):
     # Update
     with open(filename, "a", encoding="utf-8") as f:
         f.write(" world!")
+    # Update on file permissions should also trigger a modified event
+    os.chmod(filename, 0o777)
     # Should create a delete and a create event
     os.rename(filename, mv_filename)
     # Delete
@@ -33,9 +35,12 @@ class TestMonitoring(unittest.TestCase):
         with cls.cfg_file as f:
             f.write(yaml.safe_dump({"handlers": {"FileSystem": {"active": True, "workspace_dir": "/workspace"}}}))
         cls.app = utils.get_test_app(settings={"cowbird.config_path": cls.cfg_file.name})
+        # clear up monitor entries from db
+        Monitoring().store.collection.remove({})
 
     @classmethod
     def tearDownClass(cls):
+        Monitoring().store.clear_services()
         utils.clear_handlers_instances()
         os.unlink(cls.cfg_file.name)
 
@@ -84,6 +89,7 @@ class TestMonitoring(unittest.TestCase):
             assert mon.created[1] == mv_test_subdir_file
             assert mon.created == mon.deleted
             assert sorted(set(mon.modified)) == [tmpdir, test_file]
+            assert len(mon.modified) == 9
 
             # Root dir recursive
             assert len(mon2.created) == 4
@@ -94,6 +100,7 @@ class TestMonitoring(unittest.TestCase):
             assert mon2.created == mon2.deleted
             assert sorted(set(mon2.modified)) == [tmpdir, test_subdir,
                                                   test_subdir_file, test_file]
+            assert len(mon2.modified) == 18
 
             # Subdir
             assert len(mon3.created) == 2
@@ -102,6 +109,7 @@ class TestMonitoring(unittest.TestCase):
             assert mon3.created == mon3.deleted
             assert sorted(set(mon3.modified)) == [test_subdir,
                                                   test_subdir_file]
+            assert len(mon3.modified) == 9
 
             # Validate cleanup
             Monitoring().unregister(tmpdir, mon)
@@ -129,14 +137,14 @@ class TestMonitor(FSMonitor):
     def get_instance():
         return TestMonitor()
 
-    def on_created(self, filename):
-        self.created.append(filename)
+    def on_created(self, path):
+        self.created.append(path)
 
-    def on_deleted(self, filename):
-        self.deleted.append(filename)
+    def on_deleted(self, path):
+        self.deleted.append(path)
 
-    def on_modified(self, filename):
-        self.modified.append(filename)
+    def on_modified(self, path):
+        self.modified.append(path)
 
 
 class TestMonitor2(TestMonitor):

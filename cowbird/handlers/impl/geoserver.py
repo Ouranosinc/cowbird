@@ -1,27 +1,40 @@
 import functools
 import os
 import re
+import stat
 from time import sleep
 from typing import TYPE_CHECKING, Tuple
 
 import requests
 from celery import chain, shared_task
+from magpie.models import Layer, Workspace
+from magpie.permissions import Access, Scope
 
+from cowbird.constants import DEFAULT_ADMIN_GID, DEFAULT_ADMIN_UID
 from cowbird.handlers.handler import HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PARAM, Handler
 from cowbird.handlers.handler_factory import HandlerFactory
+from cowbird.handlers.impl.magpie import GEOSERVER_READ_PERMISSIONS, GEOSERVER_WRITE_PERMISSIONS
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
+from cowbird.permissions_synchronizer import Permission
 from cowbird.request_task import RequestTask
-from cowbird.utils import CONTENT_TYPE_JSON, get_logger
+from cowbird.utils import CONTENT_TYPE_JSON, get_logger, update_filesystem_permissions
 
 if TYPE_CHECKING:
-    from typing import Any
+    from typing import Any, Dict, List, Optional
 
     # pylint: disable=W0611,unused-import
-    from cowbird.typedefs import SettingsType
+    from cowbird.typedefs import JSON, SettingsType
 
 HANDLER_ADMIN_USER = "admin_user"  # nosec: B105
 HANDLER_ADMIN_PASSWORD = "admin_password"  # nosec: B105
+
+SHAPEFILE_MAIN_EXTENSION = ".shp"
+SHAPEFILE_REQUIRED_EXTENSIONS = [SHAPEFILE_MAIN_EXTENSION, ".prj", ".dbf", ".shx"]
+SHAPEFILE_OPTIONAL_EXTENSIONS = [".atx", ".sbx", ".qix", ".aih", ".ain", ".shp.xml", ".cpg"]
+SHAPEFILE_ALL_EXTENSIONS = SHAPEFILE_OPTIONAL_EXTENSIONS + SHAPEFILE_REQUIRED_EXTENSIONS
+
+DEFAULT_DATASTORE_DIR_NAME = "shapefile_datastore"
 
 LOGGER = get_logger(__name__)
 
@@ -104,6 +117,7 @@ class Geoserver(Handler, FSMonitor):
         self.admin_user = kwargs.get(HANDLER_ADMIN_USER, None)
         self.admin_password = kwargs.get(HANDLER_ADMIN_PASSWORD, None)
         self.auth = (self.admin_user, self.admin_password)
+        self.datastore_regex = rf"^{self.workspace_dir}/\w+/{DEFAULT_DATASTORE_DIR_NAME}/?$"
 
     #
     # Implementation of parent classes' functions
@@ -126,11 +140,145 @@ class Geoserver(Handler, FSMonitor):
         LOGGER.info("Stop monitoring datastore of created user [%s]", user_name)
         Monitoring().unregister(self._shapefile_folder_dir(user_name), self)
 
+        # Attempt to delete the corresponding resources in Magpie
+        magpie_handler = HandlerFactory().get_handler("Magpie")
+        workspace_res_id = magpie_handler.get_geoserver_workspace_res_id(user_name)
+        if not workspace_res_id:
+            LOGGER.debug("No workspace resource named `%s` to delete in Magpie.", user_name)
+        else:
+            magpie_handler.delete_resource(workspace_res_id)
+
+    def get_shapefile_list(self, workspace_name, shapefile_name):
+        # type:(str, str) -> List[str]
+        """
+        Generates the list of all files associated with a shapefile name.
+        """
+        base_filename = self._shapefile_folder_dir(workspace_name) + "/" + shapefile_name
+        return [base_filename + ext for ext in SHAPEFILE_ALL_EXTENSIONS]
+
+    @staticmethod
+    def _apply_new_path_permissions(path, is_readable, is_writable, is_executable):
+        # type: (str, bool, bool, bool) -> None
+        """
+        Applies new permissions to a path, if required.
+        """
+        # Only use the 3 last octal digits
+        previous_perms = os.stat(path)[stat.ST_MODE] & 0o777
+
+        new_perms = update_filesystem_permissions(previous_perms,
+                                                  is_readable=is_readable,
+                                                  is_writable=is_writable,
+                                                  is_executable=is_executable)
+        # Only apply chmod if there is an actual change, to avoid looping events between Magpie and Cowbird
+        if new_perms != previous_perms:
+            try:
+                os.chmod(path, new_perms)
+            except PermissionError as exc:
+                LOGGER.warning("Failed to change permissions on the %s path: %s", path, exc)
+
+    @staticmethod
+    def _apply_default_path_ownership(path):
+        # type: (str) -> None
+        """
+        Applies default ownership to a path, if required.
+        """
+        path_stat = os.stat(path)
+        # Only apply chown if there is an actual change, to avoid looping events between Magpie and Cowbird
+        if path_stat.st_uid != DEFAULT_ADMIN_UID or path_stat.st_gid != DEFAULT_ADMIN_GID:
+            try:
+                # This operation only works as root.
+                os.chown(path, DEFAULT_ADMIN_UID, DEFAULT_ADMIN_GID)
+            except PermissionError as exc:
+                LOGGER.warning("Failed to change ownership of the %s path: %s", path, exc)
+
+    def _update_resource_paths_permissions(self, resource_type, permission, resource_id, workspace_name,
+                                           layer_name=None):
+        # type:(str, Permission, int, str, Optional[str]) -> None
+        """
+        Updates a single Magpie resource's associated paths according to its permissions found on Magpie.
+        """
+        if resource_type == Layer.resource_type_name:
+            if not layer_name:
+                raise GeoserverError("Missing layer name to update permissions.")
+            path_list = self.get_shapefile_list(workspace_name, layer_name)
+        else:
+            path_list = [self._shapefile_folder_dir(workspace_name)]
+        # Get the actual effective user permissions
+        user_permissions = HandlerFactory().get_handler("Magpie").get_user_permissions_by_res_id(
+            permission.user, resource_id, effective=True)
+
+        allowed_user_perm_names = {p["name"] for p in user_permissions["permissions"]
+                                   if p["access"] == Access.ALLOW.value}
+        is_readable = any(p in GEOSERVER_READ_PERMISSIONS for p in allowed_user_perm_names)
+        is_writable = any(p in GEOSERVER_WRITE_PERMISSIONS for p in allowed_user_perm_names)
+        # Execute permissions are not required for shapefiles, so they will be disabled.
+        # Execute permissions are always left enabled for directories.
+        # If the workspace has a `Deny` read permission, only its read permission is disabled, blocking the access to
+        # the directory's content via a file browser or in JupyterLab.
+        # In the case the children resource also has an `Allow` read permission, the folder will not be browsable,
+        # but the children resource will be kept accessible via a direct url or path.
+        is_executable = resource_type == Workspace.resource_type_name
+
+        for path in path_list:
+            if not os.path.exists(path):
+                if path.endswith(tuple(SHAPEFILE_REQUIRED_EXTENSIONS)):
+                    LOGGER.warning("%s could not be found and its permissions could not be updated.", path)
+                continue
+            Geoserver._apply_new_path_permissions(path, is_readable, is_writable, is_executable)
+            Geoserver._apply_default_path_ownership(path)
+
+    def _update_resource_paths_permissions_recursive(self, resource, permission, workspace_name):
+        # type:(Dict[str, JSON], Permission, str) -> None
+        """
+        Recursive method to update all the path permissions of a resource and its children resources as found on Magpie.
+        """
+        resource_type = resource["resource_type"]
+        if resource_type in [Workspace.resource_type_name, Layer.resource_type_name]:
+            layer_name = resource["resource_name"] if resource_type == Layer.resource_type_name else None
+            self._update_resource_paths_permissions(resource_type=resource_type,
+                                                    permission=permission,
+                                                    resource_id=resource["resource_id"],
+                                                    workspace_name=workspace_name,
+                                                    layer_name=layer_name)
+
+        if permission.scope == Scope.RECURSIVE.value:
+            for children_res in resource["children"].values():
+                self._update_resource_paths_permissions_recursive(resource=children_res,
+                                                                  permission=permission,
+                                                                  workspace_name=workspace_name)
+
+    def _update_permissions_on_filesystem(self, permission):
+        # type: (Permission) -> None
+        """
+        Updates the permissions of dir/files on the file system, after receiving a permission webhook event from Magpie.
+        """
+        if permission.name not in GEOSERVER_READ_PERMISSIONS + GEOSERVER_WRITE_PERMISSIONS:
+            LOGGER.info("Nothing to do, since the permission `%s` is not specific to a Geoserver type service.",
+                        permission.name)
+            return
+
+        magpie_handler = HandlerFactory().get_handler("Magpie")
+
+        if permission.user is None:
+            raise NotImplementedError("A permission change on a group is not supported for now on Geoserver, since "
+                                      "workspaces are based on users only.")
+        workspace_name = permission.user
+
+        self._update_resource_paths_permissions_recursive(resource=magpie_handler.get_resource(permission.resource_id),
+                                                          permission=permission,
+                                                          workspace_name=workspace_name)
+
     def permission_created(self, permission):
-        raise NotImplementedError
+        """
+        Called when Magpie sends a permission created webhook event.
+        """
+        self._update_permissions_on_filesystem(permission)
 
     def permission_deleted(self, permission):
-        raise NotImplementedError
+        """
+        Called when Magpie sends a permission deleted webhook event.
+        """
+        self._update_permissions_on_filesystem(permission)
 
     # FSMonitor class functions
     @staticmethod
@@ -141,38 +289,212 @@ class Geoserver(Handler, FSMonitor):
         """
         return HandlerFactory().get_handler("Geoserver")
 
-    def on_created(self, filename):
+    @staticmethod
+    def publish_shapefile_task_chain(workspace_name, shapefile_name):
+        # type: (str, str) -> None
         """
-        Call when a new file is found.
-
-        :param filename: Relative filename of a new file
+        Applies the chain of tasks required to publish a new file to Geoserver.
         """
-        if filename.endswith(".shp"):
-            workspace_name, shapefile_name = self._get_shapefile_info(filename)
-            LOGGER.info("Starting Geoserver publishing process for [%s]", filename)
-            res = chain(validate_shapefile.si(workspace_name, shapefile_name),
-                        publish_shapefile.si(workspace_name, shapefile_name))
-            res.delay()
+        res = chain(validate_shapefile.si(workspace_name, shapefile_name),
+                    publish_shapefile.si(workspace_name, shapefile_name))
+        res.delay()
 
-    def on_deleted(self, filename):
+    def on_created(self, path):
         """
-        Call when a file is deleted.
+        Call when a new path is found.
 
-        :param filename: Relative filename of the removed file
+        :param path: Absolute path of a new file/directory
         """
-        if filename.endswith(".shp"):
-            workspace_name, shapefile_name = self._get_shapefile_info(filename)
-            remove_shapefile.delay(workspace_name, shapefile_name)
+        # Note that the workspace case is not implemented here, since a workspace directory is created during the user
+        # creation (user_created()) and other directories should not be created manually for Geoserver.
+        # The Magpie workspace resource will be automatically created if needed upon a shapefile creation.
+        if path.endswith(SHAPEFILE_MAIN_EXTENSION):
+            workspace_name, shapefile_name = self._get_shapefile_info(path)
 
-    def on_modified(self, filename):
+            LOGGER.info("Starting Geoserver publishing process for [%s]", path)
+            Geoserver.publish_shapefile_task_chain(workspace_name, shapefile_name)
+
+            self._update_magpie_layer_permissions(workspace_name, shapefile_name)
+
+    @staticmethod
+    def remove_shapefile_task(workspace_name, shapefile_name):
+        # type: (str, str) -> None
+        """
+        Applies the celery task required to remove a shapefile from Geoserver.
+        """
+        remove_shapefile.delay(workspace_name, shapefile_name)
+
+    def on_deleted(self, path):
+        """
+        Called when a path is deleted.
+
+        :param path: Absolute path of a new file/directory
+        """
+        if os.path.isdir(path) and re.match(self.datastore_regex, path):
+            # Note that the geoserver workspace and corresponding Magpie resources are only removed when the user is
+            # deleted. The manual deletion of a datastore folder should be avoided.
+            LOGGER.warning("An event was triggered for the deletion of the folder `%s`. The folder should "
+                           "not be removed manually, but only when a user is deleted. This event invalidates the still "
+                           "existing Geoserver workspace and corresponding Magpie resources.", path)
+        elif path.endswith(SHAPEFILE_MAIN_EXTENSION):
+            workspace_name, shapefile_name = self._get_shapefile_info(path)
+            Geoserver.remove_shapefile_task(workspace_name, shapefile_name)
+
+            # Remove all the remaining shapefile related files
+            for file in self.get_shapefile_list(workspace_name, shapefile_name):
+                if os.path.exists(file):
+                    os.remove(file)
+
+            # Remove the corresponding Magpie resource
+            magpie_handler = HandlerFactory().get_handler("Magpie")
+            layer_res_id = magpie_handler.get_geoserver_layer_res_id(workspace_name, shapefile_name)
+            if layer_res_id:
+                magpie_handler.delete_resource(layer_res_id)
+
+    def on_modified(self, path):
         # type: (str) -> None
         """
-        Call when a file is updated.
+        Called when a path is updated.
 
-        :param filename: Relative filename of the updated file
+        :param path: Absolute path of a new file/directory
         """
-        # Nothing need to be done in this class as Catalog already logs file modifications.
-        # Still needed to implement since part of parent FSMonitor class
+        # Nothing needs to be done specifically for Geoserver as Catalog already logs file modifications.
+        # Only need to update permissions on Magpie, in case the resource permissions were modified.
+        if os.path.isdir(path) and re.match(self.datastore_regex, path):
+            workspace_name = path.split("/")[-2]
+            self._update_magpie_workspace_permissions(workspace_name)
+        elif path.endswith(SHAPEFILE_MAIN_EXTENSION):
+            workspace_name, shapefile_name = self._get_shapefile_info(path)
+            self._update_magpie_layer_permissions(workspace_name, shapefile_name)
+
+    @staticmethod
+    def _is_permission_update_required(effective_permissions, user_name, res_id, perm_name, perm_access, perm_scope,
+                                       delete_if_required=False):
+        # type: (List[Dict[str, str]], str, int, str, str, str, bool) -> bool
+        """
+        Checks if the required permission already exists on the resource, else returns true if an update is required.
+
+        Also, deletes the permission if the associated input argument is activated.
+        """
+        magpie_handler = HandlerFactory().get_handler("Magpie")
+        actual_perms_on_resource = []
+
+        if perm_scope == Scope.RECURSIVE.value:
+            # Special case for recursive permissions. We have to check the actual permission on the resource to verify
+            # the actual scope.
+            actual_perms_on_resource = magpie_handler.get_user_permissions_by_res_id(
+                user_name, res_id, effective=False)["permissions"]
+
+        for perm in effective_permissions:
+            if perm["name"] == perm_name:
+                if perm["access"] == perm_access and perm_scope == Scope.RECURSIVE.value:
+                    # We truly have a valid recursive permission only if the resource has the actual recursive
+                    # permission, or if the resource does not have the permission, which means the permission was
+                    # inherited by the parent resources, which is a valid case, that doesn't need an update.
+                    if (not any(p["name"] == perm_name for p in actual_perms_on_resource) or
+                        any(p["name"] == perm_name and p["scope"] == Scope.RECURSIVE.value
+                            for p in actual_perms_on_resource)):
+                        return False
+                elif perm["access"] == perm_access and perm["scope"] == perm_scope:
+                    return False
+
+                # Permission needs to be updated.
+                if delete_if_required:
+                    magpie_handler.delete_permission_by_user_and_res_id(user_name=user_name,
+                                                                        res_id=res_id,
+                                                                        permission_name=perm_name)
+                break
+        return True
+
+    @staticmethod
+    def _update_magpie_permissions(user_name, res_id, perm_scope, is_readable, is_writable):
+        # type: (str, int, str, bool, bool) -> None
+        """
+        Updates permissions on a Magpie resource (workspace/layer).
+        """
+        magpie_handler = HandlerFactory().get_handler("Magpie")
+
+        allowed_perms = set(GEOSERVER_READ_PERMISSIONS if is_readable else [])
+        allowed_perms = allowed_perms.union(GEOSERVER_WRITE_PERMISSIONS if is_writable else [])
+        denied_perms = set(GEOSERVER_READ_PERMISSIONS + GEOSERVER_WRITE_PERMISSIONS).difference(allowed_perms)
+        perm_names_and_access = ([(p, Access.ALLOW.value) for p in allowed_perms] +
+                                 [(p, Access.DENY.value) for p in denied_perms])
+
+        # Get resolved permissions on magpie
+        user_permissions = magpie_handler.get_user_permissions_by_res_id(
+            user_name, res_id, effective=True)["permissions"]
+
+        perms_to_update = set()
+        for perm_name, perm_access in perm_names_and_access:
+            # Find all permissions that actually need an update. If the permission already exists but still needs an
+            # update, delete the permission, and check in the next steps if the permission still needs an update
+            # according to the new effective permission solving.
+            if Geoserver._is_permission_update_required(effective_permissions=user_permissions,
+                                                        user_name=user_name,
+                                                        res_id=res_id,
+                                                        perm_name=perm_name,
+                                                        perm_access=perm_access,
+                                                        perm_scope=perm_scope,
+                                                        delete_if_required=True):
+                perms_to_update.add((perm_name, perm_access))
+
+        # Get new resolved permissions on magpie, after previous perms update were applied
+        user_permissions = magpie_handler.get_user_permissions_by_res_id(
+            user_name, res_id, effective=True)["permissions"]
+
+        # Only apply new allow/deny permissions if required. If parent resources already have the required recursive
+        # allow/deny, a new permission is not necessary and will not be created in order to simplify
+        # effective permission solving.
+        for perm_name, perm_access in perms_to_update:
+            # No need to check the scope, since only `match` scopes are returned when getting `effective` permissions,
+            # even if the permission comes from a `recursive` permission of a parent resource.
+            if not any(p["name"] == perm_name and p["access"] == perm_access for p in user_permissions):
+                magpie_handler.create_permission_by_user_and_res_id(
+                    user_name=user_name,
+                    res_id=res_id,
+                    perm_name=perm_name,
+                    perm_access=perm_access,
+                    perm_scope=perm_scope)
+
+    def _update_magpie_workspace_permissions(self, workspace_name):
+        """
+        Updates the permissions of a `workspace` resource on Magpie to the current permissions found on the
+        corresponding datastore folder.
+        """
+        magpie_handler = HandlerFactory().get_handler("Magpie")
+        workspace_res_id = magpie_handler.get_geoserver_workspace_res_id(workspace_name, create_if_missing=True)
+
+        datastore_dir_path = self._shapefile_folder_dir(workspace_name)
+        # Make sure the directory has the right ownership
+        Geoserver._apply_default_path_ownership(datastore_dir_path)
+
+        workspace_status = os.stat(datastore_dir_path)[stat.ST_MODE]
+        is_readable = bool(workspace_status & stat.S_IROTH and workspace_status & stat.S_IXOTH)
+        is_writable = bool(workspace_status & stat.S_IWOTH)
+
+        Geoserver._update_magpie_permissions(user_name=workspace_name,
+                                             res_id=workspace_res_id,
+                                             perm_scope=Scope.RECURSIVE.value,
+                                             is_readable=is_readable,
+                                             is_writable=is_writable)
+
+    def _update_magpie_layer_permissions(self, workspace_name, layer_name):
+        # type: (str, str) -> None
+        """
+        Updates the permissions of a `layer` resource on Magpie to the current permissions found on the corresponding
+        shapefile.
+        """
+        magpie_handler = HandlerFactory().get_handler("Magpie")
+        layer_res_id = magpie_handler.get_geoserver_layer_res_id(workspace_name, layer_name, create_if_missing=True)
+
+        # Get permissions of the shapefile's main file
+        is_readable, is_writable = self._get_shapefile_permissions(workspace_name, layer_name)
+        self._normalize_shapefile_permissions(workspace_name, layer_name, is_readable, is_writable)
+        Geoserver._update_magpie_permissions(user_name=workspace_name,
+                                             res_id=layer_res_id,
+                                             perm_scope=Scope.MATCH.value,
+                                             is_readable=is_readable,
+                                             is_writable=is_writable)
 
     #
     # Geoserver class specific functions
@@ -245,15 +567,42 @@ class Geoserver(Handler, FSMonitor):
         """
         # Small wait time to prevent unnecessary failure since shapefile is a multi file format
         sleep(1)
-        shapefile_extensions = [".prj", ".dbf", ".shx"]
-        files_to_find = [
-            f"{self._shapefile_folder_dir(workspace_name)}/{shapefile_name}{ext}" for ext in shapefile_extensions
-        ]
+        files_to_find = [f"{self._shapefile_folder_dir(workspace_name)}/{shapefile_name}{ext}"
+                         for ext in SHAPEFILE_REQUIRED_EXTENSIONS]
         for file in files_to_find:
             if not os.path.isfile(file):
                 LOGGER.warning("Shapefile is incomplete: Missing [%s]", file)
                 raise FileNotFoundError
         LOGGER.info("Shapefile [%s] is valid", shapefile_name)
+
+    def _get_shapefile_permissions(self, workspace_name, shapefile_name):
+        # type:(str, str) -> (bool, bool)
+        """
+        Resolves the shapefile permissions on the file system, by checking the shapefile's main file permissions.
+        """
+        is_shapefile_readable = False
+        is_shapefile_writable = False
+
+        # Only consider the shapefile's main file for the permissions
+        shapefile_path = self._shapefile_folder_dir(workspace_name) + "/" + shapefile_name + SHAPEFILE_MAIN_EXTENSION
+
+        if os.path.exists(shapefile_path):
+            file_status = os.stat(shapefile_path)[stat.ST_MODE]
+            is_shapefile_readable = bool(file_status & stat.S_IROTH)
+            is_shapefile_writable = bool(file_status & stat.S_IWOTH)
+        return is_shapefile_readable, is_shapefile_writable
+
+    def _normalize_shapefile_permissions(self, workspace_name, shapefile_name, is_readable, is_writable):
+        # type: (str, str, bool, bool) -> None
+        """
+        Makes sure all files associated with a shapefile is owned by the default user/group and have the same
+        permissions.
+        """
+        for shapefile in self.get_shapefile_list(workspace_name, shapefile_name):
+            if os.path.exists(shapefile):
+                Geoserver._apply_default_path_ownership(shapefile)
+                Geoserver._apply_new_path_permissions(shapefile, is_readable=is_readable, is_writable=is_writable,
+                                                      is_executable=False)
 
     def remove_shapefile(self, workspace_name, filename):
         # type:(Geoserver, str, str) -> None
@@ -313,7 +662,7 @@ class Geoserver(Handler, FSMonitor):
         """
         Returns the path to the user's shapefile datastore inside the file system.
         """
-        return os.path.join(self.workspace_dir, workspace_name, "shapefile_datastore")
+        return os.path.join(self.workspace_dir, workspace_name, DEFAULT_DATASTORE_DIR_NAME)
 
     @staticmethod
     def _geoserver_user_datastore_dir(user_name):
@@ -323,7 +672,7 @@ class Geoserver(Handler, FSMonitor):
 
         Uses the ``WORKSPACE_DIR`` env variable mapped in the Geoserver container.
         """
-        return os.path.join("/user_workspaces", user_name, "shapefile_datastore")
+        return os.path.join("/user_workspaces", user_name, DEFAULT_DATASTORE_DIR_NAME)
 
     @geoserver_response_handling
     def _create_workspace_request(self, workspace_name):
