@@ -1,10 +1,14 @@
 import os
+import re
 import shutil
 from typing import Any
 
+from cowbird.handlers import HandlerFactory
 from cowbird.handlers.handler import HANDLER_WORKSPACE_DIR_PARAM, Handler
 from cowbird.permissions_synchronizer import Permission
 from cowbird.typedefs import SettingsType
+from cowbird.monitoring.fsmonitor import FSMonitor
+from cowbird.monitoring.monitoring import Monitoring
 from cowbird.utils import get_logger
 
 LOGGER = get_logger(__name__)
@@ -12,7 +16,7 @@ LOGGER = get_logger(__name__)
 NOTEBOOKS_DIR_NAME = "notebooks"
 
 
-class FileSystem(Handler):
+class FileSystem(Handler, FSMonitor):
     """
     Keep the proper directory structure in sync with the platform.
     """
@@ -56,6 +60,9 @@ class FileSystem(Handler):
     def _get_user_workspace_dir(self, user_name: str) -> str:
         return os.path.join(self.workspace_dir, user_name)
 
+    def _get_user_wps_outputs_dir(self, user_name):
+        return os.path.join(self._get_user_workspace_dir(user_name), "wps_outputs/user")
+
     def _get_jupyterhub_user_data_dir(self, user_name: str) -> str:
         return os.path.join(self.jupyterhub_user_data_dir, user_name)
 
@@ -91,6 +98,60 @@ class FileSystem(Handler):
             shutil.rmtree(user_workspace_dir)
         except FileNotFoundError:
             LOGGER.info("User workspace directory not found (skip removal): [%s]", user_workspace_dir)
+
+    @staticmethod
+    def get_instance():
+        # type: () -> FileSystem
+        """
+        Return the FileSYstem singleton instance from the class name used to retrieve the FSMonitor from the DB.
+        """
+        return HandlerFactory().get_handler("FileSystem")
+
+    def on_created(self, path):
+        # type: (str) -> None
+        """
+        Call when a new path is found.
+
+        :param path: Absolute path of a new file/directory
+        """
+        regex_match = re.search(self.wps_outputs_users_regex, path)
+        if regex_match:
+            user_id = int(regex_match.group(1))
+            subpath = regex_match.group(2)
+
+            magpie_handler = HandlerFactory().get_handler("Magpie")
+            user_name = magpie_handler.get_user_name_from_user_id(user_id)
+            user_workspace_dir = self._get_user_workspace_dir(user_name)
+
+            if not os.path.exists(user_workspace_dir):
+                raise FileNotFoundError(f"User {user_name} workspace not found at path {user_workspace_dir}. New wps"
+                                        f"output {path} not added to the user workspace.")
+
+            # TODO: special case for directory link, hardlink all the content? hardlinks are not possible on dirs
+            # create hardlink in the user workspace (use corresponding dir or file path)
+            hardlink_path = os.path.join(self._get_user_wps_outputs_dir(user_name), subpath)
+            os.makedirs(os.path.dirname(hardlink_path))
+            os.link(path, hardlink_path)
+            # TODO: faire un check si le link est au bon fichier, sinon updater (un peu comme on faisait avec symlinks)
+
+    def on_modified(self, path):
+        # type: (str) -> None
+        """
+        Called when a path is updated.
+
+        :param path: Absolute path of a new file/directory
+        """
+        # Nothing to do for files in the wps_outputs_dir, since hardlinks are updated automatically.
+        pass
+
+    def on_deleted(self, path):
+        # type: (str) -> None
+        """
+        Called when a path is deleted.
+
+        :param path: Absolute path of a new file/directory
+        """
+        pass
 
     def permission_created(self, permission: Permission) -> None:
         raise NotImplementedError

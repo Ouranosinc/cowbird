@@ -6,9 +6,14 @@ from unittest.mock import patch
 
 import pytest
 import yaml
+from dotenv import load_dotenv
 
+from cowbird.handlers import HandlerFactory
 from cowbird.handlers.impl.filesystem import NOTEBOOKS_DIR_NAME
+from tests import test_magpie
 from tests import utils
+
+CURR_DIR = Path(__file__).resolve().parent
 
 
 @pytest.mark.filesystem
@@ -136,3 +141,55 @@ class TestFileSystem(unittest.TestCase):
 
             # The callback url should have been called if an exception occurred during the handler's operations.
             mock_head_request.assert_called_with(self.callback_url, verify=True, timeout=5)
+
+    def test_user_wps_output_created(self):
+        """
+        Tests creating a wps output for a user.
+        """
+        with tempfile.TemporaryDirectory() as workspace_dir, \
+                tempfile.NamedTemporaryFile(mode="w", suffix=".cfg") as cfg_file, \
+                tempfile.TemporaryDirectory() as wpsoutputs_dir:
+            user_workspace_dir = Path(workspace_dir) / self.test_username
+
+            load_dotenv(CURR_DIR / "../docker/.env.example")
+            cfg_file.write(yaml.safe_dump({
+                "handlers": {
+                    "Magpie": {
+                        "active": True,
+                        "url": os.getenv("COWBIRD_TEST_MAGPIE_URL"),
+                        "admin_user": os.getenv("MAGPIE_ADMIN_USER"),
+                        "admin_password": os.getenv("MAGPIE_ADMIN_PASSWORD")},
+                    "FileSystem": {
+                        "active": True,
+                        "workspace_dir": workspace_dir,
+                        "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
+                        "wps_outputs_dir": wpsoutputs_dir}}}))
+            cfg_file.flush()
+            app = utils.get_test_app(settings={"cowbird.config_path": cfg_file.name})
+
+            # Reset test user
+            magpie_test_user = "test_user"
+            magpie_handler = HandlerFactory().get_handler("Magpie")
+            test_magpie.delete_user(magpie_handler, magpie_test_user)
+            user_id = test_magpie.create_user(magpie_handler, magpie_test_user,
+                                              "test@test.com", "qwertyqwerty", "users")
+            job_id = 1
+
+            # Create a test wps output file
+            # TODO: make case for directory, and files
+            output_subpath = f"{job_id}/test_output.txt"
+            output_file = os.path.join(wpsoutputs_dir,f"weaver/users/{user_id}/{output_subpath}")
+            os.makedirs(os.path.dirname(output_file))
+            open(output_file, mode="w").close()
+
+            filesystem_handler = HandlerFactory().create_handler("FileSystem")
+            # Error expected if the user workspace does not exist
+            with pytest.raises(FileNotFoundError):
+                filesystem_handler.on_created(output_file)
+
+            # Create the user workspace
+            filesystem_handler.user_created(magpie_test_user)
+            filesystem_handler.on_created(output_file)
+
+            hardlink_path = os.path.join(filesystem_handler._get_user_wps_outputs_dir(magpie_test_user), output_subpath)
+            assert os.stat(hardlink_path).st_nlink == 2

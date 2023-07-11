@@ -17,7 +17,7 @@ from tests import utils
 CURR_DIR = Path(__file__).resolve().parent
 
 
-def create_user(magpie: Magpie, user_name: str, email: str, password: str, group_name: str) -> None:
+def create_user(magpie: Magpie, user_name: str, email: str, password: str, group_name: str) -> int:
     resp = magpie._send_request(method="POST", url=f"{magpie.url}/users",
                                 json={
                                     "user_name": user_name,
@@ -26,6 +26,7 @@ def create_user(magpie: Magpie, user_name: str, email: str, password: str, group
                                     "group_name": group_name
                                 })
     assert resp.status_code == 201
+    return resp.json()["user"]["user_id"]
 
 
 def delete_user(magpie: Magpie, user_name: str) -> None:

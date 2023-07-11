@@ -216,6 +216,19 @@ class Magpie(Handler):
                 parent_id=workspace_res_id)
         return layer_res_id
 
+    def get_user_name_from_user_id(self, user_id):
+        # type: (int) -> str
+        """
+        Finds the name of a user from his user id.
+        """
+        resp = self._send_request(method="GET", url=f"{self.url}/users", params={"detail": True})
+        if resp.status_code != 200:
+            raise MagpieHttpError(f"Could not find the list of users. HttpError {resp.status_code} : {resp.text}")
+        for user_info in resp.json()["users"]:
+            if "user_id" in user_info and user_info["user_id"] == user_id:
+                return user_info["user_name"]
+        raise MagpieHttpError(f"Could not find any user with the id {user_id}.")
+
     def get_user_permissions(self, user: str) -> Dict[str, JSON]:
         """
         Gets all user resource permissions.
