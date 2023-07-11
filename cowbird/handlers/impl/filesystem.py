@@ -18,7 +18,12 @@ class FileSystem(Handler):
     """
     required_params = [HANDLER_WORKSPACE_DIR_PARAM]
 
-    def __init__(self, settings: SettingsType, name: str, jupyterhub_user_data_dir: str, **kwargs: Any) -> None:
+    def __init__(self,
+                 settings: SettingsType,
+                 name: str,
+                 jupyterhub_user_data_dir: str,
+                 wps_outputs_dir: str,
+                 **kwargs: Any) -> None:
         """
         Create the file system instance.
 
@@ -26,9 +31,24 @@ class FileSystem(Handler):
         :param name: Handler name
         :param jupyterhub_user_data_dir: Path to the JupyterHub user data directory,
                                          which will be symlinked to the working directory
+        :param wps_outputs_dir: Path to the wps outputs directory
         """
         super(FileSystem, self).__init__(settings, name, **kwargs)
         self.jupyterhub_user_data_dir = jupyterhub_user_data_dir
+
+        # Make sure output path is normalized (e.g.: removing trailing slashes) to simplify regex usage
+        self.wps_outputs_dir = os.path.normpath(wps_outputs_dir)
+
+        # Regex to find any directory or file found in the `users` output path of a 'bird' service
+        # {self.wps_outputs_dir}/<wps-bird-name>/users/<user-uuid>/...
+        self.wps_outputs_users_regex = rf"^{self.wps_outputs_dir}/\w+/users/(\d+)/(.+)"
+
+        if os.path.exists(self.wps_outputs_dir):
+            LOGGER.info("Start monitoring wpsoutputs folder [%s]", self.wps_outputs_dir)
+            Monitoring().register(self.wps_outputs_dir, True, self)
+        else:
+            # TODO: should this raise instead of only displaying a warning?
+            LOGGER.warning("Failed to start monitoring on the wpsoutputs folder [%s]", self.wps_outputs_dir)
 
     def get_resource_id(self, resource_full_name: str) -> int:
         raise NotImplementedError
