@@ -198,5 +198,6 @@ class TestFileSystem(unittest.TestCase):
             filesystem_handler.user_created(magpie_test_user)
             filesystem_handler.on_created(output_file)
 
-            hardlink_path = os.path.join(filesystem_handler._get_user_wps_outputs_dir(magpie_test_user), output_subpath)
+            hardlink_path = os.path.join(filesystem_handler._get_user_wps_outputs_user_dir(magpie_test_user),
+                                         output_subpath)
             assert os.stat(hardlink_path).st_nlink == 2

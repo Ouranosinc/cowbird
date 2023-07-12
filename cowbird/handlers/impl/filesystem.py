@@ -15,6 +15,7 @@ LOGGER = get_logger(__name__)
 
 NOTEBOOKS_DIR_NAME = "notebooks"
 USER_WPSOUTPUTS_PUBLIC_DIR_NAME = "wpsoutputs-public"
+USER_WPSOUTPUTS_USER_DIR_NAME = "wpsoutputs-user"
 
 
 class FileSystem(Handler, FSMonitor):
@@ -137,7 +138,7 @@ class FileSystem(Handler, FSMonitor):
 
             # TODO: special case for directory link, hardlink all the content? hardlinks are not possible on dirs
             # create hardlink in the user workspace (use corresponding dir or file path)
-            hardlink_path = os.path.join(self._get_user_wps_outputs_dir(user_name), subpath)
+            hardlink_path = os.path.join(self._get_user_wps_outputs_user_dir(user_name), subpath)
             os.makedirs(os.path.dirname(hardlink_path))
             os.link(path, hardlink_path)
             # TODO: faire un check si le link est au bon fichier, sinon updater (un peu comme on faisait avec symlinks)
