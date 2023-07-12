@@ -9,9 +9,8 @@ import yaml
 from dotenv import load_dotenv
 
 from cowbird.handlers import HandlerFactory
-from cowbird.handlers.impl.filesystem import NOTEBOOKS_DIR_NAME
-from tests import test_magpie
-from tests import utils
+from cowbird.handlers.impl.filesystem import NOTEBOOKS_DIR_NAME, USER_WPSOUTPUTS_PUBLIC_DIR_NAME
+from tests import test_magpie, utils
 
 CURR_DIR = Path(__file__).resolve().parent
 
@@ -37,16 +36,19 @@ class TestFileSystem(unittest.TestCase):
         Tests creating and deleting a user workspace.
         """
         with tempfile.TemporaryDirectory() as workspace_dir, \
+                tempfile.TemporaryDirectory() as wpsoutputs_dir, \
                 tempfile.NamedTemporaryFile(mode="w", suffix=".cfg") as cfg_file:
             user_workspace_dir = Path(workspace_dir) / self.test_username
             user_symlink = user_workspace_dir / NOTEBOOKS_DIR_NAME
+            public_wpsoutputs_symlink = user_workspace_dir / USER_WPSOUTPUTS_PUBLIC_DIR_NAME
 
             cfg_file.write(yaml.safe_dump({
                 "handlers": {
                     "FileSystem": {
                         "active": True,
                         "workspace_dir": workspace_dir,
-                        "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir}}}))
+                        "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
+                        "wps_outputs_dir": wpsoutputs_dir}}}))
             cfg_file.flush()
             app = utils.get_test_app(settings={"cowbird.config_path": cfg_file.name})
             data = {
@@ -60,6 +62,8 @@ class TestFileSystem(unittest.TestCase):
             assert os.path.islink(user_symlink)
             assert os.readlink(user_symlink) == os.path.join(self.jupyterhub_user_data_dir, self.test_username)
             utils.check_path_permissions(user_workspace_dir, 0o755)
+            assert os.path.islink(public_wpsoutputs_symlink)
+            assert os.readlink(public_wpsoutputs_symlink) == wpsoutputs_dir
 
             # Creating a user if its directory already exists should not trigger any errors.
             # The symlink should be recreated if it is missing.
@@ -71,6 +75,8 @@ class TestFileSystem(unittest.TestCase):
             utils.check_path_permissions(user_workspace_dir, 0o755)
             assert os.path.islink(user_symlink)
             assert os.readlink(user_symlink) == os.path.join(self.jupyterhub_user_data_dir, self.test_username)
+            assert os.path.islink(public_wpsoutputs_symlink)
+            assert os.readlink(public_wpsoutputs_symlink) == wpsoutputs_dir
 
             # If the directory already exists, it should correct the directory to have the right permissions.
             os.chmod(user_workspace_dir, 0o777)
@@ -88,7 +94,7 @@ class TestFileSystem(unittest.TestCase):
 
             resp = utils.test_request(app, "POST", "/webhooks/users", json=data, expect_errors=True)
             utils.check_response_basic_info(resp, 500, expected_method="POST")
-            assert "Failed to create symlinked jupyterhub directory" in resp.json_body["exception"]
+            assert "Failed to create symlinked directory" in resp.json_body["exception"]
             # The callback url should have been called if an exception occurred during the handler's operations.
             mock_head_request.assert_called_with(self.callback_url, verify=True, timeout=5)
 
@@ -126,7 +132,8 @@ class TestFileSystem(unittest.TestCase):
                     "FileSystem": {
                         "active": True,
                         "workspace_dir": workspace_dir,
-                        "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir}}}))
+                        "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
+                        "wps_outputs_dir": "/wpsoutputs"}}}))
             cfg_file.flush()
             app = utils.get_test_app(settings={"cowbird.config_path": cfg_file.name})
             data = {

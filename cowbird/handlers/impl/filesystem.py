@@ -14,6 +14,7 @@ from cowbird.utils import get_logger
 LOGGER = get_logger(__name__)
 
 NOTEBOOKS_DIR_NAME = "notebooks"
+USER_WPSOUTPUTS_PUBLIC_DIR_NAME = "wpsoutputs-public"
 
 
 class FileSystem(Handler, FSMonitor):
@@ -40,7 +41,7 @@ class FileSystem(Handler, FSMonitor):
         super(FileSystem, self).__init__(settings, name, **kwargs)
         self.jupyterhub_user_data_dir = jupyterhub_user_data_dir
 
-        # Make sure output path is normalized (e.g.: removing trailing slashes) to simplify regex usage
+        # Make sure output path is normalized (e.g.: removing trailing slashes)
         self.wps_outputs_dir = os.path.normpath(wps_outputs_dir)
 
         # Regex to find any directory or file found in the `users` output path of a 'bird' service
@@ -60,11 +61,31 @@ class FileSystem(Handler, FSMonitor):
     def _get_user_workspace_dir(self, user_name: str) -> str:
         return os.path.join(self.workspace_dir, user_name)
 
-    def _get_user_wps_outputs_dir(self, user_name):
-        return os.path.join(self._get_user_workspace_dir(user_name), "wps_outputs/user")
+    def _get_user_wps_outputs_public_dir(self, user_name: str) -> str:
+        return os.path.join(self._get_user_workspace_dir(user_name), USER_WPSOUTPUTS_PUBLIC_DIR_NAME)
 
     def _get_jupyterhub_user_data_dir(self, user_name: str) -> str:
         return os.path.join(self.jupyterhub_user_data_dir, user_name)
+
+    @staticmethod
+    def _create_symlink_dir(src: str, dst: str): -> None
+        create_symlink = False
+
+        # Check if creating a new symlink is required
+        if not os.path.islink(dst):
+            if not os.path.exists(dst):
+                create_symlink = True
+            else:
+                raise FileExistsError("Failed to create symlinked directory, since a non-symlink directory already "
+                                      f"exists at the targeted path {dst}.")
+        elif os.readlink(dst) != src:
+            # If symlink already exists but points to the wrong source, update symlink to the new source directory.
+            os.remove(dst)
+            create_symlink = True
+
+        if create_symlink:
+            os.symlink(src, dst, target_is_directory=True)
+
 
     def user_created(self, user_name: str) -> None:
         user_workspace_dir = self._get_user_workspace_dir(user_name)
@@ -73,24 +94,11 @@ class FileSystem(Handler, FSMonitor):
         except FileExistsError:
             LOGGER.info("User workspace directory already existing (skip creation): [%s]", user_workspace_dir)
         os.chmod(user_workspace_dir, 0o755)  # nosec
-        create_symlink = False
-        symlink_dir = os.path.join(user_workspace_dir, NOTEBOOKS_DIR_NAME)
 
-        # Check if creating a new symlink is required
-        if not os.path.islink(symlink_dir):
-            if not os.path.exists(symlink_dir):
-                create_symlink = True
-            else:
-                raise FileExistsError(f"Failed to create symlinked jupyterhub directory in the user {user_name}'s "
-                                      "workspace, since a non-symlink directory already exists at the targeted path "
-                                      f"{symlink_dir}.")
-        elif os.readlink(symlink_dir) != self._get_jupyterhub_user_data_dir(user_name):
-            # If symlink already exists but points to the wrong source, update symlink to the new source directory.
-            os.remove(symlink_dir)
-            create_symlink = True
-
-        if create_symlink:
-            os.symlink(self._get_jupyterhub_user_data_dir(user_name), symlink_dir, target_is_directory=True)
+        FileSystem._create_symlink_dir(src=self._get_jupyterhub_user_data_dir(user_name),
+                                       dst=os.path.join(user_workspace_dir, NOTEBOOKS_DIR_NAME))
+        FileSystem._create_symlink_dir(src=self.wps_outputs_dir,
+                                       dst=self._get_user_wps_outputs_public_dir(user_name))
 
     def user_deleted(self, user_name: str) -> None:
         user_workspace_dir = self._get_user_workspace_dir(user_name)
