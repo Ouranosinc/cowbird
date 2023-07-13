@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, TypedD
 from typing_extensions import TypeAlias
 
 from celery.app import Celery
-from magpie.typedefs import PermissionConfigItem
 from pyramid.config import Configurator
 from pyramid.httpexceptions import HTTPException
 from pyramid.registry import Registry
@@ -21,9 +20,11 @@ from webob.response import Response as WebobResponse
 from webtest.response import TestResponse
 
 if TYPE_CHECKING:
-    from cowbird.database.stores import StoreInterface as StoreInterfaceType
-else:
-    StoreInterfaceType: TypeAlias = "StoreInterface"  # noqa
+    from magpie.typedefs import PermissionConfigItem
+
+    from cowbird.database.stores import StoreInterface
+StoreInterfaceType: TypeAlias = "StoreInterface"
+PermissionConfigItemType: TypeAlias = "PermissionConfigItem"
 
 Number = Union[int, float]
 SettingValue = Union[str, Number, bool, None]
@@ -60,13 +61,14 @@ ConfigResTokenInfo = TypedDict("ConfigResTokenInfo", {"has_multi_token": bool, "
 ConfigSegment = TypedDict("ConfigSegment", {"name": str, "type": str})
 
 ResourceSegment = TypedDict("ResourceSegment", {"resource_name": str, "resource_type": str})
-PermissionResourceData = Union[PermissionConfigItem, ResourceSegment]
+PermissionResourceData = Union[PermissionConfigItemType, ResourceSegment]
 PermissionDataEntry = TypedDict(
     "PermissionDataEntry",
     {
         "res_path": List[PermissionResourceData],
         "permissions": Dict[str, List[str]],
-    }
+    },
+    total=True,
 )
 PermissionData = Dict[str, PermissionDataEntry]
 

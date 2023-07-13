@@ -68,7 +68,7 @@ CLI_MODE_CFG = "cli_mode"
 # This setting is set to true before creating the test app, the pyramid app use the default false value
 USE_TEST_CELERY_APP_CFG = "use_test_celery_app"
 
-EnumClassType = TypeVar("EnumClassType", bound=Enum)
+EnumClassType = TypeVar("EnumClassType", bound=Enum)  # pylint: disable=invalid-name
 
 
 def get_logger(name: str,

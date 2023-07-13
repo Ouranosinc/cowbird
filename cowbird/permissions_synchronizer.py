@@ -2,8 +2,6 @@ import re
 from copy import deepcopy
 from typing import TYPE_CHECKING, Callable, Dict, Iterator, List, Tuple
 
-from magpie.typedefs import PermissionDict
-
 from cowbird.config import (
     BIDIRECTIONAL_ARROW,
     LEFT_ARROW,
@@ -21,6 +19,8 @@ from cowbird.typedefs import ConfigSegment, PermissionData, PermissionResourceDa
 from cowbird.utils import get_config_path, get_logger
 
 if TYPE_CHECKING:
+    from magpie.typedefs import PermissionDict
+
     from cowbird.handlers.impl.magpie import Magpie
 
 SyncPointServicesType = Dict[str, Dict[str, List[Dict[str, str]]]]
@@ -532,7 +532,7 @@ class SyncPoint:
                 if len(permission_info) != 3:
                     raise RuntimeError(f"Invalid permission found: {perm_key}. It should use the explicit "
                                        "format `<name>-<access>-<scope>`.")
-                perm: PermissionDict = dict(zip(["name", "access", "scope"], permission_info))
+                perm: "PermissionDict" = dict(zip(["name", "access", "scope"], permission_info))
                 permissions_data[-1]["permission"] = perm
                 permissions_data[-1]["user"] = user_and_group[0]
                 permissions_data[-1]["group"] = user_and_group[1]
