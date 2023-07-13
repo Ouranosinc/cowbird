@@ -1,9 +1,10 @@
 version: "3.4"
 
 services:
-  magpie:
-    ports:
-      - "2001:2001"
+# using 'host' in this case of CI tests
+#  magpie:
+#    ports:
+#      - "2001:2001"
 
   postgres:
     ports:
