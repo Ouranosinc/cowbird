@@ -6,6 +6,10 @@ services:
 #    ports:
 #      - "2001:2001"
 
+  mongodb:
+    ports:
+      - "27017:27017"
+
   postgres:
     ports:
       - "5432:5432"
