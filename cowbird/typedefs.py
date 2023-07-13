@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, TypedD
 from typing_extensions import TypeAlias
 
 from celery.app import Celery
+from magpie.typedefs import PermissionConfigItem
 from pyramid.config import Configurator
 from pyramid.httpexceptions import HTTPException
 from pyramid.registry import Registry
@@ -59,8 +60,14 @@ ConfigResTokenInfo = TypedDict("ConfigResTokenInfo", {"has_multi_token": bool, "
 ConfigSegment = TypedDict("ConfigSegment", {"name": str, "type": str})
 
 ResourceSegment = TypedDict("ResourceSegment", {"resource_name": str, "resource_type": str})
-PermissionDataEntry = TypedDict("PermissionDataEntry",
-                                {"res_path": List[ResourceSegment], "permissions": Dict[str, List[str]]})
+PermissionResourceData = Union[PermissionConfigItem, ResourceSegment]
+PermissionDataEntry = TypedDict(
+    "PermissionDataEntry",
+    {
+        "res_path": List[PermissionResourceData],
+        "permissions": Dict[str, List[str]],
+    }
+)
 PermissionData = Dict[str, PermissionDataEntry]
 
 StoreSelector = Union[Type[StoreInterfaceType], StoreInterfaceType, str]

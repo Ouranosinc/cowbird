@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Union
 import requests
 from magpie.models import Layer, Workspace
 from magpie.permissions import Permission
+from magpie.typedefs import PermissionAction, PermissionConfigItem
 from magpie.services import ServiceGeoserver
 from pyramid.response import Response
 from requests.cookies import RequestsCookieJar
@@ -255,12 +256,13 @@ class Magpie(Handler):
     def permission_deleted(self, permission):
         self.permissions_synch.delete_permission(permission)
 
-    def create_permissions(self, permissions_data: List[Dict[str, str]]) -> None:
+    def create_permissions(self, permissions_data: List[PermissionConfigItem]) -> None:
         """
         Make sure that the specified permissions exist on Magpie.
         """
         if permissions_data:
-            permissions_data[-1]["action"] = "create"
+            action: PermissionAction = "create"
+            permissions_data[-1]["action"] = action
 
             resp = self._send_request(method="PATCH", url=f"{self.url}/permissions",
                                       json={"permissions": permissions_data})
@@ -277,7 +279,8 @@ class Magpie(Handler):
                                     perm_access: str,
                                     perm_scope: str,
                                     user_name: Optional[str] = "",
-                                    grp_name: Optional[str] = "") -> Union[Response, None]:
+                                    grp_name: Optional[str] = "",
+                                    ) -> Union[Response, None]:
 
         if user_name:
             url = f"{self.url}/users/{user_name}/resources/{res_id}/permissions"

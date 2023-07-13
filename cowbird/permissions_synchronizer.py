@@ -2,6 +2,8 @@ import re
 from copy import deepcopy
 from typing import TYPE_CHECKING, Callable, Dict, Iterator, List, Tuple
 
+from magpie.typedefs import PermissionDict
+
 from cowbird.config import (
     BIDIRECTIONAL_ARROW,
     LEFT_ARROW,
@@ -15,7 +17,7 @@ from cowbird.config import (
     validate_sync_config_services
 )
 from cowbird.handlers.handler_factory import HandlerFactory
-from cowbird.typedefs import ConfigSegment, PermissionData, ResourceSegment
+from cowbird.typedefs import ConfigSegment, PermissionData, PermissionResourceData, ResourceSegment
 from cowbird.utils import get_config_path, get_logger
 
 if TYPE_CHECKING:
@@ -306,7 +308,7 @@ class SyncPoint:
     @staticmethod
     def _is_in_permissions(target_permission: str,
                            svc_name: str,
-                           src_res_full_name: ResourceSegment,
+                           src_res_full_name: List[PermissionResourceData],
                            permissions: Dict) -> bool:
         """
         Checks if a target permission is found in a permissions dict.
@@ -391,9 +393,10 @@ class SyncPoint:
                             # Another source resource uses the same target permission as the input.
                             # If the source permission exists, for the user/group, remove the target input permission
                             # since it should not be deleted in that case.
-                            svc_name, src_res_data = \
-                                res_data.get(src_res_key,
-                                             self._get_resource_full_name_and_type(src_res_key, src_matched_groups))
+                            svc_name, src_res_data = res_data.get(
+                                src_res_key,
+                                self._get_resource_full_name_and_type(src_res_key, src_matched_groups)
+                            )
                             # Save resource data if needed for other iterations
                             res_data[src_res_key] = (svc_name, src_res_data)
                             if (target_permission in user_targets.get(target_res_key, []) and
@@ -450,10 +453,14 @@ class SyncPoint:
                         permission_data[target_key]["permissions"][target_permission] = [None, input_permission.group]
         return permission_data
 
-    def _prepare_permissions_to_remove(self, target_res_and_permissions: Dict[str, List[str]], input_permission: Permission, input_src_res_key: str,
-                                       src_matched_groups: Dict[str, str]) -> PermissionData:
+    def _prepare_permissions_to_remove(self,
+                                       target_res_and_permissions: Dict[str, List[str]],
+                                       input_permission: Permission,
+                                       input_src_res_key: str,
+                                       src_matched_groups: Dict[str, str],
+                                       ) -> PermissionData:
         """
-        Removes every source resource found in the mappings that has an existing permission that is synched to one of
+        Removes every source resource found in the mappings that has an existing permission that is synced to one of
         the input target permissions.
 
         Used in the case of a `deleted` webhook event.
@@ -468,7 +475,8 @@ class SyncPoint:
                                   src_res_key: str,
                                   src_matched_groups: Dict[str, str],
                                   input_permission: Permission,
-                                  perm_operation: Callable[[List[Dict]], None]) -> PermissionData:
+                                  perm_operation: Callable[[List[Dict]], None],
+                                  ) -> PermissionData:
         """
         Finds all permissions that should be synchronised with the source resource.
         """
@@ -498,7 +506,7 @@ class SyncPoint:
     def sync(self,
              perm_operation: Callable[[List[Dict]], None],
              permission: Permission,
-             src_resource_tree: List[Dict]) -> None:
+             src_resource_tree: List[Dict[str, ResourceSegment]]) -> None:
         """
         Create or delete target permissions, that are mapped to the source resource that triggered the event.
 
@@ -524,7 +532,8 @@ class SyncPoint:
                 if len(permission_info) != 3:
                     raise RuntimeError(f"Invalid permission found: {perm_key}. It should use the explicit "
                                        "format `<name>-<access>-<scope>`.")
-                permissions_data[-1]["permission"] = dict(zip(["name", "access", "scope"], permission_info))
+                perm: PermissionDict = dict(zip(["name", "access", "scope"], permission_info))
+                permissions_data[-1]["permission"] = perm
                 permissions_data[-1]["user"] = user_and_group[0]
                 permissions_data[-1]["group"] = user_and_group[1]
 
