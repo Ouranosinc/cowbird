@@ -3,6 +3,7 @@
 import logging
 import os
 import sys
+from typing import Iterable, Set, Tuple, Union
 
 try:
     from packaging.version import Version as LooseVersion
@@ -13,16 +14,6 @@ try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
-
-try:
-    # typing only available builtin starting with Python3
-    # cannot employ it during setup, but will be installed afterwards with backport
-    from typing import TYPE_CHECKING  # noqa
-    if TYPE_CHECKING:
-        # pylint: disable=W0611,unused-import
-        from typing import Iterable, Set, Tuple, Union  # noqa: F401
-except ImportError:
-    pass
 
 COWBIRD_ROOT = os.path.abspath(os.path.dirname(__file__))
 COWBIRD_MODULE_DIR = os.path.join(COWBIRD_ROOT, "cowbird")
