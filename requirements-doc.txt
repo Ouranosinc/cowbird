@@ -4,7 +4,8 @@
 # these are doc-only requirements
 astroid>=2.11.0,<3
 jinja2<3.1 # Avoid jinja2 3.1 version, which breaks with sphinx 3.X (https://github.com/sphinx-doc/sphinx/issues/10291)
-sphinx-autoapi>=1.7.0
+sphinx-autoapi>=1.7.0; python_version < "3.10"
+sphinx-autoapi>=2.1.0; python_version >= "3.10"
 sphinx-paramlinks>=0.4.1
 sphinx>=3.5,<6; python_version < "3.10"
 sphinx>=6.2,<7; python_version >= "3.10"
