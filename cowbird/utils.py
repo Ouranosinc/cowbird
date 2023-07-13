@@ -11,10 +11,11 @@ import types
 from configparser import ConfigParser
 from enum import Enum
 from inspect import isclass, isfunction
-from typing import TYPE_CHECKING
+from typing import Any, List, NoReturn, Optional, Type, TypeVar, Union
 
 from celery.app import Celery
 from pyramid.config import Configurator
+from pyramid.events import NewRequest
 from pyramid.httpexceptions import HTTPClientError, HTTPException
 from pyramid.registry import Registry
 from pyramid.request import Request
@@ -27,22 +28,14 @@ from webob.headers import EnvironHeaders, ResponseHeaders
 
 from cowbird import __meta__
 from cowbird.constants import get_constant, validate_required
-
-if TYPE_CHECKING:
-    # pylint: disable=W0611,unused-import
-    from typing import _TC  # noqa: E0611,F401,W0212 # pylint: disable=E0611
-    from typing import Any, List, NoReturn, Optional, Type, Union
-
-    from pyramid.events import NewRequest
-
-    from cowbird.typedefs import (
-        AnyHeadersType,
-        AnyKey,
-        AnyRegistryContainer,
-        AnyResponseType,
-        AnySettingsContainer,
-        SettingsType
-    )
+from cowbird.typedefs import (
+    AnyHeadersType,
+    AnyKey,
+    AnyRegistryContainer,
+    AnyResponseType,
+    AnySettingsContainer,
+    SettingsType
+)
 
 CONTENT_TYPE_ANY = "*/*"
 CONTENT_TYPE_JSON = "application/json"
@@ -75,9 +68,14 @@ CLI_MODE_CFG = "cli_mode"
 # This setting is set to true before creating the test app, the pyramid app use the default false value
 USE_TEST_CELERY_APP_CFG = "use_test_celery_app"
 
+EnumClassType = TypeVar("EnumClassType", bound=Enum)
 
-def get_logger(name, level=None, force_stdout=None, message_format=None, datetime_format=None):
-    # type: (str, Optional[int], bool, Optional[str], Optional[str]) -> logging.Logger
+
+def get_logger(name: str,
+               level: Optional[int] = None,
+               force_stdout: bool = None,
+               message_format: Optional[str] = None,
+               datetime_format: Optional[str] = None) -> logging.Logger:
     """
     Immediately sets the logger level to avoid duplicate log outputs from the `root logger` and `this logger` when
     `level` is ``logging.NOTSET``.
@@ -99,8 +97,10 @@ def get_logger(name, level=None, force_stdout=None, message_format=None, datetim
 LOGGER = get_logger(__name__)
 
 
-def set_logger_config(logger, force_stdout=False, message_format=None, datetime_format=None):
-    # type: (logging.Logger, bool, Optional[str], Optional[str]) -> logging.Logger
+def set_logger_config(logger: logging.Logger,
+                      force_stdout: bool = False,
+                      message_format: Optional[str] = None,
+                      datetime_format: Optional[str] = None) -> logging.Logger:
     """
     Applies the provided logging configuration settings to the logger.
     """
@@ -123,8 +123,7 @@ def set_logger_config(logger, force_stdout=False, message_format=None, datetime_
     return logger
 
 
-def print_log(msg, logger=None, level=logging.INFO, **kwargs):
-    # type: (str, Optional[logging.Logger], int, Any) -> None
+def print_log(msg: str, logger: Optional[logging.Logger] = None, level: int = logging.INFO, **kwargs: Any) -> None:
     """
     Logs the requested message to the logger and optionally enforce printing to the console according to configuration
     value defined by ``COWBIRD_LOG_PRINT``.
@@ -141,8 +140,10 @@ def print_log(msg, logger=None, level=logging.INFO, **kwargs):
     logger.log(level, msg, **kwargs)
 
 
-def raise_log(msg, exception=Exception, logger=None, level=logging.ERROR):
-    # type: (str, Type[Exception], Optional[logging.Logger], int) -> NoReturn
+def raise_log(msg: str,
+              exception: Type[Exception] = Exception,
+              logger: Optional[logging.Logger] = None,
+              level: int = logging.ERROR) -> NoReturn:
     """
     Logs the provided message to the logger and raises the corresponding exception afterwards.
 
@@ -156,8 +157,7 @@ def raise_log(msg, exception=Exception, logger=None, level=logging.ERROR):
     raise exception(msg)  # pylint: disable=W0719
 
 
-def bool2str(value):
-    # type: (Any) -> str
+def bool2str(value: Any) -> str:
     """
     Converts :paramref:`value` to explicit ``"true"`` or ``"false"`` :class:`str` with permissive variants comparison
     that can represent common falsy or truthy values.
@@ -165,8 +165,7 @@ def bool2str(value):
     return "true" if str(value).lower() in truthy else "false"
 
 
-def islambda(func):
-    # type: (Any) -> bool
+def islambda(func: Any) -> bool:
     """
     Evaluate if argument is a callable :class:`lambda` expression.
     """
@@ -208,8 +207,7 @@ def configure_celery(config, config_ini):
         LOGGER.info("Importing celery tasks from module [%s]", module)
 
 
-def get_app_config(container):
-    # type: (AnySettingsContainer) -> Configurator
+def get_app_config(container: AnySettingsContainer) -> Configurator:
     """
     Generates application configuration with all required utilities and settings configured.
     """
@@ -230,7 +228,7 @@ def get_app_config(container):
     print_log("Setting up loggers...", LOGGER)
     log_lvl = get_constant("COWBIRD_LOG_LEVEL", settings, "cowbird.log_level", default_value="INFO",
                            raise_missing=False, raise_not_set=False, print_missing=True)
-    # apply proper value in case it was in ini AND env since up until then, only env was check
+    # apply proper value in case it was in ini AND env since up until then, only env was checked
     # we want to prioritize the ini definition
     cowbird.constants.COWBIRD_LOG_LEVEL = log_lvl
     LOGGER.setLevel(log_lvl)
@@ -261,7 +259,7 @@ def get_app_config(container):
     return config
 
 
-def get_settings_from_config_ini(config_ini_path, section=None):
+def get_settings_from_config_ini(config_ini_path: str, section: Optional[str] = None) -> SettingsType:
     """
     Loads configuration INI settings with additional handling.
     """
@@ -281,8 +279,7 @@ def get_settings_from_config_ini(config_ini_path, section=None):
     return dict(parser.items(section=section))
 
 
-def get_registry(container, nothrow=False):
-    # type: (AnyRegistryContainer, bool) -> Optional[Registry]
+def get_registry(container: AnyRegistryContainer, nothrow: bool = False) -> Optional[Registry]:
     """
     Retrieves the application ``registry`` from various containers referencing to it.
     """
@@ -306,8 +303,10 @@ def get_json(response):
     return response.json()
 
 
-def get_header(header_name, header_container, default=None, split=None):
-    # type: (str, AnyHeadersType, Optional[str], Optional[Union[str, List[str]]]) -> Optional[str]
+def get_header(header_name: str,
+               header_container: AnyHeadersType,
+               default: Optional[str] = None,
+               split: Optional[Union[str, List[str]]] = None) -> Optional[str]:
     """
     Retrieves ``header_name`` by fuzzy match (independently of upper/lower-case and underscore/dash) from various
     framework implementations of ``Headers``.
@@ -343,8 +342,7 @@ def get_header(header_name, header_container, default=None, split=None):
     return default
 
 
-def convert_response(response):
-    # type: (AnyResponseType) -> Response
+def convert_response(response: AnyResponseType) -> Response:
     """
     Converts a :class:`requests.Response` object to an equivalent :class:`pyramid.response.Response` object.
 
@@ -367,8 +365,7 @@ def convert_response(response):
     return pyramid_response
 
 
-def get_settings(container, app=False):
-    # type: (Optional[AnySettingsContainer], bool) -> SettingsType
+def get_settings(container: Optional[AnySettingsContainer], app: bool = False) -> SettingsType:
     """
     Retrieve application settings from a supported container.
 
@@ -390,8 +387,7 @@ def get_settings(container, app=False):
     raise TypeError(f"Could not retrieve settings from container object [{type(container)}]")
 
 
-def fully_qualified_name(obj):
-    # type: (Union[Any, Type[Any]]) -> str
+def fully_qualified_name(obj: Union[Any, Type[Any]]) -> str:
     """
     Obtains the ``'<module>.<name>'`` full path definition of the object to allow finding and importing it.
     """
@@ -399,17 +395,15 @@ def fully_qualified_name(obj):
     return ".".join([obj.__module__, cls.__name__])
 
 
-def log_request_format(request):
-    # type: (Request) -> str
+def log_request_format(request: Request) -> str:
     return f"{request.method!s} {request.host!s} {request.path!s}"
 
 
-def log_request(event):
-    # type: (NewRequest) -> None
+def log_request(event: NewRequest) -> None:
     """
     Subscriber event that logs basic details about the incoming requests.
     """
-    request = event.request  # type: Request
+    request: Request = event.request
     LOGGER.info("Request: [%s]", log_request_format(request))
     if LOGGER.isEnabledFor(logging.DEBUG):
         def items_str(items):
@@ -451,8 +445,7 @@ def log_exception_tween(handler, registry):  # noqa: F811
     return log_exc
 
 
-def is_json_body(body):
-    # type: (Any) -> bool
+def is_json_body(body: Any) -> bool:
     if not body:
         return False
     try:
@@ -475,24 +468,24 @@ class ExtendedEnum(Enum):
     """
 
     @classmethod
-    def names(cls):
-        # type: () -> List[str]
+    def names(cls) -> List[str]:
         """
         Returns the member names assigned to corresponding enum elements.
         """
         return list(cls.__members__)
 
     @classmethod
-    def values(cls):
-        # type: () -> List[AnyKey]
+    def values(cls) -> List[AnyKey]:
         """
         Returns the literal values assigned to corresponding enum elements.
         """
         return [m.value for m in cls.__members__.values()]                      # pylint: disable=E1101
 
     @classmethod
-    def get(cls, key_or_value, default=None):
-        # type: (AnyKey, Optional[Any]) -> Optional[_TC]
+    def get(cls: Type[EnumClassType],
+            key_or_value: Union[AnyKey, Type[EnumClassType]],
+            default: Optional[Any] = None,
+            ) -> Optional[EnumClassType]:
         """
         Finds an enum entry by defined name or its value.
 
@@ -562,8 +555,7 @@ def is_null(item):
     return isinstance(item, NullType) or item is null
 
 
-def get_config_path(container=None):
-    # type: (Optional[AnySettingsContainer]) -> str
+def get_config_path(container: Optional[AnySettingsContainer] = None) -> str:
     settings = get_settings(container, app=True)
     return get_constant("COWBIRD_CONFIG_PATH", settings,
                         default_value=None,
@@ -571,23 +563,20 @@ def get_config_path(container=None):
                         print_missing=True)
 
 
-def get_ssl_verify(container=None):
-    # type: (Optional[AnySettingsContainer]) -> bool
+def get_ssl_verify(container: Optional[AnySettingsContainer] = None) -> bool:
     return asbool(get_constant("COWBIRD_SSL_VERIFY", container,
                                default_value=True,
                                raise_missing=False, raise_not_set=False,
                                print_missing=True))
 
 
-def get_timeout(container=None):
-    # type: (Optional[AnySettingsContainer]) -> int
+def get_timeout(container: Optional[AnySettingsContainer] = None) -> int:
     return int(get_constant("COWBIRD_REQUEST_TIMEOUT", container,
                             default_value=5,
                             raise_missing=False, raise_not_set=False))
 
 
-def update_filesystem_permissions(permission, is_readable, is_writable, is_executable):
-    # type: (int, bool, bool, bool) -> int
+def update_filesystem_permissions(permission: int, is_readable: bool, is_writable: bool, is_executable: bool) -> int:
     """
     Applies/remove read, write and execute permissions (user only) to the input file system permissions.
     """

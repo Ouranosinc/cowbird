@@ -1,30 +1,25 @@
-from typing import TYPE_CHECKING
+
+
+from typing import Any, Iterable, Optional, Tuple, Type, Union
 
 from pyramid.httpexceptions import HTTPError, HTTPInternalServerError, HTTPUnprocessableEntity
+from pyramid.request import Request
 
 from cowbird.api import exception as ax
 from cowbird.api import schemas as s
+from cowbird.typedefs import JSON
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger
-
-if TYPE_CHECKING:
-    # pylint: disable=W0611,unused-import
-    from typing import Any, Iterable, Optional, Tuple, Type, Union
-
-    from pyramid.request import Request
-
-    from cowbird.typedefs import JSON
 
 LOGGER = get_logger(__name__)
 
 
-def check_value(value,                      # type: Any
-                param_name,                 # type: str
-                check_type=str,             # type: Union[Type[Any], Tuple[Type[Any], ...]]
-                pattern=ax.PARAM_REGEX,     # type: Optional[Union[str, bool]]
-                http_error=None,            # type: Optional[Type[HTTPError]]
-                msg_on_fail=None            # type: Optional[str]
-                ):
-    # type: (...) -> None
+def check_value(value: Any,
+                param_name: str,
+                check_type: Union[Type[Any], Tuple[Type[Any], ...]] = str,
+                pattern: Optional[Union[str, bool]] = ax.PARAM_REGEX,
+                http_error: Optional[Type[HTTPError]] = None,
+                msg_on_fail: Optional[str] = None
+                ) -> None:
     """
     Validates the value against specified type and pattern.
 
@@ -58,8 +53,7 @@ def get_request_method_content(request):
     return getattr(request, method_property)
 
 
-def get_multiformat_body_raw(request, key, default=None):
-    # type: (Request, str, Optional[Any]) -> Any
+def get_multiformat_body_raw(request: Request, key: str, default: Optional[Any] = None) -> Any:
     """
     Obtains the value of :paramref:`key` element from the request body according to specified `Content-Type` header.
 
@@ -77,15 +71,14 @@ def get_multiformat_body_raw(request, key, default=None):
                             http_error=HTTPInternalServerError, msg_on_fail=msg)
 
 
-def get_multiformat_body(request,                   # type: Request
-                         key,                       # type: str
-                         default=None,              # type: Any
-                         check_type=str,            # type: Union[Type[Any], Tuple[Type[Any], ...]]
-                         pattern=ax.PARAM_REGEX,    # type: Optional[Union[str, bool]]
-                         http_error=None,           # type: Optional[Type[HTTPError]]
-                         msg_on_fail=None           # type: Optional[str]
-                         ):
-    # type: (...) -> JSON
+def get_multiformat_body(request: Request,
+                         key: str,
+                         default: Any = None,
+                         check_type: Union[Type[Any], Tuple[Type[Any], ...]] = str,
+                         pattern: Optional[Union[str, bool]] = ax.PARAM_REGEX,
+                         http_error: Optional[Type[HTTPError]] = None,
+                         msg_on_fail: Optional[str] = None
+                         ) -> JSON:
     """
     Obtains and validates the matched value under :paramref:`key` element from the request body.
 
@@ -113,8 +106,13 @@ def get_multiformat_body(request,                   # type: Request
     return val
 
 
-def get_path_param(request, key, check_type=str, pattern=ax.PARAM_REGEX, http_error=None, msg_on_fail=None):
-    # type: (Request, str, Any, Optional[Union[str, bool]], Optional[Type[HTTPError]], Optional[str]) -> str
+def get_path_param(request: Request,
+                   key: str,
+                   check_type: Any = str,
+                   pattern: Optional[Union[str, bool]] = ax.PARAM_REGEX,
+                   http_error: Optional[Type[HTTPError]] = None,
+                   msg_on_fail: Optional[str] = None,
+                   ) -> str:
     """
     Obtains the matched value located at the expected position of the specified path variable.
 
@@ -134,10 +132,12 @@ def get_path_param(request, key, check_type=str, pattern=ax.PARAM_REGEX, http_er
     return val
 
 
-def get_query_param(request, case_insensitive_key, default=None):
-    # type: (Request, Union[str, Iterable[str]], Optional[Any]) -> Any
+def get_query_param(request: Request,
+                    case_insensitive_key: Union[str, Iterable[str]],
+                    default: Optional[Any] = None,
+                    ) -> Any:
     """
-    Retrieves a query string value by name (case insensitive), or returns the default if not present.
+    Retrieves a query string value by name (case-insensitive), or returns the default if not present.
     """
     if not isinstance(case_insensitive_key, (list, set, tuple)):
         case_insensitive_key = [case_insensitive_key]

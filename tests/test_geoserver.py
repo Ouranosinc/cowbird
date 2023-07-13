@@ -10,6 +10,7 @@ import logging
 import os
 import shutil
 from pathlib import Path
+from typing import Tuple
 
 import mock
 import pytest
@@ -62,7 +63,10 @@ def get_geoserver_settings():
     return geoserver_settings
 
 
-def prepare_geoserver_test_workspace(test_instance, geoserver_handler, workspace_key):
+def prepare_geoserver_test_workspace(test_instance: "TestGeoserver",
+                                     geoserver_handler: Geoserver,
+                                     workspace_key: str,
+                                     ) -> Tuple[str, str]:
     """
     Prepares a workspace, its datastore and a test shapefile along with the associated Geoserver resources.
     """
@@ -174,41 +178,41 @@ class TestGeoserverRequests(TestGeoserver):
         # Bypasses HandlerFactory() to prevent side effects in other tests.
         return TestGeoserver.get_geoserver()
 
-    def test_workspace_creation(self, geoserver):
+    def test_workspace_creation(self, geoserver: Geoserver) -> None:
         response = geoserver._create_workspace_request(workspace_name=self.workspaces["creation"])
         assert response.status_code == 201
 
-    def test_empty_workspace_removal(self, geoserver):
-        geoserver._create_workspace_request(self.workspaces["empty-remove"])
+    def test_empty_workspace_removal(self, geoserver: Geoserver) -> None:
+        geoserver._create_workspace_request(workspace_name=self.workspaces["empty-remove"])
         response = geoserver._remove_workspace_request(workspace_name=self.workspaces["empty-remove"])
         assert response.status_code == 200
 
-    def test_duplicate_workspace(self, geoserver):
+    def test_duplicate_workspace(self, geoserver: Geoserver) -> None:
         response = geoserver._create_workspace_request(workspace_name=self.workspaces["creation-duplicate"])
         assert response.status_code == 201
         response = geoserver._create_workspace_request(workspace_name=self.workspaces["creation-duplicate"])
         assert response.status_code == 401
 
-    def test_workspace_removal(self, geoserver):
+    def test_workspace_removal(self, geoserver: Geoserver) -> None:
         geoserver._create_workspace_request(workspace_name=self.workspaces["remove"])
         geoserver._create_datastore_request(workspace_name=self.workspaces["remove"],
                                             datastore_name="test-datastore")
         response = geoserver._remove_workspace_request(workspace_name=self.workspaces["remove"])
         assert response.status_code == 200
 
-    def test_datastore_creation(self, geoserver):
+    def test_datastore_creation(self, geoserver: Geoserver) -> None:
         geoserver._create_workspace_request(workspace_name=self.workspaces["datastore-create"])
         response = geoserver._create_datastore_request(workspace_name=self.workspaces["datastore-create"],
                                                        datastore_name="test-datastore")
         assert response.status_code == 201
 
-    def test_datastore_creation_missing_workspace(self, geoserver):
+    def test_datastore_creation_missing_workspace(self, geoserver: Geoserver) -> None:
         with pytest.raises(GeoserverError) as error:
             geoserver._create_datastore_request(workspace_name="test-nonexistent-workspace",
                                                 datastore_name="test-datastore")
         assert "Operation [_create_datastore_request] failed" in str(error.value)
 
-    def test_datastore_configuration(self, geoserver):
+    def test_datastore_configuration(self, geoserver: Geoserver) -> None:
         geoserver._create_workspace_request(workspace_name=self.workspaces["datastore-config"])
         geoserver._create_datastore_request(workspace_name=self.workspaces["datastore-config"],
                                             datastore_name="test-datastore")
@@ -218,7 +222,7 @@ class TestGeoserverRequests(TestGeoserver):
                                                           datastore_path=geoserver.workspace_dir)
         assert response.status_code == 200
 
-    def test_duplicate_datastore(self, geoserver):
+    def test_duplicate_datastore(self, geoserver: Geoserver) -> None:
         geoserver._create_workspace_request(workspace_name=self.workspaces["datastore-duplicate"])
         response = geoserver._create_datastore_request(workspace_name=self.workspaces["datastore-duplicate"],
                                                        datastore_name="test-datastore")
@@ -229,16 +233,20 @@ class TestGeoserverRequests(TestGeoserver):
                                                 datastore_name="test-datastore")
         assert "Operation [_create_datastore_request] failed" in str(error.value)
 
-    def test_publish_and_remove_shapefile(self, geoserver):
+    def test_publish_and_remove_shapefile(self, geoserver: Geoserver) -> None:
         workspace_name, datastore_name = prepare_geoserver_test_workspace(self, geoserver, "publish_remove")
 
         # Validate and publish shapefile
         geoserver.validate_shapefile(workspace_name=workspace_name, shapefile_name=self.test_shapefile_name)
-        response = geoserver._publish_shapefile_request(workspace_name, datastore_name, self.test_shapefile_name)
+        response = geoserver._publish_shapefile_request(workspace_name=workspace_name,
+                                                        datastore_name=datastore_name,
+                                                        filename=self.test_shapefile_name)
         assert response.status_code == 201
 
         # Remove shapefile
-        response = geoserver._remove_shapefile_request(workspace_name, datastore_name, self.test_shapefile_name)
+        response = geoserver._remove_shapefile_request(workspace_name=workspace_name,
+                                                       datastore_name=datastore_name,
+                                                       filename=self.test_shapefile_name)
         assert response.status_code == 200
 
 

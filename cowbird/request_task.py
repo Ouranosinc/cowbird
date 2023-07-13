@@ -1,11 +1,8 @@
 from abc import ABC
-from typing import TYPE_CHECKING
+from typing import Tuple
 
 from celery.app.task import Task
 from requests.exceptions import RequestException
-
-if TYPE_CHECKING:
-    from typing import Tuple
 
 
 class AbortException(Exception):
@@ -39,7 +36,7 @@ class RequestTask(Task, ABC):
     Parameter ``base=RequestTask`` will instantiate a RequestTask rather than a base celery Task as the self object.
     """
 
-    autoretry_for = (RequestException,)  # type: Tuple[Exception]
+    autoretry_for: Tuple[Exception] = (RequestException,)
     """
     Exceptions that are accepted as valid raising cases to attempt request retry.
     """

@@ -1,18 +1,13 @@
 import logging
 import os
 import re
-from typing import TYPE_CHECKING, Any
+from typing import Any, Dict, List, Tuple, Union
 
 import yaml
 from schema import Optional, Regex, Schema
 
+from cowbird.typedefs import ConfigDict, ConfigResTokenInfo, ConfigSegment
 from cowbird.utils import get_logger, print_log, raise_log
-
-if TYPE_CHECKING:
-    # pylint: disable=W0611,unused-import
-    from typing import Dict, List, Tuple, Union
-
-    from cowbird.typedefs import ConfigDict, ConfigResTokenInfo, ConfigSegment
 
 LOGGER = get_logger(__name__)
 
@@ -56,8 +51,7 @@ class ConfigErrorInvalidResourceKey(ConfigError):
     """
 
 
-def _load_config(path_or_dict, section, allow_missing=False):
-    # type: (Union[str, ConfigDict], str, bool) -> ConfigDict
+def _load_config(path_or_dict: Union[str, ConfigDict], section: str, allow_missing: bool = False) -> ConfigDict:
     """
     Loads a file path or dictionary as YAML/JSON configuration.
     """
@@ -79,8 +73,9 @@ def _load_config(path_or_dict, section, allow_missing=False):
                   exception=ConfigError, logger=LOGGER)
 
 
-def get_all_configs(path_or_dict, section, allow_missing=False):
-    # type: (Union[str, ConfigDict], str, bool) -> List[ConfigDict]
+def get_all_configs(path_or_dict: Union[str, ConfigDict],
+                    section: str,
+                    allow_missing: bool = False) -> List[ConfigDict]:
     """
     Loads all configuration files specified by the path (if a directory), a single configuration (if a file) or directly
     returns the specified dictionary section (if a configuration dictionary).
@@ -112,8 +107,7 @@ def get_all_configs(path_or_dict, section, allow_missing=False):
     return []
 
 
-def _expand_all(config):
-    # type: (ConfigDict) -> ConfigDict
+def _expand_all(config: ConfigDict) -> ConfigDict:
     """
     Applies environment variable expansion recursively to all applicable fields of a configuration definition.
     """
@@ -135,8 +129,7 @@ def _expand_all(config):
     return config
 
 
-def validate_handlers_config_schema(handlers_cfg):
-    # type: (ConfigDict) -> None
+def validate_handlers_config_schema(handlers_cfg: ConfigDict) -> None:
     """
     Validates the schema of the `handlers` section found in the config.
     """
@@ -151,8 +144,7 @@ def validate_handlers_config_schema(handlers_cfg):
     schema.validate(handlers_cfg)
 
 
-def validate_sync_perm_config_schema(sync_cfg):
-    # type: (ConfigDict) -> None
+def validate_sync_perm_config_schema(sync_cfg: ConfigDict) -> None:
     """
     Validates the schema of the `sync_permissions` section found in the config.
     """
@@ -171,8 +163,7 @@ def validate_sync_perm_config_schema(sync_cfg):
     schema.validate(sync_cfg)
 
 
-def validate_and_get_resource_info(res_key, segments):
-    # type: (str, List[ConfigSegment]) -> ConfigResTokenInfo
+def validate_and_get_resource_info(res_key: str, segments: List[ConfigSegment]) -> ConfigResTokenInfo:
     """
     Validates a resource_key and its related info from the config and returns some resource info relevant to the config
     mapping validation.
@@ -203,8 +194,10 @@ def validate_and_get_resource_info(res_key, segments):
     return {"has_multi_token": has_multi_token, "named_tokens": named_tokens}
 
 
-def validate_bidirectional_mapping(mapping, res_info, res_key1, res_key2):
-    # type: (str, Dict[str, ConfigResTokenInfo], str, str) -> None
+def validate_bidirectional_mapping(mapping: str,
+                                   res_info: Dict[str, ConfigResTokenInfo],
+                                   res_key1: str,
+                                   res_key2: str) -> None:
     """
     Validates if both resources of a bidirectional mapping respect validation rules.
 
@@ -221,8 +214,7 @@ def validate_bidirectional_mapping(mapping, res_info, res_key1, res_key2):
                                        f"{res_key2}: {res_info[res_key2]['named_tokens']})")
 
 
-def validate_unidirectional_mapping(mapping, src_info, tgt_info):
-    # type: (str, ConfigResTokenInfo, ConfigResTokenInfo) -> None
+def validate_unidirectional_mapping(mapping: str, src_info: ConfigResTokenInfo, tgt_info: ConfigResTokenInfo) -> None:
     """
     Validates if both source and target resource of a unidirectional mapping respect validation rules.
 
@@ -241,8 +233,7 @@ def validate_unidirectional_mapping(mapping, src_info, tgt_info):
                                        f"missing from the source.")
 
 
-def get_mapping_info(mapping):
-    # type: (str) -> Tuple[Union[str, Any], ...]
+def get_mapping_info(mapping: str) -> Tuple[Union[str, Any], ...]:
     """
     Obtain the different info found in a mapping string from the config.
 
@@ -256,8 +247,7 @@ def get_mapping_info(mapping):
     return matched_groups.groups()
 
 
-def get_permissions_from_str(permissions):
-    # type: (str) -> List[str]
+def get_permissions_from_str(permissions: str) -> List[str]:
     """
     Returns a tuple of all permissions found in a string.
 
@@ -269,8 +259,7 @@ def get_permissions_from_str(permissions):
     return matched_groups
 
 
-def validate_sync_mapping_config(sync_cfg, res_info):
-    # type: (ConfigDict, Dict[str, ConfigResTokenInfo]) -> None
+def validate_sync_mapping_config(sync_cfg: ConfigDict, res_info: Dict[str, ConfigResTokenInfo]) -> None:
     """
     Validates if mappings in the config have valid resource keys and use tokens properly.
     """
@@ -293,8 +282,7 @@ def validate_sync_mapping_config(sync_cfg, res_info):
             raise ConfigError(f"Invalid direction `{direction}` found in the permissions_mapping.")
 
 
-def validate_sync_config(sync_cfg):
-    # type: (ConfigDict) -> None
+def validate_sync_config(sync_cfg: ConfigDict) -> None:
 
     # validate and get all resources info
     res_info = {}
@@ -308,8 +296,7 @@ def validate_sync_config(sync_cfg):
     validate_sync_mapping_config(sync_cfg, res_info)
 
 
-def validate_sync_config_services(sync_cfg, available_services):
-    # type: (ConfigDict, List) -> None
+def validate_sync_config_services(sync_cfg: ConfigDict, available_services: List) -> None:
     """
     Validates if all services used in the sync config are actual available services.
 

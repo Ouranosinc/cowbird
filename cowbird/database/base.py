@@ -1,11 +1,7 @@
 import abc
-from typing import TYPE_CHECKING
 
 from cowbird.database.stores import StoreInterface
-
-if TYPE_CHECKING:
-    # pylint: disable=W0611,unused-import
-    from cowbird.typedefs import JSON, AnySettingsContainer, StoreSelector
+from cowbird.typedefs import JSON, AnySettingsContainer, StoreSelector
 
 
 class DatabaseInterface(metaclass=abc.ABCMeta):
@@ -14,8 +10,7 @@ class DatabaseInterface(metaclass=abc.ABCMeta):
     """
     __slots__ = ["type"]
 
-    def __init__(self, _):
-        # type: (AnySettingsContainer) -> None
+    def __init__(self, _: AnySettingsContainer) -> None:
         """
         Database interface defining a minimum set of function mostly around store management.
         """
@@ -23,8 +18,7 @@ class DatabaseInterface(metaclass=abc.ABCMeta):
             raise NotImplementedError("Database 'type' must be overridden in inheriting class.")
 
     @staticmethod
-    def _get_store_type(store_type):
-        # type: (StoreSelector) -> str
+    def _get_store_type(store_type: StoreSelector) -> str:
         if isinstance(store_type, StoreInterface):
             return store_type.type
         if isinstance(store_type, type) and issubclass(store_type, StoreInterface):
@@ -38,8 +32,7 @@ class DatabaseInterface(metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def reset_store(self, store_type):
-        # type: (StoreSelector) -> None
+    def reset_store(self, store_type: StoreSelector) -> None:
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -47,14 +40,12 @@ class DatabaseInterface(metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_information(self):
-        # type: (...) -> JSON
+    def get_information(self) -> JSON:
         """
         :returns: {'version': version, 'type': db_type}
         """
         raise NotImplementedError
 
     @abc.abstractmethod
-    def is_ready(self):
-        # type: (...) -> bool
+    def is_ready(self) -> bool:
         raise NotImplementedError

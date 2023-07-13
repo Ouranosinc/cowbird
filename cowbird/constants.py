@@ -14,27 +14,23 @@ settings formatted as ``cowbird.[variable_name]`` in the ``cowbird.ini`` configu
 import logging
 import os
 import re
-from typing import TYPE_CHECKING
+from typing import Optional
+from typing_extensions import Literal
 
 from pyramid.settings import asbool
 from pyramid.threadlocal import get_current_registry
 
-if TYPE_CHECKING:
-    # pylint: disable=W0611,unused-import
-    from typing import Optional
-    from typing_extensions import Literal
+from cowbird.typedefs import AnySettingsContainer, SettingValue
 
-    from cowbird.typedefs import AnySettingsContainer, SettingValue
-
-    AnyLogLevel = Literal[
-        "NOTSET", 0,
-        "DEBUG", "debug", 10,
-        "INFO", "info", 20,
-        "WARNING", "warning", 30,
-        "ERROR", "error", 40,
-        "FATAL", "fatal", 50,
-        "CRITICAL", "critical", 50,
-    ]
+AnyLogLevel = Literal[
+    "NOTSET", 0,
+    "DEBUG", "debug", 10,
+    "INFO", "info", 20,
+    "WARNING", "warning", 30,
+    "ERROR", "error", 40,
+    "FATAL", "fatal", 50,
+    "CRITICAL", "critical", 50,
+]
 
 # ===========================
 # path variables
@@ -56,8 +52,7 @@ DEFAULT_ADMIN_UID = int(os.getenv("COWBIRD_FILESYSTEM_ADMIN_UID", 0))
 DEFAULT_ADMIN_GID = int(os.getenv("COWBIRD_FILESYSTEM_ADMIN_GID", 0))
 
 
-def _get_default_log_level():
-    # type: () -> AnyLogLevel
+def _get_default_log_level() -> AnyLogLevel:
     """
     Get logging level from INI configuration file or fallback to default ``INFO`` if it cannot be retrieved.
     """
@@ -115,8 +110,7 @@ _SETTINGS_REQUIRED = [
 ]
 
 
-def get_constant_setting_name(name):
-    # type: (str) -> str
+def get_constant_setting_name(name: str) -> str:
     """
     Find the equivalent setting name of the provided environment variable name.
 
@@ -132,14 +126,14 @@ def get_constant_setting_name(name):
     return name
 
 
-def get_constant(constant_name,             # type: str
-                 settings_container=None,   # type: Optional[AnySettingsContainer]
-                 settings_name=None,        # type: Optional[str]
-                 default_value=None,        # type: Optional[SettingValue]
-                 raise_missing=True,        # type: bool
-                 print_missing=False,       # type: bool
-                 raise_not_set=True         # type: bool
-                 ):                         # type: (...) -> SettingValue
+def get_constant(constant_name: str,
+                 settings_container: Optional[AnySettingsContainer] = None,
+                 settings_name: Optional[str] = None,
+                 default_value: Optional[SettingValue] = None,
+                 raise_missing: bool = True,
+                 print_missing: bool = False,
+                 raise_not_set: bool = True
+                 ) -> SettingValue:
     """
     Search in order for matched value of :paramref:`constant_name`:
       1. search in :py:data:`COWBIRD_CONSTANTS`
@@ -218,8 +212,7 @@ def get_constant(constant_name,             # type: str
     return cowbird_value or default_value
 
 
-def validate_required(container):
-    # type: (AnySettingsContainer) -> None
+def validate_required(container: AnySettingsContainer) -> None:
     """
     Validates that some value is provided for every mandatory configuration setting.
 

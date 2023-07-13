@@ -5,20 +5,17 @@ Add the database in the pyramid registry and a property db for the requests.
 """
 
 import logging
-from typing import TYPE_CHECKING
 
 from pyramid.settings import asbool
 
 from cowbird.database.mongodb import MongoDatabase
+from cowbird.typedefs import AnySettingsContainer
 from cowbird.utils import get_registry, get_settings
 
 LOGGER = logging.getLogger(__name__)
-if TYPE_CHECKING:
-    from cowbird.typedefs import AnySettingsContainer
 
 
-def get_db(container, reset_connection=False):
-    # type: (AnySettingsContainer, bool) -> MongoDatabase
+def get_db(container: AnySettingsContainer, reset_connection: bool = False) -> MongoDatabase:
     """
     Obtains the database connection from configured application settings.
 

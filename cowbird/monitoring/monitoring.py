@@ -1,17 +1,12 @@
 from collections import defaultdict
-from typing import TYPE_CHECKING
+from typing import Optional, Type, Union
 
 from cowbird.database import get_db
 from cowbird.database.stores import MonitoringStore
+from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitor import Monitor, MonitorException
+from cowbird.typedefs import AnySettingsContainer
 from cowbird.utils import SingletonMeta, get_logger
-
-if TYPE_CHECKING:
-    # pylint: disable=W0611,unused-import
-    from typing import Optional, Type, Union
-
-    from cowbird.monitoring.fsmonitor import FSMonitor
-    from cowbird.typedefs import AnySettingsContainer
 
 LOGGER = get_logger(__name__)
 
@@ -30,8 +25,7 @@ class Monitoring(metaclass=SingletonMeta):
               that monitoring handlers are up to date.
     """
 
-    def __init__(self, config=None):
-        # type: (AnySettingsContainer) -> None
+    def __init__(self, config: AnySettingsContainer = None) -> None:
         """
         Initialize the monitoring instance from configured application settings.
 
@@ -54,8 +48,10 @@ class Monitoring(metaclass=SingletonMeta):
             self.monitors[mon.path][mon.callback] = mon
             mon.start()
 
-    def register(self, path, recursive, cb_monitor):
-        # type: (str, bool, Union[FSMonitor, Type[FSMonitor], str]) -> Optional[Monitor]
+    def register(self,
+                 path: str,
+                 recursive: bool,
+                 cb_monitor: Union[FSMonitor, Type[FSMonitor], str]) -> Optional[Monitor]:
         """
         Register a monitor for a specific path and start it. If a monitor already exists for the specific
         path/cb_monitor combination it is directly returned. If this monitor was not recursively monitoring its path and
@@ -96,8 +92,7 @@ class Monitoring(metaclass=SingletonMeta):
                            path, callback, exc)
         return None
 
-    def unregister(self, path, cb_monitor):
-        # type: (str, Union[FSMonitor, Type[FSMonitor], str]) -> bool
+    def unregister(self, path: str, cb_monitor: Union[FSMonitor, Type[FSMonitor], str]) -> bool:
         """
         Stop a monitor and unregister it.
 

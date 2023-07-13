@@ -1,4 +1,6 @@
-from typing import TYPE_CHECKING
+
+
+from typing import Dict, List, Union
 
 import colander
 from cornice import Service
@@ -21,6 +23,7 @@ from pyramid.security import NO_PERMISSION_REQUIRED
 
 from cowbird import __meta__
 from cowbird.constants import get_constant
+from cowbird.typedefs import JSON
 from cowbird.utils import (
     CONTENT_TYPE_HTML,
     CONTENT_TYPE_JSON,
@@ -29,12 +32,6 @@ from cowbird.utils import (
     SUPPORTED_FORMAT_TYPES,
     ExtendedEnum
 )
-
-if TYPE_CHECKING:
-    # pylint: disable=W0611,unused-import
-    from typing import Dict, List, Union
-
-    from cowbird.typedefs import JSON
 
 # ignore naming style of tags
 # pylint: disable=C0103,invalid-name
@@ -92,8 +89,7 @@ class ValidOperations(ExtendedEnum):
     DeleteOperation = "deleted"
 
 
-def generate_api_schema(swagger_base_spec):
-    # type: (Dict[str, Union[str, List[str]]]) -> JSON
+def generate_api_schema(swagger_base_spec: Dict[str, Union[str, List[str]]]) -> JSON:
     """
     Return JSON Swagger specifications of Cowbird REST API.
 

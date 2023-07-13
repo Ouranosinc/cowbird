@@ -1,13 +1,10 @@
 import os
-from typing import TYPE_CHECKING
+
+from pyramid.request import Request
 
 from cowbird.api import schemas as s
 from cowbird.constants import get_constant
-
-if TYPE_CHECKING:
-    from pyramid.request import Request
-
-    from cowbird.typedefs import JSON
+from cowbird.typedefs import JSON
 
 
 @s.SwaggerAPI.get(tags=[s.APITag], response_schemas=s.SwaggerAPI_GET_responses)
@@ -24,8 +21,7 @@ def api_swagger(request):   # noqa: F811
 
 
 @s.SwaggerGenerator.get(tags=[s.APITag], response_schemas=s.SwaggerAPI_GET_responses)
-def api_schema(request):
-    # type: (Request) -> JSON
+def api_schema(request: Request) -> JSON:
     """
     Return JSON Swagger specifications of Cowbird REST API.
     """

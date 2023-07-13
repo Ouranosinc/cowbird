@@ -15,8 +15,7 @@ class FSMonitor(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def on_created(self, path):
-        # type: (str) -> None
+    def on_created(self, path: str) -> None:
         """
         Called when a new path is found.
 
@@ -25,8 +24,7 @@ class FSMonitor(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def on_deleted(self, path):
-        # type: (str) -> None
+    def on_deleted(self, path: str) -> None:
         """
         Called when a path is deleted.
 
@@ -35,8 +33,7 @@ class FSMonitor(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def on_modified(self, path):
-        # type: (str) -> None
+    def on_modified(self, path: str) -> None:
         """
         Called when a path is updated.
 

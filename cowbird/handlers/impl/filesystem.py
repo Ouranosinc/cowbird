@@ -1,15 +1,10 @@
 import os
 import shutil
-from typing import TYPE_CHECKING
+from typing import Any
 
 from cowbird.handlers.handler import HANDLER_WORKSPACE_DIR_PARAM, Handler
+from cowbird.typedefs import SettingsType
 from cowbird.utils import get_logger
-
-if TYPE_CHECKING:
-    from typing import Any
-
-    # pylint: disable=W0611,unused-import
-    from cowbird.typedefs import SettingsType
 
 LOGGER = get_logger(__name__)
 
@@ -22,8 +17,7 @@ class FileSystem(Handler):
     """
     required_params = [HANDLER_WORKSPACE_DIR_PARAM]
 
-    def __init__(self, settings, name, jupyterhub_user_data_dir, **kwargs):
-        # type: (SettingsType, str, str, Any) -> None
+    def __init__(self, settings: SettingsType, name: str, jupyterhub_user_data_dir: str, **kwargs: Any) -> None:
         """
         Create the file system instance.
 
@@ -35,8 +29,7 @@ class FileSystem(Handler):
         super(FileSystem, self).__init__(settings, name, **kwargs)
         self.jupyterhub_user_data_dir = jupyterhub_user_data_dir
 
-    def get_resource_id(self, resource_full_name):
-        # type: (str) -> str
+    def get_resource_id(self, resource_full_name: str) -> str:
         raise NotImplementedError
 
     def _get_user_workspace_dir(self, user_name):

@@ -3,19 +3,26 @@
 Cowbird CLI helper to execute handler operations.
 """
 import argparse
-from typing import TYPE_CHECKING
 
 from cowbird.cli import LOGGER
-from cowbird.cli.utils import get_config_parser, get_format_parser, print_format, set_log_level, subparser_help
+from cowbird.cli.utils import (
+    CommandPrefixes,
+    HelperParser,
+    ParsedArgs,
+    ParserArgs,
+    ParseResult,
+    SharedParsers,
+    get_config_parser,
+    get_format_parser,
+    print_format,
+    set_log_level,
+    subparser_help
+)
 from cowbird.handlers import get_handlers
 from cowbird.utils import CLI_MODE_CFG, get_app_config
 
-if TYPE_CHECKING:
-    from cowbird.cli.utils import CommandPrefixes, HelperParser, ParsedArgs, ParserArgs, ParseResult, SharedParsers
 
-
-def make_parser(shared_parsers=None, prefixes=None):
-    # type: (SharedParsers, CommandPrefixes) -> argparse.ArgumentParser
+def make_parser(shared_parsers: SharedParsers = None, prefixes: CommandPrefixes = None) -> argparse.ArgumentParser:
     cfg = get_config_parser()
     fmt = get_format_parser()
     parents = list(shared_parsers or []) + [cfg, fmt]
@@ -29,8 +36,7 @@ def make_parser(shared_parsers=None, prefixes=None):
     return parser
 
 
-def main(args=None, parser=None, namespace=None):
-    # type: (ParserArgs, HelperParser, ParsedArgs) -> ParseResult
+def main(args: ParserArgs = None, parser: HelperParser = None, namespace: ParsedArgs = None) -> ParseResult:
     if not parser:
         parser = make_parser()
     args = parser.parse_args(args=args, namespace=namespace)

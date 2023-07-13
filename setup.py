@@ -44,8 +44,10 @@ with open("CHANGES.rst") as changes_file:
     CHANGES = changes_file.read().replace(".. :changelog:", "")
 
 
-def _split_requirement(requirement, version=False, python=False, merge=False):
-    # type: (str, bool, bool, bool) -> Union[str, Tuple[str, str]]
+def _split_requirement(requirement: str,
+                       version: bool = False,
+                       python: bool = False,
+                       merge: bool = False) -> Union[str, Tuple[str, str]]:
     """
     Splits a requirement package definition into it's name and version specification.
 
@@ -105,8 +107,7 @@ def _split_requirement(requirement, version=False, python=False, merge=False):
     return parts
 
 
-def _parse_requirements(file_path, requirements, links):
-    # type: (str, Set[str], Set[str]) -> None
+def _parse_requirements(file_path: str, requirements: Set[str], links: Set[str]) -> None:
     """
     Parses a requirements file to extra packages and links.
 
@@ -149,8 +150,7 @@ def _parse_requirements(file_path, requirements, links):
                 requirements.add(line.strip())
 
 
-def _extra_requirements(base_requirements, other_requirements):
-    # type: (Iterable[str], Iterable[str]) -> Set[str]
+def _extra_requirements(base_requirements: Iterable[str], other_requirements: Iterable[str]) -> Set[str]:
     """
     Extracts only the extra requirements not already defined within the base requirements.
 
