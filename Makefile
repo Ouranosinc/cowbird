@@ -308,9 +308,8 @@ install-sys: clean conda-env install-xargs	## install system dependencies and re
 	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) gunicorn'
 
 .PHONY: install-pkg
-install-pkg: install-sys	## install the package to the active Python's site-packages
+install-pkg: conda-env install-sys	## install the package to the active Python's site-packages
 	@echo "Installing $(APP_NAME)..."
-	@bash -c '$(CONDA_CMD) python setup.py install_egg_info'
 	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) --upgrade -e "$(APP_ROOT)" --no-cache'
 
 .PHONY: install-req
@@ -330,7 +329,7 @@ install-dev: conda-env install-xargs	## install package requirements for develop
 
 # install locally to ensure they can be found by config extending them
 .PHONY: install-npm
-install-npm:    		## install npm package manager if it cannot be found
+install-npm:		## install npm package manager if it cannot be found
 	@[ -f "$(shell which npm)" ] || ( \
 		echo "Binary package manager npm not found. Attempting to install it."; \
 		apt-get install npm \
