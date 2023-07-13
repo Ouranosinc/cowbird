@@ -62,10 +62,17 @@ jobs:
           python-version: "${{ matrix.python-version }}"
       - name: Start containers
         run: make docker-up-dev-detached
-      - name: Install Dependencies
-        run: make install-pkg install-dev version
+      # preinstall system to ensure latest are available for following dependency resolution
+      - name: Install System Dependencies
+        run: make install-sys
+      - name: Display System Installation Options
+        run: make install-xargs
+      - name: Install Package and Test Dependencies
+        run: make install-pkg install-dev
       - name: Display Packages
         run: pip freeze
+      - name: Display Version
+        run: make version
       - name: Setup Environment Variables
         uses: c-py/action-dotenv-to-setenv@v2
         with:

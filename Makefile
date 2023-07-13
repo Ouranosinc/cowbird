@@ -74,33 +74,42 @@ DOWNLOAD_CACHE ?= $(APP_ROOT)/downloads
 REPORTS_DIR ?= $(APP_ROOT)/reports
 PYTHON_VERSION ?= `python -c 'import platform; print(platform.python_version())'`
 PIP_XARGS ?=
-PIP_USE_FEATURE := `python -c '\
+PIP_VERSION := `python -c '\
 	import pip; \
 	from packaging.version import Version as LooseVersion; \
-	print(LooseVersion(pip.__version__) < LooseVersion("21.0"))'`
+	if LooseVersion(pip.__version__) < LooseVersion("21.0")\: print("21"); \
+	elif LooseVersion(pip.__version__) >= LooseVersion("23.0"): print("23"); \
+	else: print("22"); \
+'`
 ifeq ($(findstring "--use-feature=2020-resolver",$(PIP_XARGS)),)
   # feature not specified, but needed
-  ifeq ("$(PIP_USE_FEATURE)", "True")
+  ifeq ("$(PIP_VERSION)", "21")
     PIP_XARGS := --use-feature=2020-resolver $(PIP_XARGS)
   else
-    # use faster legacy resolver
-    ifeq ($(subst "--use-deprecated=legacy-resolver",,$(PIP_XARGS)),)
-      PIP_XARGS := --use-deprecated=legacy-resolver $(PIP_XARGS)
+    # revert to legacy resolver while 2020 resolver was still experimental
+    ifeq ("$(PIP_VERSION)", "22")
+      ifeq ($(subst "--use-deprecated=legacy-resolver",,$(PIP_XARGS)),)
+        PIP_XARGS := --use-deprecated=legacy-resolver $(PIP_XARGS)
+      endif
     endif
+    # use faster legacy resolver
     ifeq ($(findstring "--use-feature=fast-deps",$(PIP_XARGS)),)
       PIP_XARGS := --use-feature=fast-deps $(PIP_XARGS)
     endif
   endif
 else
   # feature was specified, but should not (not required anymore, default behavior)
-  ifeq ("$(PIP_USE_FEATURE)", "True")
+  ifeq ("$(PIP_VERSION)", "21")
     PIP_XARGS := $(subst "--use-feature=2020-resolver",,"$(PIP_XARGS)")
   else
-    # use faster legacy resolver
-    ifeq $(subst "--use-deprecated=legacy-resolver",,$(PIP_XARGS))
-      PIP_XARGS := --use-deprecated=legacy-resolver $(PIP_XARGS)
+    # revert to legacy resolver while 2020 resolver was still experimental
+    ifeq ("$(PIP_VERSION)", "22")
+      ifeq $(subst "--use-deprecated=legacy-resolver",,$(PIP_XARGS))
+        PIP_XARGS := --use-deprecated=legacy-resolver $(PIP_XARGS)
+      endif
     endif
-  	ifeq ($(findstring "--use-feature=fast-deps",$(PIP_XARGS)),)
+    # use faster legacy resolver
+    ifeq ($(findstring "--use-feature=fast-deps",$(PIP_XARGS)),)
       PIP_XARGS := --use-feature=fast-deps $(PIP_XARGS)
     endif
   endif
@@ -252,7 +261,10 @@ $(DOC_LOCATION):
 
 # NOTE: we need almost all base dependencies because package needs to be parsed to generate OpenAPI
 .PHONY: docs
-docs: install-docs install-pkg clean-docs $(DOC_LOCATION)	## generate Sphinx HTML documentation, including API docs
+docs: install-docs install-pkg docs-only
+
+.PHONY: docs-only
+docs-only: clean-docs $(DOC_LOCATION)	## generate Sphinx HTML documentation, including API docs
 
 .PHONY: docs-show
 docs-show: $(DOC_LOCATION)	## display HTML webpage of generated documentation (build docs if missing)
