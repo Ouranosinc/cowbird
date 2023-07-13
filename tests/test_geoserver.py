@@ -250,7 +250,7 @@ class TestGeoserverPermissions(TestGeoserver):
     """
     Test cases to validate the synchronization between Magpie permissions and file permissions in a Geoserver workspace.
 
-    See :ref:`Components - Geoserver <components_geoserver>` for more details on the design/implemention choices.
+    See :ref:`Components - Geoserver <components_geoserver>` for more details on the design/implementation choices.
     """
     def setup_class(self):
         self.magpie_test_user = "test_user"

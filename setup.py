@@ -7,7 +7,7 @@ import sys
 try:
     from packaging.version import Version as LooseVersion  # noqa
 except ImportError:
-    from distutils.version import LooseVersion
+    from distutils.version import LooseVersion  # pylint: disable=W4901
 
 try:
     from setuptools import setup

@@ -1,7 +1,7 @@
 import functools
 import json as json_pkg  # avoid conflict name with json argument employed for some function
 import os
-from distutils.version import LooseVersion
+from packaging.version import Version as LooseVersion
 from stat import ST_MODE
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse
@@ -41,9 +41,10 @@ class TestAppContainer(object):
 
 if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
-    from typing import Any, Callable, Collection, Dict, Iterable, List, Optional, Type, Union
+    from typing import Any, Callable, Collection, Dict, Iterable, List, Literal, Optional, Tuple, Type, TypeAlias, Union
 
     from pyramid.request import Request
+    from packaging.version import _Version as TupleVersion
 
     from cowbird.typedefs import JSON, AnyCookiesType, AnyHeadersType, AnyResponseType, HeadersType, SettingsType
     from cowbird.utils import NullType
@@ -51,6 +52,10 @@ if TYPE_CHECKING:
     # pylint: disable=C0103,invalid-name
     TestAppOrUrlType = Union[str, TestApp]
     AnyTestItemType = Union[TestAppOrUrlType, TestAppContainer]
+
+    _TestVersion = "TestVersion"  # type: TypeAlias   # pylint: disable=C0103
+    LatestVersion = Literal["latest"]
+    AnyTestVersion = Union[str, Iterable[str], LooseVersion, _TestVersion, LatestVersion]
 
 
 class TestVersion(LooseVersion):
@@ -64,6 +69,9 @@ class TestVersion(LooseVersion):
     __test__ = False  # avoid invalid collect depending on specified input path/items to pytest
 
     def __init__(self, vstring):
+        # type: (AnyTestVersion) -> None
+        if hasattr(vstring, "__iter__") and not isinstance(vstring, str):
+            vstring = ".".join(str(part) for part in vstring)
         if isinstance(vstring, (TestVersion, LooseVersion)):
             self.version = vstring.version
             return
@@ -73,6 +81,7 @@ class TestVersion(LooseVersion):
         super(TestVersion, self).__init__(vstring)
 
     def _cmp(self, other):
+        # type: (Any) -> int
         if not isinstance(other, TestVersion):
             other = TestVersion(other)
         if self.version == "latest" and other.version == "latest":
@@ -81,7 +90,50 @@ class TestVersion(LooseVersion):
             return 1
         if other.version == "latest":
             return -1
-        return super(TestVersion, self)._cmp(other)
+        if super(TestVersion, self).__lt__(other):
+            return -1
+        if super(TestVersion, self).__gt__(other):
+            return 1
+        return 0
+
+    def __lt__(self, other):
+        # type: (Any) -> bool
+        return self._cmp(other) < 0
+
+    def __le__(self, other):
+        # type: (Any) -> bool
+        return self._cmp(other) <= 0
+
+    def __gt__(self, other):
+        # type: (Any) -> bool
+        return self._cmp(other) > 0
+
+    def __ge__(self, other):
+        # type: (Any) -> bool
+        return self._cmp(other) >= 0
+
+    def __eq__(self, other):
+        # type: (Any) -> bool
+        return self._cmp(other) == 0
+
+    def __ne__(self, other):
+        # type: (Any) -> bool
+        return self._cmp(other) != 0
+
+    @property
+    def version(self):
+        # type: () -> Union[Tuple[Union[int, str], ...], str]
+        if self._version == "latest":
+            return "latest"
+        return self._version
+
+    @version.setter
+    def version(self, version):
+        # type: (Union[Tuple[Union[int, str], ...], str, TupleVersion]) -> None
+        if version == "latest":
+            self._version = "latest"
+        else:
+            self.__init__(version)  # pylint: disable=C2801
 
 
 class MockMagpieHandler(Handler):
