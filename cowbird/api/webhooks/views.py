@@ -1,5 +1,5 @@
-from typing import TYPE_CHECKING
 import inspect
+from typing import TYPE_CHECKING
 
 import requests
 from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError, HTTPOk

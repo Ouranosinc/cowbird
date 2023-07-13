@@ -1,7 +1,6 @@
 import functools
 import json as json_pkg  # avoid conflict name with json argument employed for some function
 import os
-from packaging.version import Version as LooseVersion
 from stat import ST_MODE
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse
@@ -9,6 +8,7 @@ from urllib.parse import urlparse
 import mock
 import requests
 import requests.exceptions
+from packaging.version import Version as LooseVersion
 from pyramid.httpexceptions import HTTPException
 from pyramid.testing import DummyRequest
 from pyramid.testing import setUp as PyramidSetUp
@@ -43,8 +43,8 @@ if TYPE_CHECKING:
     # pylint: disable=W0611,unused-import
     from typing import Any, Callable, Collection, Dict, Iterable, List, Literal, Optional, Tuple, Type, TypeAlias, Union
 
-    from pyramid.request import Request
     from packaging.version import _Version as TupleVersion
+    from pyramid.request import Request
 
     from cowbird.typedefs import JSON, AnyCookiesType, AnyHeadersType, AnyResponseType, HeadersType, SettingsType
     from cowbird.utils import NullType

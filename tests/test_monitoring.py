@@ -10,7 +10,7 @@ import yaml
 from cowbird.handlers.handler_factory import HandlerFactory
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
-from tests.utils import LooseVersion, get_test_app, clear_handlers_instances
+from tests.utils import LooseVersion, clear_handlers_instances, get_test_app
 
 
 def file_io(filename, mv_filename):
