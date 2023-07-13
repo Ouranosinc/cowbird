@@ -2,7 +2,7 @@ version: "3.4"
 
 services:
   mongodb:
-    image: mongo:3.4.0
+    image: mongo:5.0
     container_name: mongodb
     # MongoDB crash with permission denied errors if the command is not overridden like this
     command: bash -c 'chown -R mongodb:mongodb /data && chmod -R 755 /data && mongod'
