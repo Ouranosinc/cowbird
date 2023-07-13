@@ -83,9 +83,16 @@ jobs:
           hash -r
           env | sort
         # Prepare workspace dir for tests that require access permissions
+      - name: Prepare Test Environment
+        uses: ./.github/actions/dotenv-action
+        id: dotenv
+        with:
+          path: ./docker/.env.example
+          keys-case: bypass
       - name: Prepare Workspace
         run: |
-          sudo chown -R runner:docker $(cat ./docker/.env.example | grep WORKSPACE_DIR | cut -d "=" -f2)
+          sudo mkdir -p "${{ steps.dotenv.outputs.WORKSPACE_DIR }}"
+          sudo chown -R runner:docker "${{ steps.dotenv.outputs.WORKSPACE_DIR }}"
       - name: Run Tests
         run: make stop ${{ matrix.test-case }}
       - name: Upload coverage report
