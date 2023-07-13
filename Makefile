@@ -76,7 +76,7 @@ PYTHON_VERSION ?= `python -c 'import platform; print(platform.python_version())'
 PIP_XARGS ?=
 PIP_USE_FEATURE := `python -c '\
 	import pip; \
-	from distutils.version import LooseVersion; \
+	from packaging.version import Version as LooseVersion; \
 	print(LooseVersion(pip.__version__) < LooseVersion("21.0"))'`
 ifeq ($(findstring "--use-feature=2020-resolver",$(PIP_XARGS)),)
   # feature not specified, but needed

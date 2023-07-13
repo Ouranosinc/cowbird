@@ -4,8 +4,6 @@ services:
   cowbird:
     image: pavics/cowbird:latest-webservice
     container_name: cowbird-webservice
-    ports:
-      - "7000:7000"
     environment:
       HOSTNAME: localhost
       FORWARDED_ALLOW_IPS: "*"
@@ -35,6 +33,7 @@ services:
     env_file:
       - ./config/cowbird/cowbird.env
     restart: always
+
   magpie:
     volumes:
       - ./config/magpie/config.docker.yml:/config.yml
@@ -45,5 +44,3 @@ services:
       MAGPIE_POSTGRES_HOST: postgres
     links:
       - postgres
-    ports:
-      - "2001:2001"

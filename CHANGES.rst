@@ -9,7 +9,10 @@ Changes
 
 * Update Docker image to use ``python:3.10-alpine`` instead of ``python:3.7-alpine`` for
   latest security updates and performance improvements.
-* Update multiple package dependencies flagged by PyUp.
+* Update GitHub CI tests to include Python 3.9, 3.10 and 3.11, and use 3.10 by default for additional checks.
+* Update multiple package dependencies flagged by PyUp as well as any relevant code changes to support updated packages.
+* Move ``ports`` sections of example ``docker/docker-compose.*.yml`` files to the ``dev`` variant to reflect a realistic
+  ``prod`` vs ``dev`` configuration scheme and allow ``ports`` overrides without merge of lists to avoid conflicts.
 
 `1.2.0 <https://github.com/Ouranosinc/cowbird/tree/1.2.0>`_ (2023-07-10)
 ------------------------------------------------------------------------------------

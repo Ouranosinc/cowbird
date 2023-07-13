@@ -32,31 +32,26 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.7", "3.8"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
         allow-failure: [false]
         test-case: [test-only]  # add other test variations to run for every python/os/failure combinations
         # tests with single run
         include:
           # linter tests
           - os: ubuntu-latest
-            python-version: 3.7
+            python-version: 3.10
             allow-failure: false
             test-case: check
           # docker smoke tests
           - os: ubuntu-latest
-            python-version: 3.7
+            python-version: 3.10
             allow-failure: false
             test-case: test-docker
           # coverage tests
           - os: ubuntu-latest
-            python-version: 3.7
+            python-version: 3.10
             allow-failure: false
             test-case: coverage
-          # experimental versions
-          - os: ubuntu-latest
-            python-version: 3.9
-            allow-failure: true
-            test-case: test-only
     steps:
       - uses: actions/checkout@v2
         with:

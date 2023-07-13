@@ -21,10 +21,13 @@ from cowbird.request_task import RequestTask
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger, update_filesystem_permissions
 
 if TYPE_CHECKING:
-    from typing import Any, Dict, List, Optional
+    from typing import Any, Callable, Dict, List, Optional, TypeAlias
 
     # pylint: disable=W0611,unused-import
     from cowbird.typedefs import JSON, SettingsType
+
+    GeoserverType: TypeAlias = "Geoserver"  # need a reference for the decorator before it gets defined
+    GeoserverFunc: Callable[[GeoserverType, str, ..., str], requests.Response]
 
 HANDLER_ADMIN_USER = "admin_user"  # nosec: B105
 HANDLER_ADMIN_PASSWORD = "admin_password"  # nosec: B105
@@ -40,6 +43,7 @@ LOGGER = get_logger(__name__)
 
 
 def geoserver_response_handling(func):
+    # type: (GeoserverFunc) -> GeoserverFunc
     """
     Decorator for response and logging handling for the different Geoserver HTTP requests.
 
@@ -48,7 +52,9 @@ def geoserver_response_handling(func):
     """
 
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(geoserver, *args, **kwargs):
+        # type: (GeoserverType, str, str) -> requests.Response
+
         # Geoserver responses are often full HTML pages for codes 400-499, so text/content is omitted from
         # the logs. Error responses in the 500-599 range are usually concise, so their text/content were included
         # in the logs to help eventual debugging.
@@ -56,12 +62,12 @@ def geoserver_response_handling(func):
         # This try/except is used to catch errors caused by an unavailable Geoserver instance.
         # Since a connection error causes the requests library to raise an exception (RequestException),
         # we can't rely on a response code and need to handle this case, so it can be seen in the logs.
-        # Without this, the requests auto-retries as per RequestTask class's configurations, but
+        # Without this, the requests auto-retries as per RequestTask class's configurations.
         try:
-            response = func(*args, **kwargs)
+            response = func(geoserver, *args, **kwargs)
         except Exception as error:
             LOGGER.error(error)
-            raise requests.RequestException("Connection to Geoserver failed")
+            raise requests.RequestException(f"Connection to Geoserver failed using [{geoserver.url}]")
 
         operation = func.__name__
         response_code = response.status_code
@@ -74,7 +80,6 @@ def geoserver_response_handling(func):
         elif response_code == 401 and re.search(regex_exists, response.text):
             # This is done because Geoserver's reply/error code is misleading in this case and
             # returns HTML content.
-            #
             # LOGGER instead of GeoserverError because workspace existing should not block subsequent steps
             LOGGER.warning("Operation [%s] failed :Geoserver workspace already exists", operation)
         elif response_code == 401:

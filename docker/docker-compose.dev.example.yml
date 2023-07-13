@@ -1,13 +1,35 @@
 version: "3.4"
 
 services:
+  cowbird:
+    ports:
+      - "7000:7000"
+
+  mongodb:
+    ports:
+      - "27017:27017"
+
   magpie:
     volumes:
       - ./config/magpie/config.dev.yml:/config.yml
     environment:
       HOSTNAME: 0.0.0.0
-      MAGPIE_URL: http://0.0.0.0:2001/magpie  # change this url depending of your setup
+      MAGPIE_URL: http://0.0.0.0:2001/magpie  # change this url depending on your setup
       POSTGRES_HOST: 0.0.0.0
       MAGPIE_POSTGRES_HOST: 0.0.0.0
     # Share the host network with Magpie allowing Magpie to reach Cowbird running on host's IDE
     network_mode: "host"
+    ports:
+      - "2001:2001"
+
+  postgres:
+    ports:
+      - "5432:5432"
+
+  geoserver:
+    ports:
+      - "8765:8080"
+
+  geoserver-db:
+    ports:
+      - "32767:5432"

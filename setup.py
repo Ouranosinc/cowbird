@@ -3,11 +3,7 @@
 import logging
 import os
 import sys
-
-try:
-    from packaging.version import Version as LooseVersion  # noqa
-except ImportError:
-    from distutils.version import LooseVersion  # pylint: disable=W4901
+from packaging.version import Version as LooseVersion
 
 try:
     from setuptools import setup
@@ -213,6 +209,9 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
     ],
     python_requires=">=3.7, <4",
 

@@ -4,8 +4,6 @@ services:
   mongodb:
     image: mongo:3.4.0
     container_name: mongodb
-    ports:
-      - "27017:27017"
     # MongoDB crash with permission denied errors if the command is not overridden like this
     command: bash -c 'chown -R mongodb:mongodb /data && chmod -R 755 /data && mongod'
     restart: always
@@ -13,8 +11,6 @@ services:
   postgres:
     image: postgres:latest
     container_name: postgres
-    ports:
-      - "5432:5432"
     environment:
       POSTGRES_PASSWORD: qwerty
       POSTGRES_DB: magpie
@@ -52,8 +48,6 @@ services:
   geoserver:
     image: kartoza/geoserver:2.19.0
     container_name: geoserver
-    ports:
-      - "8765:8080"
     restart: on-failure
     volumes:
       - $WORKSPACE_DIR:/user_workspaces
@@ -75,8 +69,6 @@ services:
   geoserver-db:
     image: kartoza/postgis:13-3.1
     container_name: geoserver-db
-    ports:
-      - "32767:5432"
     environment:
       - POSTGRES_DB=gis,gwc
       - POSTGRES_USER=docker
