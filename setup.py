@@ -211,13 +211,13 @@ setup(
         f"License :: OSI Approved :: {__meta__.__license__} License",
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3 :: Only",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
     ],
-    python_requires=">=3.7, <4",
+    python_requires=">=3.8, <4",
 
     # -- Package structure -------------------------------------------------
     packages=[__meta__.__package__],
