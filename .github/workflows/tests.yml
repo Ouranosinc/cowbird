@@ -82,6 +82,9 @@ jobs:
         run: make install-xargs
       - name: Install Package and Test Dependencies
         run: make install-pkg install-dev
+      - if: ${{ matrix.test-case == 'check-only' }}
+        name: Install Extra Test Dependencies
+        run: make install-npm
       - name: Display Packages
         run: pip freeze
       - name: Display Version
