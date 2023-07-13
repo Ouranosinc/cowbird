@@ -23,9 +23,9 @@ Features / Changes
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* Fix bug where the monitors saved on the database and the intermal monitors dictionary from the `Monitoring` class
+* Fix bug where the monitors saved on the database and the internal monitors dictionary from the ``Monitoring`` class
   would be desynchronized, not always having the expected monitors, or having monitors that were not started properly.
-* Fix failing permissions synchronizer by adding `service_type` to the Magpie webhooks and ignoring permissions from
+* Fix failing permissions synchronizer by adding ``service_type`` to the Magpie webhooks and ignoring permissions from
   resources not defined in the config (relates to
   `Ouranosinc/Magpie#582 <https://github.com/Ouranosinc/Magpie/pull/582>`_).
 
@@ -34,7 +34,7 @@ Bug Fixes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Return `HTTP 424 (Failed Dependency)` when the `celery` worker version cannot be retrieved on ``GET /version``.
+* Return `HTTP 424 (Failed Dependency)` when the ``celery`` worker version cannot be retrieved on ``GET /version``.
   Also, provide better error logs and detail messages in case of error to help debug the cause of the problem.
 
 Bug Fixes
