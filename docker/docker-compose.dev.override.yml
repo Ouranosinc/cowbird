@@ -1,0 +1,18 @@
+version: "3.4"
+
+services:
+  magpie:
+    ports:
+      - "2001:2001"
+
+  postgres:
+    ports:
+      - "5432:5432"
+
+  geoserver:
+    ports:
+      - "8765:8080"
+
+  geoserver-db:
+    ports:
+      - "32767:5432"
