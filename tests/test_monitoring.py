@@ -3,14 +3,13 @@ import tempfile
 import unittest
 from time import sleep
 
-import pymongo
 import pytest
 import yaml
 
 from cowbird.handlers.handler_factory import HandlerFactory
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
-from tests.utils import LooseVersion, clear_handlers_instances, get_test_app
+from tests.utils import clear_handlers_instances, get_test_app
 
 
 def file_io(filename, mv_filename):
@@ -37,10 +36,7 @@ class TestMonitoring(unittest.TestCase):
             f.write(yaml.safe_dump({"handlers": {"FileSystem": {"active": True, "workspace_dir": "/workspace"}}}))
         cls.app = get_test_app(settings={"cowbird.config_path": cls.cfg_file.name})
         # clear up monitor entries from db
-        if LooseVersion(pymongo.__version__) < LooseVersion("4"):
-            Monitoring().store.collection.remove({})
-        else:
-            Monitoring().store.collection.delete_many({})
+        Monitoring().store.clear_services(drop=False)
 
     @classmethod
     def tearDownClass(cls):

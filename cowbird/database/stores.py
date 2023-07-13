@@ -115,9 +115,12 @@ class MonitoringStore(StoreInterface, MongodbStore):
                 self.collection.delete_one(mon_params)
         return monitors
 
-    def clear_services(self):
-        # type: () -> None
+    def clear_services(self, drop=True):
+        # type: (bool) -> None
         """
         Removes all Monitor from `MongoDB` storage.
         """
-        self.collection.drop()
+        if drop:
+            self.collection.drop()
+        else:
+            self.collection.delete_many({})
