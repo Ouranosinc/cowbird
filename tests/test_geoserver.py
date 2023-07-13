@@ -160,7 +160,7 @@ class TestGeoserverRequests(TestGeoserver):
         "datastore-duplicate": "test-duplicate-datastore",
         "publish_remove": "test_publish_remove_shapefile"
     }
-    # Be careful of typos or path choisec, as the paths contained in the following dictionary
+    # Be careful of typos or path choices, as the paths contained in the following dictionary
     # will the removed during teardown.
     workspace_folders = {
         "publish_remove": f"{TestGeoserver.geoserver_settings['workspace_dir']}/{workspaces['publish_remove']}"

@@ -1,3 +1,4 @@
+from typing import TYPE_CHECKING
 import inspect
 
 import requests
@@ -12,6 +13,14 @@ from cowbird.handlers import get_handlers
 from cowbird.permissions_synchronizer import Permission
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger, get_ssl_verify, get_timeout
 
+if TYPE_CHECKING:
+    from typing import Callable
+
+    from pyramid.request import Request
+
+    from cowbird.handlers import Handler
+    from cowbird.typedefs import AnyResponseType
+
 LOGGER = get_logger(__name__)
 
 
@@ -22,6 +31,7 @@ class WebhookDispatchException(Exception):
 
 
 def dispatch(handler_fct):
+    # type: (Callable[[Handler], None]) -> None
     exceptions = []
     event_name = inspect.getsource(handler_fct).split(":")[1].strip()
     handlers = get_handlers()
@@ -44,6 +54,7 @@ def dispatch(handler_fct):
                        response_schemas=s.UserWebhook_POST_responses)
 @view_config(route_name=s.UserWebhookAPI.name, request_method="POST")
 def post_user_webhook_view(request):
+    # type: (Request) -> AnyResponseType
     """
     User webhook used for created or removed user events.
     """
@@ -60,11 +71,13 @@ def post_user_webhook_view(request):
         callback_url = ar.get_multiformat_body(request, "callback_url", pattern=None)
 
         def handler_fct(handler):
+            # type: (Handler) -> None
             handler.user_created(user_name=user_name)
     else:
         callback_url = None
 
         def handler_fct(handler):
+            # type: (Handler) -> None
             handler.user_deleted(user_name=user_name)
     try:
         dispatch(handler_fct)
@@ -94,6 +107,7 @@ def post_user_webhook_view(request):
                              response_schemas=s.PermissionWebhook_POST_responses)
 @view_config(route_name=s.PermissionWebhookAPI.name, request_method="POST")
 def post_permission_webhook_view(request):
+    # type: (Request) -> AnyResponseType
     """
     Permission webhook used for created or removed permission events.
     """
