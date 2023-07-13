@@ -60,7 +60,8 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: "${{ matrix.python-version }}"
-      - name: Start containers
+      - if: ${{ matrix.test-case == 'coverage' ||  matrix.test-case == 'test-only' }}
+        name: Start containers
         run: make docker-up-dev-detached
       # preinstall system to ensure latest are available for following dependency resolution
       - name: Install System Dependencies
