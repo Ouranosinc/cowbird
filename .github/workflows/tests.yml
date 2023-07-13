@@ -41,7 +41,7 @@ jobs:
           - os: ubuntu-latest
             python-version: "3.10"
             allow-failure: false
-            test-case: check
+            test-case: check-only
           # docker smoke tests
           - os: ubuntu-latest
             python-version: "3.10"
