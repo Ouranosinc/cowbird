@@ -4,7 +4,10 @@ import logging
 import os
 import sys
 
-from packaging.version import Version as LooseVersion
+try:
+    from packaging.version import Version as LooseVersion
+except ImportError:
+    from distutils.version import LooseVersion
 
 try:
     from setuptools import setup
