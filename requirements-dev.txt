@@ -12,7 +12,7 @@ flake8>=5,<6
 flynt
 isort>5.5
 mock>4
-pycodestyle>2.6.0,<3  # plugin dependency off flake8
+pycodestyle>2.6.0,<3  # plugin dependency of flake8
 # pylint: Use at least version 2.13.0 to avoid security vulnerabilities (https://github.com/PyCQA/pylint/issues/5322)
 # and at least version 2.14 to avoid issue (https://github.com/PyCQA/pylint/pull/6212)
 pylint>=2.14.0
