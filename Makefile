@@ -505,9 +505,16 @@ mkdir-reports:
 	@mkdir -p "$(REPORTS_DIR)"
 
 # autogen check variants with pre-install of dependencies using the '-only' target references
-CHECKS := pep8 lint security doc8 links imports css
+CHECKS_PYTHON := pep8 lint security doc8 links imports
+CHECKS_NPM := css
+CHECKS := $(CHECKS_PYTHON) $(CHECKS_NPM)
 CHECKS := $(addprefix check-, $(CHECKS))
-$(CHECKS): check-%: install-dev check-%-only
+
+CHECKS_PYTHON := $(addprefix check-, $(CHECKS_PYTHON))
+$(CHECKS_PYTHON): check-%: install-dev check-%-only
+
+CHECKS_NPM := $(addprefix check-, $(CHECKS_NPM))
+$(CHECKS_NPM): check-%: install-npm check-%-only
 
 .PHONY: check
 check: check-all	## alias for 'check-all' target
@@ -581,9 +588,6 @@ check-imports-only: mkdir-reports	## run imports code checks
 	 	isort --check-only --diff $(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/check-imports.txt")'
 
-.PHONY: check-css
-check-css: install-npm check-css-only
-
 .PHONY: check-css-only
 check-css-only: mkdir-reports
 	@echo "Running CSS style checks..."
@@ -593,9 +597,16 @@ check-css-only: mkdir-reports
 		"$(APP_ROOT)/**/*.css"
 
 # autogen fix variants with pre-install of dependencies using the '-only' target references
-FIXES := imports lint docf fstring css
+FIXES_PYTHON := imports lint docf fstring
+FIXES_NPM := css
+FIXES := $(FIXES_PYTHON) $(FIXES_NPM)
 FIXES := $(addprefix fix-, $(FIXES))
-$(FIXES): fix-%: install-dev fix-%-only
+
+FIXES_PYTHON := $(addprefix fix-, $(FIXES_PYTHON))
+$(FIXES_PYTHON): fix-%: install-dev fix-%-only
+
+FIXES_NPM := $(addprefix fix-, $(FIXES_NPM))
+$(FIXES_NPM): fix-%: install-npm fix-%-only
 
 .PHONY: fix
 fix: fix-all	## alias for 'fix-all' target
