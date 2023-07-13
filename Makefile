@@ -348,7 +348,11 @@ install-npm:		## install npm package manager if it cannot be found
 	)
 	@[ `npm ls 2>/dev/null | grep stylelint-config-standard | wc -l` = 1 ] || ( \
 		echo "Install required libraries for style checks." && \
-		npm install stylelint stylelint-config-standard --save-dev \
+		npm install --save-dev \
+			stylelint \
+			stylelint-scss \
+			stylelint-config-standard \
+			stylelint-csstree-validator \
 	)
 
 ## --- Launchers targets --- ##
