@@ -114,27 +114,33 @@ class FileSystem(Handler, FSMonitor):
         """
         return HandlerFactory().get_handler("FileSystem")
 
+    def _get_user_hardlink(self, src_path, regex_match):
+        user_id = int(regex_match.group(1))
+        subpath = regex_match.group(2)
+
+        magpie_handler = HandlerFactory().get_handler("Magpie")
+        user_name = magpie_handler.get_user_name_from_user_id(user_id)
+        user_workspace_dir = self._get_user_workspace_dir(user_name)
+
+        if not os.path.exists(user_workspace_dir):
+            raise FileNotFoundError(f"User {user_name} workspace not found at path {user_workspace_dir}. New "
+                                    f"wpsoutput {src_path} not added to the user workspace.")
+
+        # TODO: faire le call à secure-data-proxy, remove link if exists and no permission,
+        #  add link if doesn't exists and permission
+
+        return os.path.join(self._get_user_wps_outputs_user_dir(user_name), subpath)
+
+    def _get_public_hardlink(self, src_path):
+        subpath = os.path.relpath(src_path, self.wps_outputs_dir)
+        return os.path.join(self._get_wps_outputs_public_dir(), subpath)
+
     def _create_wpsoutputs_hardlink(self, src_path, overwrite=False):
         regex_match = re.search(self.wps_outputs_users_regex, src_path)
         if regex_match:  # user files
-            user_id = int(regex_match.group(1))
-            subpath = regex_match.group(2)
-
-            magpie_handler = HandlerFactory().get_handler("Magpie")
-            user_name = magpie_handler.get_user_name_from_user_id(user_id)
-            user_workspace_dir = self._get_user_workspace_dir(user_name)
-
-            if not os.path.exists(user_workspace_dir):
-                raise FileNotFoundError(f"User {user_name} workspace not found at path {user_workspace_dir}. New "
-                                        f"wpsoutput {src_path} not added to the user workspace.")
-
-            # TODO: faire le call à secure-data-proxy, remove link if exists and no permission,
-            #  add link if doesn't exists and permission
-
-            hardlink_path = os.path.join(self._get_user_wps_outputs_user_dir(user_name), subpath)
+            hardlink_path = self._get_user_hardlink(src_path, regex_match)
         else:  # public files
-            subpath = os.path.relpath(src_path, self.wps_outputs_dir)
-            hardlink_path = os.path.join(self._get_wps_outputs_public_dir(), subpath)
+            hardlink_path = self._get_public_hardlink(src_path)
 
         if os.path.exists(hardlink_path):
             if not overwrite:
@@ -176,9 +182,18 @@ class FileSystem(Handler, FSMonitor):
 
         :param path: Absolute path of a new file/directory
         """
-        # TODO: If a file from wpsoutputs is deleted, make sure to delete the associated hardlink in the user workspace.
-        #  No need to check secure-data-proxy. (maybe just check if # of links is > 1?, to avoid useless hardlink delete)
-        pass
+        # TODO: add corresponding test cases
+        if Path(self.wps_outputs_dir) in Path(path).parents:
+            regex_match = re.search(self.wps_outputs_users_regex, path)
+            try:
+                if regex_match:  # user files
+                    hardlink_path = self._get_user_hardlink(path, regex_match)
+                else:  # public files
+                    hardlink_path = self._get_public_hardlink(path)
+                os.remove(hardlink_path)
+            except FileNotFoundError as e:
+                # TODO: improve log here
+                LOGGER.debug(e)
 
     def permission_created(self, permission: Permission) -> None:
         raise NotImplementedError
