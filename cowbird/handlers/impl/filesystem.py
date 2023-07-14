@@ -123,25 +123,33 @@ class FileSystem(Handler, FSMonitor):
 
         :param path: Absolute path of a new file/directory
         """
-        regex_match = re.search(self.wps_outputs_users_regex, path)
-        if regex_match:
-            user_id = int(regex_match.group(1))
-            subpath = regex_match.group(2)
+        if not os.path.isdir(path):
+            # Only process files, since hardlinks are not permitted on directories
+            regex_match = re.search(self.wps_outputs_users_regex, path)
+            if regex_match:
+                user_id = int(regex_match.group(1))
+                subpath = regex_match.group(2)
 
-            magpie_handler = HandlerFactory().get_handler("Magpie")
-            user_name = magpie_handler.get_user_name_from_user_id(user_id)
-            user_workspace_dir = self._get_user_workspace_dir(user_name)
+                magpie_handler = HandlerFactory().get_handler("Magpie")
+                user_name = magpie_handler.get_user_name_from_user_id(user_id)
+                user_workspace_dir = self._get_user_workspace_dir(user_name)
 
-            if not os.path.exists(user_workspace_dir):
-                raise FileNotFoundError(f"User {user_name} workspace not found at path {user_workspace_dir}. New wps"
-                                        f"output {path} not added to the user workspace.")
+                if not os.path.exists(user_workspace_dir):
+                    raise FileNotFoundError(f"User {user_name} workspace not found at path {user_workspace_dir}. New "
+                                            f"wpsoutput {path} not added to the user workspace.")
 
-            # TODO: special case for directory link, hardlink all the content? hardlinks are not possible on dirs
-            # create hardlink in the user workspace (use corresponding dir or file path)
-            hardlink_path = os.path.join(self._get_user_wps_outputs_user_dir(user_name), subpath)
-            os.makedirs(os.path.dirname(hardlink_path))
-            os.link(path, hardlink_path)
-            # TODO: faire un check si le link est au bon fichier, sinon updater (un peu comme on faisait avec symlinks)
+                # TODO: faire le call à secure-data-proxy, remove link if exists and no permission,
+                #  add link if doesn't exists and permission
+
+                # create hardlink in the user workspace, reusing the same subfolder structure as in the wpsoutputs dir
+                hardlink_path = os.path.join(self._get_user_wps_outputs_user_dir(user_name), subpath)
+
+                if os.path.exists(hardlink_path):
+                    raise FileExistsError("Failed to create hardlink file, since a file already "
+                                          f"exists at the targeted path {hardlink_path}.")
+
+                os.makedirs(os.path.dirname(hardlink_path), exist_ok=True)
+                os.link(path, hardlink_path)
 
     def on_modified(self, path):
         # type: (str) -> None
@@ -160,6 +168,8 @@ class FileSystem(Handler, FSMonitor):
 
         :param path: Absolute path of a new file/directory
         """
+        # TODO: If a file from wpsoutputs is deleted, make sure to delete the associated hardlink in the user workspace.
+        #  No need to check secure-data-proxy. (maybe just check if # of links is > 1?, to avoid useless hardlink delete)
         pass
 
     def permission_created(self, permission: Permission) -> None:

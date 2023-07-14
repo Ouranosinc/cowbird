@@ -201,3 +201,6 @@ class TestFileSystem(unittest.TestCase):
             hardlink_path = os.path.join(filesystem_handler._get_user_wps_outputs_user_dir(magpie_test_user),
                                          output_subpath)
             assert os.stat(hardlink_path).st_nlink == 2
+
+            # Add test if dir already exists
+            # Add test if the hardlink already exists (same whatever if the files is the right hardlink or unrelated)
