@@ -3,7 +3,8 @@ import os
 import re
 import stat
 from time import sleep
-from typing import Any, Callable, Dict, List, Optional, Protocol, Tuple, TypeAlias, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Protocol, Tuple, Union, cast
+from typing_extensions import TypeAlias
 
 import requests
 from celery import chain, shared_task

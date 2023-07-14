@@ -17,14 +17,16 @@ from requests.models import Response as RequestsResponse
 from requests.structures import CaseInsensitiveDict
 from webob.headers import EnvironHeaders, ResponseHeaders
 from webob.response import Response as WebobResponse
-from webtest.response import TestResponse
 
 if TYPE_CHECKING:
     from magpie.typedefs import PermissionConfigItem
+    from webtest.response import TestResponse  # only with install-dev
 
     from cowbird.database.stores import StoreInterface
+
 StoreInterfaceType: TypeAlias = "StoreInterface"
 PermissionConfigItemType: TypeAlias = "PermissionConfigItem"
+TestResponseType: TypeAlias = "TestResponse"
 
 Number = Union[int, float]
 SettingValue = Union[str, Number, bool, None]
@@ -37,7 +39,7 @@ CookiesType = Union[Dict[str, str], List[Tuple[str, str]]]
 HeadersType = Union[Dict[str, str], List[Tuple[str, str]]]
 AnyHeadersType = Union[HeadersType, ResponseHeaders, EnvironHeaders, CaseInsensitiveDict]
 AnyCookiesType = Union[CookiesType, RequestsCookieJar]
-AnyResponseType = Union[WebobResponse, PyramidResponse, RequestsResponse, HTTPException, TestResponse]
+AnyResponseType = Union[WebobResponse, PyramidResponse, RequestsResponse, HTTPException, TestResponseType]
 
 # pylint: disable=C0103,invalid-name
 ValueType = Union[str, Number, bool]

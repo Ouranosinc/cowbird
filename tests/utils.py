@@ -2,7 +2,8 @@ import functools
 import json as json_pkg  # avoid conflict name with json argument employed for some function
 import os
 from stat import ST_MODE
-from typing import Any, Callable, Collection, Dict, Iterable, List, Literal, Optional, Tuple, Type, TypeAlias, Union
+from typing import Any, Callable, Collection, Dict, Iterable, List, Literal, Optional, Tuple, Type, Union
+from typing_extensions import TypeAlias
 from urllib.parse import urlparse
 
 import mock
