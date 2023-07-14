@@ -2,6 +2,7 @@ import os
 import re
 import shutil
 from typing import Any
+from pathlib import Path
 
 from cowbird.handlers import HandlerFactory
 from cowbird.handlers.handler import HANDLER_WORKSPACE_DIR_PARAM, Handler
@@ -14,7 +15,6 @@ from cowbird.utils import get_logger
 LOGGER = get_logger(__name__)
 
 NOTEBOOKS_DIR_NAME = "notebooks"
-USER_WPSOUTPUTS_PUBLIC_DIR_NAME = "wpsoutputs-public"
 USER_WPSOUTPUTS_USER_DIR_NAME = "wpsoutputs-user"
 
 
@@ -62,8 +62,8 @@ class FileSystem(Handler, FSMonitor):
     def _get_user_workspace_dir(self, user_name: str) -> str:
         return os.path.join(self.workspace_dir, user_name)
 
-    def _get_user_wps_outputs_public_dir(self, user_name: str) -> str:
-        return os.path.join(self._get_user_workspace_dir(user_name), USER_WPSOUTPUTS_PUBLIC_DIR_NAME)
+    def _get_wps_outputs_public_dir(self):
+        return os.path.join(self.workspace_dir, "public/wpsoutputs")
 
     def _get_jupyterhub_user_data_dir(self, user_name: str) -> str:
         return os.path.join(self.jupyterhub_user_data_dir, user_name)
@@ -98,8 +98,6 @@ class FileSystem(Handler, FSMonitor):
 
         FileSystem._create_symlink_dir(src=self._get_jupyterhub_user_data_dir(user_name),
                                        dst=os.path.join(user_workspace_dir, NOTEBOOKS_DIR_NAME))
-        FileSystem._create_symlink_dir(src=self.wps_outputs_dir,
-                                       dst=self._get_user_wps_outputs_public_dir(user_name))
 
     def user_deleted(self, user_name: str) -> None:
         user_workspace_dir = self._get_user_workspace_dir(user_name)
@@ -116,6 +114,40 @@ class FileSystem(Handler, FSMonitor):
         """
         return HandlerFactory().get_handler("FileSystem")
 
+    def _create_wpsoutputs_hardlink(self, src_path, overwrite=False):
+        regex_match = re.search(self.wps_outputs_users_regex, src_path)
+        if regex_match:  # user files
+            user_id = int(regex_match.group(1))
+            subpath = regex_match.group(2)
+
+            magpie_handler = HandlerFactory().get_handler("Magpie")
+            user_name = magpie_handler.get_user_name_from_user_id(user_id)
+            user_workspace_dir = self._get_user_workspace_dir(user_name)
+
+            if not os.path.exists(user_workspace_dir):
+                raise FileNotFoundError(f"User {user_name} workspace not found at path {user_workspace_dir}. New "
+                                        f"wpsoutput {src_path} not added to the user workspace.")
+
+            # TODO: faire le call à secure-data-proxy, remove link if exists and no permission,
+            #  add link if doesn't exists and permission
+
+            hardlink_path = os.path.join(self._get_user_wps_outputs_user_dir(user_name), subpath)
+        else:  # public files
+            subpath = os.path.relpath(src_path, self.wps_outputs_dir)
+            hardlink_path = os.path.join(self._get_wps_outputs_public_dir(), subpath)
+
+        if os.path.exists(hardlink_path):
+            if not overwrite:
+                # Hardlink already exists, nothing to do.
+                return
+            # Delete the existing file at the destination path to reset the hardlink path with the expected source.
+            LOGGER.warning("Removing existing hardlink destination path at `%s` to generate hardlink for the newly"
+                           "created file.", hardlink_path)
+            os.remove(hardlink_path)
+
+        os.makedirs(os.path.dirname(hardlink_path), exist_ok=True)
+        os.link(src_path, hardlink_path)
+
     def on_created(self, path):
         # type: (str) -> None
         """
@@ -123,33 +155,9 @@ class FileSystem(Handler, FSMonitor):
 
         :param path: Absolute path of a new file/directory
         """
-        if not os.path.isdir(path):
+        if not os.path.isdir(path) and Path(self.wps_outputs_dir) in Path(path).parents:
             # Only process files, since hardlinks are not permitted on directories
-            regex_match = re.search(self.wps_outputs_users_regex, path)
-            if regex_match:
-                user_id = int(regex_match.group(1))
-                subpath = regex_match.group(2)
-
-                magpie_handler = HandlerFactory().get_handler("Magpie")
-                user_name = magpie_handler.get_user_name_from_user_id(user_id)
-                user_workspace_dir = self._get_user_workspace_dir(user_name)
-
-                if not os.path.exists(user_workspace_dir):
-                    raise FileNotFoundError(f"User {user_name} workspace not found at path {user_workspace_dir}. New "
-                                            f"wpsoutput {path} not added to the user workspace.")
-
-                # TODO: faire le call à secure-data-proxy, remove link if exists and no permission,
-                #  add link if doesn't exists and permission
-
-                # create hardlink in the user workspace, reusing the same subfolder structure as in the wpsoutputs dir
-                hardlink_path = os.path.join(self._get_user_wps_outputs_user_dir(user_name), subpath)
-
-                if os.path.exists(hardlink_path):
-                    raise FileExistsError("Failed to create hardlink file, since a file already "
-                                          f"exists at the targeted path {hardlink_path}.")
-
-                os.makedirs(os.path.dirname(hardlink_path), exist_ok=True)
-                os.link(path, hardlink_path)
+            self._create_wpsoutputs_hardlink(src_path=path, overwrite=True)
 
     def on_modified(self, path):
         # type: (str) -> None

@@ -1,7 +1,9 @@
 import os
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from time import sleep
 from unittest.mock import patch
 
 import pytest
@@ -204,3 +206,60 @@ class TestFileSystem(unittest.TestCase):
 
             # Add test if dir already exists
             # Add test if the hardlink already exists (same whatever if the files is the right hardlink or unrelated)
+
+    def test_public_wps_output_created(self):
+        """
+        Tests creating a public wps output file.
+        """
+        with tempfile.TemporaryDirectory() as workspace_dir, \
+                tempfile.NamedTemporaryFile(mode="w", suffix=".cfg") as cfg_file, \
+                tempfile.TemporaryDirectory() as wpsoutputs_dir:
+
+            load_dotenv(CURR_DIR / "../docker/.env.example")
+            cfg_file.write(yaml.safe_dump({
+                "handlers": {
+                    "Magpie": {
+                        "active": True,
+                        "url": os.getenv("COWBIRD_TEST_MAGPIE_URL"),
+                        "admin_user": os.getenv("MAGPIE_ADMIN_USER"),
+                        "admin_password": os.getenv("MAGPIE_ADMIN_PASSWORD")},
+                    "FileSystem": {
+                        "active": True,
+                        "workspace_dir": workspace_dir,
+                        "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
+                        "wps_outputs_dir": wpsoutputs_dir}}}))
+            cfg_file.flush()
+            app = utils.get_test_app(settings={"cowbird.config_path": cfg_file.name})
+
+            # Create a test wps output file
+            output_subpath = f"weaver/test_output.txt"
+            output_file = os.path.join(wpsoutputs_dir, output_subpath)
+            os.makedirs(os.path.dirname(output_file))
+            open(output_file, mode="w").close()
+
+            filesystem_handler = HandlerFactory().create_handler("FileSystem")
+            filesystem_handler.on_created(output_file)
+
+            hardlink_path = os.path.join(filesystem_handler._get_wps_outputs_public_dir(), output_subpath)
+            assert os.stat(hardlink_path).st_nlink == 2
+
+            # A create event should still work if the target directory already exists
+            os.remove(hardlink_path)
+            filesystem_handler.on_created(output_file)
+            assert os.stat(hardlink_path).st_nlink == 2
+
+            # A create event should replace a hardlink path with the new file if the target path already exists
+            os.remove(hardlink_path)
+            open(hardlink_path, mode="w").close()
+            original_ctime = Path(output_file).stat().st_ctime
+            sleep(1)
+            filesystem_handler.on_created(output_file)
+            new_ctime = Path(output_file).stat().st_ctime
+            assert os.stat(hardlink_path).st_nlink == 2
+            assert original_ctime != new_ctime
+
+            # A create event on a folder should not be processed (no corresponding target folder created)
+            target_weaver_dir = os.path.join(filesystem_handler._get_wps_outputs_public_dir(), "weaver")
+            shutil.rmtree(target_weaver_dir)
+            filesystem_handler.on_created(os.path.join(wpsoutputs_dir, "weaver"))
+            assert not os.path.exists(target_weaver_dir)
