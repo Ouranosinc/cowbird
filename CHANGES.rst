@@ -13,6 +13,9 @@ Changes
 * Update multiple package dependencies flagged by PyUp as well as any relevant code changes to support updated packages.
 * Move ``ports`` sections of example ``docker/docker-compose.*.yml`` files to the ``dev`` variant to reflect a realistic
   ``prod`` vs ``dev`` configuration scheme and allow ``ports`` overrides without merge of lists to avoid conflicts.
+* Add typing requirements and ``check-types[-only]`` targets to ``Makefile``.
+  To avoid breaking the CI on any minor typing issue, leave it as ``allow_failure: true`` for the moment.
+  Further typing conversions and fixes can be applied gradually on a best-effort basis.
 * Covert type comments to type annotations.
 * Fix and improve ``Geoserver`` typings.
 * Drop Python 3.7 that reached end-of-life.
