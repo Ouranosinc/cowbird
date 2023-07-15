@@ -283,11 +283,12 @@ class Geoserver(Handler, FSMonitor):
     def _update_resource_paths_permissions_recursive(self,
                                                      resource: JSON,
                                                      permission: Permission,
-                                                     workspace_name: str) -> None:
+                                                     workspace_name: str,
+                                                     ) -> None:
         """
         Recursive method to update all the path permissions of a resource and its children resources as found on Magpie.
         """
-        resource_type = resource["resource_type"]
+        resource_type: str = resource["resource_type"]
         if resource_type in [Workspace.resource_type_name, Layer.resource_type_name]:
             layer_name: str = resource["resource_name"] if resource_type == Layer.resource_type_name else None
             res_id: int = resource["resource_id"]

@@ -5,8 +5,11 @@ Add the database in the pyramid registry and a property db for the requests.
 """
 
 import logging
+from typing import cast
 
+from pyramid.config import Configurator
 from pyramid.request import Request
+from pyramid.registry import Registry
 from pyramid.settings import asbool
 
 from cowbird.database.mongodb import MongoDatabase
@@ -33,7 +36,7 @@ def get_db(container: AnySettingsContainer, reset_connection: bool = False) -> M
     return database
 
 
-def includeme(config):
+def includeme(config: Configurator) -> None:
     settings = get_settings(config)
     if asbool(settings.get("cowbird.build_docs", False)):
         LOGGER.info("Skipping database when building docs...")
@@ -42,6 +45,6 @@ def includeme(config):
     LOGGER.info("Adding database...")
 
     def _add_db(request: Request) -> MongoDatabase:
-        return MongoDatabase(request.registry)
+        return MongoDatabase(cast(Registry, request.registry))
 
     config.add_request_method(_add_db, "db", reify=True)

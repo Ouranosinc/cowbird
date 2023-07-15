@@ -2,6 +2,7 @@ import argparse
 import importlib
 import os
 import sys
+from typing import Optional, Sequence
 
 from cowbird import __meta__
 from cowbird.cli.utils import ParserMaker, ParserRunner, get_logger_parser, subparser_help
@@ -12,7 +13,7 @@ LOGGER = get_logger(__name__,
                     datetime_format="%d-%b-%y %H:%M:%S", force_stdout=False)
 
 
-def main(args=None):
+def main(args: Optional[Sequence[str]] = None) -> Optional[int]:
     """
     Automatically groups all sub-helper CLI listed in :py:mod:`cowbird.cli` as a common ``cowbird`` CLI entrypoint.
 

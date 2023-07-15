@@ -1,0 +1,9 @@
+from typing import Optional
+
+from watchdog.utils import BaseThread
+
+
+class EventDispatcher(BaseThread):
+    def timeout(self) -> int: ...
+    def stop(self) -> None: ...
+    def join(self, timeout: Optional[float] = ...) -> None: ...

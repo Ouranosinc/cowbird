@@ -1,6 +1,6 @@
 import re
 from copy import deepcopy
-from typing import TYPE_CHECKING, Callable, Dict, Iterator, List, Tuple, cast
+from typing import TYPE_CHECKING, Callable, Dict, Iterator, List, MutableMapping, MutableSequence, Tuple, cast
 
 from cowbird.config import (
     BIDIRECTIONAL_ARROW,
@@ -26,6 +26,17 @@ if TYPE_CHECKING:
 
 SyncPointServicesType = Dict[str, Dict[str, List[Dict[str, str]]]]
 SyncPointMappingType = List[str]
+
+PermissionMapping = MutableMapping[
+    str,  # src_resource_key
+    MutableMapping[
+        str,  # src_permission
+        MutableMapping[
+            str,  # target_resource_key
+            MutableSequence[str]  # target_permission
+        ]
+    ]
+]
 
 LOGGER = get_logger(__name__)
 
@@ -110,7 +121,7 @@ class SyncPoint:
         #         {<target_resource_key> : [<target_permission>, ...],
         #           ...
         # }}}
-        self.permissions_mapping = {}
+        self.permissions_mapping: PermissionMapping = {}
 
         for mapping in permissions_mapping_list:
             left_res_key, left_permissions, direction, right_res_key, right_permissions = get_mapping_info(mapping)
@@ -227,9 +238,9 @@ class SyncPoint:
             service_resources = self.services[service_type]
             for res_key, res_segments in service_resources.items():
                 res_regex, named_segments_count = SyncPoint._generate_regex_from_segments(res_segments)
-                matched_groups = re.match(res_regex, resource_nametype_path)
-                if matched_groups:
-                    matched_groups = matched_groups.groupdict()
+                matches = re.match(res_regex, resource_nametype_path)
+                if matches:
+                    matched_groups = matches.groupdict()
                     if "multi_token" in matched_groups:
                         matched_groups["multi_token"] = SyncPoint._remove_type_from_nametype_path(
                             matched_groups["multi_token"]

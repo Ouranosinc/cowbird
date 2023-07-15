@@ -1,6 +1,4 @@
-
-
-from typing import Callable, Optional, Tuple, Union
+from typing import Callable, Optional, Tuple, Union, cast
 
 from pyramid.exceptions import PredicateMismatch
 from pyramid.httpexceptions import (
@@ -18,7 +16,7 @@ from simplejson import JSONDecodeError
 
 from cowbird.api import exception as ax
 from cowbird.api import schemas as s
-from cowbird.typedefs import JSON
+from cowbird.typedefs import JSON, AnyResponseType
 from cowbird.utils import (
     CONTENT_TYPE_ANY,
     CONTENT_TYPE_JSON,
@@ -29,6 +27,34 @@ from cowbird.utils import (
 )
 
 LOGGER = get_logger(__name__)
+
+
+class RemoveSlashNotFoundViewFactory(object):
+    """
+    Utility that will try to resolve a path without appended slash if one was provided.
+    """
+
+    def __init__(self, notfound_view: Optional[Callable[[Request], AnyResponseType]] = None) -> None:
+        self.notfound_view = notfound_view
+
+    def __call__(self, request: Request) -> AnyResponseType:
+        from pyramid.httpexceptions import HTTPMovedPermanently
+        from pyramid.interfaces import IRoutesMapper
+        from pyramid.registry import Registry
+
+        path = request.path
+        registry = cast(Registry, request.registry)  # pyramid improperly reports Type[Registry] instead of the instance
+        mapper = registry.queryUtility(IRoutesMapper)
+        if mapper is not None and path.endswith("/"):
+            no_slash_path = path.rstrip("/")
+            no_slash_path = no_slash_path.split("/cowbird", 1)[-1]
+            for route in mapper.get_routes():
+                if route.match(no_slash_path) is not None:
+                    query = request.query_string
+                    if query:
+                        no_slash_path += "?" + query
+                    return HTTPMovedPermanently(location=no_slash_path)
+        return self.notfound_view(request)
 
 
 def internal_server_error(request: Request) -> HTTPException:

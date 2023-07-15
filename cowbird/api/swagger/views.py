@@ -8,7 +8,7 @@ from cowbird.typedefs import JSON
 
 
 @s.SwaggerAPI.get(tags=[s.APITag], response_schemas=s.SwaggerAPI_GET_responses)
-def api_swagger(request):   # noqa: F811
+def api_swagger(request: Request) -> JSON:  # noqa: F811
     """
     Swagger UI route to display the Cowbird REST API schemas.
     """
