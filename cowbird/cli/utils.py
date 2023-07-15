@@ -1,7 +1,7 @@
 import argparse
 import json
 import logging
-from typing import Callable, Iterable, Literal, Mapping, Optional, Sequence
+from typing import Callable, Iterable, Literal, Optional, Sequence, TypedDict
 
 import yaml
 
@@ -16,10 +16,19 @@ HelperParser = Optional[argparse.ArgumentParser]
 ParseResult = int
 ParserMaker = Callable[[SharedParsers, CommandPrefixes], argparse.ArgumentParser]
 ParserRunner = Callable[[ParserArgs, HelperParser, ParsedArgs], ParseResult]
+SubParserArgs = TypedDict(
+    "SubParserArgs",
+    {
+        "help": str,
+        "description": str,
+        "usage": str,
+    },
+    total=True,
+)
 PrintFormat = Literal["json", "yaml", "flat", "table"]
 
 
-def subparser_help(description: str, parent_parser: Optional[argparse.ArgumentParser] = None) -> Mapping[str, str]:
+def subparser_help(description: str, parent_parser: Optional[argparse.ArgumentParser] = None) -> SubParserArgs:
     """
     Generates both fields with the same description as each parameter is used in different context.
 

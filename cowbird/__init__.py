@@ -1,13 +1,20 @@
 # -*- coding: utf-8 -*-
 import sys
+from typing import TYPE_CHECKING, Callable, Optional, cast
 
 # NOTE:
 #   Do not import anything here that is not part of the python standard library.
 #   Any external package could still not yet be installed when importing the package
 #   to access high-level information such as the metadata (__meta__.py).
 
+if TYPE_CHECKING:
+    from pyramid.config import Configurator
+    from pyramid.registry import Registry
+    from pyramid.request import Request
+    from cowbird.typedefs import AnyResponseType
 
-def includeme(config):
+
+def includeme(config: "Configurator") -> None:
     # import needs to be here, otherwise ImportError happens during setup.py install (modules not yet installed)
     # pylint: disable=C0415
     from pyramid.events import NewRequest
@@ -17,7 +24,7 @@ def includeme(config):
     from cowbird.constants import get_constant
     from cowbird.utils import fully_qualified_name, get_logger, log_exception_tween, log_request
 
-    mod_dir = get_constant("COWBIRD_MODULE_DIR", config)
+    mod_dir: str = get_constant("COWBIRD_MODULE_DIR", config)
     logger = get_logger(__name__)
     logger.info("Adding COWBIRD_MODULE_DIR='%s' to path.", mod_dir)
     sys.path.insert(0, mod_dir)
@@ -46,14 +53,14 @@ class RemoveSlashNotFoundViewFactory(object):
     Utility that will try to resolve a path without appended slash if one was provided.
     """
 
-    def __init__(self, notfound_view=None):
+    def __init__(self, notfound_view: Optional[Callable[[Request], AnyResponseType]] = None) -> None:
         self.notfound_view = notfound_view
 
-    def __call__(self, request):
+    def __call__(self, request: "Request") -> "AnyResponseType":
         from pyramid.httpexceptions import HTTPMovedPermanently
         from pyramid.interfaces import IRoutesMapper
         path = request.path
-        registry = request.registry
+        registry = cast(Registry, request.registry)
         mapper = registry.queryUtility(IRoutesMapper)
         if mapper is not None and path.endswith("/"):
             no_slash_path = path.rstrip("/")

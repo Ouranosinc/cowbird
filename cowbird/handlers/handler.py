@@ -10,9 +10,9 @@ from cowbird.utils import get_logger, get_ssl_verify, get_timeout
 
 AnyHandlerParameter = Literal["priority", "url", "workspace_dir"]
 
-HANDLER_PRIORITY_PARAM = "priority"
-HANDLER_URL_PARAM = "url"
-HANDLER_WORKSPACE_DIR_PARAM = "workspace_dir"
+HANDLER_PRIORITY_PARAM: AnyHandlerParameter = "priority"
+HANDLER_URL_PARAM: AnyHandlerParameter = "url"
+HANDLER_WORKSPACE_DIR_PARAM: AnyHandlerParameter = "workspace_dir"
 
 HANDLER_PARAMETERS = frozenset([
     HANDLER_PRIORITY_PARAM,
@@ -87,7 +87,7 @@ class Handler(abc.ABC):
         return os.path.join(self.workspace_dir, user_name)
 
     @abc.abstractmethod
-    def get_resource_id(self, resource_full_name: str) -> str:
+    def get_resource_id(self, resource_full_name: str) -> int:
         """
         Each handler must provide this implementation required by the permission synchronizer.
 

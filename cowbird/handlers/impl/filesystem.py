@@ -30,7 +30,7 @@ class FileSystem(Handler):
         super(FileSystem, self).__init__(settings, name, **kwargs)
         self.jupyterhub_user_data_dir = jupyterhub_user_data_dir
 
-    def get_resource_id(self, resource_full_name: str) -> str:
+    def get_resource_id(self, resource_full_name: str) -> int:
         raise NotImplementedError
 
     def _get_user_workspace_dir(self, user_name: str) -> str:

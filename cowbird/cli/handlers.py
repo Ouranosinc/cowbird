@@ -3,6 +3,7 @@
 Cowbird CLI helper to execute handler operations.
 """
 import argparse
+from typing import List
 
 from cowbird.cli import LOGGER
 from cowbird.cli.utils import (
@@ -49,11 +50,11 @@ def main(args: ParserArgs = None, parser: HelperParser = None, namespace: Parsed
                              CLI_MODE_CFG: True})
     if args.command == "list":
         handlers = get_handlers(config)
-        handler_json: JSON = [handler.name for handler in handlers]
+        handler_json: List[JSON] = [handler.name for handler in handlers]
         print_format(handler_json, args.format, section="handlers")
     elif args.command == "info":
         handlers = get_handlers(config)
-        handler_json: JSON = [handler.json() for handler in handlers if handler.name == args.name]
+        handler_json: List[JSON] = [handler.json() for handler in handlers if handler.name == args.name]
         if not len(handler_json) == 1:
             LOGGER.error("Cannot find handler named: %s", args.name)
             return -1

@@ -1,64 +1,81 @@
-from typing import Dict, List, Protocol
+from typing import Any, Callable, Dict, List, Optional, Protocol, TypeVar
+from typing_extensions import ParamSpec
 
 from colander import SchemaNode
 from pyramid.request import Request
 
 from cowbird.typedefs import JSON, AnyResponseType
 
-class ViewCallable(Protocol):
-    def __call__(self, request: Request) -> AnyResponseType: ...
+ViewCallableParam = ParamSpec("ViewCallableParam")
+ViewCallableType = TypeVar("ViewCallableType", bound=Callable[[Request], AnyResponseType])
+
+ViewCallableDecorator = Callable[[Request], AnyResponseType]
+ViewCallableService = Callable[[ViewCallableDecorator], ViewCallableDecorator]
+
+# class ViewService(Protocol):
+#     def __call__(
+#         self,
+#         view: Callable[ViewCallableParam, ViewCallableType],
+#     ) -> Callable[ViewCallableParam, ViewCallableType]: ...
 
 
 class Service:
     @property
     def name(self) -> str: ...
+
     @property
     def path(self) -> str: ...
+
+    @staticmethod
     def head(
-        self,
         *,
         schema: SchemaNode,
         response_schemas: Dict[str, SchemaNode],
-        tags: List[str],
-        api_security: JSON,
-    ) -> ViewCallable: ...
+        tags: Optional[List[str]] = None,
+        api_security: Optional[JSON] = None,
+    ) -> ViewCallableService: ...
+
+    @staticmethod
     def get(
-        self,
         *,
         schema: SchemaNode,
         response_schemas: Dict[str, SchemaNode],
-        tags: List[str],
-        api_security: JSON,
-    ) -> ViewCallable: ...
+        tags: Optional[List[str]] = None,
+        api_security: Optional[JSON] = None,
+    ) -> ViewCallableService: ...
+
+    @staticmethod
     def put(
-        self,
         *,
         schema: SchemaNode,
         response_schemas: Dict[str, SchemaNode],
-        tags: List[str],
-        api_security: JSON,
-    ) -> ViewCallable: ...
+        tags: Optional[List[str]] = None,
+        api_security: Optional[JSON] = None,
+    ) -> ViewCallableService: ...
+
+    @staticmethod
     def post(
-        self,
         *,
         schema: SchemaNode,
         response_schemas: Dict[str, SchemaNode],
-        tags: List[str],
-        api_security: JSON,
-    ) -> ViewCallable: ...
+        tags: Optional[List[str]] = None,
+        api_security: Optional[JSON] = None,
+    ) -> ViewCallableService: ...
+
+    @staticmethod
     def patch(
-        self,
         *,
         schema: SchemaNode,
         response_schemas: Dict[str, SchemaNode],
-        tags: List[str],
-        api_security: JSON,
-    ) -> ViewCallable: ...
+        tags: Optional[List[str]] = None,
+        api_security: Optional[JSON] = None,
+    ) -> ViewCallableService: ...
+
+    @staticmethod
     def delete(
-        self,
         *,
         schema: SchemaNode,
         response_schemas: Dict[str, SchemaNode],
-        tags: List[str],
-        api_security: JSON,
-    ) -> ViewCallable: ...
+        tags: Optional[List[str]] = None,
+        api_security: Optional[JSON] = None,
+    ) -> ViewCallableService: ...

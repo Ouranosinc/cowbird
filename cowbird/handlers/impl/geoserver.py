@@ -25,7 +25,7 @@ from cowbird.utils import CONTENT_TYPE_JSON, get_logger, update_filesystem_permi
 GeoserverType: TypeAlias = "Geoserver"  # need a reference for the decorator before it gets defined
 
 # see https://github.com/sbdchd/celery-types
-Task.__class_getitem__ = classmethod(lambda cls, *args, **kwargs: cls)  # type: ignore[attr-defined]
+Task.__class_getitem__ = classmethod(lambda cls, *args, **kwargs: cls)
 
 
 class GeoserverFuncSupportsWorkspace(Protocol):
@@ -177,7 +177,7 @@ class Geoserver(Handler, FSMonitor):
     #
 
     # Handler class functions
-    def get_resource_id(self, resource_full_name: str) -> str:
+    def get_resource_id(self, resource_full_name: str) -> int:
         raise NotImplementedError
 
     def user_created(self, user_name: str) -> None:
@@ -289,10 +289,11 @@ class Geoserver(Handler, FSMonitor):
         """
         resource_type = resource["resource_type"]
         if resource_type in [Workspace.resource_type_name, Layer.resource_type_name]:
-            layer_name = resource["resource_name"] if resource_type == Layer.resource_type_name else None
+            layer_name: str = resource["resource_name"] if resource_type == Layer.resource_type_name else None
+            res_id: int = resource["resource_id"]
             self._update_resource_paths_permissions(resource_type=resource_type,
                                                     permission=permission,
-                                                    resource_id=resource["resource_id"],
+                                                    resource_id=res_id,
                                                     workspace_name=workspace_name,
                                                     layer_name=layer_name)
 
@@ -934,17 +935,17 @@ def remove_workspace(_task: Task[[str], None], workspace_name: str) -> None:
 
 
 @shared_task(bind=True, autoretry_for=(FileNotFoundError,), retry_backoff=True, max_retries=8, typing=True)
-def validate_shapefile(_task: Task[[str, str], None], workspace_name: str, shapefile_name: str) -> None:
+def validate_shapefile(_task: Task[[Any, Any], None], workspace_name: str, shapefile_name: str) -> None:
     return Geoserver.get_instance().validate_shapefile(workspace_name, shapefile_name)
 
 
 @shared_task(bind=True, base=RequestTask, typing=True)
-def publish_shapefile(_task: Task[[str, str], None], workspace_name: str, shapefile_name: str) -> None:
+def publish_shapefile(_task: Task[[Any, Any], None], workspace_name: str, shapefile_name: str) -> None:
     return Geoserver.get_instance().publish_shapefile(workspace_name, shapefile_name)
 
 
 @shared_task(bind=True, base=RequestTask, typing=True)
-def remove_shapefile(_task: Task[[str, str], None], workspace_name: str, shapefile_name: str) -> None:
+def remove_shapefile(_task: Task[[Any, Any], None], workspace_name: str, shapefile_name: str) -> None:
     return Geoserver.get_instance().remove_shapefile(workspace_name, shapefile_name)
 
 

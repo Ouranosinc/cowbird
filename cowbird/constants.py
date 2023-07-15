@@ -143,7 +143,7 @@ def get_constant(constant_name: str,
       5. search in environment variables
 
     Parameter :paramref:`constant_name` is expected to have the format ``COWBIRD_[VARIABLE_NAME]`` although any value
-    can be passed to retrieve generic settings from all above mentioned search locations.
+    can be passed to retrieve generic settings from all above-mentioned search locations.
 
     If :paramref:`settings_name` is provided as alternative name, it is used as is to search for results if
     :paramref:`constant_name` was not found. Otherwise, ``cowbird.[variable_name]`` is used for additional search when

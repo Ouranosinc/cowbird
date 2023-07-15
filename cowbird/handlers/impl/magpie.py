@@ -173,10 +173,11 @@ class Magpie(Handler):
                 if workspace["resource_name"] == workspace_name:
                     workspace_res_id = workspace["resource_id"]
         if not workspace_res_id and create_if_missing:
+            parent_res_id: Optional[int] = list(geoserver_type_services.values())[0]["resource_id"]
             workspace_res_id = self.create_resource(
                 resource_name=workspace_name,
                 resource_type=Workspace.resource_type_name,
-                parent_id=list(geoserver_type_services.values())[0]["resource_id"])
+                parent_id=parent_res_id)
         return workspace_res_id
 
     def get_geoserver_layer_res_id(self, workspace_name: str, layer_name: str, create_if_missing: bool = False) -> int:
@@ -184,7 +185,8 @@ class Magpie(Handler):
         Tries to get the resource id of a specific layer, on `geoserver` type services, and if requested, creates the
         resource and workspace if they do not exist yet.
         """
-        layer_res_id, workspace_res_id = None, None
+        layer_res_id: Optional[int] = None
+        workspace_res_id: Optional[int] = None
         geoserver_type_services = self.get_services_by_type(ServiceGeoserver.service_type)
         if not geoserver_type_services:
             raise ValueError(f"No service of type `{ServiceGeoserver.service_type}` found on Magpie while trying to get"
@@ -386,7 +388,7 @@ class Magpie(Handler):
         else:
             LOGGER.warning("Empty permission data, no permissions to remove.")
 
-    def create_resource(self, resource_name: str, resource_type: str, parent_id: int) -> int:
+    def create_resource(self, resource_name: str, resource_type: str, parent_id: Optional[int]) -> int:
         """
         Creates the specified resource in Magpie and returns the created resource id if successful.
         """

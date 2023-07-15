@@ -11,7 +11,7 @@ class AbortException(Exception):
     """
 
 
-class RequestTask(Task, ABC):
+class RequestTask(Task, ABC):  # type: ignore[type-arg]
     """
     Celery base task that should be used to handle API requests.
 
@@ -63,7 +63,7 @@ class RequestTask(Task, ABC):
     Additional parameters to be passed down to requests for retry control.
     """
 
-    def abort_chain(self):
+    def abort_chain(self) -> None:
         """
         Calling this function from a task will prevent any downstream tasks to be run after it.
         """

@@ -11,6 +11,7 @@ from typing import (
     Literal,
     MutableMapping,
     MutableSequence,
+    MutableSet,
     Optional,
     Tuple,
     Type,
@@ -86,7 +87,7 @@ HTTPMethod = Literal[
 ConfigItem = Dict[str, JSON]
 ConfigList = List[ConfigItem]
 ConfigDict = Dict[str, Union[str, ConfigItem, ConfigList, JSON]]
-ConfigResTokenInfo = TypedDict("ConfigResTokenInfo", {"has_multi_token": bool, "named_tokens": set})
+ConfigResTokenInfo = TypedDict("ConfigResTokenInfo", {"has_multi_token": bool, "named_tokens": MutableSet[str]})
 ConfigSegment = TypedDict("ConfigSegment", {"name": str, "type": str})
 
 ResourceSegment = TypedDict("ResourceSegment", {"resource_name": str, "resource_type": str})

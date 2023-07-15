@@ -155,7 +155,7 @@ class SyncPoint:
                     SyncPoint._get_explicit_permission(target_permission))
 
     @staticmethod
-    def _generate_regex_from_segments(res_segments: List[ConfigSegment]) -> (str, int):
+    def _generate_regex_from_segments(res_segments: List[ConfigSegment]) -> Tuple[str, int]:
         """
         Generates a regex for a resource_nametype_path (ex.: /name1::type1/name2::type2) from a list of segments.
 
@@ -168,8 +168,10 @@ class SyncPoint:
             matched_groups = re.match(NAMED_TOKEN_REGEX, segment["name"])
             if matched_groups:
                 # match any name with specific type 1 time only
-                res_regex += rf"/(?P<{matched_groups.groups()[0]}>{SEGMENT_NAME_REGEX})" \
-                             rf"{RES_NAMETYPE_SEPARATOR}{segment['type']}"
+                res_regex += (
+                    rf"/(?P<{matched_groups.groups()[0]}>{SEGMENT_NAME_REGEX})"
+                    rf"{RES_NAMETYPE_SEPARATOR}{segment['type']}"
+                )
             elif segment["name"] == MULTI_TOKEN:
                 # match any name with specific type, 0 or more times
                 res_regex += rf"(?P<multi_token>(?:/{SEGMENT_NAME_REGEX}{RES_NAMETYPE_SEPARATOR}{segment['type']})*)"
@@ -191,7 +193,7 @@ class SyncPoint:
                 formatted_path += "/" + segment.split(RES_NAMETYPE_SEPARATOR)[0]
         return formatted_path
 
-    def _find_matching_res(self, service_type: str, resource_nametype_path: str) -> (str, Dict[str, str]):
+    def _find_matching_res(self, service_type: str, resource_nametype_path: str) -> Tuple[str, Dict[str, str]]:
         """
         Finds a resource key that matches the input resource path, in the sync_permissions config. Note that it returns
         the longest match and only the named segments of the path are included in the length value. Any tokenized
@@ -286,7 +288,8 @@ class SyncPoint:
 
     def _get_resource_full_name_and_type(self,
                                          res_key: str,
-                                         matched_groups: Dict[str, str]) -> (str, List[ConfigSegment]):
+                                         matched_groups: Dict[str, str],
+                                         ) -> Tuple[str, List[PermissionResourceData]]:
         """
         Finds the resource data from the config by using the resource key.
 
@@ -297,7 +300,8 @@ class SyncPoint:
         # Assume the service is the first found with the resource key, since the resource keys should be unique.
         svc_name = svc_list[0]
         target_segments = self.services[svc_name][res_key]
-        return svc_name, SyncPoint._create_res_data(target_segments, matched_groups)
+        res_data = SyncPoint._create_res_data(target_segments, matched_groups)
+        return svc_name, res_data
 
     def _get_src_permissions(self) -> Iterator[Tuple[str, str]]:
         """
@@ -338,13 +342,15 @@ class SyncPoint:
                     return False
                 # Use the 'children' key to access the rest of the resources
                 res_access_key = "children"
-        return target_permission in resource["permission_names"]
+        permission_names: JSON = resource["permission_names"]
+        return target_permission in permission_names
 
     def _filter_used_targets(self,
                              target_res_and_permissions: Dict[str, List[str]],
                              input_src_res_key: str,
                              src_matched_groups: Dict[str, str],
-                             input_permission: Permission) -> (Dict[str, List[str]], Dict[str, List[str]]):
+                             input_permission: Permission,
+                             ) -> Tuple[Dict[str, List[str]], Dict[str, List[str]]]:
         """
         Filters a dictionary of target resource/permissions, keeping only the permissions which should actually be
         removed.

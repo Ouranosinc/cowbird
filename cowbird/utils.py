@@ -11,7 +11,7 @@ import types
 from configparser import ConfigParser
 from enum import Enum
 from inspect import isclass, isfunction
-from typing import Any, List, NoReturn, Optional, Type, TypeVar, Union
+from typing import Any, Callable, List, NoReturn, Optional, Type, TypeVar, Union
 
 from celery.app import Celery
 from pyramid.config import Configurator
@@ -29,6 +29,7 @@ from webob.headers import EnvironHeaders, ResponseHeaders
 from cowbird import __meta__
 from cowbird.constants import get_constant, validate_required
 from cowbird.typedefs import (
+    JSON,
     AnyHeadersType,
     AnyKey,
     AnyRegistryContainer,
@@ -75,7 +76,8 @@ def get_logger(name: str,
                level: Optional[int] = None,
                force_stdout: bool = None,
                message_format: Optional[str] = None,
-               datetime_format: Optional[str] = None) -> logging.Logger:
+               datetime_format: Optional[str] = None,
+               ) -> logging.Logger:
     """
     Immediately sets the logger level to avoid duplicate log outputs from the `root logger` and `this logger` when
     `level` is ``logging.NOTSET``.
@@ -100,7 +102,8 @@ LOGGER = get_logger(__name__)
 def set_logger_config(logger: logging.Logger,
                       force_stdout: bool = False,
                       message_format: Optional[str] = None,
-                      datetime_format: Optional[str] = None) -> logging.Logger:
+                      datetime_format: Optional[str] = None,
+                      ) -> logging.Logger:
     """
     Applies the provided logging configuration settings to the logger.
     """
@@ -172,7 +175,7 @@ def islambda(func: Any) -> bool:
     return isinstance(func, types.LambdaType) and func.__name__ == (lambda: None).__name__  # noqa
 
 
-def configure_celery(config, config_ini):
+def configure_celery(config: Configurator, config_ini: str) -> None:
     LOGGER.info("Configuring celery")
 
     # shared_tasks use the default celery app by default so setting the pyramid_celery celery_app as default prevent
@@ -294,7 +297,7 @@ def get_registry(container: AnyRegistryContainer, nothrow: bool = False) -> Opti
     raise TypeError(f"Could not retrieve registry from container object of type [{type(container)}].")
 
 
-def get_json(response):
+def get_json(response: AnyResponseType) -> JSON:
     """
     Retrieves the 'JSON' body of a response using the property/callable according to the response's implementation.
     """
@@ -306,7 +309,8 @@ def get_json(response):
 def get_header(header_name: str,
                header_container: AnyHeadersType,
                default: Optional[str] = None,
-               split: Optional[Union[str, List[str]]] = None) -> Optional[str]:
+               split: Optional[Union[str, List[str]]] = None,
+               ) -> Optional[str]:
     """
     Retrieves ``header_name`` by fuzzy match (independently of upper/lower-case and underscore/dash) from various
     framework implementations of ``Headers``.
@@ -319,7 +323,7 @@ def get_header(header_name: str,
     :param default: value to returned if `header_container` is invalid or `header_name` could not be found.
     :param split: character(s) to use to split the *found* `header_name`.
     """
-    def fuzzy_name(name):
+    def fuzzy_name(name: str) -> str:
         return name.lower().replace("-", "_")
 
     if header_container is None:
@@ -369,7 +373,7 @@ def get_settings(container: Optional[AnySettingsContainer], app: bool = False) -
     """
     Retrieve application settings from a supported container.
 
-    :param container: supported container with an handle to application settings.
+    :param container: supported container with a handle to application settings.
     :param app: allow retrieving from current thread registry if no container was defined.
     :returns: found application settings dictionary.
     :raise TypeError: when no application settings could be found or unsupported container.
@@ -425,13 +429,16 @@ def log_request(event: NewRequest) -> None:
                      request.url, request.path, request.method, header_str, params_str, body_str)
 
 
-def log_exception_tween(handler, registry):  # noqa: F811
+def log_exception_tween(
+    handler: Callable[[Request], AnyResponseType],
+    registry: Registry,  # noqa: F811
+) -> Callable[[Request], AnyResponseType]:
     """
     Tween factory that logs any exception before re-raising it.
 
-    Application errors are marked as ``ERROR`` while non critical HTTP errors are marked as ``WARNING``.
+    Application errors are marked as ``ERROR`` while non-critical HTTP errors are marked as ``WARNING``.
     """
-    def log_exc(request):
+    def log_exc(request: Request) -> AnyResponseType:
         try:
             return handler(request)
         except Exception as err:
@@ -537,11 +544,11 @@ class NullType(object, metaclass=SingletonMeta):
     Represents a null value to differentiate from None.
     """
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<null>"
 
     @staticmethod
-    def __nonzero__():
+    def __nonzero__() -> bool:
         return False
 
     __bool__ = __nonzero__
@@ -551,7 +558,7 @@ class NullType(object, metaclass=SingletonMeta):
 null = NullType()  # pylint: disable=C0103,invalid-name
 
 
-def is_null(item):
+def is_null(item: Any) -> bool:
     return isinstance(item, NullType) or item is null
 
 

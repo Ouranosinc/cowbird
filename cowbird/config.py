@@ -75,7 +75,8 @@ def _load_config(path_or_dict: Union[str, ConfigDict], section: str, allow_missi
 
 def get_all_configs(path_or_dict: Union[str, ConfigDict],
                     section: str,
-                    allow_missing: bool = False) -> List[ConfigDict]:
+                    allow_missing: bool = False,
+                    ) -> List[ConfigDict]:
     """
     Loads all configuration files specified by the path (if a directory), a single configuration (if a file) or directly
     returns the specified dictionary section (if a configuration dictionary).

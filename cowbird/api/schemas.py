@@ -1,6 +1,4 @@
-
-
-from typing import Dict, List, Union
+from typing import Any, Dict, List, Union
 
 import colander
 from cornice import Service
@@ -23,7 +21,7 @@ from pyramid.security import NO_PERMISSION_REQUIRED
 
 from cowbird import __meta__
 from cowbird.constants import get_constant
-from cowbird.typedefs import JSON
+from cowbird.typedefs import JSON, HTTPMethod
 from cowbird.utils import (
     CONTENT_TYPE_HTML,
     CONTENT_TYPE_JSON,
@@ -44,14 +42,14 @@ InfoAPI = {
 
 
 # Security
-SecurityCookieAuthAPI = {}  # {"cookieAuth": {"type": "apiKey", "in": "cookie", "name": "token"}}
-SecurityDefinitionsAPI = {"securityDefinitions": SecurityCookieAuthAPI}
-SecurityAuthenticatedAPI = [{"cookieAuth": []}]
-SecurityAdministratorAPI = [{"cookieAuth": []}]
-SecurityEveryoneAPI = [{}]
+SecurityCookieAuthAPI: JSON = {}  # {"cookieAuth": {"type": "apiKey", "in": "cookie", "name": "token"}}
+SecurityDefinitionsAPI: JSON = {"securityDefinitions": SecurityCookieAuthAPI}
+SecurityAuthenticatedAPI: JSON = [{"cookieAuth": []}]
+SecurityAdministratorAPI: JSON = [{"cookieAuth": []}]
+SecurityEveryoneAPI: JSON = [{}]
 
 
-def get_security(service, method):
+def get_security(service: Service, method: HTTPMethod) -> JSON:
     definitions = service.definitions
     args = {}
     for definition in definitions:
@@ -68,7 +66,7 @@ def get_security(service, method):
     return SecurityAdministratorAPI if "security" not in args else args["security"]
 
 
-def service_api_route_info(service_api, **kwargs):
+def service_api_route_info(service_api: Service, **kwargs: Any) -> Dict[str, Any]:
     """
     Employed to simplify Pyramid route and view config definitions from same schema objects.
     """
@@ -218,7 +216,7 @@ class BaseResponseSchemaAPI(colander.MappingSchema):
 
 
 class BaseResponseBodySchema(colander.MappingSchema):
-    def __init__(self, code, description, **kw):
+    def __init__(self, code: int, description: str, **kw: Any) -> None:
         super(BaseResponseBodySchema, self).__init__(**kw)
         assert isinstance(code, int)         # nosec: B101
         assert isinstance(description, str)  # nosec: B101
@@ -290,7 +288,7 @@ class ErrorCallBodySchema(ErrorFallbackBodySchema):
 
 
 class ErrorResponseBodySchema(BaseResponseBodySchema):
-    def __init__(self, code, description, **kw):
+    def __init__(self, code: int, description: str, **kw: Any) -> None:
         super(ErrorResponseBodySchema, self).__init__(code, description, **kw)
         assert code >= 400  # nosec: B101
 
@@ -316,11 +314,11 @@ class ErrorResponseBodySchema(BaseResponseBodySchema):
         description="Additional details to explain failure reason of operation call or raised error.")
     fallback = ErrorFallbackBodySchema(
         missing=colander.drop,
-        description="Additional details to explain failure reason of fallback operation to cleanup call error.")
+        description="Additional details to explain failure reason of fallback operation to clean up the call error.")
 
 
 class InternalServerErrorResponseBodySchema(ErrorResponseBodySchema):
-    def __init__(self, **kw):
+    def __init__(self, **kw: Any) -> None:
         kw["code"] = HTTPInternalServerError.code
         super(InternalServerErrorResponseBodySchema, self).__init__(**kw)
 
@@ -331,7 +329,7 @@ class BadRequestResponseSchema(BaseResponseSchemaAPI):
 
 
 class UnauthorizedResponseBodySchema(ErrorResponseBodySchema):
-    def __init__(self, **kw):
+    def __init__(self, **kw: Any) -> None:
         kw["code"] = HTTPUnauthorized.code
         super(UnauthorizedResponseBodySchema, self).__init__(**kw)
 
@@ -601,7 +599,7 @@ class PermissionWebhook_POST_RequestBodySchema(colander.MappingSchema):
     )
     resource_id = colander.SchemaNode(
         colander.String(),
-        description="Id of the resource affected by the permission update."
+        description="Identifier of the resource affected by the permission update."
     )
     resource_full_name = colander.SchemaNode(
         colander.String(),
