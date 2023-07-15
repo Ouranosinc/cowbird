@@ -4,7 +4,6 @@ from pyramid.registry import Registry
 
 from cowbird.typedefs import JSON, HTTPMethod
 
-
 class Request:
     accept: Optional[str]
     method: HTTPMethod

@@ -1,10 +1,9 @@
-from typing import Callable, Dict, List, Optional, Protocol
+from typing import Dict, List, Protocol
 
 from colander import SchemaNode
 from pyramid.request import Request
 
 from cowbird.typedefs import JSON, AnyResponseType
-
 
 class ViewCallable(Protocol):
     def __call__(self, request: Request) -> AnyResponseType: ...

@@ -1,5 +1,5 @@
 import abc
-from typing import Any, Type, Union
+from typing import Any
 
 from cowbird.database.stores import StoreInterface
 from cowbird.typedefs import JSON, AnySettingsContainer, StoreSelector

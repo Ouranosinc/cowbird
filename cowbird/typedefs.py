@@ -3,7 +3,20 @@
 Additional typing definitions.
 """
 
-from typing import TYPE_CHECKING, Any, Dict, List, Literal, MutableMapping, Optional, MutableSequence, Tuple, Type, TypedDict, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    Literal,
+    MutableMapping,
+    MutableSequence,
+    Optional,
+    Tuple,
+    Type,
+    TypedDict,
+    Union
+)
 from typing_extensions import TypeAlias
 
 from celery.app import Celery

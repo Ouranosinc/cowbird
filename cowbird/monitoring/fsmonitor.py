@@ -1,5 +1,5 @@
 import abc
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 
 class FSMonitor(abc.ABC):

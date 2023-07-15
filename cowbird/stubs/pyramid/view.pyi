@@ -4,7 +4,6 @@ from pyramid.request import Request
 
 from cowbird.typedefs import AnyResponseType, HTTPMethod
 
-
 class ViewCallable(Protocol):
     def __call__(self, request: Request) -> AnyResponseType: ...
 
