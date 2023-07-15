@@ -79,7 +79,7 @@ jobs:
       # skip docker containers startup to avoid pull/up delay if not required by tests
       - if: ${{ matrix.test-case == 'coverage' ||  matrix.test-case == 'test-only' }}
         name: Start containers
-        run: make docker-up-dev-detached
+        run: make docker-up-dev-detached docker-config-dev
       # preinstall system to ensure latest are available for following dependency resolution
       - name: Install System Dependencies
         run: make install-sys

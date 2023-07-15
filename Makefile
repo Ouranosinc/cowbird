@@ -476,6 +476,11 @@ docker-up-dev: docker-build   ## run all dependencies containers using compose r
 docker-up-dev-detached:   ## run all dependencies containers using compose ready to be used by a local cowbird, in detached mode
 	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_DEV_COMPOSES) up -d
 
+# used for testing on github's ci
+.PHONY: docker-config-dev
+docker-config-dev:   ## display the docker compose configuration employed by the dev configuration
+	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_DEV_COMPOSES) config
+
 .PHONY: docker-down
 docker-down:  ## stop running containers and remove them
 	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_TEST_COMPOSES) down || true
