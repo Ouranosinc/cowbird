@@ -83,6 +83,17 @@ HTTPMethod = Literal[
     # others available, but not common for API definition
 ]
 
+HandlerConfig = TypedDict(
+    "HandlerConfig",
+    {
+        "active": Optional[bool],
+        "priority": Optional[int],
+        "url": Optional[str],
+        "workspace_dir": Optional[str],
+    },
+    total=True,
+)
+
 # registered configurations
 ConfigItem = Dict[str, JSON]
 ConfigList = List[ConfigItem]

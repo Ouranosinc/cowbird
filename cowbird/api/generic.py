@@ -40,7 +40,6 @@ class RemoveSlashNotFoundViewFactory(object):
     def __call__(self, request: Request) -> AnyResponseType:
         from pyramid.httpexceptions import HTTPMovedPermanently
         from pyramid.interfaces import IRoutesMapper
-        from pyramid.registry import Registry
 
         path = request.path
         registry = cast(Registry, request.registry)  # pyramid improperly reports Type[Registry] instead of the instance

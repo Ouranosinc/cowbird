@@ -70,7 +70,7 @@ def get_multiformat_body_raw(request: Request, key: str, default: Optional[Any] 
 
 
 @overload
-def get_multiformat_body(  # type: ignore[misc]
+def get_multiformat_body(  # type: ignore[misc,unused-ignore]
     request: Request,
     key: str,
     default: Any = None,
@@ -83,7 +83,7 @@ def get_multiformat_body(  # type: ignore[misc]
 
 
 @overload
-def get_multiformat_body(  # type: ignore[misc]
+def get_multiformat_body(  # type: ignore[misc,unused-ignore]
     request: Request,
     key: str,
     default: Any = None,
@@ -96,7 +96,7 @@ def get_multiformat_body(  # type: ignore[misc]
 
 
 @overload
-def get_multiformat_body(  # type: ignore[misc]
+def get_multiformat_body(  # type: ignore[misc,unused-ignore]
     request: Request,
     key: str,
     default: Any = None,
@@ -109,7 +109,7 @@ def get_multiformat_body(  # type: ignore[misc]
 
 
 @overload
-def get_multiformat_body(  # type: ignore[misc]
+def get_multiformat_body(  # type: ignore[misc,unused-ignore]
     request: Request,
     key: str,
     default: Any = None,
@@ -122,7 +122,7 @@ def get_multiformat_body(  # type: ignore[misc]
 
 
 @overload
-def get_multiformat_body(  # type: ignore[misc]
+def get_multiformat_body(  # type: ignore[misc,unused-ignore]
     request: Request,
     key: str,
     default: Any = None,
@@ -135,7 +135,7 @@ def get_multiformat_body(  # type: ignore[misc]
 
 
 @overload
-def get_multiformat_body(  # type: ignore[misc]
+def get_multiformat_body(  # type: ignore[misc,unused-ignore]
     request: Request,
     key: str,
     default: Any = None,
@@ -148,11 +148,11 @@ def get_multiformat_body(  # type: ignore[misc]
 
 
 @overload
-def get_multiformat_body(  # type: ignore[misc]
+def get_multiformat_body(  # type: ignore[misc,unused-ignore]
     request: Request,
     key: str,
     default: Any = None,
-    check_type: Type[dict] = dict,
+    check_type: Type[Dict[str, Any]] = dict,
     pattern: Optional[Union[str, bool]] = ax.PARAM_REGEX,
     http_error: Optional[Type[HTTPError]] = None,
     msg_on_fail: Optional[str] = None
@@ -160,7 +160,7 @@ def get_multiformat_body(  # type: ignore[misc]
     ...
 
 
-def get_multiformat_body(  # type: ignore[misc]
+def get_multiformat_body(  # type: ignore[misc,unused-ignore]
     request: Request,
     key: str,
     default: Any = None,

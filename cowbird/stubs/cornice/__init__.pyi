@@ -29,8 +29,8 @@ class Service:
     @staticmethod
     def head(
         *,
-        schema: SchemaNode,
         response_schemas: Dict[str, SchemaNode],
+        schema: Optional[SchemaNode] = None,
         tags: Optional[List[str]] = None,
         api_security: Optional[JSON] = None,
     ) -> ViewCallableService: ...
@@ -38,8 +38,8 @@ class Service:
     @staticmethod
     def get(
         *,
-        schema: SchemaNode,
         response_schemas: Dict[str, SchemaNode],
+        schema: Optional[SchemaNode] = None,
         tags: Optional[List[str]] = None,
         api_security: Optional[JSON] = None,
     ) -> ViewCallableService: ...
@@ -47,8 +47,8 @@ class Service:
     @staticmethod
     def put(
         *,
-        schema: SchemaNode,
         response_schemas: Dict[str, SchemaNode],
+        schema: Optional[SchemaNode] = None,
         tags: Optional[List[str]] = None,
         api_security: Optional[JSON] = None,
     ) -> ViewCallableService: ...
@@ -56,8 +56,8 @@ class Service:
     @staticmethod
     def post(
         *,
-        schema: SchemaNode,
         response_schemas: Dict[str, SchemaNode],
+        schema: Optional[SchemaNode] = None,
         tags: Optional[List[str]] = None,
         api_security: Optional[JSON] = None,
     ) -> ViewCallableService: ...
@@ -65,8 +65,8 @@ class Service:
     @staticmethod
     def patch(
         *,
-        schema: SchemaNode,
         response_schemas: Dict[str, SchemaNode],
+        schema: Optional[SchemaNode] = None,
         tags: Optional[List[str]] = None,
         api_security: Optional[JSON] = None,
     ) -> ViewCallableService: ...
@@ -74,8 +74,8 @@ class Service:
     @staticmethod
     def delete(
         *,
-        schema: SchemaNode,
         response_schemas: Dict[str, SchemaNode],
+        schema: Optional[SchemaNode] = None,
         tags: Optional[List[str]] = None,
         api_security: Optional[JSON] = None,
     ) -> ViewCallableService: ...

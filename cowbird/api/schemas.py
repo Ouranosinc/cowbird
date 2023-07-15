@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union
+from typing import Any, Dict
 
 import colander
 from cornice import Service
@@ -35,7 +35,7 @@ from cowbird.utils import (
 # pylint: disable=C0103,invalid-name
 
 TitleAPI = f"{__meta__.__title__} REST API"
-InfoAPI = {
+InfoAPI: JSON = {
     "description": __meta__.__description__,
     "contact": {"name": __meta__.__maintainer__, "email": __meta__.__email__, "url": __meta__.__url__}
 }
@@ -87,7 +87,7 @@ class ValidOperations(ExtendedEnum):
     DeleteOperation = "deleted"
 
 
-def generate_api_schema(swagger_base_spec: Dict[str, Union[str, List[str]]]) -> JSON:
+def generate_api_schema(swagger_base_spec: JSON) -> JSON:
     """
     Return JSON Swagger specifications of Cowbird REST API.
 

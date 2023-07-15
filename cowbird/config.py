@@ -1,12 +1,12 @@
 import logging
 import os
 import re
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Literal, Tuple, Union, overload
 
 import yaml
 from schema import Optional, Regex, Schema
 
-from cowbird.typedefs import ConfigDict, ConfigResTokenInfo, ConfigSegment
+from cowbird.typedefs import ConfigDict, ConfigResTokenInfo, ConfigSegment, HandlerConfig
 from cowbird.utils import get_logger, print_log, raise_log
 
 LOGGER = get_logger(__name__)
@@ -73,6 +73,14 @@ def _load_config(path_or_dict: Union[str, ConfigDict], section: str, allow_missi
                   exception=ConfigError, logger=LOGGER)
 
 
+@overload
+def get_all_configs(path_or_dict: Union[str, ConfigDict],
+                    section: Literal["handlers"],
+                    allow_missing: bool = False,
+                    ) -> List[Dict[str, HandlerConfig]]:
+    ...
+
+
 def get_all_configs(path_or_dict: Union[str, ConfigDict],
                     section: str,
                     allow_missing: bool = False,
@@ -130,7 +138,7 @@ def _expand_all(config: ConfigDict) -> ConfigDict:
     return config
 
 
-def validate_handlers_config_schema(handlers_cfg: ConfigDict) -> None:
+def validate_handlers_config_schema(handlers_cfg: Dict[str, HandlerConfig]) -> None:
     """
     Validates the schema of the `handlers` section found in the config.
     """

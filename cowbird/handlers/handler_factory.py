@@ -1,8 +1,9 @@
 import importlib
-from typing import TYPE_CHECKING, List, Literal, Optional, overload
+from typing import TYPE_CHECKING, Dict, List, Literal, Optional, overload
 
 from cowbird.config import get_all_configs
 from cowbird.utils import SingletonMeta, get_config_path, get_logger, get_settings
+from cowbird.typedefs import HandlerConfig
 
 if TYPE_CHECKING:
     from cowbird.handlers.handler import Handler
@@ -27,7 +28,7 @@ class HandlerFactory(metaclass=SingletonMeta):
         self.settings = get_settings(None, app=True)
         config_path = get_config_path()
         handlers_configs = get_all_configs(config_path, "handlers", allow_missing=True)
-        self.handlers_cfg = {}
+        self.handlers_cfg: Dict[str, HandlerConfig] = {}
         for handlers_config in handlers_configs:
             if not handlers_config:
                 LOGGER.warning("Handlers configuration is empty.")

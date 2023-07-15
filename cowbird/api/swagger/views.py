@@ -14,9 +14,11 @@ def api_swagger(request: Request) -> JSON:  # noqa: F811
     """
     swagger_versions_dir = os.path.abspath(os.path.join(get_constant("COWBIRD_MODULE_DIR"), "ui/swagger/versions"))
     swagger_ui_path = s.SwaggerGenerator.path.lstrip("/")
-    return_data = {"api_title": s.TitleAPI,
-                   "api_schema_path": swagger_ui_path,
-                   "api_schema_versions_dir": swagger_versions_dir}
+    return_data: JSON = {
+        "api_title": s.TitleAPI,
+        "api_schema_path": swagger_ui_path,
+        "api_schema_versions_dir": swagger_versions_dir,
+    }
     return return_data
 
 
@@ -25,8 +27,8 @@ def api_schema(request: Request) -> JSON:
     """
     Return JSON Swagger specifications of Cowbird REST API.
     """
-    swagger_base_spec = {
-        "host": get_constant("COWBIRD_URL", request.registry),
+    swagger_base_spec: JSON = {
+        "host": get_constant("COWBIRD_URL", request),
         "schemes": [request.scheme]
     }
     return s.generate_api_schema(swagger_base_spec)

@@ -2,6 +2,7 @@ import argparse
 import json
 import logging
 from typing import Callable, Iterable, Literal, Optional, Sequence, TypedDict
+from typing_extensions import NotRequired
 
 import yaml
 
@@ -21,7 +22,7 @@ SubParserArgs = TypedDict(
     {
         "help": str,
         "description": str,
-        "usage": str,
+        "usage": NotRequired[str],
     },
     total=True,
 )
@@ -35,7 +36,7 @@ def subparser_help(description: str, parent_parser: Optional[argparse.ArgumentPa
     Field ``help`` is printed next to the subparser name when *parent parser* is called with ``--help``.
     Field ``description`` populates the help details under the usage command when calling *child parser* ``--help``.
     """
-    desc = {"help": description, "description": description}
+    desc: SubParserArgs = {"help": description, "description": description}
     if parent_parser:
         desc.update({"usage": parent_parser.usage})
     return desc
