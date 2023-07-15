@@ -100,10 +100,10 @@ def get_mongodb_connection(container: AnySettingsContainer) -> Database:
     client = pymongo.MongoClient(
         host=db_url.hostname,
         port=db_url.port,
+        username=db_url.username or None,
+        password=db_url.password or None,
     )
     db = client[db_url.path[1:]]
-    if db_url.username and db_url.password:
-        db.authenticate(db_url.username, db_url.password)
     return db
 
 
