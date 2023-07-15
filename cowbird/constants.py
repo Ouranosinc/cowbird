@@ -14,7 +14,7 @@ settings formatted as ``cowbird.[variable_name]`` in the ``cowbird.ini`` configu
 import logging
 import os
 import re
-from typing import Optional
+from typing import Optional, cast
 from typing_extensions import Literal
 
 from pyramid.settings import asbool
@@ -64,7 +64,7 @@ def _get_default_log_level() -> AnyLogLevel:
     # also considers 'ModuleNotFoundError' derived from 'ImportError', but not added to avoid Python <3.6 name error
     except (AttributeError, ImportError):  # noqa: W0703 # nosec: B110
         pass
-    return _default_log_lvl
+    return cast(AnyLogLevel, _default_log_lvl)
 
 
 # ===========================

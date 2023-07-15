@@ -2,8 +2,8 @@ import importlib
 from typing import TYPE_CHECKING, Dict, List, Literal, Optional, overload
 
 from cowbird.config import get_all_configs
-from cowbird.utils import SingletonMeta, get_config_path, get_logger, get_settings
 from cowbird.typedefs import HandlerConfig
+from cowbird.utils import SingletonMeta, get_config_path, get_logger, get_settings
 
 if TYPE_CHECKING:
     from cowbird.handlers.handler import Handler

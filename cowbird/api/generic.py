@@ -218,7 +218,7 @@ def get_request_info(request: Union[Request, HTTPException],
     """
     Obtains additional content details about the :paramref:`request` according to available information.
     """
-    content = {
+    content: JSON = {
         "path": str(request.upath_info),
         "url": str(request.url),
         "detail": default_message,

@@ -276,7 +276,7 @@ def evaluate_call(call: Callable[[], Any],
                   http_kwargs: Optional[ParamsType] = None,
                   msg_on_fail: str = "",
                   content: Optional[JSON] = None,
-                  content_type: str = CONTENT_TYPE_JSON
+                  content_type: str = CONTENT_TYPE_JSON,
                   ) -> Any:
     """
     Evaluates the specified :paramref:`call` with a wrapped HTTP exception handling. On failure, tries to call.

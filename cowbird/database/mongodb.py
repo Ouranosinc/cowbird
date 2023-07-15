@@ -1,7 +1,7 @@
 # MongoDB
 # http://docs.pylonsproject.org/projects/pyramid-cookbook/en/latest/database/mongodb.html
 import warnings
-from typing import Any, Dict, Optional, Type, Union
+from typing import Any, Dict, Optional, Type, Union, cast
 from urllib.parse import urlparse
 
 import pymongo
@@ -96,7 +96,7 @@ def get_mongodb_connection(container: AnySettingsContainer) -> Database:
     if settings.get("mongo_uri", None) is None:
         warnings.warn(f"Setting 'mongo_uri' not defined in registry, using default [{default_mongo_uri}].")
         settings["mongo_uri"] = default_mongo_uri
-    db_url = urlparse(settings["mongo_uri"])
+    db_url = urlparse(cast(str, settings["mongo_uri"]))
     client = pymongo.MongoClient(
         host=db_url.hostname,
         port=db_url.port,

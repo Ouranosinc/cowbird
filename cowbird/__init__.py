@@ -20,9 +20,9 @@ def includeme(config: "Configurator") -> None:
     from pyramid.tweens import EXCVIEW
 
     from cowbird.api import generic as ag
+    from cowbird.api.generic import RemoveSlashNotFoundViewFactory
     from cowbird.constants import get_constant
     from cowbird.utils import fully_qualified_name, get_logger, log_exception_tween, log_request
-    from cowbird.api.generic import RemoveSlashNotFoundViewFactory
 
     mod_dir: str = get_constant("COWBIRD_MODULE_DIR", config)
     logger = get_logger(__name__)

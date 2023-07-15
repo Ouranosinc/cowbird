@@ -11,7 +11,8 @@ import types
 from configparser import ConfigParser
 from enum import Enum
 from inspect import isclass, isfunction
-from typing import Any, Callable, List, NoReturn, Optional, Type, TypeVar, Union
+from typing import Any, Callable, Dict, List, NoReturn, Optional, Type, TypeVar, Union
+from typing_extensions import Self
 
 from celery.app import Celery
 from pyramid.config import Configurator
@@ -218,8 +219,8 @@ def get_app_config(container: AnySettingsContainer) -> Configurator:
 
     # override INI config path if provided with --paste to gunicorn, otherwise use environment variable
     config_settings = get_settings(container)
-    config_env = get_constant("COWBIRD_INI_FILE_PATH", config_settings, raise_missing=True)
-    config_ini = (container or {}).get("__file__", config_env)
+    config_env: str = get_constant("COWBIRD_INI_FILE_PATH", config_settings, raise_missing=True)
+    config_ini: str = (container or {}).get("__file__", config_env)
     LOGGER.info("Using initialisation file : [%s]", config_ini)
     if config_ini != config_env:
         cowbird.constants.COWBIRD_INI_FILE_PATH = config_ini
@@ -229,8 +230,8 @@ def get_app_config(container: AnySettingsContainer) -> Configurator:
     settings.update(config_settings)
 
     print_log("Setting up loggers...", LOGGER)
-    log_lvl = get_constant("COWBIRD_LOG_LEVEL", settings, "cowbird.log_level", default_value="INFO",
-                           raise_missing=False, raise_not_set=False, print_missing=True)
+    log_lvl: str = get_constant("COWBIRD_LOG_LEVEL", settings, "cowbird.log_level", default_value="INFO",
+                                raise_missing=False, raise_not_set=False, print_missing=True)
     # apply proper value in case it was in ini AND env since up until then, only env was checked
     # we want to prioritize the ini definition
     cowbird.constants.COWBIRD_LOG_LEVEL = log_lvl
@@ -342,7 +343,7 @@ def get_header(header_name: str,
                 for sep in split:
                     v = v.replace(sep, split[0])
                 split = split[0]
-            return (v.split(split)[0] if split else v).strip()
+            return (v.split(split)[0] if split else v).strip()  # type: ignore[arg-type]
     return default
 
 
@@ -410,7 +411,7 @@ def log_request(event: NewRequest) -> None:
     request: Request = event.request
     LOGGER.info("Request: [%s]", log_request_format(request))
     if LOGGER.isEnabledFor(logging.DEBUG):
-        def items_str(items):
+        def items_str(items: Dict[str, str]) -> str:
             return "\n  ".join([f"{h!s}: {items[h]!s}" for h in items]) if len(items) else "-"
 
         header_str = items_str(request.headers)
@@ -499,7 +500,7 @@ class ExtendedEnum(Enum):
         Returns the entry directly if it is already a valid enum.
         """
         # Python 3.8 disallow direct check of 'str' in 'enum'
-        members = [member for member in cls]
+        members: List[EnumClassType] = [member for member in cls]
         if key_or_value in members:                                             # pylint: disable=E1133
             return key_or_value
         for m_key, m_val in cls.__members__.items():                            # pylint: disable=E1101
@@ -533,7 +534,7 @@ class SingletonMeta(type):
     """
     _instances = {}
 
-    def __call__(cls, *args, **kwargs):
+    def __call__(cls, *args: Any, **kwargs: Any) -> Self:
         if cls not in cls._instances:
             cls._instances[cls] = super(SingletonMeta, cls).__call__(*args, **kwargs)
         return cls._instances[cls]

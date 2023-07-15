@@ -8,8 +8,8 @@ import logging
 from typing import cast
 
 from pyramid.config import Configurator
-from pyramid.request import Request
 from pyramid.registry import Registry
+from pyramid.request import Request
 from pyramid.settings import asbool
 
 from cowbird.database.mongodb import MongoDatabase

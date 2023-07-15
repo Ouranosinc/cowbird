@@ -20,6 +20,17 @@ ViewCallableService = Callable[[ViewCallableDecorator], ViewCallableDecorator]
 
 
 class Service:
+    def __init__(
+        self,
+        name: str,
+        path: Optional[str] = None,
+        description: Optional[str] = None,
+        cors_policy: Dict[str, str] = None,
+        pyramid_route: Optional[str] = None,
+        depth: int = 1,
+        **kwargs: Any,
+    ) -> None: ...
+
     @property
     def name(self) -> str: ...
 
