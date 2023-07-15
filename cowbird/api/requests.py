@@ -1,6 +1,4 @@
-
-
-from typing import Any, Iterable, Optional, Tuple, Type, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Type, Union, overload
 
 from pyramid.httpexceptions import HTTPError, HTTPInternalServerError, HTTPUnprocessableEntity
 from pyramid.request import Request
@@ -47,7 +45,7 @@ def check_value(value: Any,
                         http_error=http_error, msg_on_fail=msg_on_fail)
 
 
-def get_request_method_content(request):
+def get_request_method_content(request: Request) -> Dict[str, Any]:
     # 'request' object stores GET content into 'GET' property, while other methods are in 'POST' property
     method_property = "GET" if request.method == "GET" else "POST"
     return getattr(request, method_property)
@@ -71,14 +69,106 @@ def get_multiformat_body_raw(request: Request, key: str, default: Optional[Any] 
                             http_error=HTTPInternalServerError, msg_on_fail=msg)
 
 
-def get_multiformat_body(request: Request,
-                         key: str,
-                         default: Any = None,
-                         check_type: Union[Type[Any], Tuple[Type[Any], ...]] = str,
-                         pattern: Optional[Union[str, bool]] = ax.PARAM_REGEX,
-                         http_error: Optional[Type[HTTPError]] = None,
-                         msg_on_fail: Optional[str] = None
-                         ) -> JSON:
+@overload
+def get_multiformat_body(  # type: ignore[misc]
+    request: Request,
+    key: str,
+    default: Any = None,
+    check_type: Type[str] = str,
+    pattern: Optional[Union[str, bool]] = ax.PARAM_REGEX,
+    http_error: Optional[Type[HTTPError]] = None,
+    msg_on_fail: Optional[str] = None
+) -> str:
+    ...
+
+
+@overload
+def get_multiformat_body(  # type: ignore[misc]
+    request: Request,
+    key: str,
+    default: Any = None,
+    check_type: Type[Optional[str]] = (str, type(None)),
+    pattern: Optional[Union[str, bool]] = ax.PARAM_REGEX,
+    http_error: Optional[Type[HTTPError]] = None,
+    msg_on_fail: Optional[str] = None
+) -> Optional[str]:
+    ...
+
+
+@overload
+def get_multiformat_body(  # type: ignore[misc]
+    request: Request,
+    key: str,
+    default: Any = None,
+    check_type: Type[int] = int,
+    pattern: Optional[Union[str, bool]] = ax.PARAM_REGEX,
+    http_error: Optional[Type[HTTPError]] = None,
+    msg_on_fail: Optional[str] = None
+) -> int:
+    ...
+
+
+@overload
+def get_multiformat_body(  # type: ignore[misc]
+    request: Request,
+    key: str,
+    default: Any = None,
+    check_type: Type[float] = float,
+    pattern: Optional[Union[str, bool]] = ax.PARAM_REGEX,
+    http_error: Optional[Type[HTTPError]] = None,
+    msg_on_fail: Optional[str] = None
+) -> float:
+    ...
+
+
+@overload
+def get_multiformat_body(  # type: ignore[misc]
+    request: Request,
+    key: str,
+    default: Any = None,
+    check_type: Type[bool] = bool,
+    pattern: Optional[Union[str, bool]] = ax.PARAM_REGEX,
+    http_error: Optional[Type[HTTPError]] = None,
+    msg_on_fail: Optional[str] = None
+) -> bool:
+    ...
+
+
+@overload
+def get_multiformat_body(  # type: ignore[misc]
+    request: Request,
+    key: str,
+    default: Any = None,
+    check_type: Type[List[Any]] = list,
+    pattern: Optional[Union[str, bool]] = ax.PARAM_REGEX,
+    http_error: Optional[Type[HTTPError]] = None,
+    msg_on_fail: Optional[str] = None
+) -> JSON:
+    ...
+
+
+@overload
+def get_multiformat_body(  # type: ignore[misc]
+    request: Request,
+    key: str,
+    default: Any = None,
+    check_type: Type[dict] = dict,
+    pattern: Optional[Union[str, bool]] = ax.PARAM_REGEX,
+    http_error: Optional[Type[HTTPError]] = None,
+    msg_on_fail: Optional[str] = None
+) -> JSON:
+    ...
+
+
+def get_multiformat_body(  # type: ignore[misc]
+    request: Request,
+    key: str,
+    default: Any = None,
+    check_type: Union[Type[Any], Tuple[Type[Any], ...]] = str,
+    pattern: Optional[Union[str, bool]] = ax.PARAM_REGEX,
+    http_error: Optional[Type[HTTPError]] = None,
+    msg_on_fail: Optional[str] = None
+) -> JSON:
     """
     Obtains and validates the matched value under :paramref:`key` element from the request body.
 

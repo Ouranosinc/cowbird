@@ -3,7 +3,7 @@
 Additional typing definitions.
 """
 
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, TypedDict, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, MutableMapping, Optional, MutableSequence, Tuple, Type, TypedDict, Union
 from typing_extensions import TypeAlias
 
 from celery.app import Celery
@@ -50,10 +50,24 @@ AnyKey = Union[str, int]
 _JSON: TypeAlias = "JSON"
 _JsonObjectItemAlias: TypeAlias = "_JsonObjectItem"
 _JsonListItemAlias: TypeAlias = "_JsonListItem"
-_JsonObjectItem = Dict[str, Union[_JSON, _JsonObjectItemAlias, _JsonListItemAlias]]
-_JsonListItem = List[Union[AnyValueType, _JsonObjectItem, _JsonListItemAlias]]
-_JsonItem = Union[AnyValueType, _JsonObjectItem, _JsonListItem, _JSON]
-JSON = Union[Dict[str, _JsonItem], List[_JsonItem], AnyValueType]
+_JsonObjectItem = MutableMapping[str, Union[_JSON, _JsonObjectItemAlias, _JsonListItemAlias, AnyValueType]]
+_JsonListItem = MutableSequence[Union[_JsonObjectItem, _JsonListItemAlias, AnyValueType]]
+_JsonItem = Union[_JsonObjectItem, _JsonListItem, AnyValueType]
+# NOTE:
+#   Although 'JSON' should allow referring directly to anything between 'Dict[str, JSON]', 'List[JSON]'
+#   or 'AnyValueType', this can a lot of false positives typing detections. Sometimes, it is better to provide
+#   the explicitly type expected (e.g.: 'List[JSON]') when necessary to disambiguate some situations.
+JSON = Union[MutableMapping[str, _JsonItem], MutableSequence[_JsonItem], AnyValueType]
+
+HTTPMethod = Literal[
+    "HEAD",
+    "GET",
+    "PUT",
+    "POST",
+    "PATCH",
+    "DELETE",
+    # others available, but not common for API definition
+]
 
 # registered configurations
 ConfigItem = Dict[str, JSON]
@@ -63,6 +77,7 @@ ConfigResTokenInfo = TypedDict("ConfigResTokenInfo", {"has_multi_token": bool, "
 ConfigSegment = TypedDict("ConfigSegment", {"name": str, "type": str})
 
 ResourceSegment = TypedDict("ResourceSegment", {"resource_name": str, "resource_type": str})
+ResourceTree = List[Dict[str, ResourceSegment]]
 PermissionResourceData = Union[PermissionConfigItemType, ResourceSegment]
 PermissionDataEntry = TypedDict(
     "PermissionDataEntry",

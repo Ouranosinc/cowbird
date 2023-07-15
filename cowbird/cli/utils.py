@@ -1,11 +1,12 @@
 import argparse
 import json
 import logging
-from typing import Callable, Dict, Iterable, Optional, Sequence
+from typing import Callable, Iterable, Literal, Mapping, Optional, Sequence
 
 import yaml
 
 from cowbird.constants import get_constant
+from cowbird.typedefs import JSON
 
 CommandPrefixes = Optional[Iterable[str]]
 SharedParsers = Optional[Iterable[argparse.ArgumentParser]]
@@ -13,12 +14,12 @@ ParsedArgs = Optional[argparse.Namespace]
 ParserArgs = Optional[Sequence[str]]
 HelperParser = Optional[argparse.ArgumentParser]
 ParseResult = int
-
 ParserMaker = Callable[[SharedParsers, CommandPrefixes], argparse.ArgumentParser]
 ParserRunner = Callable[[ParserArgs, HelperParser, ParsedArgs], ParseResult]
+PrintFormat = Literal["json", "yaml", "flat", "table"]
 
 
-def subparser_help(description: str, parent_parser: Optional[argparse.ArgumentParser] = None) -> Dict[str, str]:
+def subparser_help(description: str, parent_parser: Optional[argparse.ArgumentParser] = None) -> Mapping[str, str]:
     """
     Generates both fields with the same description as each parameter is used in different context.
 
@@ -67,7 +68,7 @@ def get_format_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def print_format(data, fmt, section=None):
+def print_format(data: JSON, fmt: PrintFormat, section: Optional[str] = None) -> None:
     if fmt == "yaml":
         if section:
             data = {section: data}

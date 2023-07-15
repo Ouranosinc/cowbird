@@ -2,10 +2,10 @@ import importlib
 from typing import TYPE_CHECKING, List, Literal, Optional, overload
 
 from cowbird.config import get_all_configs
-from cowbird.handlers.handler import Handler
 from cowbird.utils import SingletonMeta, get_config_path, get_logger, get_settings
 
 if TYPE_CHECKING:
+    from cowbird.handlers.handler import Handler
     from cowbird.handlers.impl.catalog import Catalog as CatalogHandler
     from cowbird.handlers.impl.filesystem import FileSystem as FileSystemHandler
     from cowbird.handlers.impl.geoserver import Geoserver as GeoserverHandler
@@ -23,7 +23,7 @@ class HandlerFactory(metaclass=SingletonMeta):
     Create handler instance using handler name.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.settings = get_settings(None, app=True)
         config_path = get_config_path()
         handlers_configs = get_all_configs(config_path, "handlers", allow_missing=True)
@@ -66,10 +66,10 @@ class HandlerFactory(metaclass=SingletonMeta):
         ...
 
     @overload
-    def create_handler(self, name: str) -> Optional[Handler]:
+    def create_handler(self, name: str) -> Optional["Handler"]:
         ...
 
-    def create_handler(self, name: str) -> Optional[Handler]:
+    def create_handler(self, name: str) -> Optional["Handler"]:
         """
         Instantiates a new `Handler` implementation using its name, overwriting an existing instance if required.
         """
@@ -110,10 +110,10 @@ class HandlerFactory(metaclass=SingletonMeta):
         ...
 
     @overload
-    def get_handler(self, name: str) -> Optional[Handler]:
+    def get_handler(self, name: str) -> Optional["Handler"]:
         ...
 
-    def get_handler(self, name: str) -> Optional[Handler]:
+    def get_handler(self, name: str) -> Optional["Handler"]:
         """
         Instantiates a `Handler` implementation using its name if it doesn't exist or else returns the existing one from
         cache.
@@ -123,7 +123,7 @@ class HandlerFactory(metaclass=SingletonMeta):
         except KeyError:
             return self.create_handler(name)
 
-    def get_active_handlers(self) -> List[Handler]:
+    def get_active_handlers(self) -> List["Handler"]:
         """
         Return a sorted list by priority of `Handler` implementation activated in the config.
         """

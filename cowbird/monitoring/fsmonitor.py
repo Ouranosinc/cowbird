@@ -1,4 +1,5 @@
 import abc
+from typing import TYPE_CHECKING, Optional
 
 
 class FSMonitor(abc.ABC):
@@ -8,7 +9,7 @@ class FSMonitor(abc.ABC):
 
     @staticmethod
     @abc.abstractmethod
-    def get_instance():
+    def get_instance() -> Optional["FSMonitor"]:
         """
         Must return an instance of the class implementing FSMonitor.
         """

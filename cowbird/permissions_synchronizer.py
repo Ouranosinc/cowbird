@@ -1,6 +1,6 @@
 import re
 from copy import deepcopy
-from typing import TYPE_CHECKING, Callable, Dict, Iterator, List, Tuple
+from typing import TYPE_CHECKING, Callable, Dict, Iterator, List, Tuple, cast
 
 from cowbird.config import (
     BIDIRECTIONAL_ARROW,
@@ -15,13 +15,14 @@ from cowbird.config import (
     validate_sync_config_services
 )
 from cowbird.handlers.handler_factory import HandlerFactory
-from cowbird.typedefs import ConfigSegment, PermissionData, PermissionResourceData, ResourceSegment
+from cowbird.typedefs import JSON, ConfigSegment, PermissionData, PermissionResourceData, ResourceSegment, ResourceTree
 from cowbird.utils import get_config_path, get_logger
 
 if TYPE_CHECKING:
-    from magpie.typedefs import PermissionDict
+    from magpie.typedefs import PermissionConfigItem, PermissionDict
 
     from cowbird.handlers.impl.magpie import Magpie
+
 
 SyncPointServicesType = Dict[str, Dict[str, List[Dict[str, str]]]]
 SyncPointMappingType = List[str]
@@ -62,7 +63,7 @@ class Permission:
         self.user = user
         self.group = group
 
-    def __eq__(self, other: "Permission") -> bool:
+    def __eq__(self, other: "Permission") -> bool:  # type: ignore[override]
         return (self.service_name == other.service_name and
                 self.service_type == other.service_type and
                 self.resource_id == other.resource_id and
@@ -228,8 +229,9 @@ class SyncPoint:
                 if matched_groups:
                     matched_groups = matched_groups.groupdict()
                     if "multi_token" in matched_groups:
-                        matched_groups["multi_token"] = \
-                            SyncPoint._remove_type_from_nametype_path(matched_groups["multi_token"])
+                        matched_groups["multi_token"] = SyncPoint._remove_type_from_nametype_path(
+                            matched_groups["multi_token"]
+                        )
                     matched_groups_by_res[res_key] = matched_groups
                     matched_length_by_res[res_key] = named_segments_count
 
@@ -309,7 +311,8 @@ class SyncPoint:
     def _is_in_permissions(target_permission: str,
                            svc_name: str,
                            src_res_full_name: List[PermissionResourceData],
-                           permissions: Dict) -> bool:
+                           permissions: JSON,
+                           ) -> bool:
         """
         Checks if a target permission is found in a permissions dict.
 
@@ -475,7 +478,7 @@ class SyncPoint:
                                   src_res_key: str,
                                   src_matched_groups: Dict[str, str],
                                   input_permission: Permission,
-                                  perm_operation: Callable[[List[Dict]], None],
+                                  perm_operation: Callable[[List["PermissionConfigItem"]], None],
                                   ) -> PermissionData:
         """
         Finds all permissions that should be synchronised with the source resource.
@@ -504,9 +507,10 @@ class SyncPoint:
         return permission_data
 
     def sync(self,
-             perm_operation: Callable[[List[Dict]], None],
+             perm_operation: Callable[[List["PermissionConfigItem"]], None],
              permission: Permission,
-             src_resource_tree: List[Dict[str, ResourceSegment]]) -> None:
+             src_resource_tree: ResourceTree,
+             ) -> None:
         """
         Create or delete target permissions, that are mapped to the source resource that triggered the event.
 
@@ -536,7 +540,6 @@ class SyncPoint:
                 permissions_data[-1]["permission"] = perm
                 permissions_data[-1]["user"] = user_and_group[0]
                 permissions_data[-1]["group"] = user_and_group[1]
-
                 perm_operation(permissions_data)
 
 
@@ -566,14 +569,15 @@ class PermissionSynchronizer(object):
                 available_services = self.magpie_inst.get_service_types()
                 validate_sync_config_services(sync_cfg, available_services)
 
-                self.sync_point.append(SyncPoint(services=sync_cfg["services"],
-                                                 permissions_mapping_list=sync_cfg["permissions_mapping"]))
+                services = cast(SyncPointServicesType, sync_cfg["services"])
+                perm_map = cast(List[str], sync_cfg["permissions_mapping"])
+                self.sync_point.append(SyncPoint(services=services, permissions_mapping_list=perm_map))
 
     def create_permission(self, permission: Permission) -> None:
         """
         Create the same permission on each service sharing the same resource.
         """
-        resource_tree = self.magpie_inst.get_parents_resource_tree(permission.resource_id)
+        resource_tree = cast(ResourceTree, self.magpie_inst.get_parents_resource_tree(permission.resource_id))
         for point in self.sync_point:
             point.sync(self.magpie_inst.create_permissions, permission, resource_tree)
 
@@ -581,6 +585,6 @@ class PermissionSynchronizer(object):
         """
         Delete the same permission on each service sharing the same resource.
         """
-        resource_tree = self.magpie_inst.get_parents_resource_tree(permission.resource_id)
+        resource_tree = cast(ResourceTree, self.magpie_inst.get_parents_resource_tree(permission.resource_id))
         for point in self.sync_point:
             point.sync(self.magpie_inst.delete_permission, permission, resource_tree)

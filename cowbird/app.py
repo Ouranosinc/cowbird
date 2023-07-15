@@ -4,6 +4,9 @@
 Cowbird is a middleware that manages interactions between various birds of the bird-house stack.
 """
 import sys
+from typing import Optional
+
+from pyramid.router import Router
 
 from cowbird.config import (
     get_all_configs,
@@ -12,12 +15,13 @@ from cowbird.config import (
     validate_sync_perm_config_schema
 )
 from cowbird.monitoring.monitoring import Monitoring
+from cowbird.typedefs import SettingsType, SettingValue
 from cowbird.utils import get_app_config, get_config_path, get_logger, print_log
 
 LOGGER = get_logger(__name__)
 
 
-def get_app(global_config=None, **settings):
+def get_app(global_config: Optional[SettingsType] = None, **settings: SettingValue) -> Router:
     """
     This function returns the Pyramid WSGI application.
 
@@ -55,7 +59,7 @@ def get_app(global_config=None, **settings):
     return wsgi_app
 
 
-def main(global_config=None, **settings):  # noqa: F811
+def main(global_config: Optional[SettingsType] = None, **settings: SettingValue) -> Router:
     """
     This function returns the Pyramid WSGI application.
     """

@@ -1,4 +1,5 @@
 import abc
+from typing import Any, Type, Union
 
 from cowbird.database.stores import StoreInterface
 from cowbird.typedefs import JSON, AnySettingsContainer, StoreSelector
@@ -28,15 +29,15 @@ class DatabaseInterface(metaclass=abc.ABCMeta):
         raise TypeError(f"Unsupported store type selector: [{store_type}] ({type(store_type)})")
 
     @abc.abstractmethod
-    def get_store(self, store_type, *store_args, **store_kwargs):
+    def get_store(self, store_type: StoreSelector, *store_args: Any, **store_kwargs: Any) -> StoreInterface:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def reset_store(self, store_type: StoreSelector) -> None:
+    def reset_store(self, store_type: StoreSelector) -> StoreInterface:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_session(self):
+    def get_session(self) -> Any:
         raise NotImplementedError
 
     @abc.abstractmethod

@@ -1,3 +1,5 @@
+## Dependencies to run documentation generation
+
 # we actually need to install all requirements during docs build because of OpenAPI generation (see 'docs/conf.py')
 -r requirements-sys.txt
 -r requirements.txt

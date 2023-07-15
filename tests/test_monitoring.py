@@ -128,6 +128,8 @@ class TestMonitoring(unittest.TestCase):
 
 
 class TestMonitor(FSMonitor):
+    __test__ = False  # avoid invalid collect depending on specified input path/items to pytest
+
     def __init__(self):
         self.created = []
         self.deleted = []
@@ -148,6 +150,8 @@ class TestMonitor(FSMonitor):
 
 
 class TestMonitor2(TestMonitor):
+    __test__ = False  # avoid invalid collect depending on specified input path/items to pytest
+
     # Allow a second full qualified class name to register as monitor
     @staticmethod
     def get_instance():

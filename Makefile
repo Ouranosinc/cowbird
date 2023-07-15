@@ -505,8 +505,11 @@ mkdir-reports:
 	@mkdir -p "$(REPORTS_DIR)"
 
 # autogen check variants with pre-install of dependencies using the '-only' target references
-CHECKS_PYTHON := pep8 lint security doc8 links imports
+CHECKS_EXCLUDE ?=
+CHECKS_PYTHON := pep8 lint security doc8 links imports types
 CHECKS_NPM := css
+CHECKS_PYTHON := $(filter-out $(CHECKS_EXCLUDE),$(CHECKS_PYTHON))
+CHECKS_NPM := $(filter-out $(CHECKS_EXCLUDE),$(CHECKS_NPM))
 CHECKS := $(CHECKS_PYTHON) $(CHECKS_NPM)
 CHECKS := $(addprefix check-, $(CHECKS))
 
@@ -588,6 +591,13 @@ check-imports-only: mkdir-reports	## run imports code checks
 	 	isort --check-only --diff $(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/check-imports.txt")'
 
+.PHONY: check-types-only
+check-types-only: mkdir-reports  ## run typing validation
+	@echo "Running type checks..."
+	@@bash -c '$(CONDA_CMD) \
+		mypy --config-file "$(APP_ROOT)/setup.cfg" "$(APP_ROOT)" \
+		1> >(tee "$(REPORTS_DIR)/check-types.txt")'
+
 .PHONY: check-css-only
 check-css-only: mkdir-reports
 	@echo "Running CSS style checks..."
@@ -597,8 +607,11 @@ check-css-only: mkdir-reports
 		"$(APP_ROOT)/**/*.css"
 
 # autogen fix variants with pre-install of dependencies using the '-only' target references
+FIXES_EXCLUDE ?=
 FIXES_PYTHON := imports lint docf fstring
 FIXES_NPM := css
+FIXES_PYTHON := $(filter-out $(FIXES_EXCLUDE),$(FIXES_PYTHON))
+FIXES_NPM := $(filter-out $(FIXES_EXCLUDE),$(FIXES_NPM))
 FIXES := $(FIXES_PYTHON) $(FIXES_NPM)
 FIXES := $(addprefix fix-, $(FIXES))
 

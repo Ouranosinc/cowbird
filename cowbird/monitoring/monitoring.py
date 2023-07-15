@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Optional, Type, Union
+from typing import Dict, MutableMapping, Optional, Type, Union
 
 from cowbird.database import get_db
 from cowbird.database.stores import MonitoringStore
@@ -36,10 +36,10 @@ class Monitoring(metaclass=SingletonMeta):
         if not config:  # pragma: no cover
             raise MonitoringConfigurationException("Without proper application settings, the Monitoring class cannot "
                                                    "obtains a proper database store.")
-        self.monitors = defaultdict(lambda: {})
+        self.monitors: MutableMapping[str, Dict[str, Monitor]] = defaultdict(lambda: {})
         self.store = get_db(config).get_store(MonitoringStore)
 
-    def start(self):
+    def start(self) -> None:
         """
         Load existing monitors and start the monitoring.
         """
@@ -51,12 +51,13 @@ class Monitoring(metaclass=SingletonMeta):
     def register(self,
                  path: str,
                  recursive: bool,
-                 cb_monitor: Union[FSMonitor, Type[FSMonitor], str]) -> Optional[Monitor]:
+                 cb_monitor: Union[FSMonitor, Type[FSMonitor], str],
+                 ) -> Optional[Monitor]:
         """
         Register a monitor for a specific path and start it. If a monitor already exists for the specific
         path/cb_monitor combination it is directly returned. If this monitor was not recursively monitoring its path and
         the `recursive` flag is now true, this one take precedence and the monitor is updated accordingly. If the
-        `recursive` flag was true and now it is false it has no effect.
+        `recursive` flag was true, and now it is false it has no effect.
 
         :param path: Path to monitor
         :param recursive: Monitor subdirectory recursively?
@@ -66,12 +67,13 @@ class Monitoring(metaclass=SingletonMeta):
         :returns: The monitor registered or already existing for the specific path/cb_monitor combination. Note that
                   the monitor is not created/returned if a MonitorException occurs.
         """
+        callback = None
         try:
             callback = Monitor.get_qualified_class_name(Monitor.get_fsmonitor_instance(cb_monitor))
             if path in self.monitors and callback in self.monitors[path]:
                 mon = self.monitors[path][callback]
                 # If the monitor already exists but is not recursive, make it recursive if required
-                # (recursivity takes precedence)
+                # (recursive takes precedence)
                 if not mon.recursive and recursive:
                     mon.recursive = True
             else:

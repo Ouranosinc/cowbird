@@ -4,6 +4,7 @@ import os
 from typing import Any, List
 from typing_extensions import Literal
 
+from cowbird.permissions_synchronizer import Permission
 from cowbird.typedefs import JSON, SettingsType
 from cowbird.utils import get_logger, get_ssl_verify, get_timeout
 
@@ -82,7 +83,7 @@ class Handler(abc.ABC):
     def json(self) -> JSON:
         return {"name": self.name}
 
-    def _user_workspace_dir(self, user_name):
+    def _user_workspace_dir(self, user_name: str) -> str:
         return os.path.join(self.workspace_dir, user_name)
 
     @abc.abstractmethod
@@ -102,17 +103,17 @@ class Handler(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def user_created(self, user_name):
+    def user_created(self, user_name: str) -> None:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def user_deleted(self, user_name):
+    def user_deleted(self, user_name: str) -> None:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def permission_created(self, permission):
+    def permission_created(self, permission: Permission) -> None:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def permission_deleted(self, permission):
+    def permission_deleted(self, permission: Permission) -> None:
         raise NotImplementedError

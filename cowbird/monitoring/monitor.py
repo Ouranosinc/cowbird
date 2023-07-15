@@ -1,6 +1,6 @@
 import importlib
 import os
-from typing import Dict, Type, Union
+from typing import Optional, Type, TypedDict, Union
 
 from watchdog.events import (
     DirCreatedEvent,
@@ -14,11 +14,30 @@ from watchdog.events import (
     FileSystemEventHandler
 )
 from watchdog.observers import Observer
+from watchdog.observers.api import BaseObserver
 
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.utils import get_logger
 
 LOGGER = get_logger(__name__)
+
+MonitorKey = TypedDict(
+    "MonitorKey",
+    {
+        "callback": str,
+        "path": str,
+    },
+    total=True,
+)
+MonitorParameters = TypedDict(
+    "MonitorParameters",
+    {
+        "callback": str,
+        "path": str,
+        "recursive": bool,
+    },
+    total=True,
+)
 
 
 class MonitorException(Exception):
@@ -50,7 +69,7 @@ class Monitor(FileSystemEventHandler):
         self.__src_path = path
         self.__recursive = recursive
         self.__callback = self.get_fsmonitor_instance(callback)
-        self.__event_observer = None
+        self.__event_observer: Optional[BaseObserver] = None
 
     @staticmethod
     def get_fsmonitor_instance(callback: Union[FSMonitor, Type[FSMonitor], str]) -> FSMonitor:
@@ -82,30 +101,30 @@ class Monitor(FileSystemEventHandler):
         return ".".join([cls.__module__, cls.__qualname__])
 
     @property
-    def recursive(self):
+    def recursive(self) -> bool:
         return self.__recursive
 
     @recursive.setter
-    def recursive(self, value):
+    def recursive(self, value: bool) -> None:
         if self.__recursive != value:
             self.stop()
             self.__recursive = value
             self.start()
 
     @property
-    def path(self):
+    def path(self) -> str:
         return self.__src_path
 
     @property
-    def callback(self):
+    def callback(self) -> str:
         return self.get_qualified_class_name(self.__callback)
 
     @property
-    def callback_instance(self):
+    def callback_instance(self) -> FSMonitor:
         return self.__callback
 
     @property
-    def key(self) -> Dict:
+    def key(self) -> MonitorKey:
         """
         Return a dict that can be used as a unique key to identify this :class:`Monitor` in a BD.
         """
@@ -118,14 +137,14 @@ class Monitor(FileSystemEventHandler):
         """
         return bool(self.__event_observer) and self.__event_observer.is_alive()
 
-    def params(self) -> Dict:
+    def params(self) -> MonitorParameters:
         """
         Return a dict serializing this object from which a new :class:`Monitor` can be recreated using the init
         function.
         """
         return {"callback": self.callback, "path": self.path, "recursive": self.__recursive}
 
-    def start(self):
+    def start(self) -> None:
         """
         Start the monitoring so that events can be fired.
         """
@@ -143,7 +162,7 @@ class Monitor(FileSystemEventHandler):
             LOGGER.warning("Cannot monitor the following file or directory [%s]: No such file or directory",
                            self.__src_path)
 
-    def stop(self):
+    def stop(self) -> None:
         """
         Stop the monitoring so that events stop to be fired.
         """

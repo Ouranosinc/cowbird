@@ -89,8 +89,8 @@ def validate_accept_header_tween(handler: Callable[[Request], Response],
                                  registry: Registry,  # noqa: F811
                                  ) -> Callable[[Request], Response]:
     """
-    Tween that validates that the specified request ``Accept`` header or ``format`` query (if any) is a supported one by
-    the application and for the given context.
+    Tween that validates that the specified request ``Accept`` header or ``format`` query (if any) is supported by the
+    application and for the given context.
 
     :raises HTTPNotAcceptable: if desired ``Content-Type`` is not supported.
     """

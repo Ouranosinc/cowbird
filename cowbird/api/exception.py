@@ -164,7 +164,7 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
                 LOGGER.debug("[param: %s] invalid type compare with [param_compare: %s]", type(param), param_compare)
                 raise TypeError("'param_compare' cannot be of non-type with specified verification flags")
             if not is_type and not ((is_str_cmp and ok_str_cmp) or (not is_str_cmp and eq_typ_cmp)):
-                # since 'param' depends of provided input by user, it should be a user-side invalid parameter
+                # since 'param' depends on provided input by user, it should be a user-side invalid parameter
                 # only exception is if 'param_compare' is not value-based, then developer combined wrong flags
                 if is_str_typ or is_cmp_typ:
                     LOGGER.debug("[param: %s] invalid value compare with [param_compare: %s]", param, param_compare)
@@ -469,7 +469,7 @@ def validate_params(http_class: Type[HTTPException],
     return http_code, detail, content
 
 
-def format_content_json_str(http_code, detail, content, content_type):
+def format_content_json_str(http_code: int, detail: str, content: JSON, content_type: str) -> str:
     """
     Inserts the code, details, content and type within the body using json format. Includes also any other specified
     json formatted content in the body. Returns the whole json body as a single string for output.
@@ -477,7 +477,7 @@ def format_content_json_str(http_code, detail, content, content_type):
     :raise `HTTPInternalServerError`: if parsing of the json content failed
     :returns: formatted json content as string with added HTTP code and details
     """
-    json_body = {}
+    json_body = ""
     try:
         content["code"] = http_code
         content["detail"] = detail
@@ -522,7 +522,7 @@ def rewrite_content_type(content: Union[str, JSON], content_type: str) -> Tuple[
             content["type"] = content_type
         json_content = content
         content = json.dumps(content)
-    return content, json_content
+    return content, json_content  # type: ignore[return-value]
 
 
 def generate_response_http_format(http_class: Type[HTTPException],

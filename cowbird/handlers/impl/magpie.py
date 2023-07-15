@@ -82,7 +82,8 @@ class Magpie(Handler):
                       method: str,
                       url: str,
                       params: Optional[Any] = None,
-                      json: Optional[Any] = None) -> requests.Response:
+                      json: Optional[Any] = None,
+                      ) -> requests.Response:
         """
         Wrapping function to send requests to Magpie, which also handles login and cookies.
         """
@@ -157,11 +158,12 @@ class Magpie(Handler):
 
     def get_geoserver_workspace_res_id(self,
                                        workspace_name: str,
-                                       create_if_missing: Optional[bool] = False) -> Union[int, None]:
+                                       create_if_missing: Optional[bool] = False,
+                                       ) -> Optional[int]:
         """
         Finds the resource id of a workspace resource from the `geoserver` type services.
         """
-        workspace_res_id = None
+        workspace_res_id: Optional[int] = None
         geoserver_type_services = self.get_services_by_type(ServiceGeoserver.service_type)
         if not geoserver_type_services:
             raise ValueError(f"No service of type `{ServiceGeoserver.service_type}` found on Magpie while trying to get"
@@ -246,16 +248,16 @@ class Magpie(Handler):
                                   f"HttpError {resp.status_code} : {resp.text}")
         return resp.json()
 
-    def user_created(self, user_name):
+    def user_created(self, user_name: str) -> None:
         raise NotImplementedError
 
-    def user_deleted(self, user_name):
+    def user_deleted(self, user_name: str) -> None:
         raise NotImplementedError
 
-    def permission_created(self, permission):
+    def permission_created(self, permission: Permission) -> None:
         self.permissions_synch.create_permission(permission)
 
-    def permission_deleted(self, permission):
+    def permission_deleted(self, permission: Permission) -> None:
         self.permissions_synch.delete_permission(permission)
 
     def create_permissions(self, permissions_data: List["PermissionConfigItem"]) -> None:
@@ -327,7 +329,8 @@ class Magpie(Handler):
                                              res_id: int,
                                              perm_name: str,
                                              perm_access: str,
-                                             perm_scope: str) -> Union[Response, None]:
+                                             perm_scope: str,
+                                             ) -> Union[Response, None]:
         return self.create_permission_by_res_id(res_id=res_id,
                                                 perm_name=perm_name,
                                                 perm_access=perm_access,
@@ -339,7 +342,8 @@ class Magpie(Handler):
                                             res_id: int,
                                             perm_name: str,
                                             perm_access: str,
-                                            perm_scope: str) -> Union[Response, None]:
+                                            perm_scope: str,
+                                            ) -> Union[Response, None]:
         return self.create_permission_by_res_id(res_id=res_id,
                                                 perm_name=perm_name,
                                                 perm_access=perm_access,

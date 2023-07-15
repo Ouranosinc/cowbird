@@ -1,7 +1,7 @@
-
 from typing import Any
 
 from cowbird.handlers.handler import Handler
+from cowbird.permissions_synchronizer import Permission
 from cowbird.typedefs import SettingsType
 
 
@@ -23,14 +23,14 @@ class Nginx(Handler):
     def get_resource_id(self, resource_full_name: str) -> str:
         raise NotImplementedError
 
-    def user_created(self, user_name):
+    def user_created(self, user_name: str) -> None:
         raise NotImplementedError
 
-    def user_deleted(self, user_name):
+    def user_deleted(self, user_name: str) -> None:
         raise NotImplementedError
 
-    def permission_created(self, permission):
+    def permission_created(self, permission: Permission) -> None:
         raise NotImplementedError
 
-    def permission_deleted(self, permission):
+    def permission_deleted(self, permission: Permission) -> None:
         raise NotImplementedError

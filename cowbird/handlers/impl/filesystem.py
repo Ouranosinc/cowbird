@@ -3,6 +3,7 @@ import shutil
 from typing import Any
 
 from cowbird.handlers.handler import HANDLER_WORKSPACE_DIR_PARAM, Handler
+from cowbird.permissions_synchronizer import Permission
 from cowbird.typedefs import SettingsType
 from cowbird.utils import get_logger
 
@@ -32,13 +33,13 @@ class FileSystem(Handler):
     def get_resource_id(self, resource_full_name: str) -> str:
         raise NotImplementedError
 
-    def _get_user_workspace_dir(self, user_name):
+    def _get_user_workspace_dir(self, user_name: str) -> str:
         return os.path.join(self.workspace_dir, user_name)
 
-    def _get_jupyterhub_user_data_dir(self, user_name):
+    def _get_jupyterhub_user_data_dir(self, user_name: str) -> str:
         return os.path.join(self.jupyterhub_user_data_dir, user_name)
 
-    def user_created(self, user_name):
+    def user_created(self, user_name: str) -> None:
         user_workspace_dir = self._get_user_workspace_dir(user_name)
         try:
             os.mkdir(user_workspace_dir)
@@ -64,15 +65,15 @@ class FileSystem(Handler):
         if create_symlink:
             os.symlink(self._get_jupyterhub_user_data_dir(user_name), symlink_dir, target_is_directory=True)
 
-    def user_deleted(self, user_name):
+    def user_deleted(self, user_name: str) -> None:
         user_workspace_dir = self._get_user_workspace_dir(user_name)
         try:
             shutil.rmtree(user_workspace_dir)
         except FileNotFoundError:
             LOGGER.info("User workspace directory not found (skip removal): [%s]", user_workspace_dir)
 
-    def permission_created(self, permission):
+    def permission_created(self, permission: Permission) -> None:
         raise NotImplementedError
 
-    def permission_deleted(self, permission):
+    def permission_deleted(self, permission: Permission) -> None:
         raise NotImplementedError

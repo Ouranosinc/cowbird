@@ -10,7 +10,7 @@ import logging
 import os
 import shutil
 from pathlib import Path
-from typing import Tuple
+from typing import List, Tuple, cast
 
 import mock
 import pytest
@@ -26,6 +26,7 @@ from cowbird.handlers import HandlerFactory
 from cowbird.handlers.impl.geoserver import SHAPEFILE_MAIN_EXTENSION, Geoserver, GeoserverError
 from cowbird.handlers.impl.magpie import GEOSERVER_READ_PERMISSIONS, GEOSERVER_WRITE_PERMISSIONS, MagpieHttpError
 from cowbird.permissions_synchronizer import Permission
+from cowbird.typedefs import JSON
 from tests import test_magpie, utils
 
 CURR_DIR = Path(__file__).resolve().parent
@@ -118,14 +119,14 @@ def reset_geoserver_test_workspace(test_instance, geoserver_handler):
             pass
 
 
-def copy_shapefile(basename, destination):
+def copy_shapefile(basename: str, destination: str) -> None:
     full_filename = f"{COWBIRD_ROOT}/tests/resources/{basename}"
     Path(destination).mkdir(parents=True, exist_ok=False)
     for file in glob.glob(f"{full_filename}.*"):
         shutil.copy(file, destination)
 
 
-def get_datastore_path(workspace_path):
+def get_datastore_path(workspace_path: str) -> str:
     return workspace_path + "/shapefile_datastore"
 
 
@@ -336,7 +337,7 @@ class TestGeoserverPermissions(TestGeoserver):
         self.layer_id = self.magpie.get_geoserver_layer_res_id(self.workspace_name, self.test_shapefile_name,
                                                                create_if_missing=True)
         parents_tree = self.magpie.get_parents_resource_tree(self.layer_id)
-        self.workspace_res_id = parents_tree[-1]["parent_id"]
+        self.workspace_res_id = cast(int, parents_tree[-1]["parent_id"])
 
         self.expected_chown_shapefile_calls = [
             mock.call(file, DEFAULT_ADMIN_UID, DEFAULT_ADMIN_GID) for file in self.shapefile_list
@@ -356,7 +357,7 @@ class TestGeoserverPermissions(TestGeoserver):
         user_permissions = self.magpie.get_user_permissions_by_res_id(self.magpie_test_user,
                                                                       res_id,
                                                                       effective=effective)
-        assert set(expected_perms) == {p["name"] for p in user_permissions["permissions"]
+        assert set(expected_perms) == {p["name"] for p in cast(List[JSON], user_permissions["permissions"])
                                        if p["access"] == expected_access and p["scope"] == expected_scope
                                        and p["name"] in GEOSERVER_READ_PERMISSIONS + GEOSERVER_WRITE_PERMISSIONS}
 

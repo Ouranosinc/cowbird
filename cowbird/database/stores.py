@@ -4,7 +4,7 @@ Stores to read/write data to from/to `MongoDB` using pymongo.
 
 import abc
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 import pymongo
 from pymongo.collection import Collection
@@ -16,12 +16,12 @@ LOGGER = logging.getLogger(__name__)
 
 class StoreInterface(object, metaclass=abc.ABCMeta):
     # Store type being used as collection name in mongo and to retrieve a store
-    type = None
+    type: str = None
 
     # Fields name used as index inside the mongo collection, with a length > 1, a compound index is created
-    index_fields = []
+    index_fields: List[str] = []
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Check that the store implementation defines its type and index_fields.
         """
@@ -36,7 +36,7 @@ class MongodbStore:
     Base class extended by all concrete store implementations.
     """
 
-    def __init__(self: Collection, collection: Optional[Dict[str, Any]]) -> None:
+    def __init__(self, collection: Collection, *_: Any, **__: Any) -> None:
         """
         Validate and hold the collection for all the implementation.
         """
@@ -45,7 +45,7 @@ class MongodbStore:
         self.collection: Collection = collection
 
     @classmethod
-    def get_args_kwargs(cls, *args: Any, **kwargs: Any) -> Tuple[Tuple, Dict]:
+    def get_args_kwargs(cls, *args: Any, **kwargs: Any) -> Tuple[Tuple[Any, ...], Dict[str, Any]]:
         """
         Filters :class:`MongodbStore`-specific arguments to safely pass them down its ``__init__``.
         """
@@ -65,7 +65,7 @@ class MonitoringStore(StoreInterface, MongodbStore):
     type = "monitors"
     index_fields = ["callback", "path"]
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
         Init the store used to save monitors.
         """
