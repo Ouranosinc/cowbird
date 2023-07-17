@@ -191,9 +191,8 @@ class FileSystem(Handler, FSMonitor):
                 else:  # public files
                     hardlink_path = self._get_public_hardlink(path)
                 os.remove(hardlink_path)
-            except FileNotFoundError as e:
-                # TODO: improve log here
-                LOGGER.debug(e)
+            except FileNotFoundError:
+                LOGGER.debug("No hardlink to delete for the `on_deleted` event of the wpsoutput file `%s`.", path)
 
     def permission_created(self, permission: Permission) -> None:
         raise NotImplementedError
