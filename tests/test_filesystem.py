@@ -1,3 +1,4 @@
+import logging
 import os
 import shutil
 import tempfile
@@ -256,3 +257,41 @@ class TestFileSystem(unittest.TestCase):
         shutil.rmtree(target_weaver_dir)
         filesystem_handler.on_created(os.path.join(self.wpsoutputs_dir, "weaver"))
         assert not os.path.exists(target_weaver_dir)
+
+    def test_public_wps_output_deleted(self):
+        """
+        Tests deleting a public wps output path.
+        """
+        self.get_test_app({
+            "handlers": {
+                "FileSystem": {
+                    "active": True,
+                    "workspace_dir": self.workspace_dir,
+                    "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
+                    "wps_outputs_dir": self.wpsoutputs_dir}}})
+
+        filesystem_handler = HandlerFactory().create_handler("FileSystem")
+
+        output_subpath = f"weaver/test_output.txt"
+        output_file_path = os.path.join(self.wpsoutputs_dir, output_subpath)
+
+        # Create a file at the hardlink location
+        hardlink_path = os.path.join(filesystem_handler._get_wps_outputs_public_dir(), output_subpath)
+        os.makedirs(os.path.dirname(hardlink_path))
+        open(hardlink_path, mode="w").close()
+
+        with self.assertLogs('cowbird.handlers.impl.filesystem', level=logging.DEBUG) as log_capture:
+            filesystem_handler.on_deleted(output_file_path)
+            assert not os.path.exists(hardlink_path)
+            assert len(log_capture.records) == 0
+
+            # Should not fail if hardlink does not exist, but should display log message instead
+            filesystem_handler.on_deleted(output_file_path)
+            assert not os.path.exists(hardlink_path)
+            assert len(log_capture.records) == 1
+
+        # Test folder paths, the removal of a source folder should also remove the linked folder.
+        weaver_linked_dir = os.path.join(filesystem_handler._get_wps_outputs_public_dir(), "weaver")
+        assert os.path.exists(weaver_linked_dir)
+        filesystem_handler.on_deleted(os.path.join(self.wpsoutputs_dir, "weaver"))
+        assert not os.path.exists(weaver_linked_dir)

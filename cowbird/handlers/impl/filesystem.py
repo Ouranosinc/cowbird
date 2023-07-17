@@ -182,17 +182,19 @@ class FileSystem(Handler, FSMonitor):
 
         :param path: Absolute path of a new file/directory
         """
-        # TODO: add corresponding test cases
         if Path(self.wps_outputs_dir) in Path(path).parents:
             regex_match = re.search(self.wps_outputs_users_regex, path)
             try:
-                if regex_match:  # user files
-                    hardlink_path = self._get_user_hardlink(path, regex_match)
-                else:  # public files
-                    hardlink_path = self._get_public_hardlink(path)
-                os.remove(hardlink_path)
+                if regex_match:  # user paths
+                    linked_path = self._get_user_hardlink(path, regex_match)
+                else:  # public paths
+                    linked_path = self._get_public_hardlink(path)
+                if os.path.isdir(linked_path):
+                    os.rmdir(linked_path)
+                else:
+                    os.remove(linked_path)
             except FileNotFoundError:
-                LOGGER.debug("No hardlink to delete for the `on_deleted` event of the wpsoutput file `%s`.", path)
+                LOGGER.debug("No linked path to delete for the `on_deleted` event of the wpsoutput path `%s`.", path)
 
     def permission_created(self, permission: Permission) -> None:
         raise NotImplementedError
