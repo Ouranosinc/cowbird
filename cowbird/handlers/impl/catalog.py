@@ -74,3 +74,6 @@ class Catalog(Handler, FSMonitor):
         :param path: Absolute path of a new file/directory
         """
         LOGGER.info("The following path [%s] has just been modified", path)
+
+    def resync(self):
+        raise NotImplementedError

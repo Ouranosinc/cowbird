@@ -277,6 +277,9 @@ class Magpie(Handler):
     def permission_deleted(self, permission: Permission) -> None:
         self.permissions_synch.delete_permission(permission)
 
+    def resync(self):
+        raise NotImplementedError
+
     def create_permissions(self, permissions_data: List[PermissionConfigItemType]) -> None:
         """
         Make sure that the specified permissions exist on Magpie.

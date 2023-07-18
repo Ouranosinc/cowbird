@@ -34,3 +34,6 @@ class Nginx(Handler):
 
     def permission_deleted(self, permission: Permission) -> None:
         raise NotImplementedError
+
+    def resync(self):
+        raise NotImplementedError
