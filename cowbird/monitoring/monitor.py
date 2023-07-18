@@ -153,11 +153,11 @@ class Monitor(FileSystemEventHandler):
             LOGGER.error(msg)
             raise MonitorException(msg)
         self.__event_observer = Observer()
-        self.__event_observer.schedule(self,
+        self.__event_observer.schedule(self,  # type: ignore[no-untyped-call]
                                        self.__src_path,
                                        recursive=self.__recursive)
         try:
-            self.__event_observer.start()
+            self.__event_observer.start()  # type: ignore[no-untyped-call]
         except OSError:
             LOGGER.warning("Cannot monitor the following file or directory [%s]: No such file or directory",
                            self.__src_path)
@@ -166,7 +166,7 @@ class Monitor(FileSystemEventHandler):
         """
         Stop the monitoring so that events stop to be fired.
         """
-        self.__event_observer.stop()
+        self.__event_observer.stop()  # type: ignore[no-untyped-call]
         self.__event_observer.join()
         self.__event_observer = None
 

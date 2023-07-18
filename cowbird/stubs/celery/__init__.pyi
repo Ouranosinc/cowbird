@@ -1,9 +1,11 @@
-from typing import Any, Callable, Optional, Tuple, Type
+from typing import Any, Callable, Optional, Protocol, Tuple, Type
 
 from celery import Task
 from celery.local import Proxy
 
-SharedTaskCallable = Callable[..., Callable[[Proxy], Task[Any, Any]]]
+#SharedTaskCallable = Callable[..., Callable[[Proxy], Task[Any, Any]]]
+class SharedTaskCallable(Protocol):
+    def __call__(self, *args: Any, **kwargs: Any) -> Callable[[Proxy], Task[Any, Any]]: ...
 
 
 class shared_task:
