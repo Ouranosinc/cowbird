@@ -39,6 +39,7 @@ class FileSystem(Handler, FSMonitor):
                                          which will be symlinked to the working directory
         :param wps_outputs_dir: Path to the wps outputs directory
         """
+        LOGGER.info("Creating Filesystem handler")
         super(FileSystem, self).__init__(settings, name, **kwargs)
         self.jupyterhub_user_data_dir = jupyterhub_user_data_dir
 
@@ -133,12 +134,16 @@ class FileSystem(Handler, FSMonitor):
                 # Hardlink already exists, nothing to do.
                 return
             # Delete the existing file at the destination path to reset the hardlink path with the expected source.
-            LOGGER.warning("Removing existing hardlink destination path at `%s` to generate hardlink for the newly"
+            LOGGER.warning("Removing existing hardlink destination path at `%s` to generate hardlink for the newly "
                            "created file.", hardlink_path)
             os.remove(hardlink_path)
 
         os.makedirs(os.path.dirname(hardlink_path), exist_ok=True)
-        os.link(src_path, hardlink_path)
+        LOGGER.debug("Creating hardlink from file `%s` to the path `%s`", src_path, hardlink_path)
+        try:
+            os.link(src_path, hardlink_path)
+        except Exception as e:
+            LOGGER.warning("Failed to create hardlink `%s` : %s", hardlink_path, e)
 
     def on_created(self, path):
         # type: (str) -> None
@@ -149,6 +154,7 @@ class FileSystem(Handler, FSMonitor):
         """
         if not os.path.isdir(path) and Path(self.wps_outputs_dir) in Path(path).parents:
             # Only process files, since hardlinks are not permitted on directories
+            LOGGER.info("Creating hardlink for the new file path `%s`", path)
             self._create_wpsoutputs_hardlink(src_path=path, overwrite=True)
 
     def on_modified(self, path):
@@ -169,6 +175,7 @@ class FileSystem(Handler, FSMonitor):
         :param path: Absolute path of a new file/directory
         """
         if Path(self.wps_outputs_dir) in Path(path).parents:
+            LOGGER.info("Removing link associated to the deleted path `%s`", path)
             regex_match = re.search(self.wps_outputs_users_regex, path)
             try:
                 if regex_match:  # user paths
@@ -192,8 +199,9 @@ class FileSystem(Handler, FSMonitor):
         """
         Resync operation, regenerating required links (user_workspace, wpsoutputs, ...)
         """
+        LOGGER.info("Applying resync operation.")
         if not os.path.exists(self.wps_outputs_dir):
-            LOGGER.warning("Skipping resync operation for wpsoutputs folder since the source folder `%s` could not be"
+            LOGGER.warning("Skipping resync operation for wpsoutputs folder since the source folder `%s` could not be "
                            "found", self.wps_outputs_dir)
         else:
             # Delete the linked public folder

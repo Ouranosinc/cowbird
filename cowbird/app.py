@@ -14,6 +14,7 @@ from cowbird.config import (
     validate_sync_config,
     validate_sync_perm_config_schema
 )
+from cowbird.handlers import HandlerFactory
 from cowbird.monitoring.monitoring import Monitoring
 from cowbird.typedefs import SettingsType, SettingValue
 from cowbird.utils import get_app_config, get_config_path, get_logger, print_log
@@ -55,6 +56,9 @@ def get_app(global_config: Optional[SettingsType] = None, **settings: SettingVal
     if not sys.argv[0].endswith("celery"):
         # TODO: The monitoring should be done in a single worker to avoid picking an event multiple time
         Monitoring(config).start()
+
+    # FileSystem handler must be initialized on startup for the monitoring of the wpsoutputs folder
+    HandlerFactory().get_handler("FileSystem")
 
     return wsgi_app
 
