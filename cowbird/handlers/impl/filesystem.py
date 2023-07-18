@@ -201,3 +201,24 @@ class FileSystem(Handler, FSMonitor):
 
     def permission_deleted(self, permission: Permission) -> None:
         raise NotImplementedError
+
+    def resync(self):
+        """
+        Resync operation, regenerating required links (user_workspace, wpsoutputs, ...)
+        """
+        if not os.path.exists(self.wps_outputs_dir):
+            LOGGER.warning("Skipping resync operation for wpsoutputs folder since the source folder `%s` could not be"
+                           "found", self.wps_outputs_dir)
+        else:
+            # Delete the linked public folder
+            shutil.rmtree(self._get_wps_outputs_public_dir(), ignore_errors=True)
+
+            # TODO: remove the users hardlinks to wpsoutputs too
+
+            # Create all hardlinks from files of the current source folder
+            for root, _, filenames in os.walk(self.wps_outputs_dir):
+                for file in filenames:
+                    full_path = os.path.join(root, file)
+                    self._create_wpsoutputs_hardlink(src_path=full_path, overwrite=True)
+        # TODO: add resync of the user_workspace symlinks to the jupyterhub dirs,
+        #  will be added during the resync task implementation

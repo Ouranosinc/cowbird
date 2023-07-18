@@ -128,6 +128,9 @@ HandlersAPI = Service(
 HandlerAPI = Service(
     path="/handlers/{handler_name}",
     name="handler_detail")
+HandlerResyncAPI = Service(
+    path="/handlers/{handler_name}/resync",
+    name="handler_resync")
 UserWebhookAPI = Service(
     path="/webhooks/users",
     name="user_webhook")
@@ -489,9 +492,18 @@ class Handler_GET_OkResponseSchema(BaseResponseSchemaAPI):
     body = Handler_GET_ResponseBodySchema(code=HTTPOk.code, description=description)
 
 
-class Handler_GET_NotFoundResponseSchema(BaseResponseSchemaAPI):
+class Handler_Check_NotFoundResponseSchema(BaseResponseSchemaAPI):
     description = "Could not find specified handler."
     body = ErrorResponseBodySchema(code=HTTPNotFound.code, description=description)
+
+
+class HandlerResync_PUT_RequestSchema(BaseRequestSchemaAPI):
+    path = Handler_RequestPathSchema()
+
+
+class HandlerResync_PUT_OkResponseSchema(BaseResponseSchemaAPI):
+    description = "Handler resync successful."
+    body = BaseResponseBodySchema(code=HTTPOk.code, description=description)
 
 
 class Handlers_POST_ForbiddenResponseSchema(BaseResponseSchemaAPI):
@@ -708,7 +720,7 @@ Handlers_POST_responses = {
 Handler_GET_responses = {
     "200": Handler_GET_OkResponseSchema(),
     "401": UnauthorizedResponseSchema(),
-    "404": Handler_GET_NotFoundResponseSchema(),
+    "404": Handler_Check_NotFoundResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
@@ -719,6 +731,12 @@ Handler_PATCH_responses = {
     "403": Handler_PATCH_ForbiddenResponseSchema(),
     "406": NotAcceptableResponseSchema(),
     "422": Handler_PATCH_UnprocessableEntityResponseSchema(),
+    "500": InternalServerErrorResponseSchema(),
+}
+HandlerResync_PUT_responses = {
+    "200": HandlerResync_PUT_OkResponseSchema(),
+    "404": Handler_Check_NotFoundResponseSchema(),
+    "406": NotAcceptableResponseSchema(),
     "500": InternalServerErrorResponseSchema(),
 }
 UserWebhook_POST_responses = {

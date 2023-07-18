@@ -9,4 +9,5 @@ def includeme(config: Configurator) -> None:
     logger.info("Adding API base routes...")
     config.add_route(**s.service_api_route_info(s.HandlersAPI))
     config.add_route(**s.service_api_route_info(s.HandlerAPI))
+    config.add_route(**s.service_api_route_info(s.HandlerResyncAPI))
     config.scan()

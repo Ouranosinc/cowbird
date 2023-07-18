@@ -31,17 +31,28 @@ class TestFileSystem(unittest.TestCase):
     Test FileSystem operations.
     """
 
+    @classmethod
+    def setUpClass(cls):
+        cls.jupyterhub_user_data_dir = "/jupyterhub_user_data"
+        cls.test_username = "test_username"
+        cls.callback_url = "callback_url"
+
+        # Mock monitoring to disable monitoring events and to trigger file events manually instead during tests.
+        cls.patcher = patch("cowbird.monitoring.monitoring.Monitoring.register")
+        cls.mock_register = cls.patcher.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.patcher.stop()
+
     def setUp(self):
         self.test_directory = tempfile.TemporaryDirectory()
         self.workspace_dir = os.path.join(self.test_directory.name, "user_workspaces")
         self.wpsoutputs_dir = os.path.join(self.test_directory.name, "wpsoutputs")
         os.mkdir(self.workspace_dir)
         os.mkdir(self.wpsoutputs_dir)
-        self.jupyterhub_user_data_dir = "/jupyterhub_user_data"
 
-        self.test_username = "test_username"
         self.user_workspace_dir = Path(self.workspace_dir) / self.test_username
-        self.callback_url = "callback_url"
 
     def tearDown(self):
         utils.clear_handlers_instances()
@@ -54,9 +65,6 @@ class TestFileSystem(unittest.TestCase):
             f.write(yaml.safe_dump(cfg_data))
         utils.clear_handlers_instances()
         app = utils.get_test_app(settings={"cowbird.config_path": cfg_file})
-
-        # Remove monitoring, to manage file events manually during tests
-        Monitoring().store.clear_services()
         return app
 
     @patch("cowbird.api.webhooks.views.requests.head")
@@ -197,7 +205,7 @@ class TestFileSystem(unittest.TestCase):
         os.makedirs(os.path.dirname(output_file))
         open(output_file, mode="w").close()
 
-        filesystem_handler = HandlerFactory().create_handler("FileSystem")
+        filesystem_handler = HandlerFactory().get_handler("FileSystem")
         # Error expected if the user workspace does not exist
         with pytest.raises(FileNotFoundError):
             filesystem_handler.on_created(output_file)
@@ -231,7 +239,7 @@ class TestFileSystem(unittest.TestCase):
         os.makedirs(os.path.dirname(output_file))
         open(output_file, mode="w").close()
 
-        filesystem_handler = HandlerFactory().create_handler("FileSystem")
+        filesystem_handler = HandlerFactory().get_handler("FileSystem")
         filesystem_handler.on_created(output_file)
 
         hardlink_path = os.path.join(filesystem_handler._get_wps_outputs_public_dir(), output_subpath)
@@ -270,7 +278,7 @@ class TestFileSystem(unittest.TestCase):
                     "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
                     "wps_outputs_dir": self.wpsoutputs_dir}}})
 
-        filesystem_handler = HandlerFactory().create_handler("FileSystem")
+        filesystem_handler = HandlerFactory().get_handler("FileSystem")
 
         output_subpath = f"weaver/test_output.txt"
         output_file_path = os.path.join(self.wpsoutputs_dir, output_subpath)
@@ -295,3 +303,84 @@ class TestFileSystem(unittest.TestCase):
         assert os.path.exists(weaver_linked_dir)
         filesystem_handler.on_deleted(os.path.join(self.wpsoutputs_dir, "weaver"))
         assert not os.path.exists(weaver_linked_dir)
+
+    def test_resync(self):
+        """
+        Tests resync operation for the handler.
+        """
+        app = self.get_test_app({
+            "handlers": {
+                "FileSystem": {
+                    "active": True,
+                    "workspace_dir": self.workspace_dir,
+                    "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
+                    "wps_outputs_dir": self.wpsoutputs_dir}}})
+
+        filesystem_handler = HandlerFactory().get_handler("FileSystem")
+
+        # Create a file in a subfolder of the linked folder that should be removed by the resync
+        old_nested_file = os.path.join(filesystem_handler._get_wps_outputs_public_dir(), "old_dir/old_file.txt")
+        os.makedirs(os.path.dirname(old_nested_file))
+        open(old_nested_file, mode="w").close()
+
+        # Create a file at the root of the linked folder that should be removed by the resync
+        old_root_file = os.path.join(filesystem_handler._get_wps_outputs_public_dir(), "old_root_file.txt")
+        open(old_root_file, mode="w").close()
+
+        # Create an empty subfolder in the linked folder that should be removed by the resync
+        old_subdir = os.path.join(filesystem_handler._get_wps_outputs_public_dir(), "empty_subdir")
+        os.mkdir(old_subdir)
+
+        # Create a new test wps output file
+        output_subpath = f"weaver/test_output.txt"
+        output_file = os.path.join(self.wpsoutputs_dir, output_subpath)
+        os.makedirs(os.path.dirname(output_file))
+        open(output_file, mode="w").close()
+        hardlink_path = os.path.join(filesystem_handler._get_wps_outputs_public_dir(), output_subpath)
+
+        # Create a new empty dir (should not appear in the resynced wpsoutputs since only files are processed)
+        new_dir = os.path.join(self.wpsoutputs_dir, "new_dir")
+        os.mkdir(new_dir)
+        new_dir_linked_path = os.path.join(filesystem_handler._get_wps_outputs_public_dir(), "new_dir")
+
+        # Check that old files exist before applying the resync
+        assert not os.path.exists(hardlink_path)
+        assert os.path.exists(old_nested_file)
+        assert os.path.exists(old_root_file)
+        assert os.path.exists(old_subdir)
+
+        resp = utils.test_request(app, "PUT", "/handlers/FileSystem/resync")
+
+        # Check that new hardlinks are generated and old files are removed
+        assert resp.status_code == 200
+        assert os.stat(hardlink_path).st_nlink == 2
+        assert not os.path.exists(new_dir_linked_path)
+        assert not os.path.exists(old_nested_file)
+        assert not os.path.exists(old_root_file)
+        assert not os.path.exists(old_subdir)
+
+    def test_resync_no_src_wpsoutputs(self):
+        """
+        Tests the resync operation when the source wpsoutputs folder does not exist.
+        """
+        app = self.get_test_app({
+            "handlers": {
+                "FileSystem": {
+                    "active": True,
+                    "workspace_dir": self.workspace_dir,
+                    "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
+                    "wps_outputs_dir": "/missing_dir"}}})
+
+        filesystem_handler = HandlerFactory().get_handler("FileSystem")
+
+        # Create a file in a subfolder of the linked folder that should normally be removed by the resync
+        old_nested_file = os.path.join(filesystem_handler._get_wps_outputs_public_dir(), "old_dir/old_file.txt")
+        os.makedirs(os.path.dirname(old_nested_file))
+        open(old_nested_file, mode="w").close()
+
+        # Applying the resync should not crash even if the source wpsoutputs folder doesn't exist
+        resp = utils.test_request(app, "PUT", "/handlers/FileSystem/resync")
+        assert resp.status_code == 200
+
+        # Check that previous file still exists, since resyncing was skipped because of the missing source folder
+        assert os.path.exists(old_nested_file)

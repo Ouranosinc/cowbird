@@ -117,3 +117,7 @@ class Handler(abc.ABC):
     @abc.abstractmethod
     def permission_deleted(self, permission: Permission) -> None:
         raise NotImplementedError
+
+    @abc.abstractmethod
+    def resync(self):
+        raise NotImplementedError

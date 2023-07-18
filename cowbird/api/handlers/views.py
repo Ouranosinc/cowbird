@@ -31,6 +31,22 @@ def get_handler_view(request: Request) -> AnyResponseType:
                                      msg_on_fail=s.Handlers_GET_BadRequestResponseSchema.description)
     handlers = list(filter(lambda handler: handler.name == handler_name, get_handlers(request)))
     ax.verify_param(len(handlers), is_equal=True, param_compare=1, param_name="handler_name",
-                    http_error=HTTPNotFound, msg_on_fail=s.Handler_GET_NotFoundResponseSchema.description)
+                    http_error=HTTPNotFound, msg_on_fail=s.Handler_Check_NotFoundResponseSchema.description)
     data: JSON = {"handler": handlers[0].json()}
     return ax.valid_http(HTTPOk, content=data, detail=s.Handlers_GET_OkResponseSchema.description)
+
+
+@s.HandlerResyncAPI.put(schema=s.HandlerResync_PUT_RequestSchema, tags=[s.HandlersTag],
+                        response_schemas=s.HandlerResync_PUT_responses)
+@view_config(route_name=s.HandlerResyncAPI.name, request_method="PUT")
+def resync_handler_view(request):
+    """
+    Resync handler operation.
+    """
+    handler_name = ar.get_path_param(request, "handler_name", http_error=HTTPBadRequest,
+                                     msg_on_fail=s.Handlers_GET_BadRequestResponseSchema.description)
+    handlers = list(filter(lambda handler: handler.name == handler_name, get_handlers(request)))
+    ax.verify_param(len(handlers), is_equal=True, param_compare=1, param_name="handler_name",
+                    http_error=HTTPNotFound, msg_on_fail=s.Handler_Check_NotFoundResponseSchema.description)
+    handlers[0].resync()
+    return ax.valid_http(HTTPOk, detail=s.HandlerResync_PUT_OkResponseSchema.description)
