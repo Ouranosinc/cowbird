@@ -317,9 +317,11 @@ class TestFileSystem(unittest.TestCase):
                     "active": True,
                     "workspace_dir": self.workspace_dir,
                     "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
-                    "wps_outputs_dir": "/missing_dir"}}})
+                    "wps_outputs_dir": self.wpsoutputs_dir}}})
 
         filesystem_handler = HandlerFactory().get_handler("FileSystem")
+
+        shutil.rmtree(self.wpsoutputs_dir)
 
         # Create a file in a subfolder of the linked folder that should normally be removed by the resync
         old_nested_file = os.path.join(filesystem_handler._get_wps_outputs_public_dir(), "old_dir/old_file.txt")

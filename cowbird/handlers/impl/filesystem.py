@@ -4,6 +4,7 @@ import shutil
 from typing import Any
 from pathlib import Path
 
+from cowbird.config import ConfigError
 from cowbird.handlers import HandlerFactory
 from cowbird.handlers.handler import HANDLER_WORKSPACE_DIR_PARAM, Handler
 from cowbird.permissions_synchronizer import Permission
@@ -41,7 +42,11 @@ class FileSystem(Handler, FSMonitor):
         super(FileSystem, self).__init__(settings, name, **kwargs)
         self.jupyterhub_user_data_dir = jupyterhub_user_data_dir
 
-        # Make sure output path is normalized (e.g.: removing trailing slashes)
+        self.wps_outputs_public_subdir = kwargs.get("wps_outputs_public_subdir", None)
+        if not self.wps_outputs_public_subdir:
+            # use default subdir if undefined or an empty string
+            self.wps_outputs_public_subdir = "public/wpsoutputs"
+        # Make sure output path is normalized for the regex (e.g.: removing trailing slashes)
         self.wps_outputs_dir = os.path.normpath(wps_outputs_dir)
 
         # Regex to find any directory or file found in the `users` output path of a 'bird' service
@@ -52,8 +57,7 @@ class FileSystem(Handler, FSMonitor):
             LOGGER.info("Start monitoring wpsoutputs folder [%s]", self.wps_outputs_dir)
             Monitoring().register(self.wps_outputs_dir, True, self)
         else:
-            # TODO: should this raise instead of only displaying a warning?
-            LOGGER.warning("Failed to start monitoring on the wpsoutputs folder [%s]", self.wps_outputs_dir)
+            raise ConfigError(f"Input wpsoutputs folder {self.wps_outputs_dir} does not exist.")
 
     def get_resource_id(self, resource_full_name: str) -> int:
         raise NotImplementedError
@@ -62,7 +66,7 @@ class FileSystem(Handler, FSMonitor):
         return os.path.join(self.workspace_dir, user_name)
 
     def _get_wps_outputs_public_dir(self):
-        return os.path.join(self.workspace_dir, "public/wpsoutputs")
+        return os.path.join(self.workspace_dir, self.wps_outputs_public_subdir)
 
     def _get_jupyterhub_user_data_dir(self, user_name: str) -> str:
         return os.path.join(self.jupyterhub_user_data_dir, user_name)
