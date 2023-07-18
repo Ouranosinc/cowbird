@@ -107,7 +107,7 @@ def print_format(data: JSON, fmt: PrintFormat, section: Optional[str] = None) ->
             for field, value in data.items():
                 print(f"| {field.ljust(widths[0])} | {value.ljust(widths[1])} |")
             print(separator)
-        else:
+        elif isinstance(data, (list, set, tuple)):
             width = max(8, len(section or ""))
             for item in data:
                 width = max(width, len(item))
@@ -119,5 +119,7 @@ def print_format(data: JSON, fmt: PrintFormat, section: Optional[str] = None) ->
             for item in data:
                 print(f"| {item.ljust(width)} |")
             print(separator)
+        else:
+            raise ValueError(f"cannot format '{data!s}' as [{fmt}]")
     else:
         raise ValueError(f"unknown format [{fmt}]")

@@ -2,7 +2,7 @@ import json
 import re
 from inspect import isclass
 from sys import exc_info
-from typing import Any, Callable, Iterable, List, NoReturn, Optional, Tuple, Type, Union
+from typing import Any, Callable, Iterable, List, Literal, NoReturn, Optional, Tuple, Type, Union, cast, overload
 
 import colander
 from dicttoxml import dicttoxml
@@ -47,7 +47,7 @@ INDEX_REGEX = r"^[0-9]+$"
 def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
                  # --- verification values ---      # noqa: E126
                  param: Any,
-                 param_compare: Optional[Union[Any, List[Any]]] = None,
+                 param_compare: Optional[Union[Any, List[Any], Type[Any], List[Type[Any]]]] = None,
                  # --- output options on failure ---
                  param_name: Optional[str] = None,
                  param_content: Optional[JSON] = None,
@@ -189,7 +189,7 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
                    detail="Error occurred during parameter verification")
 
     # passed this point, input condition flags are valid, evaluate requested parameter combinations
-    fail_conditions = {}
+    fail_conditions: JSON = {}
     fail_verify = False
     if not_none:
         fail_conditions.update({"not_none": param is not None})
@@ -222,10 +222,10 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
         fail_conditions.update({"is_equal": param == param_compare})
         fail_verify = fail_verify or not fail_conditions["is_equal"]
     if is_type:
-        fail_conditions.update({"is_type": isinstance(param, param_compare)})
+        fail_conditions.update({"is_type": isinstance(param, param_compare)})  # type: ignore[arg-type]
         fail_verify = fail_verify or not fail_conditions["is_type"]
     if matches:
-        fail_conditions.update({"matches": bool(re.match(param_compare, param))})
+        fail_conditions.update({"matches": bool(re.match(param_compare, param))})  # type: ignore[arg-type]
         fail_verify = fail_verify or not fail_conditions["matches"]
     if fail_verify:
         content = apply_param_content(content, param, param_compare, param_name, with_param, param_content,
@@ -329,8 +329,12 @@ def evaluate_call(call: Callable[[], Any],
     try:
         return call()
     except Exception as exc:
-        exc_call = {"exception": type(exc).__name__, "type": str(exc),
-                    "detail": msg_on_fail, "content": content_repr}
+        exc_call: JSON = {
+            "exception": type(exc).__name__,
+            "type": str(exc),
+            "detail": msg_on_fail,
+            "content": content_repr,
+        }
         LOGGER.debug("Exception during call evaluation: %s", exc_call, exc_info=exc)
     try:
         if fallback is not None:
@@ -339,7 +343,7 @@ def evaluate_call(call: Callable[[], Any],
         exc_fallback = {"exception": type(exc).__name__, "error": str(exc)}
         raise_http(http_error=HTTPInternalServerError, http_kwargs=http_kwargs,
                    detail="Exception occurred during 'fallback' called after failing 'call' exception.",
-                   content={"call": exc_call, "fallback": exc_fallback}, content_type=content_type)
+                   content=cast(JSON, {"call": exc_call, "fallback": exc_fallback}), content_type=content_type)
     raise_http(http_error, detail=msg_on_fail, http_kwargs=http_kwargs,
                content={"call": exc_call}, content_type=content_type)
 
@@ -374,13 +378,35 @@ def valid_http(http_success: Union[Type[HTTPSuccessful], Type[HTTPRedirection]] 
     return resp  # noqa
 
 
+@overload
+def raise_http(http_error: Type[HTTPError] = HTTPInternalServerError,
+               http_kwargs: Optional[ParamsType] = None,
+               detail: str = "",
+               content: Optional[JSON] = None,
+               content_type: str = CONTENT_TYPE_JSON,
+               nothrow: Literal[False] = False,
+               ) -> NoReturn:
+    ...
+
+
+@overload
+def raise_http(http_error: Type[HTTPError] = HTTPInternalServerError,
+               http_kwargs: Optional[ParamsType] = None,
+               detail: str = "",
+               content: Optional[JSON] = None,
+               content_type: str = CONTENT_TYPE_JSON,
+               nothrow: Literal[True] = False,
+               ) -> HTTPException:
+    ...
+
+
 def raise_http(http_error: Type[HTTPError] = HTTPInternalServerError,
                http_kwargs: Optional[ParamsType] = None,
                detail: str = "",
                content: Optional[JSON] = None,
                content_type: str = CONTENT_TYPE_JSON,
                nothrow: bool = False
-               ) -> NoReturn:
+               ) -> Union[NoReturn, HTTPException]:
     """
     Raises error HTTP with standardized information formatted with content type.
 
@@ -452,7 +478,7 @@ def validate_params(http_class: Type[HTTPException],
     # if `http_class` derives from `http_base` (ex: `HTTPSuccessful` or `HTTPError`) it is of proper requested type
     # if it derives from `HTTPException`, it *could* be different than base (ex: 2xx instead of 4xx codes)
     # return 'unknown error' (520) if not of lowest level base `HTTPException`, otherwise use the available code
-    http_base = tuple(http_base if hasattr(http_base, "__iter__") else [http_base])
+    http_base = tuple(http_base if hasattr(http_base, "__iter__") else [http_base])  # type: ignore
     if issubclass(http_class, http_base):
         http_code = http_class.code  # noqa
     elif issubclass(http_class, HTTPException):

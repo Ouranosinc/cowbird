@@ -9,7 +9,7 @@ from pymongo.database import Database
 
 from cowbird.database.base import DatabaseInterface, StoreSelector
 from cowbird.database.stores import MonitoringStore, StoreInterface
-from cowbird.typedefs import JSON, AnySettingsContainer
+from cowbird.typedefs import JSON, AnySettingsContainer, SettingsType
 from cowbird.utils import get_settings
 
 # pylint: disable=C0103,invalid-name
@@ -27,9 +27,9 @@ AnyMongodbStoreType = Union[
 
 
 class MongoDatabase(DatabaseInterface):
-    _database = None
-    _settings = None
-    _stores = None
+    _database: Database = None
+    _settings: SettingsType = None
+    _stores: Dict[str, AnyMongodbStore] = None
     type = "mongodb"
 
     def __init__(self, container: AnySettingsContainer) -> None:
@@ -39,7 +39,7 @@ class MongoDatabase(DatabaseInterface):
         super(MongoDatabase, self).__init__(container)
         self._database = get_mongodb_engine(container)
         self._settings = get_settings(container)
-        self._stores: Dict[str, AnyMongodbStore] = {}
+        self._stores = {}
 
     def reset_store(self, store_type: AnyMongodbStoreType) -> Optional[AnyMongodbStore]:
         store_type = self._get_store_type(store_type)

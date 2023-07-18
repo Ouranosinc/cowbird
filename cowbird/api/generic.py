@@ -1,4 +1,4 @@
-from typing import Callable, Optional, Tuple, Union, cast
+from typing import Callable, MutableMapping, Optional, Tuple, Union, cast
 
 from pyramid.exceptions import PredicateMismatch
 from pyramid.httpexceptions import (
@@ -62,7 +62,8 @@ def internal_server_error(request: Request) -> HTTPException:
     """
     content = get_request_info(request, exception_details=True,
                                default_message=s.InternalServerErrorResponseSchema.description)
-    return ax.raise_http(nothrow=True, http_error=HTTPInternalServerError, detail=content["detail"], content=content)
+    detail: str = content["detail"]
+    return ax.raise_http(nothrow=True, http_error=HTTPInternalServerError, detail=detail, content=content)
 
 
 def not_found_or_method_not_allowed(request: Request) -> HTTPException:
@@ -83,7 +84,8 @@ def not_found_or_method_not_allowed(request: Request) -> HTTPException:
         http_err = HTTPNotFound
         http_msg = s.NotFoundResponseSchema.description
     content = get_request_info(request, default_message=http_msg)
-    return ax.raise_http(nothrow=True, http_error=http_err, detail=content["detail"], content=content)
+    detail: str = content["detail"]
+    return ax.raise_http(nothrow=True, http_error=http_err, detail=detail, content=content)
 
 
 def guess_target_format(request: Request) -> Tuple[str, bool]:
@@ -224,5 +226,6 @@ def get_request_info(request: Union[Request, HTTPException],
         "detail": default_message,
         "method": request.method
     }
-    content.update(get_exception_info(request, content=content, exception_details=exception_details))
+    exc_info = get_exception_info(request, content=content, exception_details=exception_details)
+    content.update(exc_info)  # type: ignore[arg-type]
     return content

@@ -229,7 +229,7 @@ def get_query_param(request: Request,
     """
     Retrieves a query string value by name (case-insensitive), or returns the default if not present.
     """
-    if not isinstance(case_insensitive_key, (list, set, tuple)):
+    if isinstance(case_insensitive_key, str):
         case_insensitive_key = [case_insensitive_key]
     for param in request.params:
         for key in case_insensitive_key:

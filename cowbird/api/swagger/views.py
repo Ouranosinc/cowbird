@@ -12,7 +12,8 @@ def api_swagger(request: Request) -> JSON:  # noqa: F811
     """
     Swagger UI route to display the Cowbird REST API schemas.
     """
-    swagger_versions_dir = os.path.abspath(os.path.join(get_constant("COWBIRD_MODULE_DIR"), "ui/swagger/versions"))
+    cowbird_module: str = get_constant("COWBIRD_MODULE_DIR")
+    swagger_versions_dir = os.path.abspath(os.path.join(cowbird_module, "ui/swagger/versions"))
     swagger_ui_path = s.SwaggerGenerator.path.lstrip("/")
     return_data: JSON = {
         "api_title": s.TitleAPI,

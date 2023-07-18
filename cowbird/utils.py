@@ -11,8 +11,8 @@ import types
 from configparser import ConfigParser
 from enum import Enum
 from inspect import isclass, isfunction
-from typing import Any, Callable, Dict, List, NoReturn, Optional, Type, TypeVar, Union
-from typing_extensions import Self
+from typing import Any, Callable, Dict, List, NoReturn, Optional, Type, TypeVar, Union, cast
+from typing_extensions import TypeAlias
 
 from celery.app import Celery
 from pyramid.config import Configurator
@@ -491,7 +491,7 @@ class ExtendedEnum(Enum):
 
     @classmethod
     def get(cls: Type[EnumClassType],
-            key_or_value: Union[AnyKey, Type[EnumClassType]],
+            key_or_value: Union[AnyKey, EnumClassType],
             default: Optional[Any] = None,
             ) -> Optional[EnumClassType]:
         """
@@ -502,11 +502,14 @@ class ExtendedEnum(Enum):
         # Python 3.8 disallow direct check of 'str' in 'enum'
         members: List[EnumClassType] = [member for member in cls]
         if key_or_value in members:                                             # pylint: disable=E1133
-            return key_or_value
+            return cast(EnumClassType, key_or_value)
         for m_key, m_val in cls.__members__.items():                            # pylint: disable=E1101
             if key_or_value == m_key or key_or_value == m_val.value:            # pylint: disable=R1714
                 return m_val
         return default
+
+
+SingletonMetaType: TypeAlias = "SingletonMeta"
 
 
 # taken from https://stackoverflow.com/questions/6760685/creating-a-singleton-in-python
@@ -532,9 +535,9 @@ class SingletonMeta(type):
         b1 is b2    # True
         a1 is b1    # False
     """
-    _instances = {}
+    _instances: Dict[SingletonMetaType, SingletonMetaType] = {}
 
-    def __call__(cls, *args: Any, **kwargs: Any) -> Self:
+    def __call__(cls, *args: Any, **kwargs: Any) -> "SingletonMeta":
         if cls not in cls._instances:
             cls._instances[cls] = super(SingletonMeta, cls).__call__(*args, **kwargs)
         return cls._instances[cls]
@@ -565,16 +568,17 @@ def is_null(item: Any) -> bool:
 
 def get_config_path(container: Optional[AnySettingsContainer] = None) -> str:
     settings = get_settings(container, app=True)
-    return get_constant("COWBIRD_CONFIG_PATH", settings,
-                        default_value=None,
-                        raise_missing=True, raise_not_set=True,  # no reason for cowbird to run without a config!
-                        print_missing=True)
+    return str(get_constant("COWBIRD_CONFIG_PATH", settings,
+                            default_value=None,
+                            raise_missing=True, raise_not_set=True,  # no reason for cowbird to run without a config!
+                            print_missing=True))
 
 
 def get_ssl_verify(container: Optional[AnySettingsContainer] = None) -> bool:
     return asbool(get_constant("COWBIRD_SSL_VERIFY", container,
                                default_value=True,
-                               raise_missing=False, raise_not_set=False,
+                               raise_missing=False,
+                               raise_not_set=False,
                                print_missing=True))
 
 

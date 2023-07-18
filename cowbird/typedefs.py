@@ -70,7 +70,7 @@ _JsonItem = Union[_JsonObjectItem, _JsonListItem, AnyValueType]
 # NOTE:
 #   Although 'JSON' should allow referring directly to anything between 'Dict[str, JSON]', 'List[JSON]'
 #   or 'AnyValueType', this can a lot of false positives typing detections. Sometimes, it is better to provide
-#   the explicitly type expected (e.g.: 'List[JSON]') when necessary to disambiguate some situations.
+#   the explicit type expected (e.g.: 'List[JSON]') when necessary to disambiguate some situations.
 JSON = Union[MutableMapping[str, _JsonItem], MutableSequence[_JsonItem], AnyValueType]
 
 HTTPMethod = Literal[

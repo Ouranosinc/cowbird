@@ -169,7 +169,9 @@ class Magpie(Handler):
             raise ValueError(f"No service of type `{ServiceGeoserver.service_type}` found on Magpie while trying to get"
                              f" the workspace resource `{workspace_name}`.")
         for svc in geoserver_type_services.values():
-            for workspace in self.get_resource(svc["resource_id"])["children"].values():
+            svc_res_id: int = svc["resource_id"]
+            svc_children: JSON = self.get_resource(svc_res_id)["children"]
+            for workspace in svc_children.values():
                 if workspace["resource_name"] == workspace_name:
                     workspace_res_id = workspace["resource_id"]
         if not workspace_res_id and create_if_missing:
@@ -194,7 +196,9 @@ class Magpie(Handler):
         for svc in geoserver_type_services.values():
             if layer_res_id:
                 break
-            for workspace in self.get_resource(svc["resource_id"])["children"].values():
+            svc_res_id: int = svc["resource_id"]
+            svc_children: JSON = self.get_resource(svc_res_id)["children"]
+            for workspace in svc_children.values():
                 if workspace["resource_name"] == workspace_name:
                     workspace_res_id = workspace["resource_id"]
                     for layer in workspace["children"].values():
@@ -204,10 +208,11 @@ class Magpie(Handler):
                     break
         if not layer_res_id and create_if_missing:
             if not workspace_res_id:
+                parent_res_id: int = list(geoserver_type_services.values())[0]["resource_id"]
                 workspace_res_id = self.create_resource(
                     resource_name=workspace_name,
                     resource_type=Workspace.resource_type_name,
-                    parent_id=list(geoserver_type_services.values())[0]["resource_id"])
+                    parent_id=parent_res_id)
             layer_res_id = self.create_resource(
                 resource_name=layer_name,
                 resource_type=Layer.resource_type_name,

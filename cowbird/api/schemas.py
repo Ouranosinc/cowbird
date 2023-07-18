@@ -99,7 +99,7 @@ def generate_api_schema(swagger_base_spec: JSON) -> JSON:
     # function docstrings are used to create the route's summary in Swagger-UI
     generator.summary_docstrings = True
     generator.default_security = get_security
-    swagger_base_spec.update(SecurityDefinitionsAPI)
+    swagger_base_spec.update(SecurityDefinitionsAPI)  # type: ignore[arg-type]
     generator.swagger = swagger_base_spec
     json_api_spec = generator.generate(title=TitleAPI, version=__meta__.__version__, info=InfoAPI)
     for tag in json_api_spec["tags"]:

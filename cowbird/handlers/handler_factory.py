@@ -1,5 +1,5 @@
 import importlib
-from typing import TYPE_CHECKING, Dict, List, Literal, Optional, overload
+from typing import TYPE_CHECKING, Dict, List, Literal, MutableMapping, Optional, overload
 
 from cowbird.config import get_all_configs
 from cowbird.typedefs import HandlerConfig
@@ -38,7 +38,7 @@ class HandlerFactory(metaclass=SingletonMeta):
                     LOGGER.warning("Ignoring a duplicate handler configuration for [%s].", name)
                 else:
                     self.handlers_cfg[name] = cfg
-        self.handlers = {}
+        self.handlers: MutableMapping[str, "Handler"] = {}
         LOGGER.info("Handlers config : [%s]", ", ".join([f"{name} [{cfg.get('active', False)}]"
                                                          for name, cfg in self.handlers_cfg.items()]))
 
