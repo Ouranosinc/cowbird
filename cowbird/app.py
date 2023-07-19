@@ -57,9 +57,6 @@ def get_app(global_config: Optional[SettingsType] = None, **settings: SettingVal
         # TODO: The monitoring should be done in a single worker to avoid picking an event multiple time
         Monitoring(config).start()
 
-    # FileSystem handler must be initialized on startup for the monitoring of the wpsoutputs folder
-    HandlerFactory().get_handler("FileSystem")
-
     return wsgi_app
 
 

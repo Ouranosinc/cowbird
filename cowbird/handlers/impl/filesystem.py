@@ -54,9 +54,11 @@ class FileSystem(Handler, FSMonitor):
         # {self.wps_outputs_dir}/<wps-bird-name>/users/<user-uuid>/...
         self.wps_outputs_users_regex = rf"^{self.wps_outputs_dir}/\w+/users/(\d+)/(.+)"
 
+    def start_wpsoutputs_monitoring(self, monitoring):
+        # type: (Monitoring) -> None
         if os.path.exists(self.wps_outputs_dir):
             LOGGER.info("Start monitoring wpsoutputs folder [%s]", self.wps_outputs_dir)
-            Monitoring().register(self.wps_outputs_dir, True, self)
+            monitoring.register(self.wps_outputs_dir, True, self)
         else:
             raise ConfigError(f"Input wpsoutputs folder {self.wps_outputs_dir} does not exist.")
 
