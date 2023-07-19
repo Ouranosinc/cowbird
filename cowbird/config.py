@@ -81,7 +81,7 @@ def _load_config(path_or_dict: Union[str, ConfigDict], section: str, allow_missi
 
 
 @overload
-def get_all_configs(
+def get_all_configs(  # type: ignore[misc,unused-ignore]
     path_or_dict: Union[str, ConfigDict],
     section: Literal["handlers"],
     allow_missing: bool = False,
@@ -90,7 +90,7 @@ def get_all_configs(
 
 
 @overload
-def get_all_configs(
+def get_all_configs(  # type: ignore[misc,unused-ignore]
     path_or_dict: Union[str, ConfigDict],
     section: Literal["sync_permissions"],
     allow_missing: bool = False,
@@ -98,7 +98,7 @@ def get_all_configs(
     ...
 
 
-def get_all_configs(
+def get_all_configs(  # type: ignore[misc,unused-ignore]
     path_or_dict: Union[str, ConfigDict],
     section: str,
     allow_missing: bool = False,
