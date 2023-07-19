@@ -1,7 +1,7 @@
 import logging
 import os
 import re
-from typing import Any, Dict, List, Literal, Tuple, Union, overload
+from typing import Any, Dict, List, Literal, Tuple, Union, cast, overload
 
 import yaml
 from schema import Optional, Regex, Schema
@@ -81,25 +81,28 @@ def _load_config(path_or_dict: Union[str, ConfigDict], section: str, allow_missi
 
 
 @overload
-def get_all_configs(path_or_dict: Union[str, ConfigDict],
-                    section: Literal["handlers"],
-                    allow_missing: bool = False,
-                    ) -> List[Dict[str, HandlerConfig]]:
+def get_all_configs(  # type: ignore[misc]
+    path_or_dict: Union[str, ConfigDict],
+    section: Literal["handlers"],
+    allow_missing: bool = False,
+) -> List[Dict[str, HandlerConfig]]:
     ...
 
 
 @overload
-def get_all_configs(path_or_dict: Union[str, ConfigDict],
-                    section: Literal["sync_permissions"],
-                    allow_missing: bool = False,
-                    ) -> List[SyncPointConfig]:
+def get_all_configs(  # type: ignore[misc]
+    path_or_dict: Union[str, ConfigDict],
+    section: Literal["sync_permissions"],
+    allow_missing: bool = False,
+) -> List[SyncPointConfig]:
     ...
 
 
-def get_all_configs(path_or_dict: Union[str, ConfigDict],
-                    section: str,
-                    allow_missing: bool = False,
-                    ) -> List[ConfigDict]:
+def get_all_configs(
+    path_or_dict: Union[str, ConfigDict],
+    section: str,
+    allow_missing: bool = False,
+) -> List[ConfigDict]:
     """
     Loads all configuration files specified by the path (if a directory), a single configuration (if a file) or directly
     returns the specified dictionary section (if a configuration dictionary).
@@ -140,7 +143,7 @@ def _expand_all(config: ConfigDict) -> ConfigDict:
             cfg_key = os.path.expandvars(cfg)
             if cfg_key != cfg:
                 config[cfg_key] = config.pop(cfg)
-            config[cfg_key] = _expand_all(config[cfg_key])
+            config[cfg_key] = _expand_all(cast(ConfigDict, config[cfg_key]))
     elif isinstance(config, (list, set)):
         for i, cfg in enumerate(config):
             config[i] = _expand_all(cfg)
@@ -283,7 +286,7 @@ def get_permissions_from_str(permissions: str) -> List[str]:
     return matched_groups
 
 
-def validate_sync_mapping_config(sync_cfg: ConfigDict, res_info: Dict[str, ConfigResTokenInfo]) -> None:
+def validate_sync_mapping_config(sync_cfg: SyncPermissionConfig, res_info: Dict[str, ConfigResTokenInfo]) -> None:
     """
     Validates if mappings in the config have valid resource keys and use tokens properly.
     """
@@ -320,7 +323,7 @@ def validate_sync_config(sync_cfg: SyncPermissionConfig) -> None:
     validate_sync_mapping_config(sync_cfg, res_info)
 
 
-def validate_sync_config_services(sync_cfg: SyncPermissionConfig, available_services: List) -> None:
+def validate_sync_config_services(sync_cfg: SyncPermissionConfig, available_services: List[str]) -> None:
     """
     Validates if all services used in the sync config are actual available services.
 

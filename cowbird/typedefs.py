@@ -121,7 +121,8 @@ SyncPermissionConfig = TypedDict(
     {
         "services": SyncPointServicesType,
         "permissions_mapping": SyncPointMappingType,
-    }
+    },
+    total=True,
 )
 SyncPointConfig = Dict[
     str,  # friendly name of sync point
