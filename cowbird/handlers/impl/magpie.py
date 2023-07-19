@@ -1,5 +1,5 @@
 import time
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import requests
 from magpie.models import Layer, Workspace
@@ -11,11 +11,8 @@ from requests.cookies import RequestsCookieJar
 from cowbird.config import ConfigError
 from cowbird.handlers.handler import HANDLER_URL_PARAM, Handler
 from cowbird.permissions_synchronizer import PermissionSynchronizer
-from cowbird.typedefs import JSON, SettingsType
+from cowbird.typedefs import JSON, PermissionActionType, PermissionConfigItemType, SettingsType
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger
-
-if TYPE_CHECKING:
-    from magpie.typedefs import PermissionAction, PermissionConfigItem
 
 LOGGER = get_logger(__name__)
 
@@ -267,12 +264,12 @@ class Magpie(Handler):
     def permission_deleted(self, permission: Permission) -> None:
         self.permissions_synch.delete_permission(permission)
 
-    def create_permissions(self, permissions_data: List["PermissionConfigItem"]) -> None:
+    def create_permissions(self, permissions_data: List[PermissionConfigItemType]) -> None:
         """
         Make sure that the specified permissions exist on Magpie.
         """
         if permissions_data:
-            action: "PermissionAction" = "create"
+            action: PermissionActionType = "create"
             permissions_data[-1]["action"] = action
 
             resp = self._send_request(method="PATCH", url=f"{self.url}/permissions",

@@ -6,7 +6,14 @@ from typing import Any, Dict, List, Literal, Tuple, Union, overload
 import yaml
 from schema import Optional, Regex, Schema
 
-from cowbird.typedefs import ConfigDict, ConfigResTokenInfo, ConfigSegment, HandlerConfig
+from cowbird.typedefs import (
+    ConfigDict,
+    ConfigResTokenInfo,
+    ConfigSegment,
+    HandlerConfig,
+    SyncPermissionConfig,
+    SyncPointConfig
+)
 from cowbird.utils import get_logger, print_log, raise_log
 
 LOGGER = get_logger(__name__)
@@ -78,6 +85,14 @@ def get_all_configs(path_or_dict: Union[str, ConfigDict],
                     section: Literal["handlers"],
                     allow_missing: bool = False,
                     ) -> List[Dict[str, HandlerConfig]]:
+    ...
+
+
+@overload
+def get_all_configs(path_or_dict: Union[str, ConfigDict],
+                    section: Literal["sync_permissions"],
+                    allow_missing: bool = False,
+                    ) -> List[SyncPointConfig]:
     ...
 
 
@@ -153,7 +168,7 @@ def validate_handlers_config_schema(handlers_cfg: Dict[str, HandlerConfig]) -> N
     schema.validate(handlers_cfg)
 
 
-def validate_sync_perm_config_schema(sync_cfg: ConfigDict) -> None:
+def validate_sync_perm_config_schema(sync_cfg: SyncPointConfig) -> None:
     """
     Validates the schema of the `sync_permissions` section found in the config.
     """
@@ -291,7 +306,7 @@ def validate_sync_mapping_config(sync_cfg: ConfigDict, res_info: Dict[str, Confi
             raise ConfigError(f"Invalid direction `{direction}` found in the permissions_mapping.")
 
 
-def validate_sync_config(sync_cfg: ConfigDict) -> None:
+def validate_sync_config(sync_cfg: SyncPermissionConfig) -> None:
 
     # validate and get all resources info
     res_info = {}
@@ -305,7 +320,7 @@ def validate_sync_config(sync_cfg: ConfigDict) -> None:
     validate_sync_mapping_config(sync_cfg, res_info)
 
 
-def validate_sync_config_services(sync_cfg: ConfigDict, available_services: List) -> None:
+def validate_sync_config_services(sync_cfg: SyncPermissionConfig, available_services: List) -> None:
     """
     Validates if all services used in the sync config are actual available services.
 

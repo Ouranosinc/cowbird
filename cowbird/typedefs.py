@@ -33,13 +33,20 @@ from webob.headers import EnvironHeaders, ResponseHeaders
 from webob.response import Response as WebobResponse
 
 if TYPE_CHECKING:
-    from magpie.typedefs import PermissionConfigItem
+    from magpie.typedefs import PermissionAction, PermissionConfigItem, PermissionDict
     from webtest.response import TestResponse  # only with install-dev
 
     from cowbird.database.stores import StoreInterface
 
-StoreInterfaceType: TypeAlias = "StoreInterface"
+# FIXME:
+#   magpie still uses type-comments with TYPE_CHECKING guard
+#   use the direct typing annotations when made available
+#   following works, but type hints will be even better if using actual annotations
+PermissionActionType: TypeAlias = "PermissionAction"
 PermissionConfigItemType: TypeAlias = "PermissionConfigItem"
+PermissionDictType: TypeAlias = "PermissionDict"
+
+StoreInterfaceType: TypeAlias = "StoreInterface"
 TestResponseType: TypeAlias = "TestResponse"
 
 Number = Union[int, float]
@@ -100,6 +107,26 @@ ConfigList = List[ConfigItem]
 ConfigDict = Dict[str, Union[str, ConfigItem, ConfigList, JSON]]
 ConfigResTokenInfo = TypedDict("ConfigResTokenInfo", {"has_multi_token": bool, "named_tokens": MutableSet[str]})
 ConfigSegment = TypedDict("ConfigSegment", {"name": str, "type": str})
+
+SyncPointMappingType = List[str]
+SyncPointServicesType = Dict[
+    str,  # service type
+    Dict[
+        str,  # resource key
+        List[ConfigSegment],
+    ]
+]
+SyncPermissionConfig = TypedDict(
+    "SyncPermissionConfig",
+    {
+        "services": SyncPointServicesType,
+        "permissions_mapping": SyncPointMappingType,
+    }
+)
+SyncPointConfig = Dict[
+    str,  # friendly name of sync point
+    SyncPermissionConfig,
+]
 
 ResourceSegment = TypedDict("ResourceSegment", {"resource_name": str, "resource_type": str})
 ResourceTree = List[Dict[str, ResourceSegment]]

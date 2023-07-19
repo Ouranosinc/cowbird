@@ -1,4 +1,4 @@
-from typing import Callable, MutableMapping, Optional, Tuple, Union, cast
+from typing import Callable, Optional, Tuple, Union, cast
 
 from pyramid.exceptions import PredicateMismatch
 from pyramid.httpexceptions import (
