@@ -511,7 +511,7 @@ mkdir-reports:
 
 # autogen check variants with pre-install of dependencies using the '-only' target references
 CHECKS_EXCLUDE ?=
-CHECKS_PYTHON := pep8 lint security doc8 links imports types
+CHECKS_PYTHON := pep8 lint security doc8 docf links imports types
 CHECKS_NPM := css
 CHECKS_PYTHON := $(filter-out $(CHECKS_EXCLUDE),$(CHECKS_PYTHON))
 CHECKS_NPM := $(filter-out $(CHECKS_EXCLUDE),$(CHECKS_NPM))

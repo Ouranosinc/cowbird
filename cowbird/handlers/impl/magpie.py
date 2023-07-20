@@ -172,7 +172,7 @@ class Magpie(Handler):
                 if workspace["resource_name"] == workspace_name:
                     workspace_res_id = workspace["resource_id"]
         if not workspace_res_id and create_if_missing:
-            parent_res_id: Optional[int] = list(geoserver_type_services.values())[0]["resource_id"]
+            parent_res_id: int = list(geoserver_type_services.values())[0]["resource_id"]
             workspace_res_id = self.create_resource(
                 resource_name=workspace_name,
                 resource_type=Workspace.resource_type_name,

@@ -18,7 +18,7 @@ from typing import (
     TypedDict,
     Union
 )
-from typing_extensions import TypeAlias
+from typing_extensions import NotRequired, TypeAlias
 
 from celery.app import Celery
 from pyramid.config import Configurator
@@ -76,8 +76,9 @@ _JsonListItem = MutableSequence[Union[_JsonObjectItem, _JsonListItemAlias, AnyVa
 _JsonItem = Union[_JsonObjectItem, _JsonListItem, AnyValueType]
 # NOTE:
 #   Although 'JSON' should allow referring directly to anything between 'Dict[str, JSON]', 'List[JSON]'
-#   or 'AnyValueType', this can a lot of false positives typing detections. Sometimes, it is better to provide
-#   the explicit type expected (e.g.: 'List[JSON]') when necessary to disambiguate some situations.
+#   or 'AnyValueType', this can cause a lot of false positives typing detections. Sometimes, it is better
+#   to provide the explicit type expected (e.g.: 'List[JSON]') when a specific structure is required to
+#   disambiguate some situations.
 JSON = Union[MutableMapping[str, _JsonItem], MutableSequence[_JsonItem], AnyValueType]
 
 HTTPMethod = Literal[
@@ -93,10 +94,16 @@ HTTPMethod = Literal[
 HandlerConfig = TypedDict(
     "HandlerConfig",
     {
-        "active": Optional[bool],
-        "priority": Optional[int],
-        "url": Optional[str],
-        "workspace_dir": Optional[str],
+        # minimal needed to indicate if the handler should be active
+        "active": bool,
+        # optional settings shared by all handlers
+        "priority": NotRequired[int],
+        "url": NotRequired[str],
+        # specific settings for distinct handlers, some shared
+        "workspace_dir": NotRequired[str],
+        "admin_user": NotRequired[str],
+        "admin_password": NotRequired[str],
+        "jupyterhub_user_data_dir": NotRequired[str],
     },
     total=True,
 )
@@ -130,7 +137,17 @@ SyncPointConfig = Dict[
 ]
 
 ResourceSegment = TypedDict("ResourceSegment", {"resource_name": str, "resource_type": str})
-ResourceTree = List[Dict[str, ResourceSegment]]
+ResourceTree = List[
+    Dict[
+        str,
+        # FIXME: replace by a more specific type provided by Magpie directly if eventually implemented
+        #   Only partial fields are provided below (resource_name/resource_type),
+        #   because those are the only ones used for now in Cowbird's sync operation.
+        #   This actually contains more details such as the resource ID, permission names, etc.
+        #   (see the response body of 'GET /magpie/resources/{resource_id}' for exact content).
+        ResourceSegment,
+    ]
+]
 PermissionResourceData = Union[PermissionConfigItemType, ResourceSegment]
 PermissionDataEntry = TypedDict(
     "PermissionDataEntry",

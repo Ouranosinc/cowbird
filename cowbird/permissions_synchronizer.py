@@ -306,7 +306,7 @@ class SyncPoint:
     def _get_resource_full_name_and_type(self,
                                          res_key: str,
                                          matched_groups: Dict[str, str],
-                                         ) -> Tuple[str, List[PermissionResourceData]]:
+                                         ) -> Tuple[str, List[ResourceSegment]]:
         """
         Finds the resource data from the config by using the resource key.
 
@@ -331,7 +331,7 @@ class SyncPoint:
     @staticmethod
     def _is_in_permissions(target_permission: str,
                            svc_name: str,
-                           src_res_data: List[PermissionResourceData],
+                           src_res_data: List[ResourceSegment],
                            permissions: JSON,
                            ) -> bool:
         """
