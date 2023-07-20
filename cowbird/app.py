@@ -14,7 +14,6 @@ from cowbird.config import (
     validate_sync_config,
     validate_sync_perm_config_schema
 )
-from cowbird.handlers import HandlerFactory
 from cowbird.monitoring.monitoring import Monitoring
 from cowbird.typedefs import SettingsType, SettingValue
 from cowbird.utils import get_app_config, get_config_path, get_logger, print_log

@@ -68,7 +68,7 @@ class FileSystem(Handler, FSMonitor):
     def _get_user_workspace_dir(self, user_name: str) -> str:
         return os.path.join(self.workspace_dir, user_name)
 
-    def _get_wps_outputs_public_dir(self):
+    def get_wps_outputs_public_dir(self):
         return os.path.join(self.workspace_dir, self.wps_outputs_public_subdir)
 
     def _get_jupyterhub_user_data_dir(self, user_name: str) -> str:
@@ -122,11 +122,11 @@ class FileSystem(Handler, FSMonitor):
 
     def _get_public_hardlink(self, src_path):
         subpath = os.path.relpath(src_path, self.wps_outputs_dir)
-        return os.path.join(self._get_wps_outputs_public_dir(), subpath)
+        return os.path.join(self.get_wps_outputs_public_dir(), subpath)
 
     def _create_wpsoutputs_hardlink(self, src_path, overwrite=False):
         regex_match = re.search(self.wps_outputs_users_regex, src_path)
-        if regex_match:  # user files
+        if regex_match:  # user files  # pylint: disable=R1705
             return  # TODO: implement user hardlinks
         else:  # public files
             hardlink_path = self._get_public_hardlink(src_path)
@@ -144,8 +144,8 @@ class FileSystem(Handler, FSMonitor):
         LOGGER.debug("Creating hardlink from file `%s` to the path `%s`", src_path, hardlink_path)
         try:
             os.link(src_path, hardlink_path)
-        except Exception as e:
-            LOGGER.warning("Failed to create hardlink `%s` : %s", hardlink_path, e)
+        except Exception as exc:
+            LOGGER.warning("Failed to create hardlink `%s` : %s", hardlink_path, exc)
 
     def on_created(self, path):
         # type: (str) -> None
@@ -167,7 +167,6 @@ class FileSystem(Handler, FSMonitor):
         :param path: Absolute path of a new file/directory
         """
         # Nothing to do for files in the wps_outputs folder, since hardlinks are updated automatically.
-        pass
 
     def on_deleted(self, path):
         # type: (str) -> None
@@ -180,7 +179,7 @@ class FileSystem(Handler, FSMonitor):
             LOGGER.info("Removing link associated to the deleted path `%s`", path)
             regex_match = re.search(self.wps_outputs_users_regex, path)
             try:
-                if regex_match:  # user paths
+                if regex_match:  # user paths  # pylint: disable=R1705
                     return  # TODO: implement user hardlinks
                 else:  # public paths
                     linked_path = self._get_public_hardlink(path)
@@ -207,7 +206,7 @@ class FileSystem(Handler, FSMonitor):
                            "found", self.wps_outputs_dir)
         else:
             # Delete the linked public folder
-            shutil.rmtree(self._get_wps_outputs_public_dir(), ignore_errors=True)
+            shutil.rmtree(self.get_wps_outputs_public_dir(), ignore_errors=True)
 
             # TODO: remove the users hardlinks to wpsoutputs too
 
