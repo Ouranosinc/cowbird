@@ -729,8 +729,8 @@ class TestGeoserverPermissions(TestGeoserver):
 
     def test_group_permission(self):
         """
-        Tests modifications on a resource's group permission, which should not trigger any change to the associated
-        path on the file system, since the Geoserver handler does not support groups.
+        Tests modifications on a resource's group permission, which should not trigger any change to the associated path
+        on the file system, since the Geoserver handler does not support groups.
         """
         layer_read_permission = Permission(
             service_name="geoserver",

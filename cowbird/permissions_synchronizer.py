@@ -488,8 +488,8 @@ class SyncPoint:
                                        src_matched_groups: Dict[str, str],
                                        ) -> PermissionData:
         """
-        Removes every source resource found in the mappings that has an existing permission that is synced to one of
-        the input target permissions.
+        Removes every source resource found in the mappings that has an existing permission that is synced to one of the
+        input target permissions.
 
         Used in the case of a `deleted` webhook event.
         """
