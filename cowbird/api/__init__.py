@@ -1,13 +1,15 @@
 import os
 
+from pyramid.config import Configurator
+
 from cowbird.utils import get_logger
 
 
-def includeme(config):
+def includeme(config: Configurator) -> None:
     """
     Include API sub-modules.
 
-    Each should defined an ``includeme`` function with further sub-modules
+    Each should define an ``includeme`` function with further sub-modules
     to include, and every one of their relative views and routes.
     """
     logger = get_logger(__name__)

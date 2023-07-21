@@ -29,6 +29,7 @@ env/
 
 ## Tests & CI
 .coverage*
+.mypy_cache
 .pytest_cache
 bandit.txt
 coverage.*

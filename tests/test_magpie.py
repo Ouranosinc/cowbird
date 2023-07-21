@@ -1,7 +1,7 @@
 # pylint: disable=protected-access
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import Dict
 
 import pytest
 import yaml
@@ -14,14 +14,10 @@ from cowbird.handlers import HandlerFactory
 from cowbird.handlers.impl.magpie import Magpie
 from tests import utils
 
-if TYPE_CHECKING:
-    from typing import Dict
-
 CURR_DIR = Path(__file__).resolve().parent
 
 
-def create_user(magpie, user_name, email, password, group_name):
-    # type: (Magpie, str, str, str, str) -> None
+def create_user(magpie: Magpie, user_name: str, email: str, password: str, group_name: str) -> None:
     resp = magpie._send_request(method="POST", url=f"{magpie.url}/users",
                                 json={
                                     "user_name": user_name,
@@ -32,27 +28,23 @@ def create_user(magpie, user_name, email, password, group_name):
     assert resp.status_code == 201
 
 
-def delete_user(magpie, user_name):
-    # type: (Magpie, str) -> None
+def delete_user(magpie: Magpie, user_name: str) -> None:
     resp = magpie._send_request(method="DELETE", url=f"{magpie.url}/users/{user_name}")
     assert resp.status_code in [200, 404]
 
 
-def create_service(magpie, service_data):
-    # type: (Magpie, Dict[str, str]) -> int
+def create_service(magpie: Magpie, service_data: Dict[str, str]) -> int:
     resp = magpie._send_request(method="POST", url=f"{magpie.url}/services", json=service_data)
     assert resp.status_code == 201
     return resp.json()["service"]["resource_id"]
 
 
-def delete_service(magpie, service_name):
-    # type: (Magpie, str) -> None
+def delete_service(magpie: Magpie, service_name: str) -> None:
     resp = magpie._send_request(method="DELETE", url=f"{magpie.url}/services/{service_name}")
     assert resp.status_code in [200, 404]
 
 
-def delete_all_services(magpie):
-    # type: (Magpie) -> None
+def delete_all_services(magpie: Magpie) -> None:
     resp = magpie._send_request(method="GET", url=f"{magpie.url}/services")
     assert resp.status_code == 200
     for services_by_svc_type in resp.json()["services"].values():

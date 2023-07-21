@@ -1,47 +1,38 @@
 # MongoDB
 # http://docs.pylonsproject.org/projects/pyramid-cookbook/en/latest/database/mongodb.html
 import warnings
-from typing import TYPE_CHECKING
+from typing import Any, Dict, Optional, Type, Union, cast
 from urllib.parse import urlparse
 
 import pymongo
+from pymongo.database import Database
 
-from cowbird.database.base import DatabaseInterface
-from cowbird.database.stores import MonitoringStore
+from cowbird.database.base import DatabaseInterface, StoreSelector
+from cowbird.database.stores import MonitoringStore, StoreInterface
+from cowbird.typedefs import JSON, AnySettingsContainer, SettingsType
 from cowbird.utils import get_settings
 
 # pylint: disable=C0103,invalid-name
-MongoDB = None  # type: Optional[Database]
+MongoDB: Optional[Database] = None
 MongodbStores = frozenset([
     MonitoringStore,
 ])
 
-if TYPE_CHECKING:
-    # pylint: disable=W0611,unused-import
-    from typing import Any, Optional, Type, Union
-
-    from pymongo.database import Database
-
-    from cowbird.database.base import StoreSelector
-    from cowbird.database.stores import StoreInterface
-    from cowbird.typedefs import JSON, AnySettingsContainer
-
-    AnyMongodbStore = Union[MongodbStores]
-    AnyMongodbStoreType = Union[
-        StoreSelector,
-        AnyMongodbStore,
-        Type[MonitoringStore],
-    ]
+AnyMongodbStore = Union[MonitoringStore]
+AnyMongodbStoreType = Union[
+    StoreSelector,
+    AnyMongodbStore,
+    Type[MonitoringStore],
+]
 
 
 class MongoDatabase(DatabaseInterface):
-    _database = None
-    _settings = None
-    _stores = None
+    _database: Database = None
+    _settings: SettingsType = None
+    _stores: Dict[str, AnyMongodbStore] = None
     type = "mongodb"
 
-    def __init__(self, container):
-        # type: (AnySettingsContainer) -> None
+    def __init__(self, container: AnySettingsContainer) -> None:
         """
         Initialize the mongo database from various type of container.
         """
@@ -50,12 +41,15 @@ class MongoDatabase(DatabaseInterface):
         self._settings = get_settings(container)
         self._stores = {}
 
-    def reset_store(self, store_type):
+    def reset_store(self, store_type: AnyMongodbStoreType) -> Optional[AnyMongodbStore]:
         store_type = self._get_store_type(store_type)
         return self._stores.pop(store_type, None)
 
-    def get_store(self, store_type, *store_args, **store_kwargs):
-        # type: (Union[str, Type[StoreInterface], AnyMongodbStoreType], *Any, **Any) -> AnyMongodbStore
+    def get_store(self,
+                  store_type: Union[str, Type[StoreInterface], AnyMongodbStoreType],
+                  *store_args: Any,
+                  **store_kwargs: Any,
+                  ) -> AnyMongodbStore:
         """
         Retrieve a store from the database.
 
@@ -77,12 +71,10 @@ class MongoDatabase(DatabaseInterface):
                 return self._stores[store_type]
         raise NotImplementedError(f"Database '{self.type}' cannot find matching store '{store_type}'.")
 
-    def get_session(self):
-        # type: (...) -> Any
+    def get_session(self) -> Any:
         return self._database
 
-    def get_information(self):
-        # type: (...) -> JSON
+    def get_information(self) -> JSON:
         """
         :returns: {'version': version, 'type': db_type}
         """
@@ -90,13 +82,11 @@ class MongoDatabase(DatabaseInterface):
         db_version = result["version_num"]
         return {"version": db_version, "type": self.type}
 
-    def is_ready(self):
-        # type: (...) -> bool
+    def is_ready(self) -> bool:
         return self._database is not None and self._settings is not None
 
 
-def get_mongodb_connection(container):
-    # type: (AnySettingsContainer) -> Database
+def get_mongodb_connection(container: AnySettingsContainer) -> Database:
     """
     Obtains the basic database connection from settings.
     """
@@ -106,19 +96,18 @@ def get_mongodb_connection(container):
     if settings.get("mongo_uri", None) is None:
         warnings.warn(f"Setting 'mongo_uri' not defined in registry, using default [{default_mongo_uri}].")
         settings["mongo_uri"] = default_mongo_uri
-    db_url = urlparse(settings["mongo_uri"])
+    db_url = urlparse(cast(str, settings["mongo_uri"]))
     client = pymongo.MongoClient(
         host=db_url.hostname,
         port=db_url.port,
+        username=db_url.username or None,
+        password=db_url.password or None,
     )
     db = client[db_url.path[1:]]
-    if db_url.username and db_url.password:
-        db.authenticate(db_url.username, db_url.password)
     return db
 
 
-def get_mongodb_engine(container):
-    # type: (AnySettingsContainer) -> Database
+def get_mongodb_engine(container: AnySettingsContainer) -> Database:
     """
     Obtains the database with configuration ready for usage.
     """

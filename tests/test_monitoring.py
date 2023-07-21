@@ -9,7 +9,7 @@ import yaml
 from cowbird.handlers.handler_factory import HandlerFactory
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
-from tests import utils
+from tests.utils import clear_handlers_instances, get_test_app
 
 
 def file_io(filename, mv_filename):
@@ -21,7 +21,7 @@ def file_io(filename, mv_filename):
         f.write(" world!")
     # Update on file permissions should also trigger a modified event
     os.chmod(filename, 0o777)
-    # Should create a delete and a create event
+    # Should create a 'delete' and a 'create' event
     os.rename(filename, mv_filename)
     # Delete
     os.remove(mv_filename)
@@ -34,14 +34,14 @@ class TestMonitoring(unittest.TestCase):
         cls.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)  # pylint: disable=R1732
         with cls.cfg_file as f:
             f.write(yaml.safe_dump({"handlers": {"FileSystem": {"active": True, "workspace_dir": "/workspace"}}}))
-        cls.app = utils.get_test_app(settings={"cowbird.config_path": cls.cfg_file.name})
+        cls.app = get_test_app(settings={"cowbird.config_path": cls.cfg_file.name})
         # clear up monitor entries from db
-        Monitoring().store.collection.remove({})
+        Monitoring().store.clear_services(drop=False)
 
     @classmethod
     def tearDownClass(cls):
         Monitoring().store.clear_services()
-        utils.clear_handlers_instances()
+        clear_handlers_instances()
         os.unlink(cls.cfg_file.name)
 
     def test_register_unregister_monitor(self):
@@ -128,6 +128,8 @@ class TestMonitoring(unittest.TestCase):
 
 
 class TestMonitor(FSMonitor):
+    __test__ = False  # avoid invalid collect depending on specified input path/items to pytest
+
     def __init__(self):
         self.created = []
         self.deleted = []
@@ -148,6 +150,8 @@ class TestMonitor(FSMonitor):
 
 
 class TestMonitor2(TestMonitor):
+    __test__ = False  # avoid invalid collect depending on specified input path/items to pytest
+
     # Allow a second full qualified class name to register as monitor
     @staticmethod
     def get_instance():

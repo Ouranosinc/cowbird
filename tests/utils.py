@@ -1,15 +1,18 @@
 import functools
 import json as json_pkg  # avoid conflict name with json argument employed for some function
 import os
-from distutils.version import LooseVersion
 from stat import ST_MODE
-from typing import TYPE_CHECKING
+from typing import Any, Callable, Collection, Dict, Iterable, List, Literal, Optional, Tuple, Type, Union
+from typing_extensions import TypeAlias
 from urllib.parse import urlparse
 
 import mock
 import requests
 import requests.exceptions
+from packaging.version import Version as LooseVersion
+from packaging.version import _Version as TupleVersion
 from pyramid.httpexceptions import HTTPException
+from pyramid.request import Request
 from pyramid.testing import DummyRequest
 from pyramid.testing import setUp as PyramidSetUp
 from webtest.app import AppError, TestApp  # noqa
@@ -18,9 +21,11 @@ from webtest.response import TestResponse
 from cowbird.app import get_app
 from cowbird.constants import COWBIRD_ROOT, get_constant
 from cowbird.handlers.handler import Handler
+from cowbird.typedefs import JSON, AnyCookiesType, AnyHeadersType, AnyResponseType, HeadersType, SettingsType
 from cowbird.utils import (
     CONTENT_TYPE_JSON,
     USE_TEST_CELERY_APP_CFG,
+    NullType,
     SingletonMeta,
     get_header,
     get_settings_from_config_ini,
@@ -34,23 +39,18 @@ TEST_CFG_FILE = os.path.join(COWBIRD_ROOT, "config/config.example.yml")
 
 
 class TestAppContainer(object):
-    test_app = None  # type: Optional[TestApp]
-    app = None       # type: Optional[TestApp]
-    url = None       # type: Optional[str]
+    test_app: Optional[TestApp] = None
+    app: Optional[TestApp] = None
+    url: Optional[str] = None
 
 
-if TYPE_CHECKING:
-    # pylint: disable=W0611,unused-import
-    from typing import Any, Callable, Collection, Dict, Iterable, List, Optional, Type, Union
+# pylint: disable=C0103,invalid-name
+TestAppOrUrlType = Union[str, TestApp]
+AnyTestItemType = Union[TestAppOrUrlType, TestAppContainer]
 
-    from pyramid.request import Request
-
-    from cowbird.typedefs import JSON, AnyCookiesType, AnyHeadersType, AnyResponseType, HeadersType, SettingsType
-    from cowbird.utils import NullType
-
-    # pylint: disable=C0103,invalid-name
-    TestAppOrUrlType = Union[str, TestApp]
-    AnyTestItemType = Union[TestAppOrUrlType, TestAppContainer]
+_TestVersion: TypeAlias = "TestVersion"   # pylint: disable=C0103
+LatestVersion = Literal["latest"]
+AnyTestVersion = Union[str, Iterable[str], LooseVersion, _TestVersion, LatestVersion]
 
 
 class TestVersion(LooseVersion):
@@ -63,7 +63,9 @@ class TestVersion(LooseVersion):
     """
     __test__ = False  # avoid invalid collect depending on specified input path/items to pytest
 
-    def __init__(self, vstring):
+    def __init__(self, vstring: AnyTestVersion) -> None:
+        if hasattr(vstring, "__iter__") and not isinstance(vstring, str):
+            vstring = ".".join(str(part) for part in vstring)
         if isinstance(vstring, (TestVersion, LooseVersion)):
             self.version = vstring.version
             return
@@ -72,7 +74,7 @@ class TestVersion(LooseVersion):
             return
         super(TestVersion, self).__init__(vstring)
 
-    def _cmp(self, other):
+    def _cmp(self, other: Any) -> int:
         if not isinstance(other, TestVersion):
             other = TestVersion(other)
         if self.version == "latest" and other.version == "latest":
@@ -81,7 +83,42 @@ class TestVersion(LooseVersion):
             return 1
         if other.version == "latest":
             return -1
-        return super(TestVersion, self)._cmp(other)
+        if super(TestVersion, self).__lt__(other):
+            return -1
+        if super(TestVersion, self).__gt__(other):
+            return 1
+        return 0
+
+    def __lt__(self, other: Any) -> bool:
+        return self._cmp(other) < 0
+
+    def __le__(self, other: Any) -> bool:
+        return self._cmp(other) <= 0
+
+    def __gt__(self, other: Any) -> bool:
+        return self._cmp(other) > 0
+
+    def __ge__(self, other: Any) -> bool:
+        return self._cmp(other) >= 0
+
+    def __eq__(self, other: Any) -> bool:
+        return self._cmp(other) == 0
+
+    def __ne__(self, other: Any) -> bool:
+        return self._cmp(other) != 0
+
+    @property
+    def version(self) -> Union[Tuple[Union[int, str], ...], str]:
+        if self._version == "latest":
+            return "latest"
+        return self._version
+
+    @version.setter
+    def version(self, version: Union[Tuple[Union[int, str], ...], str, TupleVersion]) -> None:
+        if version == "latest":
+            self._version = "latest"
+        else:
+            self.__init__(version)  # pylint: disable=C2801
 
 
 class MockMagpieHandler(Handler):
@@ -129,14 +166,24 @@ class MockMagpieHandler(Handler):
     def delete_resource(self, res_id):
         pass
 
-    def get_service_types(self):
-        # type: () -> List
+    @staticmethod
+    def get_service_types() -> List[str]:
         """
         Returns the list of service types available on Magpie.
         """
         # Hardcoded listed of currently available services on Magpie.
-        return ["access", "api", "geoserver", "geoserverwfs", "geoserverwms", "geoserverwps", "ncwms", "thredds",
-                "wfs", "wps"]
+        return [
+            "access",
+            "api",
+            "geoserver",
+            "geoserverwfs",
+            "geoserverwms",
+            "geoserverwps",
+            "ncwms",
+            "thredds",
+            "wfs",
+            "wps",
+        ]
 
 
 class MockAnyHandlerBase(Handler):  # noqa  # missing abstract method 'required_params'
@@ -173,8 +220,7 @@ def config_setup_from_ini(config_ini_file_path):
     return config
 
 
-def get_test_app(settings=None):
-    # type: (Optional[SettingsType]) -> TestApp
+def get_test_app(settings: Optional[SettingsType] = None) -> TestApp:
     """
     Instantiate a local test application.
     """
@@ -197,8 +243,7 @@ def get_test_app(settings=None):
     return test_app
 
 
-def get_app_or_url(test_item):
-    # type: (AnyTestItemType) -> TestAppOrUrlType
+def get_app_or_url(test_item: AnyTestItemType) -> TestAppOrUrlType:
     """
     Obtains the referenced test application, local application or remote URL from `Test Case` implementation.
     """
@@ -213,8 +258,7 @@ def get_app_or_url(test_item):
     return app_or_url
 
 
-def get_hostname(test_item):
-    # type: (AnyTestItemType) -> str
+def get_hostname(test_item: AnyTestItemType) -> str:
     """
     Obtains stored hostname in the class implementation.
     """
@@ -224,8 +268,7 @@ def get_hostname(test_item):
     return str(urlparse(app_or_url).hostname)
 
 
-def get_headers(app_or_url, header_dict):
-    # type: (TestAppOrUrlType, AnyHeadersType) -> HeadersType
+def get_headers(app_or_url: TestAppOrUrlType, header_dict: AnyHeadersType) -> HeadersType:
     """
     Obtains stored headers in the class implementation.
     """
@@ -234,8 +277,7 @@ def get_headers(app_or_url, header_dict):
     return header_dict
 
 
-def get_response_content_types_list(response):
-    # type: (AnyResponseType) -> List[str]
+def get_response_content_types_list(response: AnyResponseType) -> List[str]:
     """
     Obtains the specified response Content-Type header(s) without additional formatting parameters.
     """
@@ -248,8 +290,7 @@ def get_response_content_types_list(response):
     return content_types
 
 
-def get_json_body(response):
-    # type: (AnyResponseType) -> JSON
+def get_json_body(response: AnyResponseType) -> JSON:
     """
     Obtains the JSON payload of the response regardless of its class implementation.
     """
@@ -258,8 +299,7 @@ def get_json_body(response):
     return response.json()
 
 
-def json_msg(json_body, msg=null):
-    # type: (JSON, Optional[str]) -> str
+def json_msg(json_body: JSON, msg: Optional[str] = null) -> str:
     """
     Generates a message string with formatted JSON body for display with easier readability.
     """
@@ -291,15 +331,15 @@ def mock_get_settings(test):
     return wrapped
 
 
-def mock_request(request_path_query="",     # type: str
-                 method="GET",              # type: str
-                 params=None,               # type: Optional[Dict[str, str]]
-                 body="",                   # type: Union[str, JSON]
-                 content_type=None,         # type: Optional[str]
-                 headers=None,              # type: Optional[AnyHeadersType]
-                 cookies=None,              # type: Optional[AnyCookiesType]
-                 settings=None,             # type: SettingsType
-                 ):                         # type: (...) -> Request
+def mock_request(request_path_query: str = "",
+                 method: str = "GET",
+                 params: Optional[Dict[str, str]] = None,
+                 body: Union[str, JSON] = "",
+                 content_type: Optional[str] = None,
+                 headers: Optional[AnyHeadersType] = None,
+                 cookies: Optional[AnyCookiesType] = None,
+                 settings: SettingsType = None,
+                 ) -> Request:
     """
     Generates a fake request with provided arguments.
 
@@ -336,21 +376,21 @@ def mock_request(request_path_query="",     # type: str
     return request  # noqa  # fake type of what is normally expected just to avoid many 'noqa'
 
 
-def test_request(test_item,             # type: AnyTestItemType
-                 method,                # type: str
-                 path,                  # type: str
-                 data=None,             # type: Optional[Union[JSON, str]]
-                 json=None,             # type: Optional[Union[JSON, str]]
-                 body=None,             # type: Optional[Union[JSON, str]]
-                 params=None,           # type: Optional[Dict[str, str]]
-                 timeout=10,            # type: int
-                 retries=3,             # type: int
-                 allow_redirects=True,  # type: bool
-                 content_type=None,     # type: Optional[str]
-                 headers=None,          # type: Optional[AnyHeadersType]
-                 cookies=None,          # type: Optional[AnyCookiesType]
-                 **kwargs               # type: Any
-                 ):                     # type: (...) -> AnyResponseType
+def test_request(test_item: AnyTestItemType,
+                 method: str,
+                 path: str,
+                 data: Optional[Union[JSON, str]] = None,
+                 json: Optional[Union[JSON, str]] = None,
+                 body: Optional[Union[JSON, str]] = None,
+                 params: Optional[Dict[str, str]] = None,
+                 timeout: int = 10,
+                 retries: int = 3,
+                 allow_redirects: bool = True,
+                 content_type: Optional[str] = None,
+                 headers: Optional[AnyHeadersType] = None,
+                 cookies: Optional[AnyCookiesType] = None,
+                 **kwargs: Any
+                 ) -> AnyResponseType:
     """
     Calls the request using either a :class:`webtest.TestApp` instance or :class:`requests.Request` from a string URL.
 
@@ -464,8 +504,7 @@ def test_request(test_item,             # type: AnyTestItemType
             retries -= 1
 
 
-def visual_repr(item):
-    # type: (Any) -> str
+def visual_repr(item: Any) -> str:
     try:
         if isinstance(item, (dict, list)):
             return json_pkg.dumps(item, indent=4, ensure_ascii=False)
@@ -494,8 +533,11 @@ def all_equal(iter_val, iter_ref, any_order=False):
     return all(it == ir for it, ir in zip(iter_val, iter_ref))
 
 
-def check_all_equal(iter_val, iter_ref, msg=None, any_order=False):
-    # type: (Collection[Any], Union[Collection[Any], NullType], Optional[str], bool) -> None
+def check_all_equal(iter_val: Collection[Any],
+                    iter_ref: Union[Collection[Any], NullType],
+                    msg: Optional[str] = None,
+                    any_order: bool = False,
+                    ) -> None:
     """
     :param iter_val: tested values.
     :param iter_ref: reference values.
@@ -510,38 +552,32 @@ def check_all_equal(iter_val, iter_ref, msg=None, any_order=False):
     assert all_equal(iter_val, iter_ref, any_order), format_test_val_ref(r_val, r_ref, pre="All Equal Fail", msg=msg)
 
 
-def check_val_equal(val, ref, msg=None):
-    # type: (Any, Union[Any, NullType], Optional[str]) -> None
+def check_val_equal(val: Any, ref: Union[Any, NullType], msg: Optional[str] = None) -> None:
     """:raises AssertionError: if :paramref:`val` is not equal to :paramref:`ref`."""
     assert is_null(ref) or val == ref, format_test_val_ref(val, ref, pre="Equal Fail", msg=msg)
 
 
-def check_val_not_equal(val, ref, msg=None):
-    # type: (Any, Union[Any, NullType], Optional[str]) -> None
+def check_val_not_equal(val: Any, ref: Union[Any, NullType], msg: Optional[str] = None) -> None:
     """:raises AssertionError: if :paramref:`val` is equal to :paramref:`ref`."""
     assert is_null(ref) or val != ref, format_test_val_ref(val, ref, pre="Not Equal Fail", msg=msg)
 
 
-def check_val_is_in(val, ref, msg=None):
-    # type: (Any, Union[Any, NullType], Optional[str]) -> None
+def check_val_is_in(val: Any, ref: Union[Any, NullType], msg: Optional[str] = None) -> None:
     """:raises AssertionError: if :paramref:`val` is not in to :paramref:`ref`."""
     assert is_null(ref) or val in ref, format_test_val_ref(val, ref, pre="Is In Fail", msg=msg)
 
 
-def check_val_not_in(val, ref, msg=None):
-    # type: (Any, Union[Any, NullType], Optional[str]) -> None
+def check_val_not_in(val: Any, ref: Union[Any, NullType], msg: Optional[str] = None) -> None:
     """:raises AssertionError: if :paramref:`val` is in to :paramref:`ref`."""
     assert is_null(ref) or val not in ref, format_test_val_ref(val, ref, pre="Not In Fail", msg=msg)
 
 
-def check_val_type(val, ref, msg=None):
-    # type: (Any, Union[Type[Any], NullType, Iterable[Type[Any]]], Optional[str]) -> None
+def check_val_type(val: Any, ref: Union[Type[Any], NullType, Iterable[Type[Any]]], msg: Optional[str] = None) -> None:
     """:raises AssertionError: if :paramref:`val` is not an instanced of :paramref:`ref`."""
     assert isinstance(val, ref), format_test_val_ref(val, repr(ref), pre="Type Fail", msg=msg)
 
 
-def check_raises(func, exception_type, msg=None):
-    # type: (Callable[[], Any], Type[Exception], Optional[str]) -> Exception
+def check_raises(func: Callable[[], Any], exception_type: Type[Exception], msg: Optional[str] = None) -> Exception:
     """
     Calls the callable and verifies that the specific exception was raised.
 
@@ -558,8 +594,7 @@ def check_raises(func, exception_type, msg=None):
     raise AssertionError(f"Exception [{exception_type.__name__!s}] was not raised{msg}")
 
 
-def check_no_raise(func, msg=None):
-    # type: (Callable[[], Any], Optional[str]) -> Any
+def check_no_raise(func: Callable[[], Any], msg: Optional[str] = None) -> Any:
     """
     Calls the callable and verifies that no exception was raised.
 
@@ -572,12 +607,12 @@ def check_no_raise(func, msg=None):
         raise AssertionError(f"Exception [{type(exc).__name__!r}] was raised when none is expected{msg}")
 
 
-def check_response_basic_info(response,                         # type: AnyResponseType
-                              expected_code=200,                # type: int
-                              expected_type=CONTENT_TYPE_JSON,  # type: str
-                              expected_method="GET",            # type: str
-                              extra_message=None,               # type: Optional[str]
-                              ):                                # type: (...) -> Union[JSON, str]
+def check_response_basic_info(response: AnyResponseType,
+                              expected_code: int = 200,
+                              expected_type: str = CONTENT_TYPE_JSON,
+                              expected_method: str = "GET",
+                              extra_message: Optional[str] = None,
+                              ) -> Union[JSON, str]:
     """
     Validates basic `Cowbird` API response metadata. For UI pages, employ :func:`check_ui_response_basic_info` instead.
 
@@ -626,14 +661,13 @@ def check_response_basic_info(response,                         # type: AnyRespo
     return body
 
 
-def check_error_param_structure(body,                                   # type: JSON
-                                param_value=null,                       # type: Optional[Any]
-                                param_name=null,                        # type: Optional[str]
-                                param_compare=null,                     # type: Optional[Any]
-                                is_param_value_literal_unicode=False,   # type: bool
-                                param_name_exists=False,                # type: bool
-                                param_compare_exists=False,             # type: bool
-                                ):                                      # type: (...) -> None
+def check_error_param_structure(body: JSON,
+                                param_value: Optional[Any] = null,
+                                param_name: Optional[str] = null,
+                                param_compare: Optional[Any] = null,
+                                param_name_exists: bool = False,
+                                param_compare_exists: bool = False,
+                                ) -> None:
     """
     Validates error response ``param`` information based on different Cowbird version formats.
 
@@ -649,7 +683,6 @@ def check_error_param_structure(body,                                   # type: 
         Expected 'compare'/'param_compare' value (filed name according to version)
         Contained field value not verified if ``null`` and ``param_compare_exists`` is ``True`` (only its presence).
         If provided, automatically implies ``param_compare_exists=True``. Skipped otherwise.
-    :param is_param_value_literal_unicode: param value is represented as `u'{paramValue}'` for older Cowbird version.
     :param param_name_exists: verify that 'name' is in the body, not validating its value.
     :param param_compare_exists: verify that 'compare'/'param_compare' is in the body, not validating its value.
     :raises AssertionError: on any failing condition
@@ -670,8 +703,7 @@ def check_error_param_structure(body,                                   # type: 
             check_val_equal(body["param"]["compare"], param_compare)
 
 
-def check_path_permissions(path, permissions):
-    # type: (Union[str, os.PathLike], int) -> None
+def check_path_permissions(path: Union[str, os.PathLike], permissions: int) -> None:
     """
     Checks if the path has the right permissions, by verifying the last digits of the octal permissions.
     """

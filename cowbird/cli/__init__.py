@@ -2,21 +2,18 @@ import argparse
 import importlib
 import os
 import sys
-from typing import TYPE_CHECKING
+from typing import Optional, Sequence
 
 from cowbird import __meta__
-from cowbird.cli.utils import get_logger_parser, subparser_help
+from cowbird.cli.utils import ParserMaker, ParserRunner, get_logger_parser, subparser_help
 from cowbird.utils import get_logger
-
-if TYPE_CHECKING:
-    from cowbird.cli.utils import ParserMaker, ParserRunner
 
 LOGGER = get_logger(__name__,
                     message_format="%(asctime)s - %(levelname)s - %(message)s",
                     datetime_format="%d-%b-%y %H:%M:%S", force_stdout=False)
 
 
-def main(args=None):
+def main(args: Optional[Sequence[str]] = None) -> Optional[int]:
     """
     Automatically groups all sub-helper CLI listed in :py:mod:`cowbird.cli` as a common ``cowbird`` CLI entrypoint.
 
@@ -38,8 +35,8 @@ def main(args=None):
             helper_name = module_item.replace(".py", "")
             helper_root = "cowbird.cli"
             helper_module = importlib.import_module(f"{helper_root}.{helper_name}", helper_root)
-            parser_maker = getattr(helper_module, "make_parser", None)  # type: ParserMaker
-            helper_runner = getattr(helper_module, "main", None)        # type: ParserRunner
+            parser_maker: ParserMaker = getattr(helper_module, "make_parser", None)
+            helper_runner: ParserRunner = getattr(helper_module, "main", None)
             if parser_maker and helper_runner:
                 # add help disabled otherwise conflicts with this main helper's help
                 helper_parser = parser_maker([log], [parser.prog])

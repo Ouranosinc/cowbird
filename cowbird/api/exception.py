@@ -2,7 +2,7 @@ import json
 import re
 from inspect import isclass
 from sys import exc_info
-from typing import TYPE_CHECKING
+from typing import Any, Callable, Iterable, List, Literal, NoReturn, Optional, Tuple, Type, Union, cast, overload
 
 import colander
 from dicttoxml import dicttoxml
@@ -16,6 +16,7 @@ from pyramid.httpexceptions import (
     HTTPSuccessful
 )
 
+from cowbird.typedefs import JSON, ParamsType
 from cowbird.utils import (
     CONTENT_TYPE_ANY,
     CONTENT_TYPE_APP_XML,
@@ -27,12 +28,6 @@ from cowbird.utils import (
     get_logger,
     islambda
 )
-
-if TYPE_CHECKING:
-    # pylint: disable=W0611,unused-import
-    from typing import Any, Callable, Iterable, List, NoReturn, Optional, Tuple, Type, Union
-
-    from cowbird.typedefs import JSON, ParamsType
 
 LOGGER = get_logger(__name__)
 
@@ -51,31 +46,31 @@ INDEX_REGEX = r"^[0-9]+$"
 
 def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
                  # --- verification values ---      # noqa: E126
-                 param,                             # type: Any
-                 param_compare=None,                # type: Optional[Union[Any, List[Any]]]
+                 param: Any,
+                 param_compare: Optional[Union[Any, List[Any], Type[Any], List[Type[Any]]]] = None,
                  # --- output options on failure ---
-                 param_name=None,                   # type: Optional[str]
-                 param_content=None,                # type: Optional[JSON]
-                 with_param=True,                   # type: bool
-                 http_error=HTTPBadRequest,         # type: Type[HTTPError]
-                 http_kwargs=None,                  # type: Optional[ParamsType]
-                 msg_on_fail="",                    # type: str
-                 content=None,                      # type: Optional[JSON]
-                 content_type=CONTENT_TYPE_JSON,    # type: str
+                 param_name: Optional[str] = None,
+                 param_content: Optional[JSON] = None,
+                 with_param: bool = True,
+                 http_error: Type[HTTPError] = HTTPBadRequest,
+                 http_kwargs: Optional[ParamsType] = None,
+                 msg_on_fail: str = "",
+                 content: Optional[JSON] = None,
+                 content_type: str = CONTENT_TYPE_JSON,
                  # --- verification flags (method) ---
-                 not_none=False,                    # type: bool
-                 not_empty=False,                   # type: bool
-                 not_in=False,                      # type: bool
-                 not_equal=False,                   # type: bool
-                 is_true=False,                     # type: bool
-                 is_false=False,                    # type: bool
-                 is_none=False,                     # type: bool
-                 is_empty=False,                    # type: bool
-                 is_in=False,                       # type: bool
-                 is_equal=False,                    # type: bool
-                 is_type=False,                     # type: bool
-                 matches=False,                     # type: bool
-                 ):                                 # type: (...) -> None   # noqa: E123,E126
+                 not_none: bool = False,
+                 not_empty: bool = False,
+                 not_in: bool = False,
+                 not_equal: bool = False,
+                 is_true: bool = False,
+                 is_false: bool = False,
+                 is_none: bool = False,
+                 is_empty: bool = False,
+                 is_in: bool = False,
+                 is_equal: bool = False,
+                 is_type: bool = False,
+                 matches: bool = False,
+                 ) -> None:   # noqa: E123,E126
     # pylint: disable=R0912,R0914
     """
     Evaluate various parameter combinations given the requested verification flags. Given a failing verification,
@@ -169,7 +164,7 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
                 LOGGER.debug("[param: %s] invalid type compare with [param_compare: %s]", type(param), param_compare)
                 raise TypeError("'param_compare' cannot be of non-type with specified verification flags")
             if not is_type and not ((is_str_cmp and ok_str_cmp) or (not is_str_cmp and eq_typ_cmp)):
-                # since 'param' depends of provided input by user, it should be a user-side invalid parameter
+                # since 'param' depends on provided input by user, it should be a user-side invalid parameter
                 # only exception is if 'param_compare' is not value-based, then developer combined wrong flags
                 if is_str_typ or is_cmp_typ:
                     LOGGER.debug("[param: %s] invalid value compare with [param_compare: %s]", param, param_compare)
@@ -194,7 +189,7 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
                    detail="Error occurred during parameter verification")
 
     # passed this point, input condition flags are valid, evaluate requested parameter combinations
-    fail_conditions = {}
+    fail_conditions: JSON = {}
     fail_verify = False
     if not_none:
         fail_conditions.update({"not_none": param is not None})
@@ -227,10 +222,10 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
         fail_conditions.update({"is_equal": param == param_compare})
         fail_verify = fail_verify or not fail_conditions["is_equal"]
     if is_type:
-        fail_conditions.update({"is_type": isinstance(param, param_compare)})
+        fail_conditions.update({"is_type": isinstance(param, param_compare)})  # type: ignore[arg-type]
         fail_verify = fail_verify or not fail_conditions["is_type"]
     if matches:
-        fail_conditions.update({"matches": bool(re.match(param_compare, param))})
+        fail_conditions.update({"matches": bool(re.match(param_compare, param))})  # type: ignore[arg-type]
         fail_verify = fail_verify or not fail_conditions["matches"]
     if fail_verify:
         content = apply_param_content(content, param, param_compare, param_name, with_param, param_content,
@@ -238,17 +233,17 @@ def verify_param(  # noqa: E126  # pylint: disable=R0913,too-many-arguments
         raise_http(http_error, http_kwargs=http_kwargs, detail=msg_on_fail, content=content, content_type=content_type)
 
 
-def apply_param_content(content,                # type: JSON
-                        param,                  # type: Any
-                        param_compare,          # type: Any
-                        param_name,             # type: str
-                        with_param,             # type: bool
-                        param_content,          # type: Optional[JSON]
-                        needs_compare,          # type: bool
-                        needs_iterable,         # type: bool
-                        is_type,                # type: bool
-                        fail_conditions,        # type: JSON
-                        ):                      # type: (...) -> JSON
+def apply_param_content(content: JSON,
+                        param: Any,
+                        param_compare: Any,
+                        param_name: str,
+                        with_param: bool,
+                        param_content: Optional[JSON],
+                        needs_compare: bool,
+                        needs_iterable: bool,
+                        is_type: bool,
+                        fail_conditions: JSON,
+                        ) -> JSON:
     """
     Formats and applies the failing parameter conditions and results to returned JSON content according to flags.
 
@@ -275,14 +270,14 @@ def apply_param_content(content,                # type: JSON
     return content
 
 
-def evaluate_call(call,                                 # type: Callable[[], Any]
-                  fallback=None,                        # type: Optional[Callable[[], None]]
-                  http_error=HTTPInternalServerError,   # type: Type[HTTPError]
-                  http_kwargs=None,                     # type: Optional[ParamsType]
-                  msg_on_fail="",                       # type: str
-                  content=None,                         # type: Optional[JSON]
-                  content_type=CONTENT_TYPE_JSON        # type: str
-                  ):                                    # type: (...) -> Any
+def evaluate_call(call: Callable[[], Any],
+                  fallback: Optional[Callable[[], None]] = None,
+                  http_error: Type[HTTPError] = HTTPInternalServerError,
+                  http_kwargs: Optional[ParamsType] = None,
+                  msg_on_fail: str = "",
+                  content: Optional[JSON] = None,
+                  content_type: str = CONTENT_TYPE_JSON,
+                  ) -> Any:
     """
     Evaluates the specified :paramref:`call` with a wrapped HTTP exception handling. On failure, tries to call.
 
@@ -334,8 +329,12 @@ def evaluate_call(call,                                 # type: Callable[[], Any
     try:
         return call()
     except Exception as exc:
-        exc_call = {"exception": type(exc).__name__, "type": str(exc),
-                    "detail": msg_on_fail, "content": content_repr}
+        exc_call: JSON = {
+            "exception": type(exc).__name__,
+            "type": str(exc),
+            "detail": msg_on_fail,
+            "content": content_repr,
+        }
         LOGGER.debug("Exception during call evaluation: %s", exc_call, exc_info=exc)
     try:
         if fallback is not None:
@@ -344,17 +343,17 @@ def evaluate_call(call,                                 # type: Callable[[], Any
         exc_fallback = {"exception": type(exc).__name__, "error": str(exc)}
         raise_http(http_error=HTTPInternalServerError, http_kwargs=http_kwargs,
                    detail="Exception occurred during 'fallback' called after failing 'call' exception.",
-                   content={"call": exc_call, "fallback": exc_fallback}, content_type=content_type)
+                   content=cast(JSON, {"call": exc_call, "fallback": exc_fallback}), content_type=content_type)
     raise_http(http_error, detail=msg_on_fail, http_kwargs=http_kwargs,
                content={"call": exc_call}, content_type=content_type)
 
 
-def valid_http(http_success=HTTPOk,             # type: Union[Type[HTTPSuccessful], Type[HTTPRedirection]]
-               http_kwargs=None,                # type: Optional[ParamsType]
-               detail="",                       # type: Optional[str]
-               content=None,                    # type: Optional[JSON]
-               content_type=CONTENT_TYPE_JSON,  # type: Optional[str]
-               ):                               # type: (...) -> Union[HTTPSuccessful, HTTPRedirection]
+def valid_http(http_success: Union[Type[HTTPSuccessful], Type[HTTPRedirection]] = HTTPOk,
+               http_kwargs: Optional[ParamsType] = None,
+               detail: Optional[str] = "",
+               content: Optional[JSON] = None,
+               content_type: Optional[str] = CONTENT_TYPE_JSON,
+               ) -> Union[HTTPSuccessful, HTTPRedirection]:
     """
     Returns successful HTTP with standardized information formatted with content type. (see :func:`raise_http` for HTTP
     error calls)
@@ -379,13 +378,35 @@ def valid_http(http_success=HTTPOk,             # type: Union[Type[HTTPSuccessfu
     return resp  # noqa
 
 
-def raise_http(http_error=HTTPInternalServerError,  # type: Type[HTTPError]
-               http_kwargs=None,                    # type: Optional[ParamsType]
-               detail="",                           # type: str
-               content=None,                        # type: Optional[JSON]
-               content_type=CONTENT_TYPE_JSON,      # type: str
-               nothrow=False                        # type: bool
-               ):                                   # type: (...) -> NoReturn
+@overload
+def raise_http(http_error: Type[HTTPError] = HTTPInternalServerError,
+               http_kwargs: Optional[ParamsType] = None,
+               detail: str = "",
+               content: Optional[JSON] = None,
+               content_type: str = CONTENT_TYPE_JSON,
+               nothrow: Literal[False] = False,
+               ) -> NoReturn:
+    ...
+
+
+@overload
+def raise_http(http_error: Type[HTTPError] = HTTPInternalServerError,
+               http_kwargs: Optional[ParamsType] = None,
+               detail: str = "",
+               content: Optional[JSON] = None,
+               content_type: str = CONTENT_TYPE_JSON,
+               nothrow: Literal[True] = False,
+               ) -> HTTPException:
+    ...
+
+
+def raise_http(http_error: Type[HTTPError] = HTTPInternalServerError,
+               http_kwargs: Optional[ParamsType] = None,
+               detail: str = "",
+               content: Optional[JSON] = None,
+               content_type: str = CONTENT_TYPE_JSON,
+               nothrow: bool = False
+               ) -> Union[NoReturn, HTTPException]:
     """
     Raises error HTTP with standardized information formatted with content type.
 
@@ -428,12 +449,12 @@ def raise_http(http_error=HTTPInternalServerError,  # type: Type[HTTPError]
     raise resp
 
 
-def validate_params(http_class,     # type: Type[HTTPException]
-                    http_base,      # type: Union[Type[HTTPException], Iterable[Type[HTTPException]]]
-                    detail,         # type: str
-                    content,        # type: Optional[JSON]
-                    content_type,   # type: str
-                    ):              # type: (...) -> Tuple[int, str, JSON]
+def validate_params(http_class: Type[HTTPException],
+                    http_base: Union[Type[HTTPException], Iterable[Type[HTTPException]]],
+                    detail: str,
+                    content: Optional[JSON],
+                    content_type: str,
+                    ) -> Tuple[int, str, JSON]:
     """
     Validates parameter types and formats required by :func:`valid_http` and :func:`raise_http`.
 
@@ -457,7 +478,7 @@ def validate_params(http_class,     # type: Type[HTTPException]
     # if `http_class` derives from `http_base` (ex: `HTTPSuccessful` or `HTTPError`) it is of proper requested type
     # if it derives from `HTTPException`, it *could* be different than base (ex: 2xx instead of 4xx codes)
     # return 'unknown error' (520) if not of lowest level base `HTTPException`, otherwise use the available code
-    http_base = tuple(http_base if hasattr(http_base, "__iter__") else [http_base])
+    http_base = tuple(http_base if hasattr(http_base, "__iter__") else [http_base])  # type: ignore
     if issubclass(http_class, http_base):
         http_code = http_class.code  # noqa
     elif issubclass(http_class, HTTPException):
@@ -474,7 +495,7 @@ def validate_params(http_class,     # type: Type[HTTPException]
     return http_code, detail, content
 
 
-def format_content_json_str(http_code, detail, content, content_type):
+def format_content_json_str(http_code: int, detail: str, content: JSON, content_type: str) -> str:
     """
     Inserts the code, details, content and type within the body using json format. Includes also any other specified
     json formatted content in the body. Returns the whole json body as a single string for output.
@@ -482,7 +503,7 @@ def format_content_json_str(http_code, detail, content, content_type):
     :raise `HTTPInternalServerError`: if parsing of the json content failed
     :returns: formatted json content as string with added HTTP code and details
     """
-    json_body = {}
+    json_body = ""
     try:
         content["code"] = http_code
         content["detail"] = detail
@@ -501,8 +522,7 @@ def format_content_json_str(http_code, detail, content, content_type):
     return json_body
 
 
-def rewrite_content_type(content, content_type):
-    # type: (Union[str, JSON], str) -> Tuple[str, Optional[JSON]]
+def rewrite_content_type(content: Union[str, JSON], content_type: str) -> Tuple[str, Optional[JSON]]:
     """
     Attempts to rewrite the ``type`` field inserted by various functions such as:
 
@@ -528,11 +548,15 @@ def rewrite_content_type(content, content_type):
             content["type"] = content_type
         json_content = content
         content = json.dumps(content)
-    return content, json_content
+    return content, json_content  # type: ignore[return-value]
 
 
-def generate_response_http_format(http_class, http_kwargs, content, content_type=CONTENT_TYPE_PLAIN, metadata=None):
-    # type: (Type[HTTPException], Optional[ParamsType], JSON, Optional[str], Optional[JSON]) -> HTTPException
+def generate_response_http_format(http_class: Type[HTTPException],
+                                  http_kwargs: Optional[ParamsType],
+                                  content: JSON,
+                                  content_type: Optional[str] = CONTENT_TYPE_PLAIN,
+                                  metadata: Optional[JSON] = None,
+                                  ) -> HTTPException:
     """
     Formats the HTTP response content according to desired ``content_type`` using provided HTTP code and content.
 

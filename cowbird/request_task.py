@@ -1,11 +1,8 @@
 from abc import ABC
-from typing import TYPE_CHECKING
+from typing import Tuple
 
 from celery.app.task import Task
 from requests.exceptions import RequestException
-
-if TYPE_CHECKING:
-    from typing import Tuple
 
 
 class AbortException(Exception):
@@ -14,7 +11,7 @@ class AbortException(Exception):
     """
 
 
-class RequestTask(Task, ABC):
+class RequestTask(Task, ABC):  # type: ignore[type-arg]
     """
     Celery base task that should be used to handle API requests.
 
@@ -39,22 +36,34 @@ class RequestTask(Task, ABC):
     Parameter ``base=RequestTask`` will instantiate a RequestTask rather than a base celery Task as the self object.
     """
 
-    autoretry_for = (RequestException,)  # type: Tuple[Exception]
-    """Exceptions that are accepted as valid raising cases to attempt request retry."""
+    autoretry_for: Tuple[Exception] = (RequestException,)
+    """
+    Exceptions that are accepted as valid raising cases to attempt request retry.
+    """
 
     retry_backoff = True
-    """Enable backoff strategy during request retry upon known raised exception."""
+    """
+    Enable backoff strategy during request retry upon known raised exception.
+    """
 
     retry_backoff_max = 600  # Max backoff to 10 min
-    """Maximum backoff delay permitted using request retry. Retries are abandoned if this delay is reached."""
+    """
+    Maximum backoff delay permitted using request retry.
+
+    Retries are abandoned if this delay is reached.
+    """
 
     retry_jitter = True
-    """Enable jitter strategy during request retry upon known raised exception."""
+    """
+    Enable jitter strategy during request retry upon known raised exception.
+    """
 
     retry_kwargs = {"max_retries": 15}
-    """Additional parameters to be passed down to requests for retry control."""
+    """
+    Additional parameters to be passed down to requests for retry control.
+    """
 
-    def abort_chain(self):
+    def abort_chain(self) -> None:
         """
         Calling this function from a task will prevent any downstream tasks to be run after it.
         """

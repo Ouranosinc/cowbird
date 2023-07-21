@@ -1,20 +1,16 @@
 -r requirements-sys.txt
-celery[mongodb]==5.2.7; python_version < "3.8"  # to avoid newer versions with dependency incompatible with latest python
-celery[mongodb]>=5.2.2; python_version >= "3.8"
+celery[mongodb]>=5.3.1,<5.4
 colander
 cornice>=5
 cornice_swagger>=0.7.0
-dicttoxml  # FIXME: if we need to parse some XML (?)
+dicttoxml>=1.7.16
 # flag --paste breaks for >20 unless using pserve
 gunicorn<20; python_version < "3.5"  # pyup: ignore
-gunicorn>=20; python_version >= "3"
-# see https://github.com/celery/celery/issues/7783
-importlib-metadata<5; python_version < "3.8"
-lxml>=3.7  # FIXME: if we need to parse some XML (?)
+gunicorn>=20
 magpie @ git+https://github.com/Ouranosinc/Magpie@3.34.0
 paste
 pastedeploy
-pymongo[srv]<4  # required to work with pinned celery
+pymongo[srv]>=4.4,<5  # required to work with pinned celery
 pyramid>=1.10.2,<2
 pyramid_mako>=1.0.2
 pyramid_celery
@@ -24,7 +20,7 @@ requests
 requests_file
 schema
 simplejson
-threddsclient>=0.4.1
+threddsclient==0.4.4
 typing_extensions
 watchdog
 webob

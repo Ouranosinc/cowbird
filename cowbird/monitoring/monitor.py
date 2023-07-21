@@ -1,29 +1,43 @@
 import importlib
 import os
-from typing import TYPE_CHECKING
+from typing import Optional, Type, TypedDict, Union
 
-from watchdog.events import FileSystemEventHandler
+from watchdog.events import (
+    DirCreatedEvent,
+    DirDeletedEvent,
+    DirModifiedEvent,
+    DirMovedEvent,
+    FileCreatedEvent,
+    FileDeletedEvent,
+    FileModifiedEvent,
+    FileMovedEvent,
+    FileSystemEventHandler
+)
 from watchdog.observers import Observer
+from watchdog.observers.api import BaseObserver
 
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.utils import get_logger
 
-if TYPE_CHECKING:
-    # pylint: disable=W0611,unused-import
-    from typing import Dict, Type, Union
-
-    from watchdog.events import (
-        DirCreatedEvent,
-        DirDeletedEvent,
-        DirModifiedEvent,
-        DirMovedEvent,
-        FileCreatedEvent,
-        FileDeletedEvent,
-        FileModifiedEvent,
-        FileMovedEvent
-    )
-
 LOGGER = get_logger(__name__)
+
+MonitorKey = TypedDict(
+    "MonitorKey",
+    {
+        "callback": str,
+        "path": str,
+    },
+    total=True,
+)
+MonitorParameters = TypedDict(
+    "MonitorParameters",
+    {
+        "callback": str,
+        "path": str,
+        "recursive": bool,
+    },
+    total=True,
+)
 
 
 class MonitorException(Exception):
@@ -38,8 +52,7 @@ class Monitor(FileSystemEventHandler):
     send events to :class:`FSMonitor` callback.
     """
 
-    def __init__(self, path, recursive, callback):
-        # type: (str, bool, Union[FSMonitor, Type[FSMonitor], str]) -> None
+    def __init__(self, path: str, recursive: bool, callback: Union[FSMonitor, Type[FSMonitor], str]) -> None:
         """
         Initialize the path monitoring and ready to be started.
 
@@ -56,11 +69,10 @@ class Monitor(FileSystemEventHandler):
         self.__src_path = path
         self.__recursive = recursive
         self.__callback = self.get_fsmonitor_instance(callback)
-        self.__event_observer = None
+        self.__event_observer: Optional[BaseObserver] = None
 
     @staticmethod
-    def get_fsmonitor_instance(callback):
-        # type: (Union[FSMonitor, Type[FSMonitor], str]) -> FSMonitor
+    def get_fsmonitor_instance(callback: Union[FSMonitor, Type[FSMonitor], str]) -> FSMonitor:
         """
         Return a :class:`FSMonitor` instance from multiple possible forms including the :class:`FSMonitor` type, the
         :class:`FSMonitor` full qualified class name or a direct instance which is returned as is.
@@ -81,8 +93,7 @@ class Monitor(FileSystemEventHandler):
         raise TypeError(f"Unsupported callback type : [{callback}] ({type(callback)})")
 
     @staticmethod
-    def get_qualified_class_name(monitor):
-        # type: (FSMonitor) -> str
+    def get_qualified_class_name(monitor: FSMonitor) -> str:
         """
         Returns the full qualified class name of the :class:`FSMonitor` object (string of the form module.class_name)
         """
@@ -90,53 +101,50 @@ class Monitor(FileSystemEventHandler):
         return ".".join([cls.__module__, cls.__qualname__])
 
     @property
-    def recursive(self):
+    def recursive(self) -> bool:
         return self.__recursive
 
     @recursive.setter
-    def recursive(self, value):
+    def recursive(self, value: bool) -> None:
         if self.__recursive != value:
             self.stop()
             self.__recursive = value
             self.start()
 
     @property
-    def path(self):
+    def path(self) -> str:
         return self.__src_path
 
     @property
-    def callback(self):
+    def callback(self) -> str:
         return self.get_qualified_class_name(self.__callback)
 
     @property
-    def callback_instance(self):
+    def callback_instance(self) -> FSMonitor:
         return self.__callback
 
     @property
-    def key(self):
-        # type: () -> Dict
+    def key(self) -> MonitorKey:
         """
         Return a dict that can be used as a unique key to identify this :class:`Monitor` in a BD.
         """
         return {"callback": self.callback, "path": self.path}
 
     @property
-    def is_alive(self):
-        # type: () -> bool
+    def is_alive(self) -> bool:
         """
         Returns true if the monitor observer exists and is currently running.
         """
         return bool(self.__event_observer) and self.__event_observer.is_alive()
 
-    def params(self):
-        # type: () -> Dict
+    def params(self) -> MonitorParameters:
         """
         Return a dict serializing this object from which a new :class:`Monitor` can be recreated using the init
         function.
         """
         return {"callback": self.callback, "path": self.path, "recursive": self.__recursive}
 
-    def start(self):
+    def start(self) -> None:
         """
         Start the monitoring so that events can be fired.
         """
@@ -145,25 +153,24 @@ class Monitor(FileSystemEventHandler):
             LOGGER.error(msg)
             raise MonitorException(msg)
         self.__event_observer = Observer()
-        self.__event_observer.schedule(self,
+        self.__event_observer.schedule(self,  # type: ignore[no-untyped-call]
                                        self.__src_path,
                                        recursive=self.__recursive)
         try:
-            self.__event_observer.start()
+            self.__event_observer.start()  # type: ignore[no-untyped-call]
         except OSError:
             LOGGER.warning("Cannot monitor the following file or directory [%s]: No such file or directory",
                            self.__src_path)
 
-    def stop(self):
+    def stop(self) -> None:
         """
         Stop the monitoring so that events stop to be fired.
         """
-        self.__event_observer.stop()
+        self.__event_observer.stop()  # type: ignore[no-untyped-call]
         self.__event_observer.join()
         self.__event_observer = None
 
-    def on_moved(self, event):
-        # type: (Union[DirMovedEvent, FileMovedEvent]) -> None
+    def on_moved(self, event: Union[DirMovedEvent, FileMovedEvent]) -> None:
         """
         Called when a file or a directory is moved or renamed.
 
@@ -179,8 +186,7 @@ class Monitor(FileSystemEventHandler):
                     os.path.dirname(self.__src_path):
                 self.__callback.on_created(event.dest_path)
 
-    def on_created(self, event):
-        # type: (Union[DirCreatedEvent, FileCreatedEvent]) -> None
+    def on_created(self, event: Union[DirCreatedEvent, FileCreatedEvent]) -> None:
         """
         Called when a file or directory is created.
 
@@ -188,8 +194,7 @@ class Monitor(FileSystemEventHandler):
         """
         self.__callback.on_created(event.src_path)
 
-    def on_deleted(self, event):
-        # type: (Union[DirDeletedEvent, FileDeletedEvent]) -> None
+    def on_deleted(self, event: Union[DirDeletedEvent, FileDeletedEvent]) -> None:
         """
         Called when a file or directory is deleted.
 
@@ -197,8 +202,7 @@ class Monitor(FileSystemEventHandler):
         """
         self.__callback.on_deleted(event.src_path)
 
-    def on_modified(self, event):
-        # type: (Union[DirModifiedEvent, FileModifiedEvent]) -> None
+    def on_modified(self, event: Union[DirModifiedEvent, FileModifiedEvent]) -> None:
         """
         Called when a file or directory is modified.
 

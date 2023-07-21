@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import Any, Dict
 
 import colander
 from cornice import Service
@@ -21,6 +21,7 @@ from pyramid.security import NO_PERMISSION_REQUIRED
 
 from cowbird import __meta__
 from cowbird.constants import get_constant
+from cowbird.typedefs import JSON, HTTPMethod
 from cowbird.utils import (
     CONTENT_TYPE_HTML,
     CONTENT_TYPE_JSON,
@@ -30,31 +31,25 @@ from cowbird.utils import (
     ExtendedEnum
 )
 
-if TYPE_CHECKING:
-    # pylint: disable=W0611,unused-import
-    from typing import Dict, List, Union
-
-    from cowbird.typedefs import JSON
-
 # ignore naming style of tags
 # pylint: disable=C0103,invalid-name
 
 TitleAPI = f"{__meta__.__title__} REST API"
-InfoAPI = {
+InfoAPI: JSON = {
     "description": __meta__.__description__,
     "contact": {"name": __meta__.__maintainer__, "email": __meta__.__email__, "url": __meta__.__url__}
 }
 
 
 # Security
-SecurityCookieAuthAPI = {}  # {"cookieAuth": {"type": "apiKey", "in": "cookie", "name": "token"}}
-SecurityDefinitionsAPI = {"securityDefinitions": SecurityCookieAuthAPI}
-SecurityAuthenticatedAPI = [{"cookieAuth": []}]
-SecurityAdministratorAPI = [{"cookieAuth": []}]
-SecurityEveryoneAPI = [{}]
+SecurityCookieAuthAPI: JSON = {}  # {"cookieAuth": {"type": "apiKey", "in": "cookie", "name": "token"}}
+SecurityDefinitionsAPI: JSON = {"securityDefinitions": SecurityCookieAuthAPI}
+SecurityAuthenticatedAPI: JSON = [{"cookieAuth": []}]
+SecurityAdministratorAPI: JSON = [{"cookieAuth": []}]
+SecurityEveryoneAPI: JSON = [{}]
 
 
-def get_security(service, method):
+def get_security(service: Service, method: HTTPMethod) -> JSON:
     definitions = service.definitions
     args = {}
     for definition in definitions:
@@ -71,7 +66,7 @@ def get_security(service, method):
     return SecurityAdministratorAPI if "security" not in args else args["security"]
 
 
-def service_api_route_info(service_api, **kwargs):
+def service_api_route_info(service_api: Service, **kwargs: Any) -> Dict[str, Any]:
     """
     Employed to simplify Pyramid route and view config definitions from same schema objects.
     """
@@ -92,8 +87,7 @@ class ValidOperations(ExtendedEnum):
     DeleteOperation = "deleted"
 
 
-def generate_api_schema(swagger_base_spec):
-    # type: (Dict[str, Union[str, List[str]]]) -> JSON
+def generate_api_schema(swagger_base_spec: JSON) -> JSON:
     """
     Return JSON Swagger specifications of Cowbird REST API.
 
@@ -105,7 +99,7 @@ def generate_api_schema(swagger_base_spec):
     # function docstrings are used to create the route's summary in Swagger-UI
     generator.summary_docstrings = True
     generator.default_security = get_security
-    swagger_base_spec.update(SecurityDefinitionsAPI)
+    swagger_base_spec.update(SecurityDefinitionsAPI)  # type: ignore[arg-type]
     generator.swagger = swagger_base_spec
     json_api_spec = generator.generate(title=TitleAPI, version=__meta__.__version__, info=InfoAPI)
     for tag in json_api_spec["tags"]:
@@ -222,7 +216,7 @@ class BaseResponseSchemaAPI(colander.MappingSchema):
 
 
 class BaseResponseBodySchema(colander.MappingSchema):
-    def __init__(self, code, description, **kw):
+    def __init__(self, code: int, description: str, **kw: Any) -> None:
         super(BaseResponseBodySchema, self).__init__(**kw)
         assert isinstance(code, int)         # nosec: B101
         assert isinstance(description, str)  # nosec: B101
@@ -294,7 +288,7 @@ class ErrorCallBodySchema(ErrorFallbackBodySchema):
 
 
 class ErrorResponseBodySchema(BaseResponseBodySchema):
-    def __init__(self, code, description, **kw):
+    def __init__(self, code: int, description: str, **kw: Any) -> None:
         super(ErrorResponseBodySchema, self).__init__(code, description, **kw)
         assert code >= 400  # nosec: B101
 
@@ -320,11 +314,11 @@ class ErrorResponseBodySchema(BaseResponseBodySchema):
         description="Additional details to explain failure reason of operation call or raised error.")
     fallback = ErrorFallbackBodySchema(
         missing=colander.drop,
-        description="Additional details to explain failure reason of fallback operation to cleanup call error.")
+        description="Additional details to explain failure reason of fallback operation to clean up the call error.")
 
 
 class InternalServerErrorResponseBodySchema(ErrorResponseBodySchema):
-    def __init__(self, **kw):
+    def __init__(self, **kw: Any) -> None:
         kw["code"] = HTTPInternalServerError.code
         super(InternalServerErrorResponseBodySchema, self).__init__(**kw)
 
@@ -335,7 +329,7 @@ class BadRequestResponseSchema(BaseResponseSchemaAPI):
 
 
 class UnauthorizedResponseBodySchema(ErrorResponseBodySchema):
-    def __init__(self, **kw):
+    def __init__(self, **kw: Any) -> None:
         kw["code"] = HTTPUnauthorized.code
         super(UnauthorizedResponseBodySchema, self).__init__(**kw)
 
@@ -605,7 +599,7 @@ class PermissionWebhook_POST_RequestBodySchema(colander.MappingSchema):
     )
     resource_id = colander.SchemaNode(
         colander.String(),
-        description="Id of the resource affected by the permission update."
+        description="Identifier of the resource affected by the permission update."
     )
     resource_full_name = colander.SchemaNode(
         colander.String(),

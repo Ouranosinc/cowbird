@@ -1,0 +1,11 @@
+## Dependency stubs to help analyse typing annotations
+
+mypy
+mypy-zope
+mongo-types
+celery-types
+types-mock
+types-pyyaml
+types-requests
+types-simplejson
+types-urllib3

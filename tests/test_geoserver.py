@@ -10,6 +10,7 @@ import logging
 import os
 import shutil
 from pathlib import Path
+from typing import List, Tuple, cast
 
 import mock
 import pytest
@@ -25,6 +26,7 @@ from cowbird.handlers import HandlerFactory
 from cowbird.handlers.impl.geoserver import SHAPEFILE_MAIN_EXTENSION, Geoserver, GeoserverError
 from cowbird.handlers.impl.magpie import GEOSERVER_READ_PERMISSIONS, GEOSERVER_WRITE_PERMISSIONS, MagpieHttpError
 from cowbird.permissions_synchronizer import Permission
+from cowbird.typedefs import JSON
 from tests import test_magpie, utils
 
 CURR_DIR = Path(__file__).resolve().parent
@@ -62,7 +64,10 @@ def get_geoserver_settings():
     return geoserver_settings
 
 
-def prepare_geoserver_test_workspace(test_instance, geoserver_handler, workspace_key):
+def prepare_geoserver_test_workspace(test_instance: "TestGeoserver",
+                                     geoserver_handler: Geoserver,
+                                     workspace_key: str,
+                                     ) -> Tuple[str, str]:
     """
     Prepares a workspace, its datastore and a test shapefile along with the associated Geoserver resources.
     """
@@ -114,14 +119,14 @@ def reset_geoserver_test_workspace(test_instance, geoserver_handler):
             pass
 
 
-def copy_shapefile(basename, destination):
+def copy_shapefile(basename: str, destination: str) -> None:
     full_filename = f"{COWBIRD_ROOT}/tests/resources/{basename}"
     Path(destination).mkdir(parents=True, exist_ok=False)
     for file in glob.glob(f"{full_filename}.*"):
         shutil.copy(file, destination)
 
 
-def get_datastore_path(workspace_path):
+def get_datastore_path(workspace_path: str) -> str:
     return workspace_path + "/shapefile_datastore"
 
 
@@ -160,7 +165,7 @@ class TestGeoserverRequests(TestGeoserver):
         "datastore-duplicate": "test-duplicate-datastore",
         "publish_remove": "test_publish_remove_shapefile"
     }
-    # Be careful of typos or path choisec, as the paths contained in the following dictionary
+    # Be careful of typos or path choices, as the paths contained in the following dictionary
     # will the removed during teardown.
     workspace_folders = {
         "publish_remove": f"{TestGeoserver.geoserver_settings['workspace_dir']}/{workspaces['publish_remove']}"
@@ -174,41 +179,41 @@ class TestGeoserverRequests(TestGeoserver):
         # Bypasses HandlerFactory() to prevent side effects in other tests.
         return TestGeoserver.get_geoserver()
 
-    def test_workspace_creation(self, geoserver):
+    def test_workspace_creation(self, geoserver: Geoserver) -> None:
         response = geoserver._create_workspace_request(workspace_name=self.workspaces["creation"])
         assert response.status_code == 201
 
-    def test_empty_workspace_removal(self, geoserver):
-        geoserver._create_workspace_request(self.workspaces["empty-remove"])
+    def test_empty_workspace_removal(self, geoserver: Geoserver) -> None:
+        geoserver._create_workspace_request(workspace_name=self.workspaces["empty-remove"])
         response = geoserver._remove_workspace_request(workspace_name=self.workspaces["empty-remove"])
         assert response.status_code == 200
 
-    def test_duplicate_workspace(self, geoserver):
+    def test_duplicate_workspace(self, geoserver: Geoserver) -> None:
         response = geoserver._create_workspace_request(workspace_name=self.workspaces["creation-duplicate"])
         assert response.status_code == 201
         response = geoserver._create_workspace_request(workspace_name=self.workspaces["creation-duplicate"])
         assert response.status_code == 401
 
-    def test_workspace_removal(self, geoserver):
+    def test_workspace_removal(self, geoserver: Geoserver) -> None:
         geoserver._create_workspace_request(workspace_name=self.workspaces["remove"])
         geoserver._create_datastore_request(workspace_name=self.workspaces["remove"],
                                             datastore_name="test-datastore")
         response = geoserver._remove_workspace_request(workspace_name=self.workspaces["remove"])
         assert response.status_code == 200
 
-    def test_datastore_creation(self, geoserver):
+    def test_datastore_creation(self, geoserver: Geoserver) -> None:
         geoserver._create_workspace_request(workspace_name=self.workspaces["datastore-create"])
         response = geoserver._create_datastore_request(workspace_name=self.workspaces["datastore-create"],
                                                        datastore_name="test-datastore")
         assert response.status_code == 201
 
-    def test_datastore_creation_missing_workspace(self, geoserver):
+    def test_datastore_creation_missing_workspace(self, geoserver: Geoserver) -> None:
         with pytest.raises(GeoserverError) as error:
             geoserver._create_datastore_request(workspace_name="test-nonexistent-workspace",
                                                 datastore_name="test-datastore")
         assert "Operation [_create_datastore_request] failed" in str(error.value)
 
-    def test_datastore_configuration(self, geoserver):
+    def test_datastore_configuration(self, geoserver: Geoserver) -> None:
         geoserver._create_workspace_request(workspace_name=self.workspaces["datastore-config"])
         geoserver._create_datastore_request(workspace_name=self.workspaces["datastore-config"],
                                             datastore_name="test-datastore")
@@ -218,7 +223,7 @@ class TestGeoserverRequests(TestGeoserver):
                                                           datastore_path=geoserver.workspace_dir)
         assert response.status_code == 200
 
-    def test_duplicate_datastore(self, geoserver):
+    def test_duplicate_datastore(self, geoserver: Geoserver) -> None:
         geoserver._create_workspace_request(workspace_name=self.workspaces["datastore-duplicate"])
         response = geoserver._create_datastore_request(workspace_name=self.workspaces["datastore-duplicate"],
                                                        datastore_name="test-datastore")
@@ -229,16 +234,20 @@ class TestGeoserverRequests(TestGeoserver):
                                                 datastore_name="test-datastore")
         assert "Operation [_create_datastore_request] failed" in str(error.value)
 
-    def test_publish_and_remove_shapefile(self, geoserver):
+    def test_publish_and_remove_shapefile(self, geoserver: Geoserver) -> None:
         workspace_name, datastore_name = prepare_geoserver_test_workspace(self, geoserver, "publish_remove")
 
         # Validate and publish shapefile
         geoserver.validate_shapefile(workspace_name=workspace_name, shapefile_name=self.test_shapefile_name)
-        response = geoserver._publish_shapefile_request(workspace_name, datastore_name, self.test_shapefile_name)
+        response = geoserver._publish_shapefile_request(workspace_name=workspace_name,
+                                                        datastore_name=datastore_name,
+                                                        filename=self.test_shapefile_name)
         assert response.status_code == 201
 
         # Remove shapefile
-        response = geoserver._remove_shapefile_request(workspace_name, datastore_name, self.test_shapefile_name)
+        response = geoserver._remove_shapefile_request(workspace_name=workspace_name,
+                                                       datastore_name=datastore_name,
+                                                       filename=self.test_shapefile_name)
         assert response.status_code == 200
 
 
@@ -250,7 +259,7 @@ class TestGeoserverPermissions(TestGeoserver):
     """
     Test cases to validate the synchronization between Magpie permissions and file permissions in a Geoserver workspace.
 
-    See :ref:`Components - Geoserver <components_geoserver>` for more details on the design/implemention choices.
+    See :ref:`Components - Geoserver <components_geoserver>` for more details on the design/implementation choices.
     """
     def setup_class(self):
         self.magpie_test_user = "test_user"
@@ -328,7 +337,7 @@ class TestGeoserverPermissions(TestGeoserver):
         self.layer_id = self.magpie.get_geoserver_layer_res_id(self.workspace_name, self.test_shapefile_name,
                                                                create_if_missing=True)
         parents_tree = self.magpie.get_parents_resource_tree(self.layer_id)
-        self.workspace_res_id = parents_tree[-1]["parent_id"]
+        self.workspace_res_id = cast(int, parents_tree[-1]["parent_id"])
 
         self.expected_chown_shapefile_calls = [
             mock.call(file, DEFAULT_ADMIN_UID, DEFAULT_ADMIN_GID) for file in self.shapefile_list
@@ -348,7 +357,7 @@ class TestGeoserverPermissions(TestGeoserver):
         user_permissions = self.magpie.get_user_permissions_by_res_id(self.magpie_test_user,
                                                                       res_id,
                                                                       effective=effective)
-        assert set(expected_perms) == {p["name"] for p in user_permissions["permissions"]
+        assert set(expected_perms) == {p["name"] for p in cast(List[JSON], user_permissions["permissions"])
                                        if p["access"] == expected_access and p["scope"] == expected_scope
                                        and p["name"] in GEOSERVER_READ_PERMISSIONS + GEOSERVER_WRITE_PERMISSIONS}
 
@@ -720,8 +729,8 @@ class TestGeoserverPermissions(TestGeoserver):
 
     def test_group_permission(self):
         """
-        Tests modifications on a resource's group permission, which should not trigger any change to the associated
-        path on the file system, since the Geoserver handler does not support groups.
+        Tests modifications on a resource's group permission, which should not trigger any change to the associated path
+        on the file system, since the Geoserver handler does not support groups.
         """
         layer_read_permission = Permission(
             service_name="geoserver",

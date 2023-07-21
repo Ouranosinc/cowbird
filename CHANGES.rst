@@ -7,7 +7,18 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Update Docker image to use ``python:3.10-alpine`` instead of ``python:3.7-alpine`` for
+  latest security updates and performance improvements.
+* Update GitHub CI tests to include Python 3.9, 3.10 and 3.11, and use 3.10 by default for additional checks.
+* Update multiple package dependencies flagged by PyUp as well as any relevant code changes to support updated packages.
+* Move ``ports`` sections of example ``docker/docker-compose.*.yml`` files to the ``dev`` variant to reflect a realistic
+  ``prod`` vs ``dev`` configuration scheme and allow ``ports`` overrides without merge of lists to avoid conflicts.
+* Add typing requirements and ``check-types[-only]`` targets to ``Makefile``.
+  To avoid breaking the CI on any minor typing issue, leave it as ``allow_failure: true`` for the moment.
+  Further typing conversions and fixes can be applied gradually on a best-effort basis.
+* Covert type comments to type annotations.
+* Fix and improve ``Geoserver`` typings.
+* Drop Python 3.7 that reached end-of-life.
 
 `1.2.0 <https://github.com/Ouranosinc/cowbird/tree/1.2.0>`_ (2023-07-10)
 ------------------------------------------------------------------------------------
@@ -18,9 +29,9 @@ Features / Changes
 
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
-* Fix bug where the monitors saved on the database and the intermal monitors dictionary from the `Monitoring` class
+* Fix bug where the monitors saved on the database and the internal monitors dictionary from the ``Monitoring`` class
   would be desynchronized, not always having the expected monitors, or having monitors that were not started properly.
-* Fix failing permissions synchronizer by adding `service_type` to the Magpie webhooks and ignoring permissions from
+* Fix failing permissions synchronizer by adding ``service_type`` to the Magpie webhooks and ignoring permissions from
   resources not defined in the config (relates to
   `Ouranosinc/Magpie#582 <https://github.com/Ouranosinc/Magpie/pull/582>`_).
 
@@ -29,7 +40,7 @@ Bug Fixes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
-* Return `HTTP 424 (Failed Dependency)` when the `celery` worker version cannot be retrieved on ``GET /version``.
+* Return `HTTP 424 (Failed Dependency)` when the ``celery`` worker version cannot be retrieved on ``GET /version``.
   Also, provide better error logs and detail messages in case of error to help debug the cause of the problem.
 
 Bug Fixes

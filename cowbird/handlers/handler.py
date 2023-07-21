@@ -1,22 +1,18 @@
 import abc
 import math
 import os
-from typing import TYPE_CHECKING
+from typing import Any, List
+from typing_extensions import Literal
 
+from cowbird.permissions_synchronizer import Permission
+from cowbird.typedefs import JSON, SettingsType
 from cowbird.utils import get_logger, get_ssl_verify, get_timeout
 
-if TYPE_CHECKING:
-    from typing import Any, List
-    from typing_extensions import Literal
+AnyHandlerParameter = Literal["priority", "url", "workspace_dir"]
 
-    # pylint: disable=W0611,unused-import
-    from cowbird.typedefs import JSON, SettingsType
-
-    AnyHandlerParameter = Literal["priority", "url", "workspace_dir"]
-
-HANDLER_PRIORITY_PARAM = "priority"
-HANDLER_URL_PARAM = "url"
-HANDLER_WORKSPACE_DIR_PARAM = "workspace_dir"
+HANDLER_PRIORITY_PARAM: AnyHandlerParameter = "priority"
+HANDLER_URL_PARAM: AnyHandlerParameter = "url"
+HANDLER_WORKSPACE_DIR_PARAM: AnyHandlerParameter = "workspace_dir"
 
 HANDLER_PARAMETERS = frozenset([
     HANDLER_PRIORITY_PARAM,
@@ -51,12 +47,10 @@ class Handler(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def required_params(self):
-        # type: () -> List[AnyHandlerParameter]
+    def required_params(self) -> List[AnyHandlerParameter]:
         raise NotImplementedError
 
-    def __init__(self, settings, name, **kwargs):
-        # type: (SettingsType, str, Any) -> None
+    def __init__(self, settings: SettingsType, name: str, **kwargs: Any) -> None:
         """
         :param settings: Cowbird settings for convenience
         :param name: Handler name
@@ -86,16 +80,14 @@ class Handler(abc.ABC):
                 LOGGER.error(error_msg)
                 raise HandlerConfigurationException(error_msg)
 
-    def json(self):
-        # type: () -> JSON
+    def json(self) -> JSON:
         return {"name": self.name}
 
-    def _user_workspace_dir(self, user_name):
+    def _user_workspace_dir(self, user_name: str) -> str:
         return os.path.join(self.workspace_dir, user_name)
 
     @abc.abstractmethod
-    def get_resource_id(self, resource_full_name):
-        # type: (str) -> str
+    def get_resource_id(self, resource_full_name: str) -> int:
         """
         Each handler must provide this implementation required by the permission synchronizer.
 
@@ -111,17 +103,17 @@ class Handler(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def user_created(self, user_name):
+    def user_created(self, user_name: str) -> None:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def user_deleted(self, user_name):
+    def user_deleted(self, user_name: str) -> None:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def permission_created(self, permission):
+    def permission_created(self, permission: Permission) -> None:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def permission_deleted(self, permission):
+    def permission_deleted(self, permission: Permission) -> None:
         raise NotImplementedError

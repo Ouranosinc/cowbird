@@ -1,15 +1,18 @@
 import inspect
+from typing import Callable
 
 import requests
 from pyramid.httpexceptions import HTTPBadRequest, HTTPInternalServerError, HTTPOk
+from pyramid.request import Request
 from pyramid.view import view_config
 
 from cowbird.api import exception as ax
 from cowbird.api import requests as ar
 from cowbird.api import schemas as s
 from cowbird.api.schemas import ValidOperations
-from cowbird.handlers import get_handlers
+from cowbird.handlers import Handler, get_handlers
 from cowbird.permissions_synchronizer import Permission
+from cowbird.typedefs import AnyResponseType
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger, get_ssl_verify, get_timeout
 
 LOGGER = get_logger(__name__)
@@ -21,7 +24,7 @@ class WebhookDispatchException(Exception):
     """
 
 
-def dispatch(handler_fct):
+def dispatch(handler_fct: Callable[[Handler], None]) -> None:
     exceptions = []
     event_name = inspect.getsource(handler_fct).split(":")[1].strip()
     handlers = get_handlers()
@@ -43,7 +46,7 @@ def dispatch(handler_fct):
 @s.UserWebhookAPI.post(schema=s.UserWebhook_POST_RequestSchema, tags=[s.WebhooksTag],
                        response_schemas=s.UserWebhook_POST_responses)
 @view_config(route_name=s.UserWebhookAPI.name, request_method="POST")
-def post_user_webhook_view(request):
+def post_user_webhook_view(request: Request) -> AnyResponseType:
     """
     User webhook used for created or removed user events.
     """
@@ -59,12 +62,12 @@ def post_user_webhook_view(request):
         # FIXME: Tried with ax.URL_REGEX, but cannot match what seems valid urls...
         callback_url = ar.get_multiformat_body(request, "callback_url", pattern=None)
 
-        def handler_fct(handler):
+        def handler_fct(handler: Handler) -> None:
             handler.user_created(user_name=user_name)
     else:
         callback_url = None
 
-        def handler_fct(handler):
+        def handler_fct(handler: Handler) -> None:
             handler.user_deleted(user_name=user_name)
     try:
         dispatch(handler_fct)
@@ -74,7 +77,8 @@ def post_user_webhook_view(request):
             LOGGER.warning("Exception occurred while dispatching event [%s], "
                            "calling Magpie callback url : [%s]", event, callback_url, exc_info=dispatch_exc)
             try:
-                requests.head(callback_url, verify=get_ssl_verify(request), timeout=get_timeout(request))
+                timeout = get_timeout(request)  # false positive security warning when passed directly
+                requests.head(callback_url, verify=get_ssl_verify(request), timeout=timeout)
             except requests.exceptions.RequestException as exc:
                 LOGGER.warning("Cannot complete the Magpie callback url request to [%s] : [%s]", callback_url, exc)
         else:
@@ -92,7 +96,7 @@ def post_user_webhook_view(request):
 @s.PermissionWebhookAPI.post(schema=s.PermissionWebhook_POST_RequestSchema, tags=[s.WebhooksTag],
                              response_schemas=s.PermissionWebhook_POST_responses)
 @view_config(route_name=s.PermissionWebhookAPI.name, request_method="POST")
-def post_permission_webhook_view(request):
+def post_permission_webhook_view(request: Request) -> AnyResponseType:
     """
     Permission webhook used for created or removed permission events.
     """

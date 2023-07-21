@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from collections import Counter
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import Dict, List, Type
 
 import mock
 import pytest
@@ -24,9 +24,6 @@ from cowbird.config import (
 )
 from cowbird.handlers import HandlerFactory
 from tests import test_magpie, utils
-
-if TYPE_CHECKING:
-    from typing import Dict, List, Type
 
 CURR_DIR = Path(__file__).resolve().parent
 
@@ -107,8 +104,14 @@ class TestSyncPermissions(unittest.TestCase):
         """
         test_magpie.delete_service(self.magpie, self.test_service_name)
 
-    def create_test_permission(self, resource_id, perm_name, perm_access, perm_scope, user_name, group_name):
-        # type: (int, Permission, Access, Scope, str, str) -> None
+    def create_test_permission(self,
+                               resource_id: int,
+                               perm_name: Permission,
+                               perm_access: Access,
+                               perm_scope: Scope,
+                               user_name: str,
+                               group_name: str,
+                               ) -> None:
         """
         Creates a test permission in Magpie app.
         """
@@ -127,8 +130,12 @@ class TestSyncPermissions(unittest.TestCase):
                 perm_access=perm_access.value,
                 perm_scope=perm_scope.value)
 
-    def delete_test_permission(self, resource_id, permission_name, user_name, group_name):
-        # type: (int, Permission, str, str) -> None
+    def delete_test_permission(self,
+                               resource_id: int,
+                               permission_name: Permission,
+                               user_name: str,
+                               group_name: str,
+                               ) -> None:
         """
         Creates a test permission in Magpie app.
         """
@@ -137,16 +144,14 @@ class TestSyncPermissions(unittest.TestCase):
         if group_name:
             self.magpie.delete_permission_by_grp_and_res_id(group_name, resource_id, permission_name.value)
 
-    def check_user_permissions(self, resource_id, expected_permissions):
-        # type: (int, List) -> None
+    def check_user_permissions(self, resource_id: int, expected_permissions: List) -> None:
         """
         Checks if the test user has the `expected_permissions` on the `resource_id`.
         """
         permissions = self.magpie.get_user_permissions_by_res_id(self.usr, resource_id)
         assert Counter(permissions["permission_names"]) == Counter(expected_permissions)
 
-    def check_group_permissions(self, resource_id, expected_permissions):
-        # type: (int, List) -> None
+    def check_group_permissions(self, resource_id: int, expected_permissions: List) -> None:
         """
         Checks if the test group has the `expected_permissions` on the `resource_id`.
         """
@@ -663,8 +668,7 @@ class TestSyncPermissions(unittest.TestCase):
                            ConfigErrorInvalidServiceKey, msg="invalid config file should raise")
 
 
-def check_config(config_data, expected_exception_type=None):
-    # type: (Dict, Type[Exception]) -> None
+def check_config(config_data: Dict, expected_exception_type: Type[Exception] = None) -> None:
     """
     Checks if the config loads without error, or if it triggers the expected exception in the case of an invalid config.
     """

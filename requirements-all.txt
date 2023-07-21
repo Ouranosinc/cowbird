@@ -2,3 +2,4 @@
 -r requirements.txt
 -r requirements-dev.txt
 -r requirements-doc.txt
+-r requirements-type.txt

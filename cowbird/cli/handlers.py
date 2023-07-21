@@ -3,19 +3,28 @@
 Cowbird CLI helper to execute handler operations.
 """
 import argparse
-from typing import TYPE_CHECKING
+from typing import List, cast
 
 from cowbird.cli import LOGGER
-from cowbird.cli.utils import get_config_parser, get_format_parser, print_format, set_log_level, subparser_help
+from cowbird.cli.utils import (
+    CommandPrefixes,
+    HelperParser,
+    ParsedArgs,
+    ParserArgs,
+    ParseResult,
+    SharedParsers,
+    get_config_parser,
+    get_format_parser,
+    print_format,
+    set_log_level,
+    subparser_help
+)
 from cowbird.handlers import get_handlers
+from cowbird.typedefs import JSON
 from cowbird.utils import CLI_MODE_CFG, get_app_config
 
-if TYPE_CHECKING:
-    from cowbird.cli.utils import CommandPrefixes, HelperParser, ParsedArgs, ParserArgs, ParseResult, SharedParsers
 
-
-def make_parser(shared_parsers=None, prefixes=None):
-    # type: (SharedParsers, CommandPrefixes) -> argparse.ArgumentParser
+def make_parser(shared_parsers: SharedParsers = None, prefixes: CommandPrefixes = None) -> argparse.ArgumentParser:
     cfg = get_config_parser()
     fmt = get_format_parser()
     parents = list(shared_parsers or []) + [cfg, fmt]
@@ -29,8 +38,7 @@ def make_parser(shared_parsers=None, prefixes=None):
     return parser
 
 
-def main(args=None, parser=None, namespace=None):
-    # type: (ParserArgs, HelperParser, ParsedArgs) -> ParseResult
+def main(args: ParserArgs = None, parser: HelperParser = None, namespace: ParsedArgs = None) -> ParseResult:
     if not parser:
         parser = make_parser()
     args = parser.parse_args(args=args, namespace=namespace)
@@ -42,15 +50,15 @@ def main(args=None, parser=None, namespace=None):
                              CLI_MODE_CFG: True})
     if args.command == "list":
         handlers = get_handlers(config)
-        handler_json = [handler.name for handler in handlers]
-        print_format(handler_json, args.format, section="handlers")
+        handler_json: List[str] = [handler.name for handler in handlers]
+        print_format(cast(JSON, handler_json), args.format, section="handlers")
     elif args.command == "info":
         handlers = get_handlers(config)
-        handler_json = [handler.json() for handler in handlers if handler.name == args.name]
+        handler_json: List[JSON] = [handler.json() for handler in handlers if handler.name == args.name]
         if not len(handler_json) == 1:
             LOGGER.error("Cannot find handler named: %s", args.name)
             return -1
-        print_format(handler_json[0], args.format, section="handler")
+        print_format(cast(JSON, handler_json[0]), args.format, section="handler")
     return 0
 
 

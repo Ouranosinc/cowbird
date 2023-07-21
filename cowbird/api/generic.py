@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import Callable, Optional, Tuple, Union, cast
 
 from pyramid.exceptions import PredicateMismatch
 from pyramid.httpexceptions import (
@@ -9,11 +9,14 @@ from pyramid.httpexceptions import (
     HTTPNotFound,
     HTTPServerError
 )
+from pyramid.registry import Registry
 from pyramid.request import Request
+from pyramid.response import Response
 from simplejson import JSONDecodeError
 
 from cowbird.api import exception as ax
 from cowbird.api import schemas as s
+from cowbird.typedefs import JSON, AnyResponseType
 from cowbird.utils import (
     CONTENT_TYPE_ANY,
     CONTENT_TYPE_JSON,
@@ -23,30 +26,47 @@ from cowbird.utils import (
     get_logger
 )
 
-if TYPE_CHECKING:
-    # pylint: disable=W0611,unused-import
-    from typing import Callable, Optional, Tuple, Union
-
-    from pyramid.registry import Registry
-    from pyramid.response import Response
-
-    from cowbird.typedefs import JSON
-
 LOGGER = get_logger(__name__)
 
 
-def internal_server_error(request):
-    # type: (Request) -> HTTPException
+class RemoveSlashNotFoundViewFactory(object):
+    """
+    Utility that will try to resolve a path without appended slash if one was provided.
+    """
+
+    def __init__(self, notfound_view: Optional[Callable[[Request], AnyResponseType]] = None) -> None:
+        self.notfound_view = notfound_view
+
+    def __call__(self, request: Request) -> AnyResponseType:
+        from pyramid.httpexceptions import HTTPMovedPermanently
+        from pyramid.interfaces import IRoutesMapper
+
+        path = request.path
+        registry = cast(Registry, request.registry)  # pyramid improperly reports Type[Registry] instead of the instance
+        mapper = registry.queryUtility(IRoutesMapper)
+        if mapper is not None and path.endswith("/"):
+            no_slash_path = path.rstrip("/")
+            no_slash_path = no_slash_path.split("/cowbird", 1)[-1]
+            for route in mapper.get_routes():
+                if route.match(no_slash_path) is not None:
+                    query = request.query_string
+                    if query:
+                        no_slash_path += "?" + query
+                    return HTTPMovedPermanently(location=no_slash_path)
+        return self.notfound_view(request)
+
+
+def internal_server_error(request: Request) -> HTTPException:
     """
     Overrides default HTTP.
     """
     content = get_request_info(request, exception_details=True,
                                default_message=s.InternalServerErrorResponseSchema.description)
-    return ax.raise_http(nothrow=True, http_error=HTTPInternalServerError, detail=content["detail"], content=content)
+    detail: str = content["detail"]
+    return ax.raise_http(nothrow=True, http_error=HTTPInternalServerError, detail=detail, content=content)
 
 
-def not_found_or_method_not_allowed(request):
-    # type: (Request) -> HTTPException
+def not_found_or_method_not_allowed(request: Request) -> HTTPException:
     """
     Overrides the default ``HTTPNotFound`` [404] by appropriate ``HTTPMethodNotAllowed`` [405] when applicable.
 
@@ -64,11 +84,11 @@ def not_found_or_method_not_allowed(request):
         http_err = HTTPNotFound
         http_msg = s.NotFoundResponseSchema.description
     content = get_request_info(request, default_message=http_msg)
-    return ax.raise_http(nothrow=True, http_error=http_err, detail=content["detail"], content=content)
+    detail: str = content["detail"]
+    return ax.raise_http(nothrow=True, http_error=http_err, detail=detail, content=content)
 
 
-def guess_target_format(request):
-    # type: (Request) -> Tuple[str, bool]
+def guess_target_format(request: Request) -> Tuple[str, bool]:
     """
     Guess the best applicable response ``Content-Type`` header according to request ``Accept`` header and ``format``
     query, or defaulting to :py:data:`CONTENT_TYPE_JSON`.
@@ -92,16 +112,16 @@ def guess_target_format(request):
     return content_type, is_header
 
 
-def validate_accept_header_tween(handler, registry):    # noqa: F811
-    # type: (Callable[[Request], Response], Registry) -> Callable[[Request], Response]
+def validate_accept_header_tween(handler: Callable[[Request], Response],
+                                 registry: Registry,  # noqa: F811
+                                 ) -> Callable[[Request], Response]:
     """
-    Tween that validates that the specified request ``Accept`` header or ``format`` query (if any) is a supported one by
-    the application and for the given context.
+    Tween that validates that the specified request ``Accept`` header or ``format`` query (if any) is supported by the
+    application and for the given context.
 
     :raises HTTPNotAcceptable: if desired ``Content-Type`` is not supported.
     """
-    def validate_format(request):
-        # type: (Request) -> Response
+    def validate_format(request: Request) -> Response:
         """
         Validates the specified request according to its ``Accept`` header or ``format`` query, ignoring UI related
         routes that require more content-types than the ones supported by the API for displaying purposes of other
@@ -118,8 +138,9 @@ def validate_accept_header_tween(handler, registry):    # noqa: F811
     return validate_format
 
 
-def apply_response_format_tween(handler, registry):    # noqa: F811
-    # type: (Callable[[Request], HTTPException], Registry) -> Callable[[Request], Response]
+def apply_response_format_tween(handler: Callable[[Request], HTTPException],
+                                registry: Registry,  # noqa: F811
+                                ) -> Callable[[Request], Response]:
     """
     Tween that obtains the request ``Accept`` header or ``format`` query (if any) to generate the response with the
     desired ``Content-Type``.
@@ -130,8 +151,7 @@ def apply_response_format_tween(handler, registry):    # noqa: F811
     The tween also ensures that additional request metadata extracted from :func:`get_request_info` is applied to
     the response body if not already provided by a previous operation.
     """
-    def apply_format(request):
-        # type: (Request) -> HTTPException
+    def apply_format(request: Request) -> HTTPException:
         """
         Validates the specified request according to its ``Accept`` header, ignoring UI related routes that request more
         content-types than the ones supported by the application for display purposes (styles, images etc.).
@@ -161,8 +181,10 @@ def apply_response_format_tween(handler, registry):    # noqa: F811
     return apply_format
 
 
-def get_exception_info(response, content=None, exception_details=False):
-    # type: (Union[HTTPException, Request, Response], Optional[JSON], bool) -> JSON
+def get_exception_info(response: Union[HTTPException, Request, Response],
+                       content: Optional[JSON] = None,
+                       exception_details: bool = False,
+                       ) -> JSON:
     """
     Obtains additional exception content details about the :paramref:`response` according to available information.
     """
@@ -191,16 +213,19 @@ def get_exception_info(response, content=None, exception_details=False):
     return content
 
 
-def get_request_info(request, default_message=None, exception_details=False):
-    # type: (Union[Request, HTTPException], Optional[str], bool) -> JSON
+def get_request_info(request: Union[Request, HTTPException],
+                     default_message: Optional[str] = None,
+                     exception_details: bool = False,
+                     ) -> JSON:
     """
     Obtains additional content details about the :paramref:`request` according to available information.
     """
-    content = {
+    content: JSON = {
         "path": str(request.upath_info),
         "url": str(request.url),
         "detail": default_message,
         "method": request.method
     }
-    content.update(get_exception_info(request, content=content, exception_details=exception_details))
+    exc_info = get_exception_info(request, content=content, exception_details=exception_details)
+    content.update(exc_info)  # type: ignore[arg-type]
     return content

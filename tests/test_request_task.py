@@ -1,13 +1,13 @@
 """
 Helpful documentation on how to setup celery test fixtures:
 
-https://medium.com/@scythargon/how-to-use-celery-pytest-fixtures-for-celery-intergration-testing-6d61c91775d9.
+https://medium.com/@scythargon/how-to-use-celery-pytest-fixtures-for-celery-integration-testing-6d61c91775d9.
 
 TL;DR :
-- Add a session fixture with an in-memory celery config
-- Use the celery_session_app and celery_session_worker fixtures for the tests
-- Don't forget to use the shared_task decorator instead of the usual app.task because shared_task use a proxy allowing
-  the task to be bound to any app (including the celery_session_app fixture).
+- Add a session fixture with an in-memory celery config.
+- Use the ``celery_session_app`` and ``celery_session_worker`` fixtures for the tests.
+- Don't forget to use the shared_task decorator instead of the usual ``app.task`` because ``shared_task`` uses
+  a proxy allowing the task to be bound to any app (including the ``celery_session_app`` fixture).
 """
 import contextlib
 import unittest
@@ -46,23 +46,20 @@ class UnreliableRequestTask(RequestTask, ABC):
 
 
 @shared_task(bind=True, base=UnreliableRequestTask)
-def unreliable_request_task(self, param1, param2):
-    # type: (RequestTask, int, int) -> int
+def unreliable_request_task(self: RequestTask, param1: int, param2: int) -> int:
     if self.request.retries < UnreliableRequestTask.test_max_retries:
         raise RequestException()
     return param1 + param2
 
 
 @shared_task(bind=True, base=RequestTask)
-def abort_sum_task(self, param1, param2):
-    # type: (RequestTask, int, int) -> int
+def abort_sum_task(self: RequestTask, param1: int, param2: int) -> int:
     self.abort_chain()
     return param1 + param2
 
 
 @shared_task(base=RequestTask)
-def sum_task(param1, param2):
-    # type: (int, int) -> int
+def sum_task(param1: int, param2: int) -> int:
     return param1 + param2
 
 
@@ -135,7 +132,7 @@ class TestRequestTask(unittest.TestCase):
                                                    create_workspace_request_mock,
                                                    create_datastore_request_mock,
                                                    configure_datastore_request_mock,
-                                                   create_datastore_dir_mock):
+                                                   _create_datastore_dir_mock):
         test_user_name = "test_user"
         test_datastore_name = f"shapefile_datastore_{test_user_name}"
         test_datastore_path = f"/user_workspaces/{test_user_name}/shapefile_datastore"
@@ -146,7 +143,7 @@ class TestRequestTask(unittest.TestCase):
 
         # current implementation doesn't give any handler on which we could wait
         sleep(2)
-        create_workspace_request_mock.assert_called_with(test_user_name)
+        create_workspace_request_mock.assert_called_with(workspace_name=test_user_name)
         create_datastore_request_mock.assert_called_with(workspace_name=test_user_name,
                                                          datastore_name=test_datastore_name)
         configure_datastore_request_mock.assert_called_with(workspace_name=test_user_name,
@@ -183,7 +180,7 @@ class TestRequestTask(unittest.TestCase):
             # current implementation doesn't give any handler on which we could wait
             sleep(2)
 
-            remove_workspace_request_mock.assert_called_with(test_user_name)
+            remove_workspace_request_mock.assert_called_with(workspace_name=test_user_name)
 
     @pytest.mark.geoserver
     @patch("cowbird.handlers.impl.geoserver.Geoserver._publish_shapefile_request")

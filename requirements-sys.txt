@@ -1,2 +1,5 @@
+## Base dependencies to install other packages
+
+packaging
 pip>=22.0
 setuptools>=65.5.1

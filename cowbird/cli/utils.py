@@ -1,50 +1,55 @@
 import argparse
 import json
 import logging
-from typing import TYPE_CHECKING
+from typing import Callable, Iterable, Literal, Optional, Sequence, TypedDict
+from typing_extensions import NotRequired
 
 import yaml
 
 from cowbird.constants import get_constant
+from cowbird.typedefs import JSON
 
-if TYPE_CHECKING:
-    from typing import Callable, Dict, Iterable, Optional, Sequence
+CommandPrefixes = Optional[Iterable[str]]
+SharedParsers = Optional[Iterable[argparse.ArgumentParser]]
+ParsedArgs = Optional[argparse.Namespace]
+ParserArgs = Optional[Sequence[str]]
+HelperParser = Optional[argparse.ArgumentParser]
+ParseResult = int
+ParserMaker = Callable[[SharedParsers, CommandPrefixes], argparse.ArgumentParser]
+ParserRunner = Callable[[ParserArgs, HelperParser, ParsedArgs], ParseResult]
+SubParserArgs = TypedDict(
+    "SubParserArgs",
+    {
+        "help": str,
+        "description": str,
+        "usage": NotRequired[str],
+    },
+    total=True,
+)
+PrintFormat = Literal["json", "yaml", "flat", "table"]
 
-    CommandPrefixes = Optional[Iterable[str]]
-    SharedParsers = Optional[Iterable[argparse.ArgumentParser]]
-    ParsedArgs = Optional[argparse.Namespace]
-    ParserArgs = Optional[Sequence[str]]
-    HelperParser = Optional[argparse.ArgumentParser]
-    ParseResult = int
 
-    ParserMaker = Callable[[SharedParsers, CommandPrefixes], argparse.ArgumentParser]
-    ParserRunner = Callable[[ParserArgs, HelperParser, ParsedArgs], ParseResult]
-
-
-def subparser_help(description, parent_parser=None):
-    # type: (str, Optional[argparse.ArgumentParser]) -> Dict[str, str]
+def subparser_help(description: str, parent_parser: Optional[argparse.ArgumentParser] = None) -> SubParserArgs:
     """
     Generates both fields with the same description as each parameter is used in different context.
 
     Field ``help`` is printed next to the subparser name when *parent parser* is called with ``--help``.
     Field ``description`` populates the help details under the usage command when calling *child parser* ``--help``.
     """
-    desc = {"help": description, "description": description}
+    desc: SubParserArgs = {"help": description, "description": description}
     if parent_parser:
         desc.update({"usage": parent_parser.usage})
     return desc
 
 
-def get_config_parser():
-    # type: () -> argparse.ArgumentParser
+def get_config_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("-c", "--config", help="INI configuration file to employ.",
                         default=get_constant("COWBIRD_INI_FILE_PATH", raise_missing=False, raise_not_set=False))
     return parser
 
 
-def get_logger_parser():
-    # type: () -> argparse.ArgumentParser
+def get_logger_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(add_help=False)
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-q", "--quiet", action="store_true", help="Suppress informative logging.")
@@ -53,8 +58,7 @@ def get_logger_parser():
     return parser
 
 
-def set_log_level(args, logger=None):
-    # type: (argparse.Namespace, Optional[logging.Logger]) -> None
+def set_log_level(args: argparse.Namespace, logger: Optional[logging.Logger] = None) -> None:
     from cowbird.cli import LOGGER
     logger = logger or LOGGER
     if args.quiet:
@@ -67,15 +71,14 @@ def set_log_level(args, logger=None):
         logger.setLevel(logging.INFO)
 
 
-def get_format_parser():
-    # type: () -> argparse.ArgumentParser
+def get_format_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("-f", "--format", choices=["flat", "json", "table", "yaml"], default="json",
                         help="Output format of the command.")
     return parser
 
 
-def print_format(data, fmt, section=None):
+def print_format(data: JSON, fmt: PrintFormat, section: Optional[str] = None) -> None:
     if fmt == "yaml":
         if section:
             data = {section: data}
@@ -104,7 +107,7 @@ def print_format(data, fmt, section=None):
             for field, value in data.items():
                 print(f"| {field.ljust(widths[0])} | {value.ljust(widths[1])} |")
             print(separator)
-        else:
+        elif isinstance(data, (list, set, tuple)):
             width = max(8, len(section or ""))
             for item in data:
                 width = max(width, len(item))
@@ -116,5 +119,7 @@ def print_format(data, fmt, section=None):
             for item in data:
                 print(f"| {item.ljust(width)} |")
             print(separator)
+        else:
+            raise ValueError(f"cannot format '{data!s}' as [{fmt}]")
     else:
         raise ValueError(f"unknown format [{fmt}]")

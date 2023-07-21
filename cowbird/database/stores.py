@@ -4,29 +4,24 @@ Stores to read/write data to from/to `MongoDB` using pymongo.
 
 import abc
 import logging
-from typing import TYPE_CHECKING
+from typing import Any, Dict, List, Tuple
 
 import pymongo
+from pymongo.collection import Collection
 
 from cowbird.monitoring.monitor import Monitor, MonitorException
-
-if TYPE_CHECKING:
-    # pylint: disable=W0611,unused-import
-    from typing import Any, Dict, List, Optional, Tuple
-
-    from pymongo.collection import Collection
 
 LOGGER = logging.getLogger(__name__)
 
 
 class StoreInterface(object, metaclass=abc.ABCMeta):
     # Store type being used as collection name in mongo and to retrieve a store
-    type = None
+    type: str = None
 
     # Fields name used as index inside the mongo collection, with a length > 1, a compound index is created
-    index_fields = []
+    index_fields: List[str] = []
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Check that the store implementation defines its type and index_fields.
         """
@@ -41,18 +36,16 @@ class MongodbStore:
     Base class extended by all concrete store implementations.
     """
 
-    def __init__(self, collection):
-        # type: (Collection, Optional[Dict[str, Any]]) -> None
+    def __init__(self, collection: Collection, *_: Any, **__: Any) -> None:
         """
         Validate and hold the collection for all the implementation.
         """
         if not isinstance(collection, pymongo.collection.Collection):
             raise TypeError("Collection not of expected type.")
-        self.collection = collection  # type: Collection
+        self.collection: Collection = collection
 
     @classmethod
-    def get_args_kwargs(cls, *args, **kwargs):
-        # type: (*Any, **Any) -> Tuple[Tuple, Dict]
+    def get_args_kwargs(cls, *args: Any, **kwargs: Any) -> Tuple[Tuple[Any, ...], Dict[str, Any]]:
         """
         Filters :class:`MongodbStore`-specific arguments to safely pass them down its ``__init__``.
         """
@@ -72,7 +65,7 @@ class MonitoringStore(StoreInterface, MongodbStore):
     type = "monitors"
     index_fields = ["callback", "path"]
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
         Init the store used to save monitors.
         """
@@ -80,8 +73,7 @@ class MonitoringStore(StoreInterface, MongodbStore):
         StoreInterface.__init__(self)
         MongodbStore.__init__(self, *db_args, **db_kwargs)
 
-    def save_monitor(self, monitor):
-        # type: (Monitor) -> None
+    def save_monitor(self, monitor: Monitor) -> None:
         """
         Stores Monitor in `MongoDB` storage.
         """
@@ -90,15 +82,13 @@ class MonitoringStore(StoreInterface, MongodbStore):
             self.collection.delete_one(monitor.key)
         self.collection.insert_one(monitor.params())
 
-    def delete_monitor(self, monitor):
-        # type: (Monitor) -> None
+    def delete_monitor(self, monitor: Monitor) -> None:
         """
         Removes Monitor from `MongoDB` storage.
         """
         self.collection.delete_one(monitor.key)
 
-    def list_monitors(self):
-        # type: () -> List[Monitor]
+    def list_monitors(self) -> List[Monitor]:
         """
         Lists all Monitor in `MongoDB` storage.
         """
@@ -115,9 +105,11 @@ class MonitoringStore(StoreInterface, MongodbStore):
                 self.collection.delete_one(mon_params)
         return monitors
 
-    def clear_services(self):
-        # type: () -> None
+    def clear_services(self, drop: bool = True) -> None:
         """
         Removes all Monitor from `MongoDB` storage.
         """
-        self.collection.drop()
+        if drop:
+            self.collection.drop()
+        else:
+            self.collection.delete_many({})

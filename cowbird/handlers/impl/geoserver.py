@@ -3,10 +3,11 @@ import os
 import re
 import stat
 from time import sleep
-from typing import TYPE_CHECKING, Tuple
+from typing import Any, List, Optional, Protocol, Tuple, Union, cast, overload
+from typing_extensions import TypeAlias
 
 import requests
-from celery import chain, shared_task
+from celery import Task, chain, shared_task
 from magpie.models import Layer, Workspace
 from magpie.permissions import Access, Scope
 
@@ -18,13 +19,51 @@ from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
 from cowbird.permissions_synchronizer import Permission
 from cowbird.request_task import RequestTask
+from cowbird.typedefs import JSON, SettingsType
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger, update_filesystem_permissions
 
-if TYPE_CHECKING:
-    from typing import Any, Dict, List, Optional
+GeoserverType: TypeAlias = "Geoserver"  # need a reference for the decorator before it gets defined
 
-    # pylint: disable=W0611,unused-import
-    from cowbird.typedefs import JSON, SettingsType
+# see https://github.com/sbdchd/celery-types
+Task.__class_getitem__ = classmethod(lambda cls, *args, **kwargs: cls)
+
+
+class GeoserverFuncSupportsWorkspace(Protocol):
+    def __call__(  # type: ignore[misc]
+        self: GeoserverType,
+        *,
+        workspace_name: str,
+    ) -> requests.Response:
+        ...
+
+
+class GeoserverFuncSupportsDatastore(Protocol):
+    def __call__(  # type: ignore[misc]
+        self: GeoserverType,
+        *,
+        workspace_name: str,
+        datastore_name: str,
+        datastore_path: str,
+    ) -> requests.Response:
+        ...
+
+
+class GeoserverFuncSupportsShapefile(Protocol):
+    def __call__(  # type: ignore[misc]
+        self: GeoserverType,
+        *,
+        workspace_name: str,
+        datastore_name: str,
+        filename: str,
+    ) -> requests.Response:
+        ...
+
+
+GeoserverFunc = Union[
+    GeoserverFuncSupportsWorkspace,
+    GeoserverFuncSupportsDatastore,
+    GeoserverFuncSupportsShapefile,
+]
 
 HANDLER_ADMIN_USER = "admin_user"  # nosec: B105
 HANDLER_ADMIN_PASSWORD = "admin_password"  # nosec: B105
@@ -39,7 +78,22 @@ DEFAULT_DATASTORE_DIR_NAME = "shapefile_datastore"
 LOGGER = get_logger(__name__)
 
 
-def geoserver_response_handling(func):
+@overload
+def geoserver_response_handling(func: GeoserverFuncSupportsWorkspace) -> GeoserverFuncSupportsWorkspace:
+    ...
+
+
+@overload
+def geoserver_response_handling(func: GeoserverFuncSupportsDatastore) -> GeoserverFuncSupportsDatastore:
+    ...
+
+
+@overload
+def geoserver_response_handling(func: GeoserverFuncSupportsShapefile) -> GeoserverFuncSupportsShapefile:
+    ...
+
+
+def geoserver_response_handling(func: GeoserverFunc) -> GeoserverFunc:
     """
     Decorator for response and logging handling for the different Geoserver HTTP requests.
 
@@ -48,7 +102,8 @@ def geoserver_response_handling(func):
     """
 
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(geoserver: GeoserverType, **kwargs: str) -> requests.Response:
+
         # Geoserver responses are often full HTML pages for codes 400-499, so text/content is omitted from
         # the logs. Error responses in the 500-599 range are usually concise, so their text/content were included
         # in the logs to help eventual debugging.
@@ -56,12 +111,12 @@ def geoserver_response_handling(func):
         # This try/except is used to catch errors caused by an unavailable Geoserver instance.
         # Since a connection error causes the requests library to raise an exception (RequestException),
         # we can't rely on a response code and need to handle this case, so it can be seen in the logs.
-        # Without this, the requests auto-retries as per RequestTask class's configurations, but
+        # Without this, the requests auto-retries as per RequestTask class's configurations.
         try:
-            response = func(*args, **kwargs)
+            response = func(geoserver, **kwargs)  # type: ignore[arg-type,misc]  # since args are not named explicitly
         except Exception as error:
             LOGGER.error(error)
-            raise requests.RequestException("Connection to Geoserver failed")
+            raise requests.RequestException(f"Connection to Geoserver failed using [{geoserver.url}]")
 
         operation = func.__name__
         response_code = response.status_code
@@ -74,7 +129,6 @@ def geoserver_response_handling(func):
         elif response_code == 401 and re.search(regex_exists, response.text):
             # This is done because Geoserver's reply/error code is misleading in this case and
             # returns HTML content.
-            #
             # LOGGER instead of GeoserverError because workspace existing should not block subsequent steps
             LOGGER.warning("Operation [%s] failed :Geoserver workspace already exists", operation)
         elif response_code == 401:
@@ -94,7 +148,7 @@ def geoserver_response_handling(func):
 
         return response
 
-    return wrapper
+    return cast(GeoserverFunc, wrapper)
 
 
 class Geoserver(Handler, FSMonitor):
@@ -103,8 +157,7 @@ class Geoserver(Handler, FSMonitor):
     """
     required_params = [HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PARAM]
 
-    def __init__(self, settings, name, **kwargs):
-        # type: (SettingsType, str, Any) -> None
+    def __init__(self, settings: SettingsType, name: str, **kwargs: Any) -> None:
         """
         Create the geoserver handler instance.
 
@@ -124,18 +177,17 @@ class Geoserver(Handler, FSMonitor):
     #
 
     # Handler class functions
-    def get_resource_id(self, resource_full_name):
-        # type:(str) -> str
+    def get_resource_id(self, resource_full_name: str) -> int:
         raise NotImplementedError
 
-    def user_created(self, user_name):
+    def user_created(self, user_name: str) -> None:
         self._create_datastore_dir(user_name)
         res = chain(create_workspace.si(user_name), create_datastore.si(user_name))
         res.delay()
         LOGGER.info("Start monitoring datastore of created user [%s]", user_name)
         Monitoring().register(self._shapefile_folder_dir(user_name), True, Geoserver)
 
-    def user_deleted(self, user_name):
+    def user_deleted(self, user_name: str) -> None:
         remove_workspace.delay(user_name)
         LOGGER.info("Stop monitoring datastore of created user [%s]", user_name)
         Monitoring().unregister(self._shapefile_folder_dir(user_name), self)
@@ -148,8 +200,7 @@ class Geoserver(Handler, FSMonitor):
         else:
             magpie_handler.delete_resource(workspace_res_id)
 
-    def get_shapefile_list(self, workspace_name, shapefile_name):
-        # type:(str, str) -> List[str]
+    def get_shapefile_list(self, workspace_name: str, shapefile_name: str) -> List[str]:
         """
         Generates the list of all files associated with a shapefile name.
         """
@@ -157,8 +208,7 @@ class Geoserver(Handler, FSMonitor):
         return [base_filename + ext for ext in SHAPEFILE_ALL_EXTENSIONS]
 
     @staticmethod
-    def _apply_new_path_permissions(path, is_readable, is_writable, is_executable):
-        # type: (str, bool, bool, bool) -> None
+    def _apply_new_path_permissions(path: str, is_readable: bool, is_writable: bool, is_executable: bool) -> None:
         """
         Applies new permissions to a path, if required.
         """
@@ -177,8 +227,7 @@ class Geoserver(Handler, FSMonitor):
                 LOGGER.warning("Failed to change permissions on the %s path: %s", path, exc)
 
     @staticmethod
-    def _apply_default_path_ownership(path):
-        # type: (str) -> None
+    def _apply_default_path_ownership(path: str) -> None:
         """
         Applies default ownership to a path, if required.
         """
@@ -191,9 +240,13 @@ class Geoserver(Handler, FSMonitor):
             except PermissionError as exc:
                 LOGGER.warning("Failed to change ownership of the %s path: %s", path, exc)
 
-    def _update_resource_paths_permissions(self, resource_type, permission, resource_id, workspace_name,
-                                           layer_name=None):
-        # type:(str, Permission, int, str, Optional[str]) -> None
+    def _update_resource_paths_permissions(self,
+                                           resource_type: str,
+                                           permission: Permission,
+                                           resource_id: int,
+                                           workspace_name: str,
+                                           layer_name: Optional[str] = None,
+                                           ) -> None:
         """
         Updates a single Magpie resource's associated paths according to its permissions found on Magpie.
         """
@@ -224,31 +277,34 @@ class Geoserver(Handler, FSMonitor):
                 if path.endswith(tuple(SHAPEFILE_REQUIRED_EXTENSIONS)):
                     LOGGER.warning("%s could not be found and its permissions could not be updated.", path)
                 continue
-            Geoserver._apply_new_path_permissions(path, is_readable, is_writable, is_executable)
-            Geoserver._apply_default_path_ownership(path)
+            self._apply_new_path_permissions(path, is_readable, is_writable, is_executable)
+            self._apply_default_path_ownership(path)
 
-    def _update_resource_paths_permissions_recursive(self, resource, permission, workspace_name):
-        # type:(Dict[str, JSON], Permission, str) -> None
+    def _update_resource_paths_permissions_recursive(self,
+                                                     resource: JSON,
+                                                     permission: Permission,
+                                                     workspace_name: str,
+                                                     ) -> None:
         """
         Recursive method to update all the path permissions of a resource and its children resources as found on Magpie.
         """
-        resource_type = resource["resource_type"]
+        resource_type: str = resource["resource_type"]
         if resource_type in [Workspace.resource_type_name, Layer.resource_type_name]:
-            layer_name = resource["resource_name"] if resource_type == Layer.resource_type_name else None
+            layer_name: str = resource["resource_name"] if resource_type == Layer.resource_type_name else None
+            res_id: int = resource["resource_id"]
             self._update_resource_paths_permissions(resource_type=resource_type,
                                                     permission=permission,
-                                                    resource_id=resource["resource_id"],
+                                                    resource_id=res_id,
                                                     workspace_name=workspace_name,
                                                     layer_name=layer_name)
 
         if permission.scope == Scope.RECURSIVE.value:
-            for children_res in resource["children"].values():
+            for children_res in cast(JSON, resource["children"]).values():
                 self._update_resource_paths_permissions_recursive(resource=children_res,
                                                                   permission=permission,
                                                                   workspace_name=workspace_name)
 
-    def _update_permissions_on_filesystem(self, permission):
-        # type: (Permission) -> None
+    def _update_permissions_on_filesystem(self, permission: Permission) -> None:
         """
         Updates the permissions of dir/files on the file system, after receiving a permission webhook event from Magpie.
         """
@@ -268,13 +324,13 @@ class Geoserver(Handler, FSMonitor):
                                                           permission=permission,
                                                           workspace_name=workspace_name)
 
-    def permission_created(self, permission):
+    def permission_created(self, permission: Permission) -> None:
         """
         Called when Magpie sends a permission created webhook event.
         """
         self._update_permissions_on_filesystem(permission)
 
-    def permission_deleted(self, permission):
+    def permission_deleted(self, permission: Permission) -> None:
         """
         Called when Magpie sends a permission deleted webhook event.
         """
@@ -282,16 +338,14 @@ class Geoserver(Handler, FSMonitor):
 
     # FSMonitor class functions
     @staticmethod
-    def get_instance():
-        # type: () -> Geoserver
+    def get_instance() -> Optional["Geoserver"]:
         """
         Return the Geoserver singleton instance from the class name used to retrieve the FSMonitor from the DB.
         """
         return HandlerFactory().get_handler("Geoserver")
 
     @staticmethod
-    def publish_shapefile_task_chain(workspace_name, shapefile_name):
-        # type: (str, str) -> None
+    def publish_shapefile_task_chain(workspace_name: str, shapefile_name: str) -> None:
         """
         Applies the chain of tasks required to publish a new file to Geoserver.
         """
@@ -299,7 +353,7 @@ class Geoserver(Handler, FSMonitor):
                     publish_shapefile.si(workspace_name, shapefile_name))
         res.delay()
 
-    def on_created(self, path):
+    def on_created(self, path: str) -> None:
         """
         Call when a new path is found.
 
@@ -317,14 +371,13 @@ class Geoserver(Handler, FSMonitor):
             self._update_magpie_layer_permissions(workspace_name, shapefile_name)
 
     @staticmethod
-    def remove_shapefile_task(workspace_name, shapefile_name):
-        # type: (str, str) -> None
+    def remove_shapefile_task(workspace_name: str, shapefile_name: str) -> None:
         """
         Applies the celery task required to remove a shapefile from Geoserver.
         """
         remove_shapefile.delay(workspace_name, shapefile_name)
 
-    def on_deleted(self, path):
+    def on_deleted(self, path: str) -> None:
         """
         Called when a path is deleted.
 
@@ -351,8 +404,7 @@ class Geoserver(Handler, FSMonitor):
             if layer_res_id:
                 magpie_handler.delete_resource(layer_res_id)
 
-    def on_modified(self, path):
-        # type: (str) -> None
+    def on_modified(self, path: str) -> None:
         """
         Called when a path is updated.
 
@@ -368,22 +420,27 @@ class Geoserver(Handler, FSMonitor):
             self._update_magpie_layer_permissions(workspace_name, shapefile_name)
 
     @staticmethod
-    def _is_permission_update_required(effective_permissions, user_name, res_id, perm_name, perm_access, perm_scope,
-                                       delete_if_required=False):
-        # type: (List[Dict[str, str]], str, int, str, str, str, bool) -> bool
+    def _is_permission_update_required(effective_permissions: List[JSON],
+                                       user_name: str,
+                                       res_id: int,
+                                       perm_name: str,
+                                       perm_access: str,
+                                       perm_scope: str,
+                                       delete_if_required: bool = False,
+                                       ) -> bool:
         """
         Checks if the required permission already exists on the resource, else returns true if an update is required.
 
         Also, deletes the permission if the associated input argument is activated.
         """
         magpie_handler = HandlerFactory().get_handler("Magpie")
-        actual_perms_on_resource = []
+        actual_perms_on_resource: List[JSON] = []
 
         if perm_scope == Scope.RECURSIVE.value:
             # Special case for recursive permissions. We have to check the actual permission on the resource to verify
             # the actual scope.
-            actual_perms_on_resource = magpie_handler.get_user_permissions_by_res_id(
-                user_name, res_id, effective=False)["permissions"]
+            body: JSON = magpie_handler.get_user_permissions_by_res_id(user_name, res_id, effective=False)
+            actual_perms_on_resource = cast(List[JSON], body["permissions"])
 
         for perm in effective_permissions:
             if perm["name"] == perm_name:
@@ -407,8 +464,12 @@ class Geoserver(Handler, FSMonitor):
         return True
 
     @staticmethod
-    def _update_magpie_permissions(user_name, res_id, perm_scope, is_readable, is_writable):
-        # type: (str, int, str, bool, bool) -> None
+    def _update_magpie_permissions(user_name: str,
+                                   res_id: int,
+                                   perm_scope: str,
+                                   is_readable: bool,
+                                   is_writable: bool,
+                                   ) -> None:
         """
         Updates permissions on a Magpie resource (workspace/layer).
         """
@@ -421,8 +482,8 @@ class Geoserver(Handler, FSMonitor):
                                  [(p, Access.DENY.value) for p in denied_perms])
 
         # Get resolved permissions on magpie
-        user_permissions = magpie_handler.get_user_permissions_by_res_id(
-            user_name, res_id, effective=True)["permissions"]
+        user_perms_body: JSON = magpie_handler.get_user_permissions_by_res_id(user_name, res_id, effective=True)
+        user_permissions = cast(List[JSON], user_perms_body["permissions"])
 
         perms_to_update = set()
         for perm_name, perm_access in perm_names_and_access:
@@ -439,8 +500,8 @@ class Geoserver(Handler, FSMonitor):
                 perms_to_update.add((perm_name, perm_access))
 
         # Get new resolved permissions on magpie, after previous perms update were applied
-        user_permissions = magpie_handler.get_user_permissions_by_res_id(
-            user_name, res_id, effective=True)["permissions"]
+        body: JSON = magpie_handler.get_user_permissions_by_res_id(user_name, res_id, effective=True)
+        user_permissions = cast(List[JSON], body["permissions"])
 
         # Only apply new allow/deny permissions if required. If parent resources already have the required recursive
         # allow/deny, a new permission is not necessary and will not be created in order to simplify
@@ -456,7 +517,7 @@ class Geoserver(Handler, FSMonitor):
                     perm_access=perm_access,
                     perm_scope=perm_scope)
 
-    def _update_magpie_workspace_permissions(self, workspace_name):
+    def _update_magpie_workspace_permissions(self, workspace_name: str) -> None:
         """
         Updates the permissions of a `workspace` resource on Magpie to the current permissions found on the
         corresponding datastore folder.
@@ -466,20 +527,19 @@ class Geoserver(Handler, FSMonitor):
 
         datastore_dir_path = self._shapefile_folder_dir(workspace_name)
         # Make sure the directory has the right ownership
-        Geoserver._apply_default_path_ownership(datastore_dir_path)
+        self._apply_default_path_ownership(datastore_dir_path)
 
         workspace_status = os.stat(datastore_dir_path)[stat.ST_MODE]
         is_readable = bool(workspace_status & stat.S_IROTH and workspace_status & stat.S_IXOTH)
         is_writable = bool(workspace_status & stat.S_IWOTH)
 
-        Geoserver._update_magpie_permissions(user_name=workspace_name,
-                                             res_id=workspace_res_id,
-                                             perm_scope=Scope.RECURSIVE.value,
-                                             is_readable=is_readable,
-                                             is_writable=is_writable)
+        self._update_magpie_permissions(user_name=workspace_name,
+                                        res_id=workspace_res_id,
+                                        perm_scope=Scope.RECURSIVE.value,
+                                        is_readable=is_readable,
+                                        is_writable=is_writable)
 
-    def _update_magpie_layer_permissions(self, workspace_name, layer_name):
-        # type: (str, str) -> None
+    def _update_magpie_layer_permissions(self, workspace_name: str, layer_name: str) -> None:
         """
         Updates the permissions of a `layer` resource on Magpie to the current permissions found on the corresponding
         shapefile.
@@ -490,37 +550,34 @@ class Geoserver(Handler, FSMonitor):
         # Get permissions of the shapefile's main file
         is_readable, is_writable = self._get_shapefile_permissions(workspace_name, layer_name)
         self._normalize_shapefile_permissions(workspace_name, layer_name, is_readable, is_writable)
-        Geoserver._update_magpie_permissions(user_name=workspace_name,
-                                             res_id=layer_res_id,
-                                             perm_scope=Scope.MATCH.value,
-                                             is_readable=is_readable,
-                                             is_writable=is_writable)
+        self._update_magpie_permissions(user_name=workspace_name,
+                                        res_id=layer_res_id,
+                                        perm_scope=Scope.MATCH.value,
+                                        is_readable=is_readable,
+                                        is_writable=is_writable)
 
     #
     # Geoserver class specific functions
     #
-    def create_workspace(self, name):
-        # type:(Geoserver, str) -> None
+    def create_workspace(self, name: str) -> None:
         """
         Create a new Geoserver workspace.
 
         :param name: Workspace name
         """
         LOGGER.info("Attempting to create Geoserver workspace [%s]", name)
-        self._create_workspace_request(name)
+        self._create_workspace_request(workspace_name=name)
 
-    def remove_workspace(self, name):
-        # type:(Geoserver, str) -> None
+    def remove_workspace(self, name: str) -> None:
         """
         Removes a workspace from geoserver. Will also remove all datastores associated with the workspace.
 
         :param name: Workspace name
         """
         LOGGER.info("Attempting to remove Geoserver workspace [%s]", name)
-        self._remove_workspace_request(name)
+        self._remove_workspace_request(workspace_name=name)
 
-    def create_datastore(self, workspace_name):
-        # type:(Geoserver, str) -> None
+    def create_datastore(self, workspace_name: str) -> None:
         """
         Create a new Geoserver workspace.
 
@@ -537,8 +594,7 @@ class Geoserver(Handler, FSMonitor):
                                           datastore_name=datastore_name,
                                           datastore_path=datastore_path)
 
-    def publish_shapefile(self, workspace_name, shapefile_name):
-        # type:(Geoserver, str, str) -> None
+    def publish_shapefile(self, workspace_name: str, shapefile_name: str) -> None:
         """
         Publish a shapefile in the specified workspace.
 
@@ -555,7 +611,7 @@ class Geoserver(Handler, FSMonitor):
                                         datastore_name=datastore_name,
                                         filename=shapefile_name)
 
-    def validate_shapefile(self, workspace_name, shapefile_name):
+    def validate_shapefile(self, workspace_name: str, shapefile_name: str) -> None:
         """
         Validate shapefile.
 
@@ -575,8 +631,7 @@ class Geoserver(Handler, FSMonitor):
                 raise FileNotFoundError
         LOGGER.info("Shapefile [%s] is valid", shapefile_name)
 
-    def _get_shapefile_permissions(self, workspace_name, shapefile_name):
-        # type:(str, str) -> (bool, bool)
+    def _get_shapefile_permissions(self, workspace_name: str, shapefile_name: str) -> Tuple[bool, bool]:
         """
         Resolves the shapefile permissions on the file system, by checking the shapefile's main file permissions.
         """
@@ -592,20 +647,24 @@ class Geoserver(Handler, FSMonitor):
             is_shapefile_writable = bool(file_status & stat.S_IWOTH)
         return is_shapefile_readable, is_shapefile_writable
 
-    def _normalize_shapefile_permissions(self, workspace_name, shapefile_name, is_readable, is_writable):
-        # type: (str, str, bool, bool) -> None
+    def _normalize_shapefile_permissions(self,
+                                         workspace_name: str,
+                                         shapefile_name: str,
+                                         is_readable: bool,
+                                         is_writable: bool) -> None:
         """
         Makes sure all files associated with a shapefile is owned by the default user/group and have the same
         permissions.
         """
         for shapefile in self.get_shapefile_list(workspace_name, shapefile_name):
             if os.path.exists(shapefile):
-                Geoserver._apply_default_path_ownership(shapefile)
-                Geoserver._apply_new_path_permissions(shapefile, is_readable=is_readable, is_writable=is_writable,
-                                                      is_executable=False)
+                self._apply_default_path_ownership(shapefile)
+                self._apply_new_path_permissions(shapefile,
+                                                 is_readable=is_readable,
+                                                 is_writable=is_writable,
+                                                 is_executable=False)
 
-    def remove_shapefile(self, workspace_name, filename):
-        # type:(Geoserver, str, str) -> None
+    def remove_shapefile(self, workspace_name: str, filename: str) -> None:
         """
         Remove a shapefile from the specified workspace.
 
@@ -634,8 +693,7 @@ class Geoserver(Handler, FSMonitor):
     # While sometimes harder to get working, data payloads where written in json instead of xml as they are easier
     # to parse and use without external libraries.
     @staticmethod
-    def _get_shapefile_info(filename):
-        # type:(str) -> Tuple[str, str]
+    def _get_shapefile_info(filename: str) -> Tuple[str, str]:
         """
         :param filename: Relative filename of a new file
         :returns: Workspace name (str) where file is located and shapefile name (str)
@@ -647,8 +705,7 @@ class Geoserver(Handler, FSMonitor):
         return workspace, shapefile_name
 
     @staticmethod
-    def _get_datastore_name(workspace_name):
-        # type: (str) -> str
+    def _get_datastore_name(workspace_name: str) -> str:
         """
         Return datastore name used to represent the datastore inside Geoserver.
 
@@ -657,16 +714,14 @@ class Geoserver(Handler, FSMonitor):
         """
         return f"shapefile_datastore_{workspace_name}"
 
-    def _shapefile_folder_dir(self, workspace_name):
-        # type: (str) -> str
+    def _shapefile_folder_dir(self, workspace_name: str) -> str:
         """
         Returns the path to the user's shapefile datastore inside the file system.
         """
         return os.path.join(self.workspace_dir, workspace_name, DEFAULT_DATASTORE_DIR_NAME)
 
     @staticmethod
-    def _geoserver_user_datastore_dir(user_name):
-        # type: (str) -> str
+    def _geoserver_user_datastore_dir(user_name: str) -> str:
         """
         Returns the path to the user's shapefile datastore inside the Geoserver instance container.
 
@@ -675,8 +730,7 @@ class Geoserver(Handler, FSMonitor):
         return os.path.join("/user_workspaces", user_name, DEFAULT_DATASTORE_DIR_NAME)
 
     @geoserver_response_handling
-    def _create_workspace_request(self, workspace_name):
-        # type:(Geoserver, str) -> requests.Response
+    def _create_workspace_request(self, *, workspace_name: str) -> requests.Response:
         """
         Request to create a new workspace.
 
@@ -690,8 +744,10 @@ class Geoserver(Handler, FSMonitor):
         return response
 
     @geoserver_response_handling
-    def _remove_workspace_request(self, workspace_name):
-        # type:(Geoserver, str) -> requests.Response
+    def _remove_workspace_request(self,
+                                  *,
+                                  workspace_name: str,
+                                  ) -> requests.Response:
         """
         Request to remove workspace and all associated datastores and layers.
 
@@ -703,8 +759,7 @@ class Geoserver(Handler, FSMonitor):
                                    headers=self.headers, timeout=self.timeout)
         return response
 
-    def _create_datastore_dir(self, workspace_name):
-        # type:(str) -> None
+    def _create_datastore_dir(self, workspace_name: str) -> None:
         datastore_folder_path = self._shapefile_folder_dir(workspace_name)
         try:
             os.mkdir(datastore_folder_path)
@@ -712,8 +767,11 @@ class Geoserver(Handler, FSMonitor):
             LOGGER.info("User datastore directory already existing (skip creation): [%s]", datastore_folder_path)
 
     @geoserver_response_handling
-    def _create_datastore_request(self, workspace_name, datastore_name):
-        # type:(Geoserver, str, str) -> requests.Response
+    def _create_datastore_request(self,
+                                  *,
+                                  workspace_name: str,
+                                  datastore_name: str,
+                                  ) -> requests.Response:
         """
         Initial creation of the datastore with no connection parameters.
 
@@ -736,8 +794,12 @@ class Geoserver(Handler, FSMonitor):
         return response
 
     @geoserver_response_handling
-    def _configure_datastore_request(self, workspace_name, datastore_name, datastore_path):
-        # type:(Geoserver, str, str, str) -> requests.Response
+    def _configure_datastore_request(self,
+                                     *,
+                                     workspace_name: str,
+                                     datastore_name: str,
+                                     datastore_path: str,
+                                     ) -> requests.Response:
         """
         Configures the connection parameters of the datastore.
 
@@ -785,8 +847,12 @@ class Geoserver(Handler, FSMonitor):
         return response
 
     @geoserver_response_handling
-    def _publish_shapefile_request(self, workspace_name, datastore_name, filename):
-        # type:(Geoserver, str, str, str) -> requests.Response
+    def _publish_shapefile_request(self,
+                                   *,
+                                   workspace_name: str,
+                                   datastore_name: str,
+                                   filename: str,
+                                   ) -> requests.Response:
         """
         Request to publish a shapefile in Geoserver. Does so by creating a `Feature type` in Geoserver.
 
@@ -828,8 +894,12 @@ class Geoserver(Handler, FSMonitor):
         return response
 
     @geoserver_response_handling
-    def _remove_shapefile_request(self, workspace_name, datastore_name, filename):
-        # type:(Geoserver, str, str, str) -> requests.Response
+    def _remove_shapefile_request(self,
+                                  *,
+                                  workspace_name: str,
+                                  datastore_name: str,
+                                  filename: str,
+                                  ) -> requests.Response:
         """
         Request to remove specified Geoserver `Feature type` and corresponding layer.
 
@@ -847,36 +917,36 @@ class Geoserver(Handler, FSMonitor):
         return response
 
 
-@shared_task(bind=True, base=RequestTask)
-def create_workspace(_task, user_name):
+@shared_task(bind=True, base=RequestTask, typing=True)
+def create_workspace(_task: Task[[str], None], user_name: str) -> None:
     # Avoid any actual logic in celery task handler, only task related stuff should be done here
     return Geoserver.get_instance().create_workspace(user_name)
 
 
-@shared_task(bind=True, base=RequestTask)
-def create_datastore(_task, datastore_name):
+@shared_task(bind=True, base=RequestTask, typing=True)
+def create_datastore(_task: Task[[str], None], datastore_name: str) -> None:
     # Avoid any actual logic in celery task handler, only task related stuff should be done here
     return Geoserver.get_instance().create_datastore(datastore_name)
 
 
-@shared_task(bind=True, base=RequestTask)
-def remove_workspace(_task, workspace_name):
+@shared_task(bind=True, base=RequestTask, typing=True)
+def remove_workspace(_task: Task[[str], None], workspace_name: str) -> None:
     # Avoid any actual logic in celery task handler, only task related stuff should be done here
     return Geoserver.get_instance().remove_workspace(workspace_name)
 
 
-@shared_task(bind=True, autoretry_for=(FileNotFoundError,), retry_backoff=True, max_retries=8)
-def validate_shapefile(_task, workspace_name, shapefile_name):
+@shared_task(bind=True, autoretry_for=(FileNotFoundError,), retry_backoff=True, max_retries=8, typing=True)
+def validate_shapefile(_task: Task[[Any, Any], None], workspace_name: str, shapefile_name: str) -> None:
     return Geoserver.get_instance().validate_shapefile(workspace_name, shapefile_name)
 
 
-@shared_task(bind=True, base=RequestTask)
-def publish_shapefile(_task, workspace_name, shapefile_name):
+@shared_task(bind=True, base=RequestTask, typing=True)
+def publish_shapefile(_task: Task[[Any, Any], None], workspace_name: str, shapefile_name: str) -> None:
     return Geoserver.get_instance().publish_shapefile(workspace_name, shapefile_name)
 
 
-@shared_task(bind=True, base=RequestTask)
-def remove_shapefile(_task, workspace_name, shapefile_name):
+@shared_task(bind=True, base=RequestTask, typing=True)
+def remove_shapefile(_task: Task[[Any, Any], None], workspace_name: str, shapefile_name: str) -> None:
     return Geoserver.get_instance().remove_shapefile(workspace_name, shapefile_name)
 
 

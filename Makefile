@@ -74,33 +74,42 @@ DOWNLOAD_CACHE ?= $(APP_ROOT)/downloads
 REPORTS_DIR ?= $(APP_ROOT)/reports
 PYTHON_VERSION ?= `python -c 'import platform; print(platform.python_version())'`
 PIP_XARGS ?=
-PIP_USE_FEATURE := `python -c '\
+PIP_VERSION := `python -c '\
 	import pip; \
-	from distutils.version import LooseVersion; \
-	print(LooseVersion(pip.__version__) < LooseVersion("21.0"))'`
+	from packaging.version import Version as LooseVersion; \
+	if LooseVersion(pip.__version__) < LooseVersion("21.0")\: print("21"); \
+	elif LooseVersion(pip.__version__) >= LooseVersion("23.0"): print("23"); \
+	else: print("22"); \
+'`
 ifeq ($(findstring "--use-feature=2020-resolver",$(PIP_XARGS)),)
   # feature not specified, but needed
-  ifeq ("$(PIP_USE_FEATURE)", "True")
+  ifeq ("$(PIP_VERSION)", "21")
     PIP_XARGS := --use-feature=2020-resolver $(PIP_XARGS)
   else
-    # use faster legacy resolver
-    ifeq ($(subst "--use-deprecated=legacy-resolver",,$(PIP_XARGS)),)
-      PIP_XARGS := --use-deprecated=legacy-resolver $(PIP_XARGS)
+    # revert to legacy resolver while 2020 resolver was still experimental
+    ifeq ("$(PIP_VERSION)", "22")
+      ifeq ($(subst "--use-deprecated=legacy-resolver",,$(PIP_XARGS)),)
+        PIP_XARGS := --use-deprecated=legacy-resolver $(PIP_XARGS)
+      endif
     endif
+    # use faster legacy resolver
     ifeq ($(findstring "--use-feature=fast-deps",$(PIP_XARGS)),)
       PIP_XARGS := --use-feature=fast-deps $(PIP_XARGS)
     endif
   endif
 else
   # feature was specified, but should not (not required anymore, default behavior)
-  ifeq ("$(PIP_USE_FEATURE)", "True")
+  ifeq ("$(PIP_VERSION)", "21")
     PIP_XARGS := $(subst "--use-feature=2020-resolver",,"$(PIP_XARGS)")
   else
-    # use faster legacy resolver
-    ifeq $(subst "--use-deprecated=legacy-resolver",,$(PIP_XARGS))
-      PIP_XARGS := --use-deprecated=legacy-resolver $(PIP_XARGS)
+    # revert to legacy resolver while 2020 resolver was still experimental
+    ifeq ("$(PIP_VERSION)", "22")
+      ifeq $(subst "--use-deprecated=legacy-resolver",,$(PIP_XARGS))
+        PIP_XARGS := --use-deprecated=legacy-resolver $(PIP_XARGS)
+      endif
     endif
-  	ifeq ($(findstring "--use-feature=fast-deps",$(PIP_XARGS)),)
+    # use faster legacy resolver
+    ifeq ($(findstring "--use-feature=fast-deps",$(PIP_XARGS)),)
       PIP_XARGS := --use-feature=fast-deps $(PIP_XARGS)
     endif
   endif
@@ -252,7 +261,10 @@ $(DOC_LOCATION):
 
 # NOTE: we need almost all base dependencies because package needs to be parsed to generate OpenAPI
 .PHONY: docs
-docs: install-docs install-pkg clean-docs $(DOC_LOCATION)	## generate Sphinx HTML documentation, including API docs
+docs: install-docs install-pkg docs-only
+
+.PHONY: docs-only
+docs-only: clean-docs $(DOC_LOCATION)	## generate Sphinx HTML documentation, including API docs
 
 .PHONY: docs-show
 docs-show: $(DOC_LOCATION)	## display HTML webpage of generated documentation (build docs if missing)
@@ -308,9 +320,8 @@ install-sys: clean conda-env install-xargs	## install system dependencies and re
 	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) gunicorn'
 
 .PHONY: install-pkg
-install-pkg: install-sys	## install the package to the active Python's site-packages
+install-pkg: conda-env install-sys	## install the package to the active Python's site-packages
 	@echo "Installing $(APP_NAME)..."
-	@bash -c '$(CONDA_CMD) python setup.py install_egg_info'
 	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) --upgrade -e "$(APP_ROOT)" --no-cache'
 
 .PHONY: install-req
@@ -330,14 +341,18 @@ install-dev: conda-env install-xargs	## install package requirements for develop
 
 # install locally to ensure they can be found by config extending them
 .PHONY: install-npm
-install-npm:    		## install npm package manager if it cannot be found
+install-npm:		## install npm package manager if it cannot be found
 	@[ -f "$(shell which npm)" ] || ( \
 		echo "Binary package manager npm not found. Attempting to install it."; \
 		apt-get install npm \
 	)
 	@[ `npm ls 2>/dev/null | grep stylelint-config-standard | wc -l` = 1 ] || ( \
 		echo "Install required libraries for style checks." && \
-		npm install stylelint stylelint-config-standard --save-dev \
+		npm install --save-dev \
+			stylelint \
+			stylelint-scss \
+			stylelint-config-standard \
+			stylelint-csstree-validator \
 	)
 
 ## --- Launchers targets --- ##
@@ -441,12 +456,17 @@ docker-test: docker-build	## execute a smoke test of the built Docker image (val
 docker-stat:  ## query docker-compose images status (from 'docker-test')
 	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_TEST_COMPOSES) ps
 
-DOCKER_COMPOSES := -f "$(APP_ROOT)/docker/docker-compose.example.yml" -f "$(APP_ROOT)/docker/docker-compose.override.example.yml"
+DOCKER_COMPOSES := \
+	-f "$(APP_ROOT)/docker/docker-compose.example.yml" \
+	-f "$(APP_ROOT)/docker/docker-compose.override.example.yml"
 .PHONY: docker-up
 docker-up: docker-build docker-config   ## run all containers using compose
 	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_COMPOSES) up
 
-DOCKER_DEV_COMPOSES := -f "$(APP_ROOT)/docker/docker-compose.example.yml" -f "$(APP_ROOT)/docker/docker-compose.dev.example.yml"
+DOCKER_DEV_COMPOSES := \
+	-f "$(APP_ROOT)/docker/docker-compose.example.yml" \
+	-f "$(APP_ROOT)/docker/docker-compose.dev.example.yml" \
+	-f "$(APP_ROOT)/docker/docker-compose.dev.override.yml"
 .PHONY: docker-up-dev
 docker-up-dev: docker-build   ## run all dependencies containers using compose ready to be used by a local cowbird
 	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_DEV_COMPOSES) up
@@ -455,6 +475,11 @@ docker-up-dev: docker-build   ## run all dependencies containers using compose r
 .PHONY: docker-up-dev-detached
 docker-up-dev-detached:   ## run all dependencies containers using compose ready to be used by a local cowbird, in detached mode
 	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_DEV_COMPOSES) up -d
+
+# used for testing on github's ci
+.PHONY: docker-config-dev
+docker-config-dev:   ## display the docker compose configuration employed by the dev configuration
+	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_DEV_COMPOSES) config
 
 .PHONY: docker-down
 docker-down:  ## stop running containers and remove them
@@ -484,8 +509,20 @@ docker-clean: docker-down  ## remove all built docker images (only matching curr
 mkdir-reports:
 	@mkdir -p "$(REPORTS_DIR)"
 
-CHECKS := pep8 lint security doc8 links imports css
+# autogen check variants with pre-install of dependencies using the '-only' target references
+CHECKS_EXCLUDE ?=
+CHECKS_PYTHON := pep8 lint security doc8 docf links imports types
+CHECKS_NPM := css
+CHECKS_PYTHON := $(filter-out $(CHECKS_EXCLUDE),$(CHECKS_PYTHON))
+CHECKS_NPM := $(filter-out $(CHECKS_EXCLUDE),$(CHECKS_NPM))
+CHECKS := $(CHECKS_PYTHON) $(CHECKS_NPM)
 CHECKS := $(addprefix check-, $(CHECKS))
+
+CHECKS_PYTHON := $(addprefix check-, $(CHECKS_PYTHON))
+$(CHECKS_PYTHON): check-%: install-dev check-%-only
+
+CHECKS_NPM := $(addprefix check-, $(CHECKS_NPM))
+$(CHECKS_NPM): check-%: install-npm check-%-only
 
 .PHONY: check
 check: check-all	## alias for 'check-all' target
@@ -493,15 +530,18 @@ check: check-all	## alias for 'check-all' target
 .PHONY: check-all
 check-all: $(CHECKS)	## run every code style checks
 
-.PHONY: check-pep8
-check-pep8: mkdir-reports install-dev		## run PEP8 code style checks
+.PHONY: check-only
+check-only: $(addsuffix -only, $(CHECKS))	## run all linting checks without development dependencies pre-install
+
+.PHONY: check-pep8-only
+check-pep8-only: mkdir-reports		## run PEP8 code style checks
 	@echo "Running PEP8 code style checks..."
 	@-rm -fr "$(REPORTS_DIR)/check-pep8.txt"
 	@bash -c '$(CONDA_CMD) \
 		flake8 --config="$(APP_ROOT)/setup.cfg" --output-file="$(REPORTS_DIR)/check-pep8.txt" --tee'
 
-.PHONY: check-lint
-check-lint: mkdir-reports install-dev		## run linting code style checks
+.PHONY: check-lint-only
+check-lint-only: mkdir-reports		## run linting code style checks
 	@echo "Running linting code style checks..."
 	@-rm -fr "$(REPORTS_DIR)/check-lint.txt"
 	@bash -c '$(CONDA_CMD) \
@@ -512,69 +552,79 @@ check-lint: mkdir-reports install-dev		## run linting code style checks
 			"$(APP_ROOT)/$(APP_NAME)" "$(APP_ROOT)/docs" "$(APP_ROOT)/tests" \
 		1> >(tee "$(REPORTS_DIR)/check-lint.txt")'
 
-.PHONY: check-security
-check-security: mkdir-reports install-dev	## run security code checks
+.PHONY: check-security-only
+check-security-only: mkdir-reports	## run security code checks
 	@echo "Running security code checks..."
 	@-rm -fr "$(REPORTS_DIR)/check-security.txt"
 	@bash -c '$(CONDA_CMD) \
 		bandit -v --ini "$(APP_ROOT)/setup.cfg" -r \
 		1> >(tee "$(REPORTS_DIR)/check-security.txt")'
 
-.PHONY: check-docs
-check-docs: check-doc8 check-docf	## run every code documentation checks
+.PHONY: check-docs-only
+check-docs-only: check-doc8-only check-docf-only	## run every code documentation checks
 
-.PHONY: check-doc8
-check-doc8:	mkdir-reports install-dev		## run PEP8 documentation style checks
+.PHONY: check-doc8-only
+check-doc8-only: mkdir-reports		## run PEP8 documentation style checks
 	@echo "Running PEP8 doc style checks..."
 	@-rm -fr "$(REPORTS_DIR)/check-doc8.txt"
 	@bash -c '$(CONDA_CMD) \
 		doc8 --config "$(APP_ROOT)/setup.cfg" "$(APP_ROOT)/docs" \
 		1> >(tee "$(REPORTS_DIR)/check-doc8.txt")'
 
-# FIXME: move parameters to setup.cfg when implemented (https://github.com/myint/docformatter/issues/10)
-# NOTE: docformatter only reports files with errors on stderr, redirect trace stderr & stdout to file with tee
-# NOTE:
-#	Don't employ '--wrap-descriptions 120' since they *enforce* that length and rearranges format if any word can fit
-#	within remaining space, which often cause big diffs of ugly formatting for no important reason. Instead only check
-#	general formatting operations, and let other linter capture docstrings going over 120 (what we really care about).
-.PHONY: check-docf
-check-docf: mkdir-reports install-dev	## run PEP8 code documentation format checks
+.PHONY: check-docf-only
+check-docf-only: mkdir-reports	## run PEP8 code documentation format checks
 	@echo "Checking PEP8 doc formatting problems..."
 	@-rm -fr "$(REPORTS_DIR)/check-docf.txt"
 	@bash -c '$(CONDA_CMD) \
 		docformatter \
-			--pre-summary-newline \
-			--wrap-descriptions 0 \
-			--wrap-summaries 120 \
-			--make-summary-multi-line \
 			--check \
 			--recursive \
+			--config "$(APP_ROOT)/setup.cfg" \
 			"$(APP_ROOT)" \
 		1>&2 2> >(tee "$(REPORTS_DIR)/check-docf.txt")'
 
-.PHONY: check-links
-check-links: install-dev	## check all external links in documentation for integrity
+.PHONY: check-links-only
+check-links-only:	## check all external links in documentation for integrity
 	@echo "Running link checks on docs..."
 	@bash -c '$(CONDA_CMD) $(MAKE) -C "$(APP_ROOT)/docs" linkcheck'
 
-.PHONY: check-imports
-check-imports: mkdir-reports install-dev	## run imports code checks
+.PHONY: check-imports-only
+check-imports-only: mkdir-reports	## run imports code checks
 	@echo "Running import checks..."
 	@-rm -fr "$(REPORTS_DIR)/check-imports.txt"
 	@bash -c '$(CONDA_CMD) \
 	 	isort --check-only --diff $(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/check-imports.txt")'
 
-.PHONY: check-css
-check-css: mkdir-reports install-npm
+.PHONY: check-types-only
+check-types-only: mkdir-reports  ## run typing validation
+	@echo "Running type checks..."
+	@@bash -c '$(CONDA_CMD) \
+		mypy --config-file "$(APP_ROOT)/setup.cfg" "$(APP_ROOT)" \
+		1> >(tee "$(REPORTS_DIR)/check-types.txt")'
+
+.PHONY: check-css-only
+check-css-only: mkdir-reports
 	@echo "Running CSS style checks..."
 	@npx stylelint \
 		--config "$(APP_ROOT)/.stylelintrc.json" \
 		--output-file "$(REPORTS_DIR)/fixed-css.txt" \
 		"$(APP_ROOT)/**/*.css"
 
-FIXES := imports lint docf fstring css
+# autogen fix variants with pre-install of dependencies using the '-only' target references
+FIXES_EXCLUDE ?=
+FIXES_PYTHON := imports lint docf fstring
+FIXES_NPM := css
+FIXES_PYTHON := $(filter-out $(FIXES_EXCLUDE),$(FIXES_PYTHON))
+FIXES_NPM := $(filter-out $(FIXES_EXCLUDE),$(FIXES_NPM))
+FIXES := $(FIXES_PYTHON) $(FIXES_NPM)
 FIXES := $(addprefix fix-, $(FIXES))
+
+FIXES_PYTHON := $(addprefix fix-, $(FIXES_PYTHON))
+$(FIXES_PYTHON): fix-%: install-dev fix-%-only
+
+FIXES_NPM := $(addprefix fix-, $(FIXES_NPM))
+$(FIXES_NPM): fix-%: install-npm fix-%-only
 
 .PHONY: fix
 fix: fix-all	## alias for 'fix-all' target
@@ -582,40 +632,39 @@ fix: fix-all	## alias for 'fix-all' target
 .PHONY: fix-all
 fix-all: $(FIXES)	## fix all applicable code check corrections automatically
 
-.PHONY: fix-imports
-fix-imports: install-dev	## fix import code checks corrections automatically
+.PHONY: fix-only
+fix-only: $(addsuffix -only, $(FIXES))	## run all automatic fixes without development dependencies pre-install
+
+.PHONY: fix-imports-only
+fix-imports-only:	## fix import code checks corrections automatically
 	@echo "Fixing flagged import checks..."
 	@-rm -fr "$(REPORTS_DIR)/fixed-imports.txt"
 	@bash -c '$(CONDA_CMD) \
 		isort $(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/fixed-imports.txt")'
 
-.PHONY: fix-lint
-fix-lint: install-dev	## fix some PEP8 code style problems automatically
+.PHONY: fix-lint-only
+fix-lint-only:	## fix some PEP8 code style problems automatically
 	@echo "Fixing PEP8 code style problems..."
 	@-rm -fr "$(REPORTS_DIR)/fixed-lint.txt"
 	@bash -c '$(CONDA_CMD) \
 		autopep8 -v -j 0 -i -r $(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/fixed-lint.txt")'
 
-# FIXME: move parameters to setup.cfg when implemented (https://github.com/myint/docformatter/issues/10)
-.PHONY: fix-docf
-fix-docf: install-dev	## fix some PEP8 code documentation style problems automatically
+.PHONY: fix-docf-only
+fix-docf-only:	## fix some PEP8 code documentation style problems automatically
 	@echo "Fixing PEP8 code documentation problems..."
 	@-rm -fr "$(REPORTS_DIR)/fixed-docf.txt"
 	@bash -c '$(CONDA_CMD) \
 		docformatter \
-			--pre-summary-newline \
-			--wrap-descriptions 0 \
-			--wrap-summaries 120 \
-			--make-summary-multi-line \
 			--in-place \
 			--recursive \
+			--config "$(APP_ROOT)/setup.cfg" \
 			$(APP_ROOT) \
 		1> >(tee "$(REPORTS_DIR)/fixed-docf.txt")'
 
-.PHONY: fix-fstring
-fix-fstring: mkdir-reports install-dev    ## fix code string formats substitutions to f-string definitions automatically
+.PHONY: fix-fstring-only
+fix-fstring-only: mkdir-reports		## fix code string formats substitutions to f-string definitions automatically
 	@echo "Fixing code string formats substitutions to f-string definitions..."
 	@-rm -f "$(REPORTS_DIR)/fixed-fstring.txt"
 	@bash -c '$(CONDA_CMD) \
@@ -623,7 +672,10 @@ fix-fstring: mkdir-reports install-dev    ## fix code string formats substitutio
 		1> >(tee "$(REPORTS_DIR)/fixed-fstring.txt")'
 
 .PHONY: fix-css
-fix-css: mkdir-reports install-npm		## fix CSS styles problems automatically
+fix-css: install-npm fix-css-only
+
+.PHONY: fix-css-only
+fix-css-only: mkdir-reports		## fix CSS styles problems automatically
 	@echo "Fixing CSS style problems..."
 	@npx stylelint \
 		--fix \

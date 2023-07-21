@@ -1,12 +1,8 @@
-from typing import TYPE_CHECKING
+from typing import Any
 
 from cowbird.handlers.handler import Handler
-
-if TYPE_CHECKING:
-    from typing import Any
-
-    # pylint: disable=W0611,unused-import
-    from cowbird.typedefs import SettingsType
+from cowbird.permissions_synchronizer import Permission
+from cowbird.typedefs import SettingsType
 
 
 class Nginx(Handler):
@@ -15,8 +11,7 @@ class Nginx(Handler):
     """
     required_params = []
 
-    def __init__(self, settings, name, **kwargs):
-        # type: (SettingsType, str, Any) -> None
+    def __init__(self, settings: SettingsType, name: str, **kwargs: Any) -> None:
         """
         Create the nginx instance.
 
@@ -25,18 +20,17 @@ class Nginx(Handler):
         """
         super(Nginx, self).__init__(settings, name, **kwargs)
 
-    def get_resource_id(self, resource_full_name):
-        # type: (str) -> str
+    def get_resource_id(self, resource_full_name: str) -> int:
         raise NotImplementedError
 
-    def user_created(self, user_name):
+    def user_created(self, user_name: str) -> None:
         raise NotImplementedError
 
-    def user_deleted(self, user_name):
+    def user_deleted(self, user_name: str) -> None:
         raise NotImplementedError
 
-    def permission_created(self, permission):
+    def permission_created(self, permission: Permission) -> None:
         raise NotImplementedError
 
-    def permission_deleted(self, permission):
+    def permission_deleted(self, permission: Permission) -> None:
         raise NotImplementedError

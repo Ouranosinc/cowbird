@@ -1,0 +1,23 @@
+version: "3.4"
+
+services:
+# using 'host' in this case of CI tests
+#  magpie:
+#    ports:
+#      - "2001:2001"
+
+  mongodb:
+    ports:
+      - "27017:27017"
+
+  postgres:
+    ports:
+      - "5432:5432"
+
+  geoserver:
+    ports:
+      - "8765:8080"
+
+  geoserver-db:
+    ports:
+      - "32767:5432"

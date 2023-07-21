@@ -3,9 +3,10 @@
 import logging
 import os
 import sys
+from typing import Iterable, Set, Tuple, Union
 
 try:
-    from packaging.version import Version as LooseVersion  # noqa
+    from packaging.version import Version as LooseVersion
 except ImportError:
     from distutils.version import LooseVersion
 
@@ -13,16 +14,6 @@ try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
-
-try:
-    # typing only available builtin starting with Python3
-    # cannot employ it during setup, but will be installed afterwards with backport
-    from typing import TYPE_CHECKING  # noqa
-    if TYPE_CHECKING:
-        # pylint: disable=W0611,unused-import
-        from typing import Iterable, Set, Tuple, Union  # noqa: F401
-except ImportError:
-    pass
 
 COWBIRD_ROOT = os.path.abspath(os.path.dirname(__file__))
 COWBIRD_MODULE_DIR = os.path.join(COWBIRD_ROOT, "cowbird")
@@ -44,8 +35,10 @@ with open("CHANGES.rst") as changes_file:
     CHANGES = changes_file.read().replace(".. :changelog:", "")
 
 
-def _split_requirement(requirement, version=False, python=False, merge=False):
-    # type: (str, bool, bool, bool) -> Union[str, Tuple[str, str]]
+def _split_requirement(requirement: str,
+                       version: bool = False,
+                       python: bool = False,
+                       merge: bool = False) -> Union[str, Tuple[str, str]]:
     """
     Splits a requirement package definition into it's name and version specification.
 
@@ -105,8 +98,7 @@ def _split_requirement(requirement, version=False, python=False, merge=False):
     return parts
 
 
-def _parse_requirements(file_path, requirements, links):
-    # type: (str, Set[str], Set[str]) -> None
+def _parse_requirements(file_path: str, requirements: Set[str], links: Set[str]) -> None:
     """
     Parses a requirements file to extra packages and links.
 
@@ -149,8 +141,7 @@ def _parse_requirements(file_path, requirements, links):
                 requirements.add(line.strip())
 
 
-def _extra_requirements(base_requirements, other_requirements):
-    # type: (Iterable[str], Iterable[str]) -> Set[str]
+def _extra_requirements(base_requirements: Iterable[str], other_requirements: Iterable[str]) -> Set[str]:
     """
     Extracts only the extra requirements not already defined within the base requirements.
 
@@ -211,10 +202,13 @@ setup(
         f"License :: OSI Approved :: {__meta__.__license__} License",
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3 :: Only",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
     ],
-    python_requires=">=3.7, <4",
+    python_requires=">=3.8, <4",
 
     # -- Package structure -------------------------------------------------
     packages=[__meta__.__package__],

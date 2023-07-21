@@ -1,3 +1,4 @@
+from pyramid.config import Configurator
 from pyramid.security import NO_PERMISSION_REQUIRED
 
 from cowbird.api import schemas as s
@@ -5,7 +6,7 @@ from cowbird.api.swagger.views import api_schema, api_swagger
 from cowbird.utils import get_logger
 
 
-def includeme(config):
+def includeme(config: Configurator) -> None:
     logger = get_logger(__name__)
     logger.info("Adding swagger...")
     config.add_route(**s.service_api_route_info(s.SwaggerAPI))
