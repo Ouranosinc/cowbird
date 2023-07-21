@@ -70,6 +70,9 @@ class TestRequestTask(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        # Reset handlers instances in case any are left from other test cases
+        utils.clear_handlers_instances()
+
         cls.app = utils.get_test_app(settings={"cowbird.config_path": utils.TEST_CFG_FILE})
 
     @classmethod

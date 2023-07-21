@@ -39,8 +39,7 @@ def get_geoserver_settings():
     """
     load_dotenv(CURR_DIR / "../docker/.env.example")
     config_path = os.path.join(COWBIRD_ROOT, "config/config.example.yml")
-    # Set environment variables with config
-    utils.get_test_app(settings={"cowbird.config_path": config_path})
+
     with open(config_path, "r", encoding="utf-8") as f:
         settings_dictionary = yaml.safe_load(f)
     geoserver_settings = settings_dictionary["handlers"]["Geoserver"]

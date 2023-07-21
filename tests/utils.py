@@ -166,6 +166,9 @@ class MockMagpieHandler(Handler):
     def delete_resource(self, res_id):
         pass
 
+    def resync(self):
+        pass
+
     @staticmethod
     def get_service_types() -> List[str]:
         """
@@ -202,6 +205,9 @@ class MockAnyHandlerBase(Handler):  # noqa  # missing abstract method 'required_
         pass
 
     def permission_deleted(self, permission):
+        pass
+
+    def resync(self):
         pass
 
 

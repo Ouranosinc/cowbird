@@ -60,7 +60,7 @@ class FileSystem(Handler, FSMonitor):
             LOGGER.info("Start monitoring wpsoutputs folder [%s]", self.wps_outputs_dir)
             monitoring.register(self.wps_outputs_dir, True, self)
         else:
-            raise ConfigError(f"Input wpsoutputs folder {self.wps_outputs_dir} does not exist.")
+            LOGGER.warning(f"Input wpsoutputs folder {self.wps_outputs_dir} does not exist.")
 
     def get_resource_id(self, resource_full_name: str) -> int:
         raise NotImplementedError

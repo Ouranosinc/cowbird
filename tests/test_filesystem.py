@@ -242,12 +242,12 @@ class TestFileSystem(unittest.TestCase):
         with self.assertLogs("cowbird.handlers.impl.filesystem", level=logging.DEBUG) as log_capture:
             filesystem_handler.on_deleted(output_file_path)
             assert not os.path.exists(hardlink_path)
-            assert len(log_capture.records) == 0
+            assert len([r for r in log_capture.records if r.levelno == logging.DEBUG]) == 0
 
             # Should not fail if hardlink does not exist, but should display log message instead
             filesystem_handler.on_deleted(output_file_path)
             assert not os.path.exists(hardlink_path)
-            assert len(log_capture.records) == 1
+            assert len([r for r in log_capture.records if r.levelno == logging.DEBUG]) == 1
 
         # Test folder paths, the removal of a source folder should also remove the linked folder.
         weaver_linked_dir = os.path.join(filesystem_handler.get_wps_outputs_public_dir(), "weaver")
