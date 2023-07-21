@@ -4,7 +4,6 @@ import shutil
 from typing import Any
 from pathlib import Path
 
-from cowbird.config import ConfigError
 from cowbird.handlers import HandlerFactory
 from cowbird.handlers.handler import HANDLER_WORKSPACE_DIR_PARAM, Handler
 from cowbird.permissions_synchronizer import Permission
@@ -60,7 +59,7 @@ class FileSystem(Handler, FSMonitor):
             LOGGER.info("Start monitoring wpsoutputs folder [%s]", self.wps_outputs_dir)
             monitoring.register(self.wps_outputs_dir, True, self)
         else:
-            LOGGER.warning(f"Input wpsoutputs folder {self.wps_outputs_dir} does not exist.")
+            LOGGER.warning("Input wpsoutputs folder [%s] does not exist.", self.wps_outputs_dir)
 
     def get_resource_id(self, resource_full_name: str) -> int:
         raise NotImplementedError

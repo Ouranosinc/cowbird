@@ -24,7 +24,7 @@ or to manage file modification events.
 .. _components_filesystem:
 
 FileSystem
-~~~~~~~~~
+~~~~~~~~~~
 
 The `FileSystem` handler is used to manage some aspects of the folder/file structure associated with the platform.
 It is specifically used to handle user workspaces and the user access to different other folders.
