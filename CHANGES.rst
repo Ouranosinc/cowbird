@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`2.0.0 <https://github.com/Ouranosinc/cowbird/tree/2.0.0>`_ (2023-07-21)
+------------------------------------------------------------------------------------
+
 * Update Docker image to use ``python:3.10-alpine`` instead of ``python:3.7-alpine`` for
   latest security updates and performance improvements.
 * Update GitHub CI tests to include Python 3.9, 3.10 and 3.11, and use 3.10 by default for additional checks.
