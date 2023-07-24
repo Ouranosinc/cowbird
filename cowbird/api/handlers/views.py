@@ -39,7 +39,7 @@ def get_handler_view(request: Request) -> AnyResponseType:
 @s.HandlerResyncAPI.put(schema=s.HandlerResync_PUT_RequestSchema, tags=[s.HandlersTag],
                         response_schemas=s.HandlerResync_PUT_responses)
 @view_config(route_name=s.HandlerResyncAPI.name, request_method="PUT")
-def resync_handler_view(request):
+def resync_handler_view(request: Request) -> AnyResponseType:
     """
     Resync handler operation.
     """

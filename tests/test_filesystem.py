@@ -5,7 +5,6 @@ import tempfile
 import unittest
 from pathlib import Path
 from time import sleep
-from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import pytest
@@ -14,10 +13,8 @@ from webtest.app import TestApp
 
 from cowbird.handlers import HandlerFactory
 from cowbird.handlers.impl.filesystem import NOTEBOOKS_DIR_NAME
+from cowbird.typedefs import JSON
 from tests import utils
-
-if TYPE_CHECKING:
-    from cowbird.typedefs import JSON
 
 CURR_DIR = Path(__file__).resolve().parent
 
@@ -55,8 +52,7 @@ class TestFileSystem(unittest.TestCase):
         utils.clear_handlers_instances()
         self.test_directory.cleanup()
 
-    def get_test_app(self, cfg_data):
-        # type: (JSON) -> TestApp
+    def get_test_app(self, cfg_data: JSON) -> TestApp:
         cfg_file = os.path.join(self.test_directory.name, "config.yml")
         with open(cfg_file, "w", encoding="utf-8") as f:
             f.write(yaml.safe_dump(cfg_data))

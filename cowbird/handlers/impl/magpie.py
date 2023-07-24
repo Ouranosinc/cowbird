@@ -216,8 +216,7 @@ class Magpie(Handler):
                 parent_id=workspace_res_id)
         return layer_res_id
 
-    def get_user_name_from_user_id(self, user_id):
-        # type: (int) -> str
+    def get_user_name_from_user_id(self, user_id: int) -> str:
         """
         Finds the name of a user from his user id.
         """
@@ -277,7 +276,7 @@ class Magpie(Handler):
     def permission_deleted(self, permission: Permission) -> None:
         self.permissions_synch.delete_permission(permission)
 
-    def resync(self):
+    def resync(self) -> None:
         raise NotImplementedError
 
     def create_permissions(self, permissions_data: List[PermissionConfigItemType]) -> None:

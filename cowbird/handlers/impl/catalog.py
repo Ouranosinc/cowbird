@@ -75,5 +75,5 @@ class Catalog(Handler, FSMonitor):
         """
         LOGGER.info("The following path [%s] has just been modified", path)
 
-    def resync(self):
+    def resync(self) -> None:
         raise NotImplementedError

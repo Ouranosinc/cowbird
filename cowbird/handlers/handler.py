@@ -119,5 +119,5 @@ class Handler(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def resync(self):
+    def resync(self) -> None:
         raise NotImplementedError

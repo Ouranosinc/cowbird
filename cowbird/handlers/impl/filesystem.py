@@ -1,15 +1,15 @@
 import os
 import re
 import shutil
-from typing import Any
 from pathlib import Path
+from typing import Any
 
 from cowbird.handlers import HandlerFactory
 from cowbird.handlers.handler import HANDLER_WORKSPACE_DIR_PARAM, Handler
-from cowbird.permissions_synchronizer import Permission
-from cowbird.typedefs import SettingsType
 from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
+from cowbird.permissions_synchronizer import Permission
+from cowbird.typedefs import SettingsType
 from cowbird.utils import get_logger
 
 LOGGER = get_logger(__name__)
@@ -53,8 +53,7 @@ class FileSystem(Handler, FSMonitor):
         # {self.wps_outputs_dir}/<wps-bird-name>/users/<user-uuid>/...
         self.wps_outputs_users_regex = rf"^{self.wps_outputs_dir}/\w+/users/(\d+)/(.+)"
 
-    def start_wpsoutputs_monitoring(self, monitoring):
-        # type: (Monitoring) -> None
+    def start_wpsoutputs_monitoring(self, monitoring: Monitoring) -> None:
         if os.path.exists(self.wps_outputs_dir):
             LOGGER.info("Start monitoring wpsoutputs folder [%s]", self.wps_outputs_dir)
             monitoring.register(self.wps_outputs_dir, True, self)
@@ -67,14 +66,14 @@ class FileSystem(Handler, FSMonitor):
     def _get_user_workspace_dir(self, user_name: str) -> str:
         return os.path.join(self.workspace_dir, user_name)
 
-    def get_wps_outputs_public_dir(self):
+    def get_wps_outputs_public_dir(self) -> str:
         return os.path.join(self.workspace_dir, self.wps_outputs_public_subdir)
 
     def _get_jupyterhub_user_data_dir(self, user_name: str) -> str:
         return os.path.join(self.jupyterhub_user_data_dir, user_name)
 
     @staticmethod
-    def _create_symlink_dir(src: str, dst: str): -> None
+    def _create_symlink_dir(src: str, dst: str) -> None:
         create_symlink = False
 
         # Check if creating a new symlink is required
@@ -91,7 +90,6 @@ class FileSystem(Handler, FSMonitor):
 
         if create_symlink:
             os.symlink(src, dst, target_is_directory=True)
-
 
     def user_created(self, user_name: str) -> None:
         user_workspace_dir = self._get_user_workspace_dir(user_name)
@@ -112,20 +110,19 @@ class FileSystem(Handler, FSMonitor):
             LOGGER.info("User workspace directory not found (skip removal): [%s]", user_workspace_dir)
 
     @staticmethod
-    def get_instance():
-        # type: () -> FileSystem
+    def get_instance() -> "FileSystem":
         """
-        Return the FileSYstem singleton instance from the class name used to retrieve the FSMonitor from the DB.
+        Return the FileSystem singleton instance from the class name used to retrieve the FSMonitor from the DB.
         """
         return HandlerFactory().get_handler("FileSystem")
 
-    def _get_public_hardlink(self, src_path):
+    def _get_public_hardlink(self, src_path: str) -> str:
         subpath = os.path.relpath(src_path, self.wps_outputs_dir)
         return os.path.join(self.get_wps_outputs_public_dir(), subpath)
 
-    def _create_wpsoutputs_hardlink(self, src_path, overwrite=False):
+    def _create_wpsoutputs_hardlink(self, src_path: str, overwrite: bool = False) -> None:
         regex_match = re.search(self.wps_outputs_users_regex, src_path)
-        if regex_match:  # user files  # pylint: disable=R1705
+        if regex_match:  # user files  # pylint: disable=R1705,no-else-return
             return  # TODO: implement user hardlinks
         else:  # public files
             hardlink_path = self._get_public_hardlink(src_path)
@@ -146,8 +143,7 @@ class FileSystem(Handler, FSMonitor):
         except Exception as exc:
             LOGGER.warning("Failed to create hardlink `%s` : %s", hardlink_path, exc)
 
-    def on_created(self, path):
-        # type: (str) -> None
+    def on_created(self, path: str) -> None:
         """
         Call when a new path is found.
 
@@ -158,8 +154,7 @@ class FileSystem(Handler, FSMonitor):
             LOGGER.info("Creating hardlink for the new file path `%s`", path)
             self._create_wpsoutputs_hardlink(src_path=path, overwrite=True)
 
-    def on_modified(self, path):
-        # type: (str) -> None
+    def on_modified(self, path: str) -> None:
         """
         Called when a path is updated.
 
@@ -167,8 +162,7 @@ class FileSystem(Handler, FSMonitor):
         """
         # Nothing to do for files in the wps_outputs folder, since hardlinks are updated automatically.
 
-    def on_deleted(self, path):
-        # type: (str) -> None
+    def on_deleted(self, path: str) -> None:
         """
         Called when a path is deleted.
 
@@ -178,7 +172,7 @@ class FileSystem(Handler, FSMonitor):
             LOGGER.info("Removing link associated to the deleted path `%s`", path)
             regex_match = re.search(self.wps_outputs_users_regex, path)
             try:
-                if regex_match:  # user paths  # pylint: disable=R1705
+                if regex_match:  # user paths  # pylint: disable=R1705,no-else-return
                     return  # TODO: implement user hardlinks
                 else:  # public paths
                     linked_path = self._get_public_hardlink(path)
@@ -195,7 +189,7 @@ class FileSystem(Handler, FSMonitor):
     def permission_deleted(self, permission: Permission) -> None:
         raise NotImplementedError
 
-    def resync(self):
+    def resync(self) -> None:
         """
         Resync operation, regenerating required links (user_workspace, wpsoutputs, ...)
         """

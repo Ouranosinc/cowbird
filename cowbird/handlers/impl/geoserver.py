@@ -419,7 +419,7 @@ class Geoserver(Handler, FSMonitor):
             workspace_name, shapefile_name = self._get_shapefile_info(path)
             self._update_magpie_layer_permissions(workspace_name, shapefile_name)
 
-    def resync(self):
+    def resync(self) -> None:
         raise NotImplementedError
 
     @staticmethod
