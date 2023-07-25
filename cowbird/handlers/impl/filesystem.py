@@ -198,8 +198,17 @@ class FileSystem(Handler, FSMonitor):
             LOGGER.warning("Skipping resync operation for wpsoutputs folder since the source folder `%s` could not be "
                            "found", self.wps_outputs_dir)
         else:
-            # Delete the linked public folder
-            shutil.rmtree(self.get_wps_outputs_public_dir(), ignore_errors=True)
+            # Delete the content of the linked public folder, but keep the folder to avoid breaking the volume
+            # if the folder is mounted on a Docker container
+            for filename in os.listdir(self.get_wps_outputs_public_dir()):
+                file_path = os.path.join(self.get_wps_outputs_public_dir(), filename)
+                try:
+                    if os.path.isfile(file_path):
+                        os.remove(file_path)
+                    elif os.path.isdir(file_path):
+                        shutil.rmtree(file_path)
+                except Exception as exc:
+                    LOGGER.error("Failed to delete path [%s] : %s", file_path, exc)
 
             # TODO: remove the users hardlinks to wpsoutputs too
 
