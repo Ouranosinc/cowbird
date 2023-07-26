@@ -15,6 +15,7 @@ from cowbird.utils import get_logger
 LOGGER = get_logger(__name__)
 
 NOTEBOOKS_DIR_NAME = "notebooks"
+USER_WPS_OUTPUTS_USER_DIR_NAME = "wpsoutputs"
 
 
 class FileSystem(Handler, FSMonitor):
@@ -51,7 +52,7 @@ class FileSystem(Handler, FSMonitor):
 
         # Regex to find any directory or file found in the `users` output path of a 'bird' service
         # {self.wps_outputs_dir}/<wps-bird-name>/users/<user-uuid>/...
-        self.wps_outputs_users_regex = rf"^{self.wps_outputs_dir}/\w+/users/(\d+)/(.+)"
+        self.wps_outputs_users_regex = rf"^{self.wps_outputs_dir}/(\w+)/users/(\d+)/(.+)"
 
     def start_wpsoutputs_monitoring(self, monitoring: Monitoring) -> None:
         if os.path.exists(self.wps_outputs_dir):
@@ -65,6 +66,9 @@ class FileSystem(Handler, FSMonitor):
 
     def _get_user_workspace_dir(self, user_name: str) -> str:
         return os.path.join(self.workspace_dir, user_name)
+
+    def _get_wps_outputs_user_dir(self, user_name: str) -> str:
+        return os.path.join(self._get_user_workspace_dir(user_name), USER_WPS_OUTPUTS_USER_DIR_NAME)
 
     def get_wps_outputs_public_dir(self) -> str:
         return os.path.join(self.workspace_dir, self.wps_outputs_public_subdir)
@@ -120,10 +124,29 @@ class FileSystem(Handler, FSMonitor):
         subpath = os.path.relpath(src_path, self.wps_outputs_dir)
         return os.path.join(self.get_wps_outputs_public_dir(), subpath)
 
+    def _get_user_hardlink(self, src_path, regex_match):
+        bird_name = regex_match.group(1)
+        user_id = int(regex_match.group(2))
+        subpath = os.path.join(bird_name, regex_match.group(3))
+
+        magpie_handler = HandlerFactory().get_handler("Magpie")
+        user_name = magpie_handler.get_user_name_from_user_id(user_id)
+        user_workspace_dir = self._get_user_workspace_dir(user_name)
+
+        if not os.path.exists(user_workspace_dir):
+            raise FileNotFoundError(f"User {user_name} workspace not found at path {user_workspace_dir}. New "
+                                    f"wpsoutput {src_path} not added to the user workspace.")
+
+        # TODO: apply call to magpie/secure-data-proxy, remove link if exists and no permission,
+        #  add link if doesn't exists and permission
+
+        return os.path.join(self._get_wps_outputs_user_dir(user_name), subpath)
+
     def _create_wpsoutputs_hardlink(self, src_path: str, overwrite: bool = False) -> None:
         regex_match = re.search(self.wps_outputs_users_regex, src_path)
-        if regex_match:  # user files  # pylint: disable=R1705,no-else-return
-            return  # TODO: implement user hardlinks
+        if regex_match:  # user files
+            hardlink_path = self._get_user_hardlink(src_path, regex_match)
+            # TODO: check what to do if no access permitted and a hardlink already exists
         else:  # public files
             hardlink_path = self._get_public_hardlink(src_path)
 
@@ -172,8 +195,8 @@ class FileSystem(Handler, FSMonitor):
             LOGGER.info("Removing link associated to the deleted path `%s`", path)
             regex_match = re.search(self.wps_outputs_users_regex, path)
             try:
-                if regex_match:  # user paths  # pylint: disable=R1705,no-else-return
-                    return  # TODO: implement user hardlinks
+                if regex_match:  # user paths
+                    linked_path = self._get_user_hardlink(path, regex_match)
                 else:  # public paths
                     linked_path = self._get_public_hardlink(path)
                 if os.path.isdir(linked_path):

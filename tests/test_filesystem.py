@@ -8,12 +8,13 @@ from unittest.mock import patch
 
 import pytest
 import yaml
+from dotenv import load_dotenv
 from webtest.app import TestApp
 
 from cowbird.handlers import HandlerFactory
 from cowbird.handlers.impl.filesystem import NOTEBOOKS_DIR_NAME
 from cowbird.typedefs import JSON
-from tests import utils
+from tests import utils, test_magpie
 
 CURR_DIR = Path(__file__).resolve().parent
 
@@ -164,6 +165,34 @@ class TestFileSystem(unittest.TestCase):
         # The callback url should have been called if an exception occurred during the handler's operations.
         mock_head_request.assert_called_with(self.callback_url, verify=True, timeout=5)
 
+    @staticmethod
+    def check_created_test_cases(output_path, hardlink_path):
+        """
+        Runs multiple test cases for the creation of hardlinks, which are the same for public and user files.
+        """
+        # Make sure the hardlink doesn't already exist for the test cases
+        Path(hardlink_path).unlink(missing_ok=True)
+
+        filesystem_handler = HandlerFactory().get_handler("FileSystem")
+        filesystem_handler.on_created(output_path)
+        assert os.stat(hardlink_path).st_nlink == 2
+
+        # A create event should still work if the target directory already exists
+        os.remove(hardlink_path)
+        filesystem_handler.on_created(output_path)
+        assert os.stat(hardlink_path).st_nlink == 2
+
+        # A create event should replace a hardlink path with the new file if the target path already exists
+        os.remove(hardlink_path)
+        with open(hardlink_path, mode="w", encoding="utf-8"):
+            pass
+        original_hardlink_ino = Path(hardlink_path).stat().st_ino
+        filesystem_handler.on_created(output_path)
+        new_hardlink_ino = Path(hardlink_path).stat().st_ino
+        assert original_hardlink_ino != new_hardlink_ino
+        assert Path(output_path).stat().st_ino == new_hardlink_ino
+        assert os.stat(hardlink_path).st_nlink == 2
+
     def test_public_wps_output_created(self):
         """
         Tests creating a public wps output file.
@@ -177,39 +206,23 @@ class TestFileSystem(unittest.TestCase):
                     "wps_outputs_dir": self.wpsoutputs_dir}}})
 
         # Create a test wps output file
-        output_subpath = "weaver/test_output.txt"
+        bird_name = "weaver"
+        output_subpath = f"{bird_name}/test_output.txt"
         output_file = os.path.join(self.wpsoutputs_dir, output_subpath)
         os.makedirs(os.path.dirname(output_file))
         with open(output_file, mode="w", encoding="utf-8"):
             pass
 
         filesystem_handler = HandlerFactory().get_handler("FileSystem")
-        filesystem_handler.on_created(output_file)
-
         hardlink_path = os.path.join(filesystem_handler.get_wps_outputs_public_dir(), output_subpath)
-        assert os.stat(hardlink_path).st_nlink == 2
 
-        # A create event should still work if the target directory already exists
-        os.remove(hardlink_path)
-        filesystem_handler.on_created(output_file)
-        assert os.stat(hardlink_path).st_nlink == 2
-
-        # A create event should replace a hardlink path with the new file if the target path already exists
-        os.remove(hardlink_path)
-        with open(hardlink_path, mode="w", encoding="utf-8"):
-            pass
-        original_hardlink_ino = Path(hardlink_path).stat().st_ino
-        filesystem_handler.on_created(output_file)
-        new_hardlink_ino = Path(hardlink_path).stat().st_ino
-        assert original_hardlink_ino != new_hardlink_ino
-        assert Path(output_file).stat().st_ino == new_hardlink_ino
-        assert os.stat(hardlink_path).st_nlink == 2
+        TestFileSystem.check_created_test_cases(output_file, hardlink_path)
 
         # A create event on a folder should not be processed (no corresponding target folder created)
-        target_weaver_dir = os.path.join(filesystem_handler.get_wps_outputs_public_dir(), "weaver")
-        shutil.rmtree(target_weaver_dir)
-        filesystem_handler.on_created(os.path.join(self.wpsoutputs_dir, "weaver"))
-        assert not os.path.exists(target_weaver_dir)
+        target_dir = os.path.join(filesystem_handler.get_wps_outputs_public_dir(), bird_name)
+        shutil.rmtree(target_dir)
+        filesystem_handler.on_created(os.path.join(self.wpsoutputs_dir, bird_name))
+        assert not os.path.exists(target_dir)
 
     def test_public_wps_output_deleted(self):
         """
@@ -249,6 +262,63 @@ class TestFileSystem(unittest.TestCase):
         assert os.path.exists(weaver_linked_dir)
         filesystem_handler.on_deleted(os.path.join(self.wpsoutputs_dir, "weaver"))
         assert not os.path.exists(weaver_linked_dir)
+
+    def test_user_wps_output_created(self):
+        """
+        Tests creating a wps output for a user.
+        """
+        load_dotenv(CURR_DIR / "../docker/.env.example")
+        self.get_test_app({
+            "handlers": {
+                "Magpie": {
+                    "active": True,
+                    "url": os.getenv("COWBIRD_TEST_MAGPIE_URL"),
+                    "admin_user": os.getenv("MAGPIE_ADMIN_USER"),
+                    "admin_password": os.getenv("MAGPIE_ADMIN_PASSWORD")},
+                "FileSystem": {
+                    "active": True,
+                    "workspace_dir": self.workspace_dir,
+                    "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
+                    "wps_outputs_dir": self.wpsoutputs_dir}}})
+
+        # Reset test user
+        magpie_test_user = "test_user"
+        magpie_handler = HandlerFactory().get_handler("Magpie")
+        test_magpie.delete_user(magpie_handler, magpie_test_user)
+        user_id = test_magpie.create_user(magpie_handler, magpie_test_user,
+                                          "test@test.com", "qwertyqwerty", "users")
+        job_id = 1
+
+        bird_name = "weaver"
+        output_subpath = f"{job_id}/test_output.txt"
+        output_file = os.path.join(self.wpsoutputs_dir, f"{bird_name}/users/{user_id}/{output_subpath}")
+        # Hardlink for user files doesn't use the full subpath, but removes the redundant `users` and `{user_id}` parts.
+        hardlink_subpath = f"{bird_name}/{output_subpath}"
+
+        # Create a test wps output file
+        os.makedirs(os.path.dirname(output_file))
+        with open(output_file, mode="w", encoding="utf-8"):
+            pass
+
+        filesystem_handler = HandlerFactory().get_handler("FileSystem")
+        # Error expected if the user workspace does not exist
+        with pytest.raises(FileNotFoundError):
+            filesystem_handler.on_created(output_file)
+
+        # Create the user workspace
+        filesystem_handler.user_created(magpie_test_user)
+
+        wps_outputs_user_dir = filesystem_handler._get_wps_outputs_user_dir(magpie_test_user)
+        hardlink_path = os.path.join(wps_outputs_user_dir, hardlink_subpath)
+
+        self.check_created_test_cases(output_file, hardlink_path)
+
+        # A create event on a folder should not be processed (no corresponding target folder created)
+        src_dir = os.path.join(self.wpsoutputs_dir, f"{bird_name}/users/{user_id}/{job_id}")
+        target_dir = os.path.join(wps_outputs_user_dir, f"{bird_name}/{job_id}")
+        shutil.rmtree(target_dir)
+        filesystem_handler.on_created(src_dir)
+        assert not os.path.exists(target_dir)
 
     def test_resync(self):
         """
