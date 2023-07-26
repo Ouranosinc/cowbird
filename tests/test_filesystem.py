@@ -4,7 +4,6 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
-from time import sleep
 from unittest.mock import patch
 
 import pytest
@@ -199,12 +198,12 @@ class TestFileSystem(unittest.TestCase):
         os.remove(hardlink_path)
         with open(hardlink_path, mode="w", encoding="utf-8"):
             pass
-        original_ctime = Path(output_file).stat().st_ctime
-        sleep(1)
+        original_hardlink_ino = Path(hardlink_path).stat().st_ino
         filesystem_handler.on_created(output_file)
-        new_ctime = Path(output_file).stat().st_ctime
+        new_hardlink_ino = Path(hardlink_path).stat().st_ino
+        assert original_hardlink_ino != new_hardlink_ino
+        assert Path(output_file).stat().st_ino == new_hardlink_ino
         assert os.stat(hardlink_path).st_nlink == 2
-        assert original_ctime != new_ctime
 
         # A create event on a folder should not be processed (no corresponding target folder created)
         target_weaver_dir = os.path.join(filesystem_handler.get_wps_outputs_public_dir(), "weaver")
