@@ -278,8 +278,14 @@ class TestFileSystemBasic(TestFileSystem):
         """
         Tests resync operation for the handler.
         """
+        load_dotenv(CURR_DIR / "../docker/.env.example")
         app = self.get_test_app({
             "handlers": {
+                "Magpie": {
+                    "active": True,
+                    "url": os.getenv("COWBIRD_TEST_MAGPIE_URL"),
+                    "admin_user": os.getenv("MAGPIE_ADMIN_USER"),
+                    "admin_password": os.getenv("MAGPIE_ADMIN_PASSWORD")},
                 "FileSystem": {
                     "active": True,
                     "workspace_dir": self.workspace_dir,
@@ -370,7 +376,7 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
     def setUp(self):
         super().setUp()
         load_dotenv(CURR_DIR / "../docker/.env.example")
-        self.get_test_app({
+        self.app = self.get_test_app({
             "handlers": {
                 "Magpie": {
                     "active": True,
@@ -524,3 +530,41 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
         assert os.path.exists(target_dir)
         filesystem_handler.on_deleted(src_dir)
         assert not os.path.exists(target_dir)
+
+    def test_resync(self):
+        """
+        Tests resync operation on wpsoutputs user data.
+        """
+        filesystem_handler = HandlerFactory().get_handler("FileSystem")
+        filesystem_handler.user_created(self.test_username)
+
+        test_dir = os.path.join(self.wps_outputs_user_dir, f"{self.bird_name}/{self.job_id}")
+
+        # Create a file in a subfolder of the linked folder that should be removed by the resync
+        old_nested_file = os.path.join(test_dir, "old_dir/old_file.txt")
+        os.makedirs(os.path.dirname(old_nested_file))
+        with open(old_nested_file, mode="w", encoding="utf-8"):
+            pass
+
+        # Create an empty subfolder in the linked folder that should be removed by the resync
+        old_subdir = os.path.join(test_dir, "empty_subdir")
+        os.mkdir(old_subdir)
+
+        # Create a new empty dir (should not appear in the resynced wpsoutputs since only files are processed)
+        new_dir = os.path.join(self.wpsoutputs_dir, f"{self.bird_name}/users/{self.user_id}/new_dir")
+        os.mkdir(new_dir)
+        new_dir_linked_path = os.path.join(self.wps_outputs_user_dir, f"{self.bird_name}/new_dir")
+
+        # Check that old files exist before applying the resync
+        assert not os.path.exists(self.hardlink_path)
+        assert os.path.exists(old_nested_file)
+        assert os.path.exists(old_subdir)
+
+        resp = utils.test_request(self.app, "PUT", "/handlers/FileSystem/resync")
+
+        # Check that new hardlinks are generated and old files are removed
+        assert resp.status_code == 200
+        assert os.stat(self.hardlink_path).st_nlink == 2
+        assert not os.path.exists(new_dir_linked_path)
+        assert not os.path.exists(old_nested_file)
+        assert not os.path.exists(old_subdir)

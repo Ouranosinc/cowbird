@@ -292,17 +292,25 @@ class FileSystem(Handler, FSMonitor):
         else:
             # Delete the content of the linked public folder, but keep the folder to avoid breaking the volume
             # if the folder is mounted on a Docker container
-            for filename in os.listdir(self.get_wps_outputs_public_dir()):
-                file_path = os.path.join(self.get_wps_outputs_public_dir(), filename)
-                try:
-                    if os.path.isfile(file_path):
-                        os.remove(file_path)
-                    elif os.path.isdir(file_path):
-                        shutil.rmtree(file_path)
-                except Exception as exc:
-                    LOGGER.error("Failed to delete path [%s] : %s", file_path, exc)
+            wps_outputs_public_dir = self.get_wps_outputs_public_dir()
+            if not os.path.exists(wps_outputs_public_dir):
+                LOGGER.debug("Linked public wps outputs data folder [%s] does not exist. "
+                             "No public file to delete for the resync operation.", wps_outputs_public_dir)
+            else:
+                for filename in os.listdir(wps_outputs_public_dir):
+                    file_path = os.path.join(wps_outputs_public_dir, filename)
+                    try:
+                        if os.path.isfile(file_path):
+                            os.remove(file_path)
+                        elif os.path.isdir(file_path):
+                            shutil.rmtree(file_path)
+                    except Exception as exc:
+                        LOGGER.error("Failed to delete path [%s] : %s", file_path, exc)
 
-            # TODO: remove the users hardlinks to wpsoutputs too
+            # Delete wps outputs hardlinks for each user
+            user_list = HandlerFactory().get_handler("Magpie").get_user_list()
+            for user_name in user_list:
+                shutil.rmtree(self.get_wps_outputs_user_dir(user_name), ignore_errors=True)
 
             # Create all hardlinks from files of the current source folder
             for root, _, filenames in os.walk(self.wps_outputs_dir):

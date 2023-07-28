@@ -216,6 +216,15 @@ class Magpie(Handler):
                 parent_id=workspace_res_id)
         return layer_res_id
 
+    def get_user_list(self) -> List[str]:
+        """
+        Returns the list of all Magpie users.
+        """
+        resp = self._send_request(method="GET", url=f"{self.url}/users", params={"detail": False})
+        if resp.status_code != 200:
+            raise MagpieHttpError(f"Could not find the list of users. HttpError {resp.status_code} : {resp.text}")
+        return resp.json()["user_names"]
+
     def get_user_name_from_user_id(self, user_id: int) -> str:
         """
         Finds the name of a user from his user id.
