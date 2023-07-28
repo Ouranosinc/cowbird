@@ -1,8 +1,13 @@
 import os
 import re
 import shutil
+import stat
 from pathlib import Path
-from typing import Any
+from typing import Any, Tuple, cast
+
+from magpie.permissions import Access
+from magpie.permissions import Permission as MagpiePermission
+from magpie.services import ServiceAPI
 
 from cowbird.handlers import HandlerFactory
 from cowbird.handlers.handler import HANDLER_WORKSPACE_DIR_PARAM, Handler
@@ -10,11 +15,12 @@ from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
 from cowbird.permissions_synchronizer import Permission
 from cowbird.typedefs import SettingsType
-from cowbird.utils import get_logger
+from cowbird.utils import get_logger, update_filesystem_permissions
 
 LOGGER = get_logger(__name__)
 
 NOTEBOOKS_DIR_NAME = "notebooks"
+SECURE_DATA_PROXY_NAME = "secure-data-proxy"
 USER_WPS_OUTPUTS_USER_DIR_NAME = "wpsoutputs"
 
 
@@ -67,7 +73,7 @@ class FileSystem(Handler, FSMonitor):
     def _get_user_workspace_dir(self, user_name: str) -> str:
         return os.path.join(self.workspace_dir, user_name)
 
-    def _get_wps_outputs_user_dir(self, user_name: str) -> str:
+    def get_wps_outputs_user_dir(self, user_name: str) -> str:
         return os.path.join(self._get_user_workspace_dir(user_name), USER_WPS_OUTPUTS_USER_DIR_NAME)
 
     def get_wps_outputs_public_dir(self) -> str:
@@ -124,34 +130,88 @@ class FileSystem(Handler, FSMonitor):
         subpath = os.path.relpath(src_path, self.wps_outputs_dir)
         return os.path.join(self.get_wps_outputs_public_dir(), subpath)
 
-    def _get_user_hardlink(self, src_path, regex_match):
-        bird_name = regex_match.group(1)
-        user_id = int(regex_match.group(2))
-        subpath = os.path.join(bird_name, regex_match.group(3))
-
-        magpie_handler = HandlerFactory().get_handler("Magpie")
-        user_name = magpie_handler.get_user_name_from_user_id(user_id)
+    def _get_user_hardlink(self, src_path: str, bird_name: str, user_name: str, subpath: str) -> str:
         user_workspace_dir = self._get_user_workspace_dir(user_name)
-
         if not os.path.exists(user_workspace_dir):
             raise FileNotFoundError(f"User {user_name} workspace not found at path {user_workspace_dir}. New "
                                     f"wpsoutput {src_path} not added to the user workspace.")
 
-        # TODO: apply call to magpie/secure-data-proxy, remove link if exists and no permission,
-        #  add link if doesn't exists and permission
+        subpath = os.path.join(bird_name, subpath)
+        return os.path.join(self.get_wps_outputs_user_dir(user_name), subpath)
 
-        return os.path.join(self._get_wps_outputs_user_dir(user_name), subpath)
+    def _get_secure_data_proxy_file_perms(self, src_path: str, user_name: str) -> Tuple[bool, bool]:
+        """
+        Finds a route from the `secure-data-proxy service` that matches the resource path (or one its parent resource)
+        and gets the user permissions on that route.
+        """
+        magpie_handler = HandlerFactory().get_handler("Magpie")
+        sdp_svc_info = magpie_handler.get_service_info("secure-data-proxy")
+        # Find the closest related route resource
+        expected_route = re.sub(rf"^{self.wps_outputs_dir}", "wpsoutputs", src_path)
+
+        # Finds the resource id of the route matching the resource or the closest matching parent route.
+        closest_res_id = None
+        resource = magpie_handler.get_resource(cast(int, sdp_svc_info["resource_id"]))
+        for segment in expected_route.split("/"):
+            child_res_id = None
+            for child in resource["children"].values():
+                if child["resource_name"] == segment:
+                    child_res_id = cast(int, child["resource_id"])
+                    resource = child
+                    break
+            if not child_res_id:
+                break
+            closest_res_id = child_res_id
+
+        if not closest_res_id:
+            # No resource was found to be corresponding to even some part of the expected route.
+            # Assume access is not allowed.
+            is_readable = False
+            is_writable = False
+        else:
+            # Resolve permissions
+            res_perms = magpie_handler.get_user_permissions_by_res_id(user=user_name,
+                                                                      res_id=closest_res_id,
+                                                                      effective=True)["permissions"]
+            read_access = [perm["access"] for perm in res_perms
+                           if perm["name"] == MagpiePermission.READ.value][0]
+            write_access = [perm["access"] for perm in res_perms
+                            if perm["name"] == MagpiePermission.WRITE.value][0]
+            is_readable = read_access == Access.ALLOW.value
+            is_writable = write_access == Access.ALLOW.value
+        return is_readable, is_writable
 
     def _create_wpsoutputs_hardlink(self, src_path: str, overwrite: bool = False) -> None:
         regex_match = re.search(self.wps_outputs_users_regex, src_path)
+        access_allowed = True
         if regex_match:  # user files
-            hardlink_path = self._get_user_hardlink(src_path, regex_match)
-            # TODO: check what to do if no access permitted and a hardlink already exists
+            magpie_handler = HandlerFactory().get_handler("Magpie")
+            user_name = magpie_handler.get_user_name_from_user_id(int(regex_match.group(2)))
+            hardlink_path = self._get_user_hardlink(src_path=src_path,
+                                                    bird_name=regex_match.group(1),
+                                                    user_name=user_name,
+                                                    subpath=regex_match.group(3))
+            api_services = magpie_handler.get_services_by_type(ServiceAPI.service_type)
+            if SECURE_DATA_PROXY_NAME not in api_services:
+                LOGGER.debug("`%s` service not found. Considering user wpsoutputs data as accessible by default.",
+                             SECURE_DATA_PROXY_NAME)
+            else:  # get and apply permissions if the secure-data-proxy exists
+                is_readable, is_writable = self._get_secure_data_proxy_file_perms(src_path, user_name)
+
+                previous_perms = os.stat(src_path)[stat.ST_MODE] & 0o777
+                new_perms = update_filesystem_permissions(previous_perms,
+                                                          is_readable=is_readable,
+                                                          is_writable=is_writable,
+                                                          is_executable=False)
+                os.chmod(src_path, new_perms)
+                if not is_readable and not is_writable:
+                    # If no permission on the file, the hardlink should not be created.
+                    access_allowed = False
         else:  # public files
             hardlink_path = self._get_public_hardlink(src_path)
 
         if os.path.exists(hardlink_path):
-            if not overwrite:
+            if not overwrite and access_allowed:
                 # Hardlink already exists, nothing to do.
                 return
             # Delete the existing file at the destination path to reset the hardlink path with the expected source.
@@ -159,12 +219,16 @@ class FileSystem(Handler, FSMonitor):
                            "created file.", hardlink_path)
             os.remove(hardlink_path)
 
-        os.makedirs(os.path.dirname(hardlink_path), exist_ok=True)
-        LOGGER.debug("Creating hardlink from file `%s` to the path `%s`", src_path, hardlink_path)
-        try:
-            os.link(src_path, hardlink_path)
-        except Exception as exc:
-            LOGGER.warning("Failed to create hardlink `%s` : %s", hardlink_path, exc)
+        if access_allowed:
+            os.makedirs(os.path.dirname(hardlink_path), exist_ok=True)
+            LOGGER.debug("Creating hardlink from file `%s` to the path `%s`", src_path, hardlink_path)
+            try:
+                os.link(src_path, hardlink_path)
+            except Exception as exc:
+                LOGGER.warning("Failed to create hardlink `%s` : %s", hardlink_path, exc)
+        else:
+            LOGGER.debug("Access to the wps output file `%s` is not allowed for the user. No hardlink created.",
+                         src_path)
 
     def on_created(self, path: str) -> None:
         """
@@ -196,7 +260,12 @@ class FileSystem(Handler, FSMonitor):
             regex_match = re.search(self.wps_outputs_users_regex, path)
             try:
                 if regex_match:  # user paths
-                    linked_path = self._get_user_hardlink(path, regex_match)
+                    magpie_handler = HandlerFactory().get_handler("Magpie")
+                    user_name = magpie_handler.get_user_name_from_user_id(int(regex_match.group(2)))
+                    linked_path = self._get_user_hardlink(src_path=path,
+                                                          bird_name=regex_match.group(1),
+                                                          user_name=user_name,
+                                                          subpath=regex_match.group(3))
                 else:  # public paths
                     linked_path = self._get_public_hardlink(path)
                 if os.path.isdir(linked_path):
