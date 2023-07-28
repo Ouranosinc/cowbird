@@ -70,11 +70,11 @@ class FileSystem(Handler, FSMonitor):
     def get_resource_id(self, resource_full_name: str) -> int:
         raise NotImplementedError
 
-    def _get_user_workspace_dir(self, user_name: str) -> str:
+    def get_user_workspace_dir(self, user_name: str) -> str:
         return os.path.join(self.workspace_dir, user_name)
 
     def get_wps_outputs_user_dir(self, user_name: str) -> str:
-        return os.path.join(self._get_user_workspace_dir(user_name), USER_WPS_OUTPUTS_USER_DIR_NAME)
+        return os.path.join(self.get_user_workspace_dir(user_name), USER_WPS_OUTPUTS_USER_DIR_NAME)
 
     def get_wps_outputs_public_dir(self) -> str:
         return os.path.join(self.workspace_dir, self.wps_outputs_public_subdir)
@@ -102,7 +102,7 @@ class FileSystem(Handler, FSMonitor):
             os.symlink(src, dst, target_is_directory=True)
 
     def user_created(self, user_name: str) -> None:
-        user_workspace_dir = self._get_user_workspace_dir(user_name)
+        user_workspace_dir = self.get_user_workspace_dir(user_name)
         try:
             os.mkdir(user_workspace_dir)
         except FileExistsError:
@@ -112,8 +112,15 @@ class FileSystem(Handler, FSMonitor):
         FileSystem._create_symlink_dir(src=self._get_jupyterhub_user_data_dir(user_name),
                                        dst=os.path.join(user_workspace_dir, NOTEBOOKS_DIR_NAME))
 
+        # Create all hardlinks from the user wps outputs data
+        for root, _, filenames in os.walk(self.wps_outputs_dir):
+            for file in filenames:
+                full_path = os.path.join(root, file)
+                self._create_wpsoutputs_hardlink(src_path=full_path, overwrite=True,
+                                                 process_user_files=True, process_public_files=False)
+
     def user_deleted(self, user_name: str) -> None:
-        user_workspace_dir = self._get_user_workspace_dir(user_name)
+        user_workspace_dir = self.get_user_workspace_dir(user_name)
         try:
             shutil.rmtree(user_workspace_dir)
         except FileNotFoundError:
@@ -131,7 +138,7 @@ class FileSystem(Handler, FSMonitor):
         return os.path.join(self.get_wps_outputs_public_dir(), subpath)
 
     def _get_user_hardlink(self, src_path: str, bird_name: str, user_name: str, subpath: str) -> str:
-        user_workspace_dir = self._get_user_workspace_dir(user_name)
+        user_workspace_dir = self.get_user_workspace_dir(user_name)
         if not os.path.exists(user_workspace_dir):
             raise FileNotFoundError(f"User {user_name} workspace not found at path {user_workspace_dir}. New "
                                     f"wpsoutput {src_path} not added to the user workspace.")
@@ -181,10 +188,14 @@ class FileSystem(Handler, FSMonitor):
             is_writable = write_access == Access.ALLOW.value
         return is_readable, is_writable
 
-    def _create_wpsoutputs_hardlink(self, src_path: str, overwrite: bool = False) -> None:
+    def _create_wpsoutputs_hardlink(self, src_path: str, overwrite: bool = False,
+                                    process_user_files: bool = True, process_public_files: bool = True) -> None:
         regex_match = re.search(self.wps_outputs_users_regex, src_path)
         access_allowed = True
         if regex_match:  # user files
+            if not process_user_files:
+                return
+
             magpie_handler = HandlerFactory().get_handler("Magpie")
             user_name = magpie_handler.get_user_name_from_user_id(int(regex_match.group(2)))
             hardlink_path = self._get_user_hardlink(src_path=src_path,
@@ -208,6 +219,8 @@ class FileSystem(Handler, FSMonitor):
                     # If no permission on the file, the hardlink should not be created.
                     access_allowed = False
         else:  # public files
+            if not process_public_files:
+                return
             hardlink_path = self._get_public_hardlink(src_path)
 
         if os.path.exists(hardlink_path):

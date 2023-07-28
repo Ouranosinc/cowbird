@@ -390,17 +390,18 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
                     "wps_outputs_dir": self.wpsoutputs_dir}}})
 
         # Reset test user
+        filesystem_handler = HandlerFactory().get_handler("FileSystem")
         magpie_handler = HandlerFactory().get_handler("Magpie")
         test_magpie.delete_user(magpie_handler, self.test_username)
         self.user_id = test_magpie.create_user(magpie_handler, self.test_username,
                                                "test@test.com", "qwertyqwerty", "users")
+        filesystem_handler.user_created(self.test_username)
 
         self.job_id = 1
         self.bird_name = "weaver"
         self.output_subpath = f"{self.job_id}/test_output.txt"
         self.output_file = os.path.join(self.wpsoutputs_dir,
                                         f"{self.bird_name}/users/{self.user_id}/{self.output_subpath}")
-        filesystem_handler = HandlerFactory().get_handler("FileSystem")
         self.wps_outputs_user_dir = filesystem_handler.get_wps_outputs_user_dir(self.test_username)
         # Hardlink for user files doesn't use the full subpath, but removes the redundant `users` and `{user_id}` parts.
         self.hardlink_path = os.path.join(self.wps_outputs_user_dir, f"{self.bird_name}/{self.output_subpath}")
@@ -435,6 +436,7 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
         filesystem_handler = HandlerFactory().get_handler("FileSystem")
 
         # Error expected if the user workspace does not exist
+        shutil.rmtree(filesystem_handler.get_user_workspace_dir(self.test_username))
         with pytest.raises(FileNotFoundError):
             filesystem_handler.on_created(self.output_file)
 
@@ -450,6 +452,17 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
         filesystem_handler.on_created(src_dir)
         assert not os.path.exists(target_dir)
 
+    def test_user_created(self):
+        """
+        Tests if creating a user generates the hardlinks to the pre-existing user wpsoutputs data.
+        """
+        filesystem_handler = HandlerFactory().get_handler("FileSystem")
+        shutil.rmtree(filesystem_handler.get_user_workspace_dir(self.test_username))
+
+        # Simulate a user_created event and check that the expected hardlink is generated.
+        filesystem_handler.user_created(self.test_username)
+        assert os.stat(self.hardlink_path).st_nlink == 2
+
     def test_user_wps_output_created_secure_data_proxy(self):
         """
         Tests creating wps outputs for a user when Magpie uses a secure-data-proxy service to manage access permissions
@@ -457,7 +470,6 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
         """
         filesystem_handler = HandlerFactory().get_handler("FileSystem")
         magpie_handler = HandlerFactory().get_handler("Magpie")
-        filesystem_handler.user_created(self.test_username)
         svc_id = self.create_secure_data_proxy_service()
 
         # Note that the following test cases are made to be executed in a specific order and are not interchangeable.
@@ -514,9 +526,6 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
         """
         filesystem_handler = HandlerFactory().get_handler("FileSystem")
 
-        # Create the user workspace
-        filesystem_handler.user_created(self.test_username)
-
         # Basic test cases for deleting user wps outputs. More extensive delete test cases are done in the public tests.
         # Test deleting a user file.
         filesystem_handler.on_created(self.output_file)
@@ -535,8 +544,6 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
         """
         Tests resync operation on wpsoutputs user data.
         """
-        filesystem_handler = HandlerFactory().get_handler("FileSystem")
-        filesystem_handler.user_created(self.test_username)
 
         test_dir = os.path.join(self.wps_outputs_user_dir, f"{self.bird_name}/{self.job_id}")
 
