@@ -34,6 +34,23 @@ def delete_user(magpie: Magpie, user_name: str) -> None:
     assert resp.status_code in [200, 404]
 
 
+def create_group(magpie: Magpie, group_name: str, descr: str, discoverable: bool, terms: str) -> int:
+    resp = magpie._send_request(method="POST", url=f"{magpie.url}/groups",
+                                json={
+                                    "group_name": group_name,
+                                    "description": descr,
+                                    "discoverable": discoverable,
+                                    "terms": terms
+                                })
+    assert resp.status_code == 201
+    return resp.json()["group"]["group_id"]
+
+
+def delete_group(magpie: Magpie, group_name: str) -> None:
+    resp = magpie._send_request(method="DELETE", url=f"{magpie.url}/groups/{group_name}")
+    assert resp.status_code in [200, 404]
+
+
 def create_service(magpie: Magpie, service_data: Dict[str, str]) -> int:
     resp = magpie._send_request(method="POST", url=f"{magpie.url}/services", json=service_data)
     assert resp.status_code == 201

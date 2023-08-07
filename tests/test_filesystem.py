@@ -15,6 +15,7 @@ from magpie.permissions import Access, Scope
 from magpie.services import ServiceAPI
 from webtest.app import TestApp
 
+from cowbird.api.schemas import ValidOperations
 from cowbird.handlers import HandlerFactory
 from cowbird.handlers.impl.filesystem import NOTEBOOKS_DIR_NAME, SECURE_DATA_PROXY_NAME
 from cowbird.typedefs import JSON
@@ -399,17 +400,21 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
 
         self.job_id = 1
         self.bird_name = "weaver"
-        self.output_subpath = f"{self.job_id}/test_output.txt"
+        self.output_filename = "test_output.txt"
+        subpath = f"{self.job_id}/{self.output_filename}"
         self.output_file = os.path.join(self.wpsoutputs_dir,
-                                        f"{self.bird_name}/users/{self.user_id}/{self.output_subpath}")
+                                        f"{self.bird_name}/users/{self.user_id}/{subpath}")
         self.wps_outputs_user_dir = filesystem_handler.get_wps_outputs_user_dir(self.test_username)
-        # Hardlink for user files doesn't use the full subpath, but removes the redundant `users` and `{user_id}` parts.
-        self.hardlink_path = os.path.join(self.wps_outputs_user_dir, f"{self.bird_name}/{self.output_subpath}")
+        self.hardlink_path = filesystem_handler._get_user_hardlink(src_path=self.output_file,
+                                                                   bird_name=self.bird_name,
+                                                                   user_name=self.test_username,
+                                                                   subpath=subpath)
 
         # Create the test wps output file
         os.makedirs(os.path.dirname(self.output_file))
         with open(self.output_file, mode="w", encoding="utf-8"):
             pass
+        os.chmod(self.output_file, 0o666)
 
         self.secure_data_proxy_name = SECURE_DATA_PROXY_NAME
         # Delete the service if it already exists
@@ -428,6 +433,17 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
             "configuration": {}
         }
         return test_magpie.create_service(HandlerFactory().get_handler("Magpie"), data)
+
+    @staticmethod
+    def check_path_perms_and_hardlink(src_path: str, hardlink_path: str, perms: int):
+        """
+        Checks if a path has the expected permissions, and if a hardlink exists, depending of the `other` permissions.
+        """
+        utils.check_path_permissions(src_path, perms)
+        if perms & 0o006:  # check if path has a read or write permission set for `other`
+            assert os.path.exists(hardlink_path)
+        else:
+            assert not os.path.exists(hardlink_path)
 
     def test_user_wps_output_created(self):
         """
@@ -575,3 +591,272 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
         assert not os.path.exists(new_dir_linked_path)
         assert not os.path.exists(old_nested_file)
         assert not os.path.exists(old_subdir)
+
+    def test_permission_updates_user_data(self):
+        """
+        Tests updating permissions on data found directly in a specific user directory.
+        """
+        magpie_handler = HandlerFactory().get_handler("Magpie")
+        # Create resources for the full route
+        svc_id = self.create_secure_data_proxy_service()
+
+        # Prepare test files
+        subdir_test_file = self.output_file
+        subdir_hardlink = self.hardlink_path
+        root_test_filename = "other_file.txt"
+        root_test_file = os.path.join(self.wpsoutputs_dir,
+                                      f"{self.bird_name}/users/{self.user_id}/{root_test_filename}")
+        root_hardlink = HandlerFactory().get_handler("FileSystem")._get_user_hardlink(
+            src_path=root_test_file, bird_name=self.bird_name, user_name=self.test_username, subpath=root_test_filename)
+        with open(root_test_file, mode="w", encoding="utf-8"):
+            pass
+        for file in [root_test_file, subdir_test_file]:
+            os.chmod(file, 0o660)
+
+        # Prepare test routes
+        user_dir_res_id = None
+        routes = re.sub(rf"^{self.wpsoutputs_dir}", "wpsoutputs", self.output_file).strip("/")
+        last_res_id = svc_id
+        for route in routes.split("/"):
+            last_res_id = magpie_handler.create_resource(route, Route.resource_type_name, last_res_id)
+            if route == str(self.user_id):
+                user_dir_res_id = last_res_id
+        if not user_dir_res_id:
+            raise ValueError("Missing resource id for the user directory, invalid test.")
+        subdir_file_res_id = last_res_id
+        magpie_handler.create_resource(root_test_filename, Route.resource_type_name, user_dir_res_id)
+
+        data = {
+            "event": ValidOperations.CreateOperation.value,
+            "service_name": None,
+            "service_type": ServiceAPI.service_type,
+            "resource_id": user_dir_res_id,
+            "resource_full_name": "test-full-name",
+            "name": Permission.READ.value,
+            "access": Access.ALLOW.value,
+            "scope": Scope.MATCH.value,
+            "user": self.test_username,
+            "group": None
+        }
+        magpie_handler.create_permission_by_res_id(data["resource_id"], data["name"], data["access"],
+                                                   data["scope"], data["user"])
+        # Files should still have no permissions since dir permission is match-only.
+        resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
+        assert resp.status_code == 200
+        self.check_path_perms_and_hardlink(root_test_file, root_hardlink, 0o660)
+        self.check_path_perms_and_hardlink(subdir_test_file, subdir_hardlink, 0o660)
+
+        # File permissions should be updated with the recursive permission on the parent directory.
+        data["scope"] = Scope.RECURSIVE.value
+        magpie_handler.create_permission_by_res_id(data["resource_id"], data["name"], data["access"],
+                                                   data["scope"], data["user"])
+        resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
+        assert resp.status_code == 200
+        self.check_path_perms_and_hardlink(root_test_file, root_hardlink, 0o664)
+        self.check_path_perms_and_hardlink(subdir_test_file, subdir_hardlink, 0o664)
+
+        # Permission applied directly to a file
+        data["resource_id"] = subdir_file_res_id
+        data["name"] = Permission.WRITE.value
+        data["scope"] = Scope.MATCH.value
+        magpie_handler.create_permission_by_res_id(data["resource_id"], data["name"], data["access"],
+                                                   data["scope"], data["user"])
+        resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
+        assert resp.status_code == 200
+        self.check_path_perms_and_hardlink(root_test_file, root_hardlink, 0o664)
+        self.check_path_perms_and_hardlink(subdir_test_file, subdir_hardlink, 0o666)
+
+        # Test deleting permission on a directory
+        data["event"] = ValidOperations.DeleteOperation.value
+        data["resource_id"] = user_dir_res_id
+        data["name"] = Permission.READ.value
+        magpie_handler.delete_permission_by_user_and_res_id(data["user"], data["resource_id"], data["name"])
+        resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
+        assert resp.status_code == 200
+        self.check_path_perms_and_hardlink(root_test_file, root_hardlink, 0o660)
+        self.check_path_perms_and_hardlink(subdir_test_file, subdir_hardlink, 0o662)
+
+        # Test deleting permission on a file
+        data["resource_id"] = subdir_file_res_id
+        data["name"] = Permission.WRITE.value
+        magpie_handler.delete_permission_by_user_and_res_id(data["user"], data["resource_id"], data["name"])
+        resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
+        assert resp.status_code == 200
+        self.check_path_perms_and_hardlink(root_test_file, root_hardlink, 0o660)
+        self.check_path_perms_and_hardlink(subdir_test_file, subdir_hardlink, 0o660)
+
+    def test_permission_updates_wpsoutputs_data(self):
+        """
+        Tests updating permissions on data found outside of the user directories, including testing permissions
+        on a user and on a group.
+        """
+        filesystem_handler = HandlerFactory().get_handler("FileSystem")
+        magpie_handler = HandlerFactory().get_handler("Magpie")
+        # Create resources for the full route
+        svc_id = self.create_secure_data_proxy_service()
+
+        # Create other user from a group different than the test group
+        test_magpie.delete_group(magpie_handler, "others")
+        test_magpie.create_group(magpie_handler, "others", "", True, "")
+        ignored_username = "ignored-user"
+        test_magpie.delete_user(magpie_handler, ignored_username)
+        ignored_user_id = test_magpie.create_user(magpie_handler, ignored_username,
+                                                  "ignored@test.com", "qwertyqwerty", "others")
+        filesystem_handler.user_created(ignored_username)
+
+        # Create other user from the same group as the original test user
+        same_group_username = "same-group-user"
+        test_magpie.delete_user(magpie_handler, same_group_username)
+        same_group_user_id = test_magpie.create_user(magpie_handler, same_group_username,
+                                                     "samegroup@test.com", "qwertyqwerty", "users")
+        filesystem_handler.user_created(same_group_username)
+
+        # Create other test files
+        # Public files should be ignored by following test cases,
+        # since public files are not concerned by perm change events.
+        public_file = os.path.join(self.wpsoutputs_dir, "public_file.txt")
+        public_subfile = os.path.join(self.wpsoutputs_dir, "public_dir/public_file.txt")
+
+        # This file should be ignored by following test cases, being in a group different than the test group.
+        ignored_filename = "ignored.txt"
+        ignored_file = os.path.join(self.wpsoutputs_dir, f"{self.bird_name}/users/{ignored_user_id}/{ignored_filename}")
+        ignored_hardlink = filesystem_handler._get_user_hardlink(
+            src_path=ignored_file, bird_name=self.bird_name, user_name=ignored_username, subpath=ignored_filename)
+
+        same_group_filename = "same_group.txt"
+        same_group_file = os.path.join(self.wpsoutputs_dir,
+                                       f"{self.bird_name}/users/{same_group_user_id}/{same_group_filename}")
+        same_group_hardlink = filesystem_handler._get_user_hardlink(src_path=same_group_file,
+                                                                    bird_name=self.bird_name,
+                                                                    user_name=same_group_username,
+                                                                    subpath=same_group_filename)
+
+        for file in [self.output_file, public_file, public_subfile, ignored_file, same_group_file]:
+            os.makedirs(os.path.dirname(file), exist_ok=True)
+            with open(file, mode="w", encoding="utf-8"):
+                pass
+            os.chmod(file, 0o660)
+
+        # Create resource
+        res_id = magpie_handler.create_resource("wpsoutputs", Route.resource_type_name, svc_id)
+
+        data = {
+            "event": ValidOperations.CreateOperation.value,
+            "service_name": None,
+            "service_type": ServiceAPI.service_type,
+            "resource_id": res_id,
+            "resource_full_name": "test-full-name",
+            "name": Permission.READ.value,
+            "access": Access.ALLOW.value,
+            "scope": Scope.RECURSIVE.value,
+            "user": self.test_username,
+            "group": None
+        }
+        magpie_handler.create_permission_by_res_id(data["resource_id"], data["name"], data["access"], data["scope"],
+                                                   user_name=data["user"])
+        # Check that perms was only updated for concerned user files
+        resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
+        assert resp.status_code == 200
+        self.check_path_perms_and_hardlink(self.output_file, self.hardlink_path, 0o664)
+        self.check_path_perms_and_hardlink(ignored_file, ignored_hardlink, 0o660)
+        self.check_path_perms_and_hardlink(same_group_file, same_group_hardlink, 0o660)
+        utils.check_path_permissions(public_file, 0o660)
+        utils.check_path_permissions(public_subfile, 0o660)
+
+        # Check that perms are updated for all the users of the concerned group
+        data["user"] = None
+        data["group"] = "users"
+        data["name"] = Permission.WRITE.value
+        magpie_handler.create_permission_by_res_id(data["resource_id"], data["name"], data["access"], data["scope"],
+                                                   grp_name=data["group"])
+        resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
+        assert resp.status_code == 200
+        self.check_path_perms_and_hardlink(self.output_file, self.hardlink_path, 0o666)
+        self.check_path_perms_and_hardlink(ignored_file, ignored_hardlink, 0o660)
+        self.check_path_perms_and_hardlink(same_group_file, same_group_hardlink, 0o662)
+        utils.check_path_permissions(public_file, 0o660)
+        utils.check_path_permissions(public_subfile, 0o660)
+
+        # Add read-deny group permissions for next test cases
+        data["name"] = Permission.READ.value
+        data["access"] = Access.DENY.value
+        magpie_handler.create_permission_by_res_id(data["resource_id"], data["name"], data["access"], data["scope"],
+                                                   grp_name=data["group"])
+        utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
+        self.check_path_perms_and_hardlink(self.output_file, self.hardlink_path, 0o666)
+
+        # Test deleting a specific user permission
+        data["event"] = ValidOperations.DeleteOperation.value
+        data["user"] = self.test_username
+        data["group"] = None
+        magpie_handler.delete_permission_by_user_and_res_id(data["user"], data["resource_id"], data["name"])
+        resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
+        assert resp.status_code == 200
+        self.check_path_perms_and_hardlink(self.output_file, self.hardlink_path, 0o662)
+        self.check_path_perms_and_hardlink(ignored_file, ignored_hardlink, 0o660)
+        self.check_path_perms_and_hardlink(same_group_file, same_group_hardlink, 0o662)
+        utils.check_path_permissions(public_file, 0o660)
+        utils.check_path_permissions(public_subfile, 0o660)
+
+        # Test deleting a group permission
+        data["name"] = Permission.WRITE.value
+        data["user"] = None
+        data["group"] = "users"
+        magpie_handler.delete_permission_by_grp_and_res_id(data["group"], data["resource_id"], data["name"])
+        resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
+        assert resp.status_code == 200
+        self.check_path_perms_and_hardlink(self.output_file, self.hardlink_path, 0o660)
+        self.check_path_perms_and_hardlink(ignored_file, ignored_hardlink, 0o660)
+        self.check_path_perms_and_hardlink(same_group_file, same_group_hardlink, 0o660)
+        utils.check_path_permissions(public_file, 0o660)
+        utils.check_path_permissions(public_subfile, 0o660)
+
+    def test_permission_updates_other_svc(self):
+        """
+        Tests permission updates on a wpsoutputs resource from a service other than the secure-data-proxy, which
+        should not be processed by the filesystem handler.
+        """
+        magpie_handler = HandlerFactory().get_handler("Magpie")
+        # Create resources for the full route
+        self.create_secure_data_proxy_service()
+        data = {
+            "service_name": "other_service",
+            "service_type": ServiceAPI.service_type,
+            "service_sync_type": ServiceAPI.service_type,
+            "service_url": f"http://localhost:9000/other_service",
+            "configuration": {}
+        }
+        test_magpie.delete_service(magpie_handler, "other_service")
+        other_svc_id = test_magpie.create_service(magpie_handler, data)
+
+        # Create resource associated with the test file, on the other service
+        last_res_id = other_svc_id
+        routes = re.sub(rf"^{self.wpsoutputs_dir}", "", self.output_file).strip("/")
+        for route in routes.split("/"):
+            last_res_id = magpie_handler.create_resource(route, Route.resource_type_name, last_res_id)
+
+        data = {
+            "event": ValidOperations.DeleteOperation.value,
+            "service_name": None,
+            "service_type": ServiceAPI.service_type,
+            "resource_id": last_res_id,
+            "resource_full_name": routes,
+            "name": Permission.READ.value,
+            "access": Access.ALLOW.value,
+            "scope": Scope.MATCH.value,
+            "user": self.test_username,
+            "group": None
+        }
+        # Check that a delete event on the resource of the other service does not modify the file permissions.
+        resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
+        assert resp.status_code == 200
+        utils.check_path_permissions(self.output_file, 0o666)
+
+        # Check that a create event on the resource of the other service does not modify the file permissions.
+        data["event"] = ValidOperations.CreateOperation.value
+        data["access"] = Access.DENY.value
+        magpie_handler.create_permission_by_res_id(data["resource_id"], data["name"], data["access"],
+                                                   data["scope"], data["user"])
+        resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
+        assert resp.status_code == 200
+        utils.check_path_permissions(self.output_file, 0o666)
