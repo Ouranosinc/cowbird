@@ -405,10 +405,10 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
         self.output_file = os.path.join(self.wpsoutputs_dir,
                                         f"{self.bird_name}/users/{self.user_id}/{subpath}")
         self.wps_outputs_user_dir = filesystem_handler.get_wps_outputs_user_dir(self.test_username)
-        self.hardlink_path = filesystem_handler._get_user_hardlink(src_path=self.output_file,
-                                                                   bird_name=self.bird_name,
-                                                                   user_name=self.test_username,
-                                                                   subpath=subpath)
+        self.hardlink_path = filesystem_handler.get_user_hardlink(src_path=self.output_file,
+                                                                  bird_name=self.bird_name,
+                                                                  user_name=self.test_username,
+                                                                  subpath=subpath)
 
         # Create the test wps output file
         os.makedirs(os.path.dirname(self.output_file))
@@ -437,7 +437,7 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
     @staticmethod
     def check_path_perms_and_hardlink(src_path: str, hardlink_path: str, perms: int):
         """
-        Checks if a path has the expected permissions, and if a hardlink exists, depending of the `other` permissions.
+        Checks if a path has the expected permissions, and if a hardlink exists, according to the `other` permissions.
         """
         utils.check_path_permissions(src_path, perms)
         if perms & 0o006:  # check if path has a read or write permission set for `other`
@@ -606,7 +606,7 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
         root_test_filename = "other_file.txt"
         root_test_file = os.path.join(self.wpsoutputs_dir,
                                       f"{self.bird_name}/users/{self.user_id}/{root_test_filename}")
-        root_hardlink = HandlerFactory().get_handler("FileSystem")._get_user_hardlink(
+        root_hardlink = HandlerFactory().get_handler("FileSystem").get_user_hardlink(
             src_path=root_test_file, bird_name=self.bird_name, user_name=self.test_username, subpath=root_test_filename)
         with open(root_test_file, mode="w", encoding="utf-8"):
             pass
@@ -687,8 +687,8 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
 
     def test_permission_updates_wpsoutputs_data(self):
         """
-        Tests updating permissions on data found outside of the user directories, including testing permissions
-        on a user and on a group.
+        Tests updating permissions on data found outside of the user directories, including testing permissions on a
+        user and on a group.
         """
         filesystem_handler = HandlerFactory().get_handler("FileSystem")
         magpie_handler = HandlerFactory().get_handler("Magpie")
@@ -720,16 +720,16 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
         # This file should be ignored by following test cases, being in a group different than the test group.
         ignored_filename = "ignored.txt"
         ignored_file = os.path.join(self.wpsoutputs_dir, f"{self.bird_name}/users/{ignored_user_id}/{ignored_filename}")
-        ignored_hardlink = filesystem_handler._get_user_hardlink(
+        ignored_hardlink = filesystem_handler.get_user_hardlink(
             src_path=ignored_file, bird_name=self.bird_name, user_name=ignored_username, subpath=ignored_filename)
 
         same_group_filename = "same_group.txt"
         same_group_file = os.path.join(self.wpsoutputs_dir,
                                        f"{self.bird_name}/users/{same_group_user_id}/{same_group_filename}")
-        same_group_hardlink = filesystem_handler._get_user_hardlink(src_path=same_group_file,
-                                                                    bird_name=self.bird_name,
-                                                                    user_name=same_group_username,
-                                                                    subpath=same_group_filename)
+        same_group_hardlink = filesystem_handler.get_user_hardlink(src_path=same_group_file,
+                                                                   bird_name=self.bird_name,
+                                                                   user_name=same_group_username,
+                                                                   subpath=same_group_filename)
 
         for file in [self.output_file, public_file, public_subfile, ignored_file, same_group_file]:
             os.makedirs(os.path.dirname(file), exist_ok=True)
@@ -813,8 +813,8 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
 
     def test_permission_updates_other_svc(self):
         """
-        Tests permission updates on a wpsoutputs resource from a service other than the secure-data-proxy, which
-        should not be processed by the filesystem handler.
+        Tests permission updates on a wpsoutputs resource from a service other than the secure-data-proxy, which should
+        not be processed by the filesystem handler.
         """
         magpie_handler = HandlerFactory().get_handler("Magpie")
         # Create resources for the full route
@@ -823,7 +823,7 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
             "service_name": "other_service",
             "service_type": ServiceAPI.service_type,
             "service_sync_type": ServiceAPI.service_type,
-            "service_url": f"http://localhost:9000/other_service",
+            "service_url": "http://localhost:9000/other_service",
             "configuration": {}
         }
         test_magpie.delete_service(magpie_handler, "other_service")

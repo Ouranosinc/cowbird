@@ -2,7 +2,7 @@ import os
 import re
 import shutil
 from pathlib import Path
-from typing import Any, Tuple, cast, List
+from typing import Any, List, Tuple, cast
 
 from magpie.permissions import Access
 from magpie.permissions import Permission as MagpiePermission
@@ -14,7 +14,7 @@ from cowbird.monitoring.fsmonitor import FSMonitor
 from cowbird.monitoring.monitoring import Monitoring
 from cowbird.permissions_synchronizer import Permission
 from cowbird.typedefs import JSON, SettingsType
-from cowbird.utils import get_logger, apply_new_path_permissions
+from cowbird.utils import apply_new_path_permissions, get_logger
 
 LOGGER = get_logger(__name__)
 
@@ -136,7 +136,7 @@ class FileSystem(Handler, FSMonitor):
         subpath = os.path.relpath(src_path, self.wps_outputs_dir)
         return os.path.join(self.get_wps_outputs_public_dir(), subpath)
 
-    def _get_user_hardlink(self, src_path: str, bird_name: str, user_name: str, subpath: str) -> str:
+    def get_user_hardlink(self, src_path: str, bird_name: str, user_name: str, subpath: str) -> str:
         user_workspace_dir = self.get_user_workspace_dir(user_name)
         if not os.path.exists(user_workspace_dir):
             raise FileNotFoundError(f"User {user_name} workspace not found at path {user_workspace_dir}. New "
@@ -229,10 +229,10 @@ class FileSystem(Handler, FSMonitor):
 
             magpie_handler = HandlerFactory().get_handler("Magpie")
             user_name = magpie_handler.get_user_name_from_user_id(int(regex_match.group(2)))
-            hardlink_path = self._get_user_hardlink(src_path=src_path,
-                                                    bird_name=regex_match.group(1),
-                                                    user_name=user_name,
-                                                    subpath=regex_match.group(3))
+            hardlink_path = self.get_user_hardlink(src_path=src_path,
+                                                   bird_name=regex_match.group(1),
+                                                   user_name=user_name,
+                                                   subpath=regex_match.group(3))
             api_services = magpie_handler.get_services_by_type(ServiceAPI.service_type)
             if SECURE_DATA_PROXY_NAME not in api_services:
                 LOGGER.debug("`%s` service not found. Considering user wpsoutputs data as accessible by default.",
@@ -289,10 +289,10 @@ class FileSystem(Handler, FSMonitor):
                     return False
                 magpie_handler = HandlerFactory().get_handler("Magpie")
                 user_name = magpie_handler.get_user_name_from_user_id(int(regex_match.group(2)))
-                linked_path = self._get_user_hardlink(src_path=src_path,
-                                                      bird_name=regex_match.group(1),
-                                                      user_name=user_name,
-                                                      subpath=regex_match.group(3))
+                linked_path = self.get_user_hardlink(src_path=src_path,
+                                                     bird_name=regex_match.group(1),
+                                                     user_name=user_name,
+                                                     subpath=regex_match.group(3))
             else:  # public paths
                 if not process_public_files:
                     return False
@@ -338,7 +338,7 @@ class FileSystem(Handler, FSMonitor):
             full_route = self.wps_outputs_dir
             # Add subpath if the resource is a child of the main wpsoutputs resource
             if len(res_tree) > 2:
-                child_route = "/".join([res["resource_name"] for res in res_tree[2:]])
+                child_route = "/".join(cast(List[str], [res["resource_name"] for res in res_tree[2:]]))
                 full_route = os.path.join(full_route, child_route)
 
             # Find all users related to the permission
@@ -370,10 +370,10 @@ class FileSystem(Handler, FSMonitor):
                 user_name = users[int(path_regex_match.group(2))]
                 access_allowed = self.update_secure_data_proxy_path_perms(user_path, user_name)
                 try:
-                    hardlink_path = self._get_user_hardlink(src_path=user_path,
-                                                            bird_name=path_regex_match.group(1),
-                                                            user_name=user_name,
-                                                            subpath=path_regex_match.group(3))
+                    hardlink_path = self.get_user_hardlink(src_path=user_path,
+                                                           bird_name=path_regex_match.group(1),
+                                                           user_name=user_name,
+                                                           subpath=path_regex_match.group(3))
                 except FileNotFoundError:
                     LOGGER.debug("Failed to find a hardlink path corresponding to the source path [%s]. The user `%s` "
                                  "should already have an existing workspace.",

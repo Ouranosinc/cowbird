@@ -19,7 +19,7 @@ from cowbird.monitoring.monitoring import Monitoring
 from cowbird.permissions_synchronizer import Permission
 from cowbird.request_task import RequestTask
 from cowbird.typedefs import JSON, SettingsType
-from cowbird.utils import CONTENT_TYPE_JSON, get_logger, apply_default_path_ownership, apply_new_path_permissions
+from cowbird.utils import CONTENT_TYPE_JSON, apply_default_path_ownership, apply_new_path_permissions, get_logger
 
 GeoserverType: TypeAlias = "Geoserver"  # need a reference for the decorator before it gets defined
 

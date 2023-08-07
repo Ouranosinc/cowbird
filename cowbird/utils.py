@@ -28,7 +28,7 @@ from requests.structures import CaseInsensitiveDict
 from webob.headers import EnvironHeaders, ResponseHeaders
 
 from cowbird import __meta__
-from cowbird.constants import get_constant, validate_required, DEFAULT_ADMIN_GID, DEFAULT_ADMIN_UID
+from cowbird.constants import DEFAULT_ADMIN_GID, DEFAULT_ADMIN_UID, get_constant, validate_required
 from cowbird.typedefs import (
     JSON,
     AnyHeadersType,
