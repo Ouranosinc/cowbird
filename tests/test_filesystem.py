@@ -17,7 +17,7 @@ from webtest.app import TestApp
 
 from cowbird.api.schemas import ValidOperations
 from cowbird.handlers import HandlerFactory
-from cowbird.handlers.impl.filesystem import NOTEBOOKS_DIR_NAME, SECURE_DATA_PROXY_NAME
+from cowbird.handlers.impl.filesystem import NOTEBOOKS_DIR_NAME, SECURE_DATA_PROXY_NAME, USER_WPS_OUTPUTS_USER_DIR_NAME
 from cowbird.typedefs import JSON
 from tests import test_magpie, utils
 
@@ -229,6 +229,9 @@ class TestFileSystemBasic(TestFileSystem):
         hardlink_path = os.path.join(filesystem_handler.get_wps_outputs_public_dir(), output_subpath)
 
         TestFileSystem.check_created_test_cases(output_file, hardlink_path)
+
+        # Check that the hardlink's parent directory have the right permissions
+        utils.check_path_permissions(os.path.join(filesystem_handler.get_wps_outputs_public_dir(), bird_name), 0o775)
 
         # A create event on a folder should not be processed (no corresponding target folder created)
         target_dir = os.path.join(filesystem_handler.get_wps_outputs_public_dir(), bird_name)
@@ -460,6 +463,12 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
         filesystem_handler.user_created(self.test_username)
 
         TestFileSystem.check_created_test_cases(self.output_file, self.hardlink_path)
+
+        # Check that the hardlink's parent directories have the right permissions
+        path_to_check = self.hardlink_path
+        while not path_to_check.endswith(USER_WPS_OUTPUTS_USER_DIR_NAME):
+            path_to_check = os.path.dirname(path_to_check)
+            utils.check_path_permissions(path_to_check, 0o777)
 
         # A create event on a folder should not be processed (no corresponding target folder created)
         src_dir = os.path.join(self.wpsoutputs_dir, f"{self.bird_name}/users/{self.user_id}/{self.job_id}")
