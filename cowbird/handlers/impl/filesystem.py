@@ -273,7 +273,10 @@ class FileSystem(Handler, FSMonitor):
 
         :param path: Absolute path of a new file/directory
         """
-        # Nothing to do for files in the wps_outputs folder, since hardlinks are updated automatically.
+        # Nothing to do for files in the wps_outputs folder.
+        # Permission modifications (e.g.: via `chmod`) are not supported to simplify the management of wpsoutputs perms.
+        # Any permission modifications should be done via Magpie, which will synchronize the permissions on any related
+        # hardlinks automatically.
 
     def _delete_wpsoutputs_hardlink(self, src_path: str,
                                     process_user_files: bool = True, process_public_files: bool = True) -> bool:
