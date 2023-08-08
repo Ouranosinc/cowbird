@@ -231,7 +231,7 @@ class TestFileSystemBasic(TestFileSystem):
         TestFileSystem.check_created_test_cases(output_file, hardlink_path)
 
         # Check that the hardlink's parent directory have the right permissions
-        utils.check_path_permissions(os.path.join(filesystem_handler.get_wps_outputs_public_dir(), bird_name), 0o775)
+        utils.check_path_permissions(os.path.dirname(hardlink_path), 0o775)
 
         # A create event on a folder should not be processed (no corresponding target folder created)
         target_dir = os.path.join(filesystem_handler.get_wps_outputs_public_dir(), bird_name)
@@ -464,11 +464,8 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
 
         TestFileSystem.check_created_test_cases(self.output_file, self.hardlink_path)
 
-        # Check that the hardlink's parent directories have the right permissions
-        path_to_check = self.hardlink_path
-        while not path_to_check.endswith(USER_WPS_OUTPUTS_USER_DIR_NAME):
-            path_to_check = os.path.dirname(path_to_check)
-            utils.check_path_permissions(path_to_check, 0o777)
+        # Check that the hardlink's parent directory has the right permissions
+        utils.check_path_permissions(os.path.dirname(self.hardlink_path), 0o777)
 
         # A create event on a folder should not be processed (no corresponding target folder created)
         src_dir = os.path.join(self.wpsoutputs_dir, f"{self.bird_name}/users/{self.user_id}/{self.job_id}")

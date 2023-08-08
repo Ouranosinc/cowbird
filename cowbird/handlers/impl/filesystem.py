@@ -204,15 +204,17 @@ class FileSystem(Handler, FSMonitor):
         return access_allowed
 
     @staticmethod
-    def create_hardlink_path(src_path: str, hardlink_path: str, access_allowed: bool, dir_perms: int = 0o775) -> None:
+    def create_hardlink_path(src_path: str, hardlink_path: str, access_allowed: bool,
+                             is_parent_dir_writable: bool = False) -> None:
         """
         Creates a hardlink path from a source file, if the user has access rights.
         """
         if access_allowed:
-            # set umask to allow all permissions, else, mode is ignored when making directories
-            previous_umask = os.umask(0)
-            os.makedirs(os.path.dirname(hardlink_path), mode=dir_perms, exist_ok=True)
-            os.umask(previous_umask)  # reset umask to default
+            os.makedirs(os.path.dirname(hardlink_path), exist_ok=True)
+            apply_new_path_permissions(os.path.dirname(hardlink_path),
+                                       is_readable=True,
+                                       is_writable=is_parent_dir_writable,
+                                       is_executable=True)
             LOGGER.debug("Creating hardlink from file `%s` to the path `%s`", src_path, hardlink_path)
             try:
                 os.link(src_path, hardlink_path)
@@ -230,9 +232,9 @@ class FileSystem(Handler, FSMonitor):
             if not process_user_files:
                 return
 
-            # User workspace directories require `rwx` permissions to allow file modifications via JupyterLab for
+            # User workspace directories require write permissions to allow file modifications via JupyterLab for
             # files with write permissions
-            dir_perms = 0o777
+            is_parent_dir_writable = True
             magpie_handler = HandlerFactory().get_handler("Magpie")
             user_name = magpie_handler.get_user_name_from_user_id(int(regex_match.group(2)))
             hardlink_path = self.get_user_hardlink(src_path=src_path,
@@ -249,7 +251,7 @@ class FileSystem(Handler, FSMonitor):
         else:  # public files
             if not process_public_files:
                 return
-            dir_perms = 0o775
+            is_parent_dir_writable = False  # public files are read-only
             hardlink_path = self._get_public_hardlink(src_path)
 
         if os.path.exists(hardlink_path):
@@ -261,7 +263,7 @@ class FileSystem(Handler, FSMonitor):
                            "created file.", hardlink_path)
             os.remove(hardlink_path)
 
-        self.create_hardlink_path(src_path, hardlink_path, access_allowed, dir_perms=dir_perms)
+        self.create_hardlink_path(src_path, hardlink_path, access_allowed, is_parent_dir_writable)
 
     def on_created(self, path: str) -> None:
         """
@@ -393,7 +395,7 @@ class FileSystem(Handler, FSMonitor):
                 # Resync hardlink path
                 if os.path.exists(hardlink_path):
                     os.remove(hardlink_path)
-                self.create_hardlink_path(user_path, hardlink_path, access_allowed, dir_perms=0o777)
+                self.create_hardlink_path(user_path, hardlink_path, access_allowed, is_parent_dir_writable=True)
 
     def permission_created(self, permission: Permission) -> None:
         self._update_permissions_on_filesystem(permission)
