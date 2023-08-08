@@ -17,7 +17,7 @@ from webtest.app import TestApp
 
 from cowbird.api.schemas import ValidOperations
 from cowbird.handlers import HandlerFactory
-from cowbird.handlers.impl.filesystem import NOTEBOOKS_DIR_NAME, SECURE_DATA_PROXY_NAME, USER_WPS_OUTPUTS_USER_DIR_NAME
+from cowbird.handlers.impl.filesystem import NOTEBOOKS_DIR_NAME, SECURE_DATA_PROXY_NAME
 from cowbird.typedefs import JSON
 from tests import test_magpie, utils
 
@@ -403,25 +403,24 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
 
         self.job_id = 1
         self.bird_name = "weaver"
-        self.output_filename = "test_output.txt"
-        subpath = f"{self.job_id}/{self.output_filename}"
-        self.output_file = os.path.join(self.wpsoutputs_dir,
-                                        f"{self.bird_name}/users/{self.user_id}/{subpath}")
+        self.test_filename = "test_output.txt"
+        subpath = f"{self.job_id}/{self.test_filename}"
+        self.test_file = os.path.join(self.wpsoutputs_dir,
+                                      f"{self.bird_name}/users/{self.user_id}/{subpath}")
         self.wps_outputs_user_dir = filesystem_handler.get_wps_outputs_user_dir(self.test_username)
-        self.hardlink_path = filesystem_handler.get_user_hardlink(src_path=self.output_file,
+        self.test_hardlink = filesystem_handler.get_user_hardlink(src_path=self.test_file,
                                                                   bird_name=self.bird_name,
                                                                   user_name=self.test_username,
                                                                   subpath=subpath)
 
         # Create the test wps output file
-        os.makedirs(os.path.dirname(self.output_file))
-        with open(self.output_file, mode="w", encoding="utf-8"):
+        os.makedirs(os.path.dirname(self.test_file))
+        with open(self.test_file, mode="w", encoding="utf-8"):
             pass
-        os.chmod(self.output_file, 0o666)
+        os.chmod(self.test_file, 0o666)
 
-        self.secure_data_proxy_name = SECURE_DATA_PROXY_NAME
         # Delete the service if it already exists
-        test_magpie.delete_service(magpie_handler, self.secure_data_proxy_name)
+        test_magpie.delete_service(magpie_handler, SECURE_DATA_PROXY_NAME)
 
     def create_secure_data_proxy_service(self):
         """
@@ -429,10 +428,10 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
         """
         # Create service
         data = {
-            "service_name": self.secure_data_proxy_name,
+            "service_name": SECURE_DATA_PROXY_NAME,
             "service_type": ServiceAPI.service_type,
             "service_sync_type": ServiceAPI.service_type,
-            "service_url": f"http://localhost:9000/{self.secure_data_proxy_name}",
+            "service_url": f"http://localhost:9000/{SECURE_DATA_PROXY_NAME}",
             "configuration": {}
         }
         return test_magpie.create_service(HandlerFactory().get_handler("Magpie"), data)
@@ -445,8 +444,10 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
         utils.check_path_permissions(src_path, perms)
         if perms & 0o006:  # check if path has a read or write permission set for `other`
             assert os.path.exists(hardlink_path)
+            assert os.stat(hardlink_path).st_nlink == 2
         else:
             assert not os.path.exists(hardlink_path)
+            assert os.stat(src_path).st_nlink == 1
 
     def test_user_wps_output_created(self):
         """
@@ -457,19 +458,23 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
         # Error expected if the user workspace does not exist
         shutil.rmtree(filesystem_handler.get_user_workspace_dir(self.test_username))
         with pytest.raises(FileNotFoundError):
-            filesystem_handler.on_created(self.output_file)
+            filesystem_handler.on_created(self.test_file)
 
         # Create the user workspace
         filesystem_handler.user_created(self.test_username)
 
-        TestFileSystem.check_created_test_cases(self.output_file, self.hardlink_path)
+        TestFileSystem.check_created_test_cases(self.test_file, self.test_hardlink)
 
         # Check that the hardlink's parent directory has the right permissions
-        utils.check_path_permissions(os.path.dirname(self.hardlink_path), 0o777)
+        utils.check_path_permissions(os.path.dirname(self.test_hardlink), 0o777)
 
         # A create event on a folder should not be processed (no corresponding target folder created)
-        src_dir = os.path.join(self.wpsoutputs_dir, f"{self.bird_name}/users/{self.user_id}/{self.job_id}")
-        target_dir = os.path.join(self.wps_outputs_user_dir, f"{self.bird_name}/{self.job_id}")
+        subpath = str(self.job_id)
+        src_dir = os.path.join(self.wpsoutputs_dir, f"{self.bird_name}/users/{self.user_id}/{subpath}")
+        target_dir = filesystem_handler.get_user_hardlink(src_path=src_dir,
+                                                          bird_name=self.bird_name,
+                                                          user_name=self.test_username,
+                                                          subpath=subpath)
         shutil.rmtree(target_dir)
         filesystem_handler.on_created(src_dir)
         assert not os.path.exists(target_dir)
@@ -483,7 +488,7 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
 
         # Simulate a user_created event and check that the expected hardlink is generated.
         filesystem_handler.user_created(self.test_username)
-        assert os.stat(self.hardlink_path).st_nlink == 2
+        assert os.stat(self.test_hardlink).st_nlink == 2
 
     def test_user_wps_output_created_secure_data_proxy(self):
         """
@@ -495,28 +500,28 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
         svc_id = self.create_secure_data_proxy_service()
 
         # Note that the following test cases are made to be executed in a specific order and are not interchangeable.
+        # Each permission case specifies the permission's name and access to add and the resulting expected file perms.
         test_cases = [{
-            # If secure-data-proxy service exists but no route is defined for wpsoutputs,
-            # assume access is not allowed and check if no hardlink is created.
+            # If secure-data-proxy service exists but no route is defined for wpsoutputs, assume access is not allowed.
             "routes_to_create": [],
-            "permissions_cases": [("", "", False, 0o660)]
+            "permissions_cases": [("", "", 0o660)]
         }, {
             # Permission applied only on a parent resource
             # If the route is only defined on a parent resource and no route are defined for the actual file,
-            # assume access is the same as the access of the parent, and hardlink should be created accordingly.
+            # assume access is the same as the access of the parent.
             "routes_to_create": ["wpsoutputs"],
-            "permissions_cases": [(Permission.READ.value, Access.DENY.value, False, 0o660),
-                                  (Permission.READ.value, Access.ALLOW.value, True, 0o664),
-                                  (Permission.WRITE.value, Access.ALLOW.value, True, 0o666),
-                                  (Permission.WRITE.value, Access.DENY.value, True, 0o664)]
+            "permissions_cases": [(Permission.READ.value, Access.DENY.value, 0o660),
+                                  (Permission.READ.value, Access.ALLOW.value, 0o664),
+                                  (Permission.WRITE.value, Access.ALLOW.value, 0o666),
+                                  (Permission.WRITE.value, Access.DENY.value, 0o664)]
         }, {
             # Permission applied on the actual resource - Test access with an exact route match
             # Create the rest of the route to get a route that match the actual full path of the resource
-            "routes_to_create": re.sub(rf"^{self.wpsoutputs_dir}", "", self.output_file).strip("/").split("/"),
-            "permissions_cases": [(Permission.READ.value, Access.DENY.value, False, 0o660),
-                                  (Permission.READ.value, Access.ALLOW.value, True, 0o664),
-                                  (Permission.WRITE.value, Access.ALLOW.value, True, 0o666),
-                                  (Permission.WRITE.value, Access.DENY.value, True, 0o664)]}]
+            "routes_to_create": re.sub(rf"^{self.wpsoutputs_dir}", "", self.test_file).strip("/").split("/"),
+            "permissions_cases": [(Permission.READ.value, Access.DENY.value, 0o660),
+                                  (Permission.READ.value, Access.ALLOW.value, 0o664),
+                                  (Permission.WRITE.value, Access.ALLOW.value, 0o666),
+                                  (Permission.WRITE.value, Access.DENY.value, 0o664)]}]
         # Resource id of the last existing route resource found from the path of the test file
         last_res_id = svc_id
 
@@ -524,7 +529,7 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
             # Create routes found in list
             for route in test_case["routes_to_create"]:
                 last_res_id = magpie_handler.create_resource(route, Route.resource_type_name, last_res_id)
-            for perm_name, perm_access, expecting_created_file, expected_file_perms in test_case["permissions_cases"]:
+            for perm_name, perm_access, expected_file_perms in test_case["permissions_cases"]:
                 # Reset hardlink file for each test
                 shutil.rmtree(self.wps_outputs_user_dir, ignore_errors=True)
 
@@ -538,9 +543,8 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
                         perm_scope=Scope.MATCH.value)
 
                 # Check if file is created according to permissions
-                filesystem_handler.on_created(self.output_file)
-                assert expecting_created_file == os.path.exists(self.hardlink_path)
-                utils.check_path_permissions(self.output_file, expected_file_perms)
+                filesystem_handler.on_created(self.test_file)
+                self.check_path_perms_and_hardlink(self.test_file, self.test_hardlink, expected_file_perms)
 
     def test_user_wps_output_deleted(self):
         """
@@ -550,10 +554,10 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
 
         # Basic test cases for deleting user wps outputs. More extensive delete test cases are done in the public tests.
         # Test deleting a user file.
-        filesystem_handler.on_created(self.output_file)
-        assert os.path.exists(self.hardlink_path)
-        filesystem_handler.on_deleted(self.output_file)
-        assert not os.path.exists(self.hardlink_path)
+        filesystem_handler.on_created(self.test_file)
+        assert os.path.exists(self.test_hardlink)
+        filesystem_handler.on_deleted(self.test_file)
+        assert not os.path.exists(self.test_hardlink)
 
         # Test deleting a user directory
         src_dir = os.path.join(self.wpsoutputs_dir, f"{self.bird_name}/users/{self.user_id}/{self.job_id}")
@@ -566,7 +570,7 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
         """
         Tests resync operation on wpsoutputs user data.
         """
-
+        filesystem_handler = HandlerFactory().get_handler("FileSystem")
         test_dir = os.path.join(self.wps_outputs_user_dir, f"{self.bird_name}/{self.job_id}")
 
         # Create a file in a subfolder of the linked folder that should be removed by the resync
@@ -580,20 +584,25 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
         os.mkdir(old_subdir)
 
         # Create a new empty dir (should not appear in the resynced wpsoutputs since only files are processed)
-        new_dir = os.path.join(self.wpsoutputs_dir, f"{self.bird_name}/users/{self.user_id}/new_dir")
+        subpath = "new_dir"
+        new_dir = os.path.join(self.wpsoutputs_dir, f"{self.bird_name}/users/{self.user_id}/{subpath}")
         os.mkdir(new_dir)
-        new_dir_linked_path = os.path.join(self.wps_outputs_user_dir, f"{self.bird_name}/new_dir")
+
+        new_dir_linked_path = filesystem_handler.get_user_hardlink(src_path=new_dir,
+                                                                   bird_name=self.bird_name,
+                                                                   user_name=self.test_username,
+                                                                   subpath=subpath)
 
         # Check that old files exist before applying the resync
-        assert not os.path.exists(self.hardlink_path)
+        assert not os.path.exists(self.test_hardlink)
         assert os.path.exists(old_nested_file)
         assert os.path.exists(old_subdir)
 
         resp = utils.test_request(self.app, "PUT", "/handlers/FileSystem/resync")
 
-        # Check that new hardlinks are generated and old files are removed
+        # Check that hardlink is generated and old files are removed
         assert resp.status_code == 200
-        assert os.stat(self.hardlink_path).st_nlink == 2
+        assert os.stat(self.test_hardlink).st_nlink == 2
         assert not os.path.exists(new_dir_linked_path)
         assert not os.path.exists(old_nested_file)
         assert not os.path.exists(old_subdir)
@@ -607,8 +616,8 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
         svc_id = self.create_secure_data_proxy_service()
 
         # Prepare test files
-        subdir_test_file = self.output_file
-        subdir_hardlink = self.hardlink_path
+        subdir_test_file = self.test_file
+        subdir_hardlink = self.test_hardlink
         root_test_filename = "other_file.txt"
         root_test_file = os.path.join(self.wpsoutputs_dir,
                                       f"{self.bird_name}/users/{self.user_id}/{root_test_filename}")
@@ -621,7 +630,7 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
 
         # Prepare test routes
         user_dir_res_id = None
-        routes = re.sub(rf"^{self.wpsoutputs_dir}", "wpsoutputs", self.output_file).strip("/")
+        routes = re.sub(rf"^{self.wpsoutputs_dir}", "wpsoutputs", self.test_file).strip("/")
         last_res_id = svc_id
         for route in routes.split("/"):
             last_res_id = magpie_handler.create_resource(route, Route.resource_type_name, last_res_id)
@@ -629,7 +638,9 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
                 user_dir_res_id = last_res_id
         if not user_dir_res_id:
             raise ValueError("Missing resource id for the user directory, invalid test.")
+        # subdir file resource
         subdir_file_res_id = last_res_id
+        # root file resource
         magpie_handler.create_resource(root_test_filename, Route.resource_type_name, user_dir_res_id)
 
         data = {
@@ -698,8 +709,10 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
         """
         filesystem_handler = HandlerFactory().get_handler("FileSystem")
         magpie_handler = HandlerFactory().get_handler("Magpie")
-        # Create resources for the full route
+
+        # Create resources
         svc_id = self.create_secure_data_proxy_service()
+        res_id = magpie_handler.create_resource("wpsoutputs", Route.resource_type_name, svc_id)
 
         # Create other user from a group different than the test group
         test_magpie.delete_group(magpie_handler, "others")
@@ -737,14 +750,11 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
                                                                    user_name=same_group_username,
                                                                    subpath=same_group_filename)
 
-        for file in [self.output_file, public_file, public_subfile, ignored_file, same_group_file]:
+        for file in [self.test_file, public_file, public_subfile, ignored_file, same_group_file]:
             os.makedirs(os.path.dirname(file), exist_ok=True)
             with open(file, mode="w", encoding="utf-8"):
                 pass
             os.chmod(file, 0o660)
-
-        # Create resource
-        res_id = magpie_handler.create_resource("wpsoutputs", Route.resource_type_name, svc_id)
 
         data = {
             "event": ValidOperations.CreateOperation.value,
@@ -760,10 +770,10 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
         }
         magpie_handler.create_permission_by_res_id(data["resource_id"], data["name"], data["access"], data["scope"],
                                                    user_name=data["user"])
-        # Check that perms was only updated for concerned user files
+        # Check that perms are only updated for concerned user files
         resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
         assert resp.status_code == 200
-        self.check_path_perms_and_hardlink(self.output_file, self.hardlink_path, 0o664)
+        self.check_path_perms_and_hardlink(self.test_file, self.test_hardlink, 0o664)
         self.check_path_perms_and_hardlink(ignored_file, ignored_hardlink, 0o660)
         self.check_path_perms_and_hardlink(same_group_file, same_group_hardlink, 0o660)
         utils.check_path_permissions(public_file, 0o660)
@@ -777,7 +787,7 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
                                                    grp_name=data["group"])
         resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
         assert resp.status_code == 200
-        self.check_path_perms_and_hardlink(self.output_file, self.hardlink_path, 0o666)
+        self.check_path_perms_and_hardlink(self.test_file, self.test_hardlink, 0o666)
         self.check_path_perms_and_hardlink(ignored_file, ignored_hardlink, 0o660)
         self.check_path_perms_and_hardlink(same_group_file, same_group_hardlink, 0o662)
         utils.check_path_permissions(public_file, 0o660)
@@ -789,16 +799,16 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
         magpie_handler.create_permission_by_res_id(data["resource_id"], data["name"], data["access"], data["scope"],
                                                    grp_name=data["group"])
         utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
-        self.check_path_perms_and_hardlink(self.output_file, self.hardlink_path, 0o666)
+        self.check_path_perms_and_hardlink(self.test_file, self.test_hardlink, 0o666)
 
-        # Test deleting a specific user permission
+        # Test deleting a specific user permission, removing read-allow on user
         data["event"] = ValidOperations.DeleteOperation.value
         data["user"] = self.test_username
         data["group"] = None
         magpie_handler.delete_permission_by_user_and_res_id(data["user"], data["resource_id"], data["name"])
         resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
         assert resp.status_code == 200
-        self.check_path_perms_and_hardlink(self.output_file, self.hardlink_path, 0o662)
+        self.check_path_perms_and_hardlink(self.test_file, self.test_hardlink, 0o662)
         self.check_path_perms_and_hardlink(ignored_file, ignored_hardlink, 0o660)
         self.check_path_perms_and_hardlink(same_group_file, same_group_hardlink, 0o662)
         utils.check_path_permissions(public_file, 0o660)
@@ -811,7 +821,7 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
         magpie_handler.delete_permission_by_grp_and_res_id(data["group"], data["resource_id"], data["name"])
         resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
         assert resp.status_code == 200
-        self.check_path_perms_and_hardlink(self.output_file, self.hardlink_path, 0o660)
+        self.check_path_perms_and_hardlink(self.test_file, self.test_hardlink, 0o660)
         self.check_path_perms_and_hardlink(ignored_file, ignored_hardlink, 0o660)
         self.check_path_perms_and_hardlink(same_group_file, same_group_hardlink, 0o660)
         utils.check_path_permissions(public_file, 0o660)
@@ -837,7 +847,7 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
 
         # Create resource associated with the test file, on the other service
         last_res_id = other_svc_id
-        routes = re.sub(rf"^{self.wpsoutputs_dir}", "", self.output_file).strip("/")
+        routes = re.sub(rf"^{self.wpsoutputs_dir}", "wpsoutputs", self.test_file).strip("/")
         for route in routes.split("/"):
             last_res_id = magpie_handler.create_resource(route, Route.resource_type_name, last_res_id)
 
@@ -856,7 +866,7 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
         # Check that a delete event on the resource of the other service does not modify the file permissions.
         resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
         assert resp.status_code == 200
-        utils.check_path_permissions(self.output_file, 0o666)
+        utils.check_path_permissions(self.test_file, 0o666)
 
         # Check that a create event on the resource of the other service does not modify the file permissions.
         data["event"] = ValidOperations.CreateOperation.value
@@ -865,4 +875,4 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
                                                    data["scope"], data["user"])
         resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
         assert resp.status_code == 200
-        utils.check_path_permissions(self.output_file, 0o666)
+        utils.check_path_permissions(self.test_file, 0o666)

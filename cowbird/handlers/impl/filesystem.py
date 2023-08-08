@@ -141,7 +141,6 @@ class FileSystem(Handler, FSMonitor):
         if not os.path.exists(user_workspace_dir):
             raise FileNotFoundError(f"User `{user_name}` workspace not found at path [{user_workspace_dir}]. Failed to "
                                     f"find a hardlink path for the wpsoutput [{src_path}] source path.")
-        # TODO: review
         subpath = os.path.join(bird_name, subpath)
         return os.path.join(self.get_wps_outputs_user_dir(user_name), subpath)
 
@@ -189,7 +188,7 @@ class FileSystem(Handler, FSMonitor):
 
     def update_secure_data_proxy_path_perms(self, src_path: str, user_name: str) -> bool:
         """
-        Gets a path's permissions from the secure-data-proxy service and updates the file system permissions
+        Gets a path's permissions from the `secure-data-proxy` service and updates the file system permissions
         accordingly.
 
         Returns a boolean to indicate if the user should have some type of access to the path or not.
