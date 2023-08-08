@@ -10,7 +10,7 @@ Changes
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add monitoring to the ``FileSystem`` handler to watch wps outputs data.
-* Synchronize public wps outputs data to the user workspaces folder with hardlinks for user access.
+* Synchronize both public and user wps outputs data to the workspace folder with hardlinks for user access.
 * Add resync endpoint to trigger a handler's resync operations. Only the ``FileSystem`` handler is implemented for now,
   regenerating hardlinks associated to wps outputs public data.
 
