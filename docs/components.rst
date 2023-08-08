@@ -63,8 +63,20 @@ user workspaces location (e.g.:``/user_workspaces/public/wpsoutputs``). When a `
 `birdhouse`, the folder containing the hardlinks will be mounted as volume, so that the users have access
 via their `JupyterLab` instance. The volume will be made read-only to prevent a user from modifying the public data.
 
-..
-    TODO: add section on user data when implemented
+The user wps outputs data is made accessible by generating hardlinks from a wps outputs data directory containing user
+data to a subdirectory found in the related user's workspace. For example, with a source path
+``/wpsoutputs/<bird-name>/users/<user-id>/<job-id>/<output-file>``, a hardlink is generated at the path
+``/user_workspaces/<user-name>/wpsoutputs/<bird-name>/<job-id>/<output-file>``. The hardlink path uses a similar
+structure as found at the source path, but removes the redundant ``users`` and ``<user-id>`` path segments. The
+hardlink files will be automatically available to the user on a `JupyterLab` instance since the workspace is mounted as
+a volume. Any file that is found under a directory ``/wpsoutputs/<bird-name>/users/<user-id>/`` is considered to be
+user data and any file outside is considered public.
+
+The permissions found on the files are synchronized with the permissions found on `Magpie`. If `Magpie` uses a
+`secure-data-proxy` service, this service handles the permissions of those files. If a file does not have a
+corresponding route on the `secure-data-proxy` service, it will use the closest parent permissions. If no such service
+is found, the user files are assumed to be fully available with read and write permissions for the user. Note that if
+the file does not have any read or write permissions, the hardlink will not be available in the user's workspace.
 
 Note that different design choices were made to respect the constraints of the file system and to prevent the user from
 accessing forbidden data:
