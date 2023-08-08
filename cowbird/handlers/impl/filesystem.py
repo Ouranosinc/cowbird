@@ -139,23 +139,23 @@ class FileSystem(Handler, FSMonitor):
     def get_user_hardlink(self, src_path: str, bird_name: str, user_name: str, subpath: str) -> str:
         user_workspace_dir = self.get_user_workspace_dir(user_name)
         if not os.path.exists(user_workspace_dir):
-            raise FileNotFoundError(f"User {user_name} workspace not found at path {user_workspace_dir}. New "
-                                    f"wpsoutput {src_path} not added to the user workspace.")
-
+            raise FileNotFoundError(f"User `{user_name}` workspace not found at path [{user_workspace_dir}]. Failed to "
+                                    f"find a hardlink path for the wpsoutput [{src_path}] source path.")
+        # TODO: review
         subpath = os.path.join(bird_name, subpath)
         return os.path.join(self.get_wps_outputs_user_dir(user_name), subpath)
 
     def _get_secure_data_proxy_file_perms(self, src_path: str, user_name: str) -> Tuple[bool, bool]:
         """
-        Finds a route from the `secure-data-proxy service` that matches the resource path (or one its parent resource)
-        and gets the user permissions on that route.
+        Finds a route from the `secure-data-proxy` service that matches the resource path (or one of its parent
+        resource) and gets the user permissions on that route.
         """
         magpie_handler = HandlerFactory().get_handler("Magpie")
         sdp_svc_info = magpie_handler.get_service_info("secure-data-proxy")
         # Find the closest related route resource
         expected_route = re.sub(rf"^{self.wps_outputs_dir}", "wpsoutputs", src_path)
 
-        # Finds the resource id of the route matching the resource or the closest matching parent route.
+        # Finds the resource id of the route or the closest matching parent route.
         closest_res_id = None
         resource = magpie_handler.get_resource(cast(int, sdp_svc_info["resource_id"]))
         for segment in expected_route.split("/"):
@@ -170,7 +170,7 @@ class FileSystem(Handler, FSMonitor):
             closest_res_id = child_res_id
 
         if not closest_res_id:
-            # No resource was found to be corresponding to even some part of the expected route.
+            # No resource corresponds to the expected route or one of its parent route.
             # Assume access is not allowed.
             is_readable = False
             is_writable = False
@@ -195,6 +195,8 @@ class FileSystem(Handler, FSMonitor):
         Returns a boolean to indicate if the user should have some type of access to the path or not.
         """
         is_readable, is_writable = self._get_secure_data_proxy_file_perms(src_path, user_name)
+
+        # Files do not require the `executable` permission.
         apply_new_path_permissions(src_path, is_readable, is_writable, is_executable=False)
 
         access_allowed = True
@@ -211,10 +213,14 @@ class FileSystem(Handler, FSMonitor):
         """
         if access_allowed:
             os.makedirs(os.path.dirname(hardlink_path), exist_ok=True)
+
+            # Set custom write permissions to the parent directory, since they are required for write permissive files
+            # in JupyterLab.
             apply_new_path_permissions(os.path.dirname(hardlink_path),
                                        is_readable=True,
                                        is_writable=is_parent_dir_writable,
                                        is_executable=True)
+
             LOGGER.debug("Creating hardlink from file `%s` to the path `%s`", src_path, hardlink_path)
             try:
                 os.link(src_path, hardlink_path)
@@ -235,6 +241,7 @@ class FileSystem(Handler, FSMonitor):
             # User workspace directories require write permissions to allow file modifications via JupyterLab for
             # files with write permissions
             is_parent_dir_writable = True
+
             magpie_handler = HandlerFactory().get_handler("Magpie")
             user_name = magpie_handler.get_user_name_from_user_id(int(regex_match.group(2)))
             hardlink_path = self.get_user_hardlink(src_path=src_path,
@@ -283,12 +290,12 @@ class FileSystem(Handler, FSMonitor):
         :param path: Absolute path of a new file/directory
         """
         # Nothing to do for files in the wps_outputs folder.
-        # Permission modifications (e.g.: via `chmod`) are not supported to simplify the management of wpsoutputs perms.
-        # Any permission modifications should be done via Magpie, which will synchronize the permissions on any related
-        # hardlinks automatically.
+        # Permission modifications (e.g.: via `chmod`) are not supported to simplify the management of wpsoutputs
+        # permissions. Any permission modifications should be done via Magpie, which will synchronize the permissions on
+        # any related hardlinks automatically.
 
     def _delete_wpsoutputs_hardlink(self, src_path: str,
-                                    process_user_files: bool = True, process_public_files: bool = True) -> bool:
+                                    process_user_paths: bool = True, process_public_paths: bool = True) -> bool:
         """
         Deletes the hardlink path that corresponds to the input source path.
 
@@ -297,7 +304,7 @@ class FileSystem(Handler, FSMonitor):
         regex_match = re.search(self.wps_outputs_user_data_regex, src_path)
         try:
             if regex_match:  # user paths
-                if not process_user_files:
+                if not process_user_paths:
                     return False
                 magpie_handler = HandlerFactory().get_handler("Magpie")
                 user_name = magpie_handler.get_user_name_from_user_id(int(regex_match.group(2)))
@@ -306,7 +313,7 @@ class FileSystem(Handler, FSMonitor):
                                                      user_name=user_name,
                                                      subpath=regex_match.group(3))
             else:  # public paths
-                if not process_public_files:
+                if not process_public_paths:
                     return False
                 linked_path = self._get_public_hardlink(src_path)
             if os.path.isdir(linked_path):
@@ -331,7 +338,7 @@ class FileSystem(Handler, FSMonitor):
     @staticmethod
     def _check_if_res_from_secure_data_proxy(res_tree: List[JSON]) -> bool:
         """
-        Checks if the resource if part of a secure-data-proxy service of type API.
+        Checks if the resource if part of a `secure-data-proxy` service of type API.
         """
         root_res_info = res_tree[0]
         if root_res_info["resource_name"] == SECURE_DATA_PROXY_NAME:
@@ -349,7 +356,7 @@ class FileSystem(Handler, FSMonitor):
         if self._check_if_res_from_secure_data_proxy(res_tree):
             full_route = self.wps_outputs_dir
             # Add subpath if the resource is a child of the main wpsoutputs resource
-            if len(res_tree) > 2:
+            if len(res_tree) > 2:  # /secure-data-proxy/wpsoutputs/<subpath>
                 child_route = "/".join(cast(List[str], [res["resource_name"] for res in res_tree[2:]]))
                 full_route = os.path.join(full_route, child_route)
 

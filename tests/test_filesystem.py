@@ -68,7 +68,7 @@ class TestFileSystem(unittest.TestCase):
     @staticmethod
     def check_created_test_cases(output_path, hardlink_path):
         """
-        Runs multiple test cases for the creation of hardlinks, which are the same for public and user files.
+        Runs multiple test cases, common to the public and user files, for the creation of hardlinks.
         """
         # Make sure the hardlink doesn't already exist for the test cases
         Path(hardlink_path).unlink(missing_ok=True)

@@ -67,10 +67,10 @@ The user wps outputs data is made accessible by generating hardlinks from a wps 
 data to a subdirectory found in the related user's workspace. For example, with a source path
 ``/wpsoutputs/<bird-name>/users/<user-id>/<job-id>/<output-file>``, a hardlink is generated at the path
 ``/user_workspaces/<user-name>/wpsoutputs/<bird-name>/<job-id>/<output-file>``. The hardlink path uses a similar
-structure as found at the source path, but removes the redundant ``users`` and ``<user-id>`` path segments. The
+structure as found in the source path, but removes the redundant ``users`` and ``<user-id>`` path segments. The
 hardlink files will be automatically available to the user on a `JupyterLab` instance since the workspace is mounted as
 a volume. Any file that is found under a directory ``/wpsoutputs/<bird-name>/users/<user-id>/`` is considered to be
-user data and any file outside is considered public.
+user data and any outside file is considered public.
 
 The permissions found on the files are synchronized with the permissions found on `Magpie`. If `Magpie` uses a
 `secure-data-proxy` service, this service handles the permissions of those files. If a file does not have a

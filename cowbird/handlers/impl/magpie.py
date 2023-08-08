@@ -218,7 +218,7 @@ class Magpie(Handler):
 
     def get_user_list(self) -> List[str]:
         """
-        Returns the list of all Magpie users.
+        Returns the list of all Magpie usernames.
         """
         resp = self._send_request(method="GET", url=f"{self.url}/users", params={"detail": False})
         if resp.status_code != 200:
@@ -244,7 +244,7 @@ class Magpie(Handler):
         for user_info in resp.json()["users"]:
             if "user_id" in user_info and user_info["user_id"] == user_id:
                 return user_info["user_name"]
-        raise MagpieHttpError(f"Could not find any user with the id {user_id}.")
+        raise MagpieHttpError(f"Could not find any user with the id `{user_id}`.")
 
     def get_user_permissions(self, user: str) -> Dict[str, JSON]:
         """
@@ -270,7 +270,7 @@ class Magpie(Handler):
         """
         resp = self._send_request(method="GET", url=f"{self.url}/groups/{grp_name}/users")
         if resp.status_code != 200:
-            raise MagpieHttpError(f"Could not find the list of usernames from group {grp_name}. "
+            raise MagpieHttpError(f"Could not find the list of usernames from group `{grp_name}`. "
                                   f"HttpError {resp.status_code} : {resp.text}")
         return resp.json()["user_names"]
 
