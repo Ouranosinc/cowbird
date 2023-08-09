@@ -40,6 +40,7 @@ TEST_CFG_FILE = os.path.join(COWBIRD_ROOT, "config/config.example.yml")
 
 LOGGER = get_logger(__name__)
 
+
 class TestAppContainer(object):
     test_app: Optional[TestApp] = None
     app: Optional[TestApp] = None
