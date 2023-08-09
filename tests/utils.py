@@ -28,6 +28,7 @@ from cowbird.utils import (
     NullType,
     SingletonMeta,
     get_header,
+    get_logger,
     get_settings_from_config_ini,
     is_null,
     null
@@ -37,6 +38,7 @@ from cowbird.utils import (
 TEST_INI_FILE = os.path.join(COWBIRD_ROOT, "config/cowbird.example.ini")
 TEST_CFG_FILE = os.path.join(COWBIRD_ROOT, "config/config.example.yml")
 
+LOGGER = get_logger(__name__)
 
 class TestAppContainer(object):
     test_app: Optional[TestApp] = None
@@ -713,7 +715,13 @@ def check_path_permissions(path: Union[str, os.PathLike], permissions: int) -> N
     """
     Checks if the path has the right permissions, by verifying the last digits of the octal permissions.
     """
-    assert oct(os.stat(path)[ST_MODE] & 0o777) == oct(permissions & 0o777)
+    expected_perms = oct(permissions & 0o777)
+    actual_perms = oct(os.stat(path)[ST_MODE] & 0o777)
+    try:
+        assert actual_perms == expected_perms
+    except AssertionError as err:
+        LOGGER.error("Actual permissions `%s` not equal to expected permissions `%s`.", actual_perms, expected_perms)
+        raise err
 
 
 def check_mock_has_calls(mocked_fct, calls):
