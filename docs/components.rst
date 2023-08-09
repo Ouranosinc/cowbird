@@ -74,9 +74,12 @@ user data and any outside file is considered public.
 
 The permissions found on the files are synchronized with the permissions found on `Magpie`. If `Magpie` uses a
 `secure-data-proxy` service, this service handles the permissions of those files. If a file does not have a
-corresponding route on the `secure-data-proxy` service, it will use the closest parent permissions. If no such service
-is found, the user files are assumed to be fully available with read and write permissions for the user. Note that if
-the file does not have any read or write permissions, the hardlink will not be available in the user's workspace.
+corresponding route on the `secure-data-proxy` service, it will use the closest parent permissions. Note that the route
+resources found under the `secure-data-proxy` service must match exactly a path on the filesystem, starting with the
+directory name ``wpsoutputs``, and following with the desired children directories/file names. If no `secure-data-proxy`
+service is found, the user files are assumed to be fully available with read and write permissions for the user. Note
+that if the file does not have any read or write permissions, the hardlink will not be available in the user's
+workspace.
 
 Note that different design choices were made to respect the constraints of the file system and to prevent the user from
 accessing forbidden data:
