@@ -712,12 +712,15 @@ def check_error_param_structure(body: JSON,
             check_val_equal(body["param"]["compare"], param_compare)
 
 
-def check_path_permissions(path: Union[str, os.PathLike], permissions: int) -> None:
+def check_path_permissions(path: Union[str, os.PathLike], permissions: int, check_others_only: bool = False) -> None:
     """
     Checks if the path has the right permissions, by verifying the last digits of the octal permissions.
     """
-    expected_perms = oct(permissions & 0o777)
-    actual_perms = oct(os.stat(path)[ST_MODE] & 0o777)
+    check_mask = 0o777
+    if check_others_only:
+        check_mask = 0o007
+    expected_perms = oct(permissions & check_mask)
+    actual_perms = oct(os.stat(path)[ST_MODE] & check_mask)
     try:
         assert actual_perms == expected_perms
     except AssertionError as err:
