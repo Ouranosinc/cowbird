@@ -305,6 +305,7 @@ class Magpie(Handler):
         self.permissions_synch.delete_permission(permission)
 
     def resync(self) -> None:
+        # FIXME: this should be implemented in the eventual task addressing the resync mechanism.
         raise NotImplementedError
 
     def create_permissions(self, permissions_data: List[PermissionConfigItemType]) -> None:

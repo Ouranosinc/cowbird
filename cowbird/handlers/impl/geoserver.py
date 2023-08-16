@@ -386,6 +386,7 @@ class Geoserver(Handler, FSMonitor):
             self._update_magpie_layer_permissions(workspace_name, shapefile_name)
 
     def resync(self) -> None:
+        # FIXME: this should be implemented in the eventual task addressing the resync mechanism.
         raise NotImplementedError
 
     @staticmethod

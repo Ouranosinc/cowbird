@@ -36,4 +36,5 @@ class Thredds(Handler):
         raise NotImplementedError
 
     def resync(self) -> None:
+        # FIXME: this should be implemented in the eventual task addressing the resync mechanism.
         raise NotImplementedError
