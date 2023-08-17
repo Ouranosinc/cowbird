@@ -290,8 +290,8 @@ class FileSystem(Handler, FSMonitor):
         # Permission modifications (e.g.: via `chmod`) are not supported to simplify the management of wpsoutputs
         # permissions. Any permission modifications should be done via Magpie, which will synchronize the permissions on
         # any related hardlinks automatically.
-        LOGGER.warning(f"Modification event detected on path [{path}]. Event ignored as there is nothing to be done by "
-                       "the handler.")
+        LOGGER.warning("Modification event detected on path [%s]. Event ignored as there is nothing to be done by the "
+                       "handler.", path)
 
     def _delete_wpsoutputs_hardlink(self, src_path: str,
                                     process_user_paths: bool = True, process_public_paths: bool = True) -> bool:

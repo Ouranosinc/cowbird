@@ -299,7 +299,8 @@ class TestFileSystemBasic(TestFileSystem):
         filesystem_handler = HandlerFactory().get_handler("FileSystem")
 
         # Create a file in a subfolder of the linked folder that should be removed by the resync
-        old_nested_file = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(), "old_dir/old_file.txt")
+        old_nested_file = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(),
+                                       "old_dir/old_file.txt")
         os.makedirs(os.path.dirname(old_nested_file))
         with open(old_nested_file, mode="w", encoding="utf-8"):
             pass
@@ -359,7 +360,8 @@ class TestFileSystemBasic(TestFileSystem):
         shutil.rmtree(self.wpsoutputs_dir)
 
         # Create a file in a subfolder of the linked folder that should normally be removed by the resync
-        old_nested_file = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(), "old_dir/old_file.txt")
+        old_nested_file = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(),
+                                       "old_dir/old_file.txt")
         os.makedirs(os.path.dirname(old_nested_file))
         with open(old_nested_file, mode="w", encoding="utf-8"):
             pass
