@@ -139,9 +139,6 @@ class MockMagpieHandler(Handler):
                 "event_perms": self.event_perms,
                 "outbound_perms": self.outbound_perms}
 
-    def get_resource_id(self, resource_full_name):
-        pass
-
     def get_geoserver_workspace_res_id(self, user_name):
         pass
 
@@ -194,9 +191,6 @@ class MockMagpieHandler(Handler):
 
 class MockAnyHandlerBase(Handler):  # noqa  # missing abstract method 'required_params'
     ResourceId = 1000
-
-    def get_resource_id(self, resource_full_name):
-        return MockAnyHandler.ResourceId
 
     def user_created(self, user_name):
         pass

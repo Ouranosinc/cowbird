@@ -108,9 +108,6 @@ class Magpie(Handler):
             self.service_types = list(resp.json()["service_types"])
         return self.service_types
 
-    def get_resource_id(self, resource_full_name: str) -> int:
-        raise NotImplementedError
-
     def get_services_by_type(self, service_type: str) -> Dict[str, JSON]:
         resp = self._send_request(method="GET", url=f"{self.url}/services/types/{service_type}")
         if resp.status_code != 200:

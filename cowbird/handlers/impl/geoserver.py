@@ -176,9 +176,6 @@ class Geoserver(Handler, FSMonitor):
     #
 
     # Handler class functions
-    def get_resource_id(self, resource_full_name: str) -> int:
-        raise NotImplementedError
-
     def user_created(self, user_name: str) -> None:
         self._create_datastore_dir(user_name)
         res = chain(create_workspace.si(user_name), create_datastore.si(user_name))

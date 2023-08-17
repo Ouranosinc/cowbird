@@ -20,9 +20,6 @@ class Thredds(Handler):
         """
         super(Thredds, self).__init__(settings, name, **kwargs)
 
-    def get_resource_id(self, resource_full_name: str) -> int:
-        raise NotImplementedError
-
     def user_created(self, user_name: str) -> None:
         raise NotImplementedError
 

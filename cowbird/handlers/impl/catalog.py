@@ -26,9 +26,6 @@ class Catalog(Handler, FSMonitor):
         super(Catalog, self).__init__(settings, name, **kwargs)
         # TODO: Need to monitor data directory
 
-    def get_resource_id(self, resource_full_name: str) -> int:
-        raise NotImplementedError
-
     def user_created(self, user_name: str) -> None:
         LOGGER.info("Start monitoring workspace of created user [%s]", user_name)
         Monitoring().register(self._user_workspace_dir(user_name), True, Catalog)

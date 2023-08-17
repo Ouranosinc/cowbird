@@ -66,9 +66,6 @@ class FileSystem(Handler, FSMonitor):
         else:
             LOGGER.warning("Input wpsoutputs folder [%s] does not exist.", self.wps_outputs_dir)
 
-    def get_resource_id(self, resource_full_name: str) -> int:
-        raise NotImplementedError
-
     def get_user_workspace_dir(self, user_name: str) -> str:
         return os.path.join(self.workspace_dir, user_name)
 

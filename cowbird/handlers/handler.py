@@ -87,22 +87,6 @@ class Handler(abc.ABC):
         return os.path.join(self.workspace_dir, user_name)
 
     @abc.abstractmethod
-    def get_resource_id(self, resource_full_name: str) -> int:
-        """
-        Each handler must provide this implementation required by the permission synchronizer.
-
-        The function needs to find the resource id in Magpie from the resource full name using its knowledge of the
-        service. If the resource doesn't already exist, the function needs to create it, again using its knowledge of
-        resource type and parent resource type if required.
-
-        .. todo: Could be moved to another abstract class (SynchronizableHandler) that some Handler could implement
-                 Permissions_synchronizer would then check instance type of handler while loading sync config
-
-                 TODO: Check if this TODO is still relevant considering latest Magpie implementation?
-        """
-        raise NotImplementedError
-
-    @abc.abstractmethod
     def user_created(self, user_name: str) -> None:
         raise NotImplementedError
 
