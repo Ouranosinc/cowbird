@@ -604,7 +604,8 @@ def apply_new_path_permissions(path: str, is_readable: bool, is_writable: bool, 
         try:
             os.chmod(path, new_perms)
         except PermissionError as exc:
-            LOGGER.warning("Failed to change permissions on the %s path: %s", path, exc)
+            LOGGER.warning("Failed to change permissions from `%o` to `%o` on the path [%s] : %s",
+                           previous_perms, new_perms, path, exc)
 
 
 def update_filesystem_permissions(permission: int, is_readable: bool, is_writable: bool, is_executable: bool) -> int:
@@ -630,4 +631,5 @@ def apply_default_path_ownership(path: str) -> None:
             # This operation only works as root.
             os.chown(path, DEFAULT_ADMIN_UID, DEFAULT_ADMIN_GID)
         except PermissionError as exc:
-            LOGGER.warning("Failed to change ownership of the %s path: %s", path, exc)
+            LOGGER.warning("Failed to change ownership from [uid=%s;gid=%s] to [uid=%s;gid=%s] on the path [%s] : %s",
+                           path_stat.st_uid, path_stat.st_gid, DEFAULT_ADMIN_UID, DEFAULT_ADMIN_GID, path, exc)
