@@ -226,7 +226,7 @@ class TestFileSystemBasic(TestFileSystem):
             pass
 
         filesystem_handler = HandlerFactory().get_handler("FileSystem")
-        hardlink_path = os.path.join(filesystem_handler.get_wps_outputs_public_dir(), output_subpath)
+        hardlink_path = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(), output_subpath)
 
         TestFileSystem.check_created_test_cases(output_file, hardlink_path)
 
@@ -234,7 +234,7 @@ class TestFileSystemBasic(TestFileSystem):
         utils.check_path_permissions(os.path.dirname(hardlink_path), 0o005, check_others_only=True)
 
         # A create event on a folder should not be processed (no corresponding target folder created)
-        target_dir = os.path.join(filesystem_handler.get_wps_outputs_public_dir(), bird_name)
+        target_dir = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(), bird_name)
         shutil.rmtree(target_dir)
         filesystem_handler.on_created(os.path.join(self.wpsoutputs_dir, bird_name))
         assert not os.path.exists(target_dir)
@@ -257,7 +257,7 @@ class TestFileSystemBasic(TestFileSystem):
         output_file_path = os.path.join(self.wpsoutputs_dir, output_subpath)
 
         # Create a file at the hardlink location
-        hardlink_path = os.path.join(filesystem_handler.get_wps_outputs_public_dir(), output_subpath)
+        hardlink_path = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(), output_subpath)
         os.makedirs(os.path.dirname(hardlink_path))
         with open(hardlink_path, mode="w", encoding="utf-8"):
             pass
@@ -273,7 +273,7 @@ class TestFileSystemBasic(TestFileSystem):
             assert len([r for r in log_capture.records if r.levelno == logging.DEBUG]) == 1
 
         # Test folder paths, the removal of a source folder should also remove the linked folder.
-        weaver_linked_dir = os.path.join(filesystem_handler.get_wps_outputs_public_dir(), "weaver")
+        weaver_linked_dir = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(), "weaver")
         assert os.path.exists(weaver_linked_dir)
         filesystem_handler.on_deleted(os.path.join(self.wpsoutputs_dir, "weaver"))
         assert not os.path.exists(weaver_linked_dir)
@@ -299,18 +299,18 @@ class TestFileSystemBasic(TestFileSystem):
         filesystem_handler = HandlerFactory().get_handler("FileSystem")
 
         # Create a file in a subfolder of the linked folder that should be removed by the resync
-        old_nested_file = os.path.join(filesystem_handler.get_wps_outputs_public_dir(), "old_dir/old_file.txt")
+        old_nested_file = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(), "old_dir/old_file.txt")
         os.makedirs(os.path.dirname(old_nested_file))
         with open(old_nested_file, mode="w", encoding="utf-8"):
             pass
 
         # Create a file at the root of the linked folder that should be removed by the resync
-        old_root_file = os.path.join(filesystem_handler.get_wps_outputs_public_dir(), "old_root_file.txt")
+        old_root_file = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(), "old_root_file.txt")
         with open(old_root_file, mode="w", encoding="utf-8"):
             pass
 
         # Create an empty subfolder in the linked folder that should be removed by the resync
-        old_subdir = os.path.join(filesystem_handler.get_wps_outputs_public_dir(), "empty_subdir")
+        old_subdir = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(), "empty_subdir")
         os.mkdir(old_subdir)
 
         # Create a new test wps output file
@@ -319,12 +319,12 @@ class TestFileSystemBasic(TestFileSystem):
         os.makedirs(os.path.dirname(output_file))
         with open(output_file, mode="w", encoding="utf-8"):
             pass
-        hardlink_path = os.path.join(filesystem_handler.get_wps_outputs_public_dir(), output_subpath)
+        hardlink_path = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(), output_subpath)
 
         # Create a new empty dir (should not appear in the resynced wpsoutputs since only files are processed)
         new_dir = os.path.join(self.wpsoutputs_dir, "new_dir")
         os.mkdir(new_dir)
-        new_dir_linked_path = os.path.join(filesystem_handler.get_wps_outputs_public_dir(), "new_dir")
+        new_dir_linked_path = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(), "new_dir")
 
         # Check that old files exist before applying the resync
         assert not os.path.exists(hardlink_path)
@@ -359,7 +359,7 @@ class TestFileSystemBasic(TestFileSystem):
         shutil.rmtree(self.wpsoutputs_dir)
 
         # Create a file in a subfolder of the linked folder that should normally be removed by the resync
-        old_nested_file = os.path.join(filesystem_handler.get_wps_outputs_public_dir(), "old_dir/old_file.txt")
+        old_nested_file = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(), "old_dir/old_file.txt")
         os.makedirs(os.path.dirname(old_nested_file))
         with open(old_nested_file, mode="w", encoding="utf-8"):
             pass
@@ -407,7 +407,7 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
         subpath = f"{self.job_id}/{self.test_filename}"
         self.test_file = os.path.join(self.wpsoutputs_dir,
                                       f"{self.bird_name}/users/{self.user_id}/{subpath}")
-        self.wps_outputs_user_dir = filesystem_handler.get_wps_outputs_user_dir(self.test_username)
+        self.wps_outputs_user_dir = filesystem_handler.get_user_workspace_wps_outputs_dir(self.test_username)
         self.test_hardlink = filesystem_handler.get_user_hardlink(src_path=self.test_file,
                                                                   bird_name=self.bird_name,
                                                                   user_name=self.test_username,

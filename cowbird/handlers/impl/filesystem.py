@@ -48,16 +48,17 @@ class FileSystem(Handler, FSMonitor):
         super(FileSystem, self).__init__(settings, name, **kwargs)
         self.jupyterhub_user_data_dir = jupyterhub_user_data_dir
 
-        self.wps_outputs_public_subdir = kwargs.get("wps_outputs_public_subdir", None)
-        if not self.wps_outputs_public_subdir:
+        self.public_workspace_wps_outputs_subdir = kwargs.get("public_workspace_wps_outputs_subdir", None)
+        if not self.public_workspace_wps_outputs_subdir:
             # use default subdir if undefined or an empty string
-            self.wps_outputs_public_subdir = "public/wpsoutputs"
+            self.public_workspace_wps_outputs_subdir = "public/wpsoutputs"
         # Make sure output path is normalized for the regex (e.g.: removing trailing slashes)
         self.wps_outputs_dir = os.path.normpath(wps_outputs_dir)
 
         # Regex to find any directory or file found in the `users` output path of a 'bird' service
         # {self.wps_outputs_dir}/<wps-bird-name>/users/<user-uuid>/...
-        self.wps_outputs_user_data_regex = rf"^{self.wps_outputs_dir}/(\w+)/users/(\d+)/(.+)"
+        self.wps_outputs_user_data_regex = re.compile(
+            rf"^{self.wps_outputs_dir}/(?P<bird_name>\w+)/users/(?P<user_id>\d+)/(?P<subpath>.+)")
 
     def start_wpsoutputs_monitoring(self, monitoring: Monitoring) -> None:
         if os.path.exists(self.wps_outputs_dir):
@@ -69,11 +70,11 @@ class FileSystem(Handler, FSMonitor):
     def get_user_workspace_dir(self, user_name: str) -> str:
         return os.path.join(self.workspace_dir, user_name)
 
-    def get_wps_outputs_user_dir(self, user_name: str) -> str:
+    def get_user_workspace_wps_outputs_dir(self, user_name: str) -> str:
         return os.path.join(self.get_user_workspace_dir(user_name), USER_WPS_OUTPUTS_USER_DIR_NAME)
 
-    def get_wps_outputs_public_dir(self) -> str:
-        return os.path.join(self.workspace_dir, self.wps_outputs_public_subdir)
+    def get_public_workspace_wps_outputs_dir(self) -> str:
+        return os.path.join(self.workspace_dir, self.public_workspace_wps_outputs_subdir)
 
     def _get_jupyterhub_user_data_dir(self, user_name: str) -> str:
         return os.path.join(self.jupyterhub_user_data_dir, user_name)
@@ -88,7 +89,7 @@ class FileSystem(Handler, FSMonitor):
                 create_symlink = True
             else:
                 raise FileExistsError("Failed to create symlinked directory, since a non-symlink directory already "
-                                      f"exists at the targeted path {dst}.")
+                                      f"exists at the targeted path [{dst}].")
         elif os.readlink(dst) != src:
             # If symlink already exists but points to the wrong source, update symlink to the new source directory.
             os.remove(dst)
@@ -102,7 +103,7 @@ class FileSystem(Handler, FSMonitor):
         try:
             os.mkdir(user_workspace_dir)
         except FileExistsError:
-            LOGGER.info("User workspace directory already existing (skip creation): [%s]", user_workspace_dir)
+            LOGGER.info("User workspace directory already exists (skip creation): [%s]", user_workspace_dir)
         os.chmod(user_workspace_dir, 0o755)  # nosec
 
         FileSystem._create_symlink_dir(src=self._get_jupyterhub_user_data_dir(user_name),
@@ -131,7 +132,7 @@ class FileSystem(Handler, FSMonitor):
 
     def _get_public_hardlink(self, src_path: str) -> str:
         subpath = os.path.relpath(src_path, self.wps_outputs_dir)
-        return os.path.join(self.get_wps_outputs_public_dir(), subpath)
+        return os.path.join(self.get_public_workspace_wps_outputs_dir(), subpath)
 
     def get_user_hardlink(self, src_path: str, bird_name: str, user_name: str, subpath: str) -> str:
         user_workspace_dir = self.get_user_workspace_dir(user_name)
@@ -139,7 +140,7 @@ class FileSystem(Handler, FSMonitor):
             raise FileNotFoundError(f"User `{user_name}` workspace not found at path [{user_workspace_dir}]. Failed to "
                                     f"find a hardlink path for the wpsoutput [{src_path}] source path.")
         subpath = os.path.join(bird_name, subpath)
-        return os.path.join(self.get_wps_outputs_user_dir(user_name), subpath)
+        return os.path.join(self.get_user_workspace_wps_outputs_dir(user_name), subpath)
 
     def _get_secure_data_proxy_file_perms(self, src_path: str, user_name: str) -> Tuple[bool, bool]:
         """
@@ -147,9 +148,9 @@ class FileSystem(Handler, FSMonitor):
         resource) and gets the user permissions on that route.
         """
         magpie_handler = HandlerFactory().get_handler("Magpie")
-        sdp_svc_info = magpie_handler.get_service_info("secure-data-proxy")
+        sdp_svc_info = magpie_handler.get_service_info(SECURE_DATA_PROXY_NAME)
         # Find the closest related route resource
-        expected_route = re.sub(rf"^{self.wps_outputs_dir}", "wpsoutputs", src_path)
+        expected_route = re.sub(rf"^{self.wps_outputs_dir}", USER_WPS_OUTPUTS_USER_DIR_NAME, src_path)
 
         # Finds the resource id of the route or the closest matching parent route.
         closest_res_id = None
@@ -223,12 +224,12 @@ class FileSystem(Handler, FSMonitor):
             except Exception as exc:
                 LOGGER.warning("Failed to create hardlink `%s` : %s", hardlink_path, exc)
         else:
-            LOGGER.debug("Access to the wps output file `%s` is not allowed for the user. No hardlink created.",
-                         src_path)
+            LOGGER.info("Access to the WPS output file `%s` is not allowed for the user. No hardlink created.",
+                        src_path)
 
     def _create_wpsoutputs_hardlink(self, src_path: str, overwrite: bool = False,
                                     process_user_files: bool = True, process_public_files: bool = True) -> None:
-        regex_match = re.search(self.wps_outputs_user_data_regex, src_path)
+        regex_match = self.wps_outputs_user_data_regex.search(src_path)
         access_allowed = True
         if regex_match:  # user files
             if not process_user_files:
@@ -239,15 +240,15 @@ class FileSystem(Handler, FSMonitor):
             is_parent_dir_writable = True
 
             magpie_handler = HandlerFactory().get_handler("Magpie")
-            user_name = magpie_handler.get_user_name_from_user_id(int(regex_match.group(2)))
+            user_name = magpie_handler.get_user_name_from_user_id(int(regex_match.group("user_id")))
             hardlink_path = self.get_user_hardlink(src_path=src_path,
-                                                   bird_name=regex_match.group(1),
+                                                   bird_name=regex_match.group("bird_name"),
                                                    user_name=user_name,
-                                                   subpath=regex_match.group(3))
+                                                   subpath=regex_match.group("subpath"))
             api_services = magpie_handler.get_services_by_type(ServiceAPI.service_type)
             if SECURE_DATA_PROXY_NAME not in api_services:
-                LOGGER.debug("`%s` service not found. Considering user wpsoutputs data as accessible by default.",
-                             SECURE_DATA_PROXY_NAME)
+                LOGGER.warning("`%s` service not found. Considering user wpsoutputs data as accessible by default.",
+                               SECURE_DATA_PROXY_NAME)
                 apply_new_path_permissions(src_path, True, True, False)
             else:  # get access and apply permissions if the secure-data-proxy exists
                 access_allowed = self.update_secure_data_proxy_path_perms(src_path, user_name)
@@ -289,6 +290,8 @@ class FileSystem(Handler, FSMonitor):
         # Permission modifications (e.g.: via `chmod`) are not supported to simplify the management of wpsoutputs
         # permissions. Any permission modifications should be done via Magpie, which will synchronize the permissions on
         # any related hardlinks automatically.
+        LOGGER.warning(f"Modification event detected on path [{path}]. Event ignored as there is nothing to be done by "
+                       "the handler.")
 
     def _delete_wpsoutputs_hardlink(self, src_path: str,
                                     process_user_paths: bool = True, process_public_paths: bool = True) -> bool:
@@ -297,23 +300,23 @@ class FileSystem(Handler, FSMonitor):
 
         Returns a bool to indicate if a hardlink path was deleted or not.
         """
-        regex_match = re.search(self.wps_outputs_user_data_regex, src_path)
+        regex_match = self.wps_outputs_user_data_regex.search(src_path)
         try:
             if regex_match:  # user paths
                 if not process_user_paths:
                     return False
                 magpie_handler = HandlerFactory().get_handler("Magpie")
-                user_name = magpie_handler.get_user_name_from_user_id(int(regex_match.group(2)))
+                user_name = magpie_handler.get_user_name_from_user_id(int(regex_match.group("user_id")))
                 linked_path = self.get_user_hardlink(src_path=src_path,
-                                                     bird_name=regex_match.group(1),
+                                                     bird_name=regex_match.group("bird_name"),
                                                      user_name=user_name,
-                                                     subpath=regex_match.group(3))
+                                                     subpath=regex_match.group("subpath"))
             else:  # public paths
                 if not process_public_paths:
                     return False
                 linked_path = self._get_public_hardlink(src_path)
             if os.path.isdir(linked_path):
-                os.rmdir(linked_path)
+                shutil.rmtree(linked_path, ignore_errors=True)
             else:
                 os.remove(linked_path)
             return True
@@ -369,30 +372,30 @@ class FileSystem(Handler, FSMonitor):
             user_routes = {}
             if os.path.isfile(full_route):
                 # use current route directly if it's a user data file
-                regex_match = re.search(self.wps_outputs_user_data_regex, full_route)
-                if regex_match and int(regex_match.group(2)) in users:
+                regex_match = self.wps_outputs_user_data_regex.search(full_route)
+                if regex_match and int(regex_match.group("user_id")) in users:
                     user_routes[full_route] = regex_match
             else:  # dir case, browse to find all children user file paths
                 for root, _, filenames in os.walk(full_route):
                     for file in filenames:
                         full_path = os.path.join(root, file)
-                        regex_match = re.search(self.wps_outputs_user_data_regex, full_path)
-                        if regex_match and int(regex_match.group(2)) in users:
+                        regex_match = self.wps_outputs_user_data_regex.search(full_path)
+                        if regex_match and int(regex_match.group("user_id")) in users:
                             user_routes[full_path] = regex_match
 
             # Update permissions for all found user paths
             for user_path, path_regex_match in user_routes.items():
-                user_name = users[int(path_regex_match.group(2))]
+                user_name = users[int(path_regex_match.group("user_id"))]
                 access_allowed = self.update_secure_data_proxy_path_perms(user_path, user_name)
                 try:
                     hardlink_path = self.get_user_hardlink(src_path=user_path,
-                                                           bird_name=path_regex_match.group(1),
+                                                           bird_name=path_regex_match.group("bird_name"),
                                                            user_name=user_name,
-                                                           subpath=path_regex_match.group(3))
+                                                           subpath=path_regex_match.group("subpath"))
                 except FileNotFoundError:
-                    LOGGER.debug("Failed to find a hardlink path corresponding to the source path [%s]. The user `%s` "
-                                 "should already have an existing workspace.",
-                                 user_path, user_name)
+                    LOGGER.warning("Failed to find a hardlink path corresponding to the source path [%s]. The user `%s`"
+                                   " should already have an existing workspace.",
+                                   user_path, user_name)
                     continue
 
                 # Resync hardlink path
@@ -417,25 +420,25 @@ class FileSystem(Handler, FSMonitor):
         else:
             # Delete the content of the linked public folder, but keep the folder to avoid breaking the volume
             # if the folder is mounted on a Docker container
-            wps_outputs_public_dir = self.get_wps_outputs_public_dir()
-            if not os.path.exists(wps_outputs_public_dir):
+            public_workspace_wps_outputs_dir = self.get_public_workspace_wps_outputs_dir()
+            if not os.path.exists(public_workspace_wps_outputs_dir):
                 LOGGER.debug("Linked public wps outputs data folder [%s] does not exist. "
-                             "No public file to delete for the resync operation.", wps_outputs_public_dir)
+                             "No public file to delete for the resync operation.", public_workspace_wps_outputs_dir)
             else:
-                for filename in os.listdir(wps_outputs_public_dir):
-                    file_path = os.path.join(wps_outputs_public_dir, filename)
+                for filename in os.listdir(public_workspace_wps_outputs_dir):
+                    file_path = os.path.join(public_workspace_wps_outputs_dir, filename)
                     try:
                         if os.path.isfile(file_path):
                             os.remove(file_path)
                         elif os.path.isdir(file_path):
                             shutil.rmtree(file_path)
                     except Exception as exc:
-                        LOGGER.error("Failed to delete path [%s] : %s", file_path, exc)
+                        LOGGER.error("Failed to delete path [%s].", file_path, exc_info=exc)
 
             # Delete wps outputs hardlinks for each user
             user_list = HandlerFactory().get_handler("Magpie").get_user_list()
             for user_name in user_list:
-                shutil.rmtree(self.get_wps_outputs_user_dir(user_name), ignore_errors=True)
+                shutil.rmtree(self.get_user_workspace_wps_outputs_dir(user_name), ignore_errors=True)
 
             # Create all hardlinks from files of the current source folder
             for root, _, filenames in os.walk(self.wps_outputs_dir):
