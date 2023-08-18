@@ -46,7 +46,7 @@ JupyterHub user data
 A symlink is created in the user workspace to give access to the notebook directory of the user. The notebook directory
 is the directory that was originally mounted in `bird-house`_ as the ``writable-workspace``. When adding the `Cowbird`
 component to `bird-house`_ (see
-`here <https://github.com/bird-house/birdhouse-deploy/blob/master/birdhouse/components/README.rst#cowbird>`_), the
+`here <https://github.com/bird-house/birdhouse-deploy/blob/master/birdhouse/components/README.rst#cowbird>`__), the
 mounted ``writable-workspace`` becomes the user workspace managed by `Cowbird` (e.g.: ``/user_workspaces/<user_name>``)
 which requires a symlink to access the notebook directory originally used by `bird-house`_ and `JupyterHub`.
 
@@ -81,7 +81,7 @@ user data and any outside file is considered public.
 The permissions found on the user data are synchronized with the permissions found on `Magpie`_. If `Magpie`_ uses a
 `secure-data-proxy` service, this service handles the permissions of those files (see `here <https://github.com/
 bird-house/birdhouse-deploy/blob/master/birdhouse/optional-components/README.rst#control-secured-access-to-wps-
-outputs>`_). If a file does not have a corresponding route on the `secure-data-proxy` service, it will use the closest
+outputs>`__). If a file does not have a corresponding route on the `secure-data-proxy` service, it will use the closest
 parent permissions.
 
 .. warning::
