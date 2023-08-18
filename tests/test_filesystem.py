@@ -24,10 +24,9 @@ from tests import test_magpie, utils
 CURR_DIR = Path(__file__).resolve().parent
 
 
-@pytest.mark.filesystem
-class TestFileSystem(unittest.TestCase):
+class BaseTestFileSystem(unittest.TestCase):
     """
-    Test FileSystem parent class, containing some utility functions and common setup/teardown operations.
+    Base test FileSystem parent class, containing some utility functions and common setup/teardown operations.
     """
 
     @classmethod
@@ -85,8 +84,7 @@ class TestFileSystem(unittest.TestCase):
 
         # A create event should replace a hardlink path with the new file if the target path already exists
         os.remove(hardlink_path)
-        with open(hardlink_path, mode="w", encoding="utf-8"):
-            pass
+        Path(hardlink_path).touch()
         original_hardlink_ino = Path(hardlink_path).stat().st_ino
         filesystem_handler.on_created(output_path)
         new_hardlink_ino = Path(hardlink_path).stat().st_ino
@@ -96,7 +94,7 @@ class TestFileSystem(unittest.TestCase):
 
 
 @pytest.mark.filesystem
-class TestFileSystemBasic(TestFileSystem):
+class TestFileSystemBasic(BaseTestFileSystem):
     """
     Test FileSystem generic operations.
     """
@@ -222,13 +220,12 @@ class TestFileSystemBasic(TestFileSystem):
         output_subpath = f"{bird_name}/test_output.txt"
         output_file = os.path.join(self.wpsoutputs_dir, output_subpath)
         os.makedirs(os.path.dirname(output_file))
-        with open(output_file, mode="w", encoding="utf-8"):
-            pass
+        Path(output_file).touch()
 
         filesystem_handler = HandlerFactory().get_handler("FileSystem")
         hardlink_path = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(), output_subpath)
 
-        TestFileSystem.check_created_test_cases(output_file, hardlink_path)
+        BaseTestFileSystem.check_created_test_cases(output_file, hardlink_path)
 
         # Check that the hardlink's parent directory have the right permissions
         utils.check_path_permissions(os.path.dirname(hardlink_path), 0o005, check_others_only=True)
@@ -259,8 +256,7 @@ class TestFileSystemBasic(TestFileSystem):
         # Create a file at the hardlink location
         hardlink_path = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(), output_subpath)
         os.makedirs(os.path.dirname(hardlink_path))
-        with open(hardlink_path, mode="w", encoding="utf-8"):
-            pass
+        Path(hardlink_path).touch()
 
         with self.assertLogs("cowbird.handlers.impl.filesystem", level=logging.DEBUG) as log_capture:
             filesystem_handler.on_deleted(output_file_path)
@@ -302,13 +298,11 @@ class TestFileSystemBasic(TestFileSystem):
         old_nested_file = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(),
                                        "old_dir/old_file.txt")
         os.makedirs(os.path.dirname(old_nested_file))
-        with open(old_nested_file, mode="w", encoding="utf-8"):
-            pass
+        Path(old_nested_file).touch()
 
         # Create a file at the root of the linked folder that should be removed by the resync
         old_root_file = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(), "old_root_file.txt")
-        with open(old_root_file, mode="w", encoding="utf-8"):
-            pass
+        Path(old_root_file).touch()
 
         # Create an empty subfolder in the linked folder that should be removed by the resync
         old_subdir = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(), "empty_subdir")
@@ -318,8 +312,7 @@ class TestFileSystemBasic(TestFileSystem):
         output_subpath = "weaver/test_output.txt"
         output_file = os.path.join(self.wpsoutputs_dir, output_subpath)
         os.makedirs(os.path.dirname(output_file))
-        with open(output_file, mode="w", encoding="utf-8"):
-            pass
+        Path(output_file).touch()
         hardlink_path = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(), output_subpath)
 
         # Create a new empty dir (should not appear in the resynced wpsoutputs since only files are processed)
@@ -363,8 +356,7 @@ class TestFileSystemBasic(TestFileSystem):
         old_nested_file = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(),
                                        "old_dir/old_file.txt")
         os.makedirs(os.path.dirname(old_nested_file))
-        with open(old_nested_file, mode="w", encoding="utf-8"):
-            pass
+        Path(old_nested_file).touch()
 
         # Applying the resync should not crash even if the source wpsoutputs folder doesn't exist
         resp = utils.test_request(app, "PUT", "/handlers/FileSystem/resync")
@@ -375,7 +367,7 @@ class TestFileSystemBasic(TestFileSystem):
 
 
 @pytest.mark.filesystem
-class TestFileSystemWpsOutputsUser(TestFileSystem):
+class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
     """
     FileSystem tests specific to the user wps outputs data.
     """
@@ -417,8 +409,7 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
 
         # Create the test wps output file
         os.makedirs(os.path.dirname(self.test_file))
-        with open(self.test_file, mode="w", encoding="utf-8"):
-            pass
+        Path(self.test_file).touch()
         os.chmod(self.test_file, 0o666)
 
         # Delete the service if it already exists
@@ -465,7 +456,7 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
         # Create the user workspace
         filesystem_handler.user_created(self.test_username)
 
-        TestFileSystem.check_created_test_cases(self.test_file, self.test_hardlink)
+        BaseTestFileSystem.check_created_test_cases(self.test_file, self.test_hardlink)
 
         # Check that the hardlink's parent directory has the right permissions
         utils.check_path_permissions(os.path.dirname(self.test_hardlink), 0o007, check_others_only=True)
@@ -578,8 +569,7 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
         # Create a file in a subfolder of the linked folder that should be removed by the resync
         old_nested_file = os.path.join(test_dir, "old_dir/old_file.txt")
         os.makedirs(os.path.dirname(old_nested_file))
-        with open(old_nested_file, mode="w", encoding="utf-8"):
-            pass
+        Path(old_nested_file).touch()
 
         # Create an empty subfolder in the linked folder that should be removed by the resync
         old_subdir = os.path.join(test_dir, "empty_subdir")
@@ -625,8 +615,7 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
                                       f"{self.bird_name}/users/{self.user_id}/{root_test_filename}")
         root_hardlink = HandlerFactory().get_handler("FileSystem").get_user_hardlink(
             src_path=root_test_file, bird_name=self.bird_name, user_name=self.test_username, subpath=root_test_filename)
-        with open(root_test_file, mode="w", encoding="utf-8"):
-            pass
+        Path(root_test_file).touch()
         for file in [root_test_file, subdir_test_file]:
             os.chmod(file, 0o660)
 
@@ -754,8 +743,7 @@ class TestFileSystemWpsOutputsUser(TestFileSystem):
 
         for file in [self.test_file, public_file, public_subfile, ignored_file, same_group_file]:
             os.makedirs(os.path.dirname(file), exist_ok=True)
-            with open(file, mode="w", encoding="utf-8"):
-                pass
+            Path(file).touch()
             os.chmod(file, 0o660)
 
         data = {
