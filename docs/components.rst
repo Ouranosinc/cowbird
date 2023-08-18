@@ -78,15 +78,27 @@ hardlink files will be automatically available to the user on a `JupyterLab` ins
 a volume. Any file that is found under a directory ``/wpsoutputs/<bird-name>/users/<user-id>/`` is considered to be
 user data and any outside file is considered public.
 
-The permissions found on the files are synchronized with the permissions found on `Magpie`_. If `Magpie`_ uses a
+The permissions found on the user data are synchronized with the permissions found on `Magpie`_. If `Magpie`_ uses a
 `secure-data-proxy` service, this service handles the permissions of those files (see `here <https://github.com/
 bird-house/birdhouse-deploy/blob/master/birdhouse/optional-components/README.rst#control-secured-access-to-wps-
 outputs>`_). If a file does not have a corresponding route on the `secure-data-proxy` service, it will use the closest
-parent permissions. Note that the route resources found under the `secure-data-proxy` service must match exactly a path
-on the filesystem, starting with the directory name ``wpsoutputs``, and following with the desired children
-directories/file names. If no `secure-data-proxy` service is found, the user files are assumed to be fully available
-with read and write permissions for the user. Note that if the file does not have any read or write permissions, the
-hardlink will not be available in the user's workspace.
+parent permissions.
+
+.. warning::
+    The route resources found under the `secure-data-proxy` service must match exactly a path on the filesystem,
+    starting with the directory name ``wpsoutputs``, and following with the desired children directories/file names.
+
+If the file does not have any read or write permissions, the hardlink will not be available in the user's workspace.
+
+.. note::
+    Permissions should not be modified via the file system, but should only be managed via the
+    `secure-data-proxy` service on Magpie. Permission modifications on the file system will be ignored.
+
+    Refer to `DAC-571 <https://crim-ca.atlassian.net/browse/DAC-571>`_ for more details on the design choices for the
+    management of permissions.
+
+If no `secure-data-proxy` service is found, the user files are assumed to be fully available
+with read and write permissions for the user.
 
 Note that different design choices were made to respect the constraints of the file system and to prevent the user from
 accessing forbidden data:
@@ -100,20 +112,29 @@ accessing forbidden data:
   not made available on the `JupyterLab` browser via the UI, the data would still be accessible via the terminal found
   on `JupyterLab`. Using hardlinks lets us mount only the public directory instead of the whole WPS outputs directory,
   which contains a mix of public and user data.
-- Note that changing permissions to control user access was not an option since symlinks and hardlinks must have the
-  same permissions as their original source file.
-  Therefore, it not possible for example to give access to a user and prevent the access to another user for a specific
-  file, even if using hardlinks or symlinks.
-- It is possible to add anonymous volumes to hide some parts of the WPS outputs data directory, but it was easier
-  and safer to go with the hardlinks option to prevent errors which could accidentally give access to other users' data.
+- Changing permissions of the linked workspace files to control user access was not an option since symlinks
+  and hardlinks always use the same permissions as their original source file. Symlinks/hardlinks cannot have custom
+  file permissions independent from their source file.
+  Therefore, it is not possible for example to give access to a user and prevent the access to another user for a
+  specific file using the file permissions, even if users have their own hardlinks or symlinks in their personal
+  workspace.
+- Another considered option was to add anonymous volumes to hide some parts of the WPS outputs data directory. This
+  could have been useful to mount the whole WPS outputs directory on the user `JupyterLab` instance and to
+  hide the user data subdirectories found in the WPS outputs by using anonymous volumes for each user subdirectory. This
+  would automatically mount the public data while hiding the user related data. It was still considered easier and safer
+  to go with the hardlinks option to prevent potential errors which could accidentally give access to other users' data.
   For example, if a bird directory was created while a user `JupyterLab` instance was running, it would require both the
   instance and `JupyterHub` to be restarted in order to generate the new required anonymous volume to hide the user data
   from that new bird. Without a restart of the instance, the user could potentially have access to some of the new user
-  data.
+  data found in the new bird directory.
 
 In conclusion, the best option was to use hardlinks, which do not require access to the original source file, to create
 separate user and public data access points, and volume mounting to control which locations are made available to the
 user.
+
+.. seealso::
+    Refer to `DAC-149 <https://crim-ca.atlassian.net/browse/DAC-149>`_ for details on the design choices for managing
+    the access to WPS outputs data.
 
 .. _components_geoserver:
 
