@@ -88,7 +88,7 @@ Example :
         workspace_dir: ${WORKSPACE_DIR}
         jupyterhub_user_data_dir: ${JUPYTERHUB_USER_DATA_DIR}
         wps_outputs_dir: ${WPS_OUTPUTS_DIR}
-        wps_outputs_public_subdir: ${WPS_OUTPUTS_PUBLIC_SUBDIR}
+        public_workspace_wps_outputs_subdir: ${PUBLIC_WORKSPACE_WPS_OUTPUTS_SUBDIR}
 
 sync_permissions:
 #################
