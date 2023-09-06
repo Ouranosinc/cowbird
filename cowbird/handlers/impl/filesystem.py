@@ -18,9 +18,9 @@ from cowbird.utils import apply_new_path_permissions, get_logger
 
 LOGGER = get_logger(__name__)
 
-NOTEBOOKS_DIR_NAME = "notebooks"
-SECURE_DATA_PROXY_NAME = "secure-data-proxy"
-USER_WPS_OUTPUTS_USER_DIR_NAME = "wpsoutputs"
+DEFAULT_NOTEBOOKS_DIR_NAME = "notebooks"
+DEFAULT_PUBLIC_WORKSPACE_WPS_OUTPUTS_SUBDIR = "public/wpsoutputs"
+DEFAULT_USER_WPS_OUTPUTS_DIR_NAME = "wpsoutputs"
 
 
 class FileSystem(Handler, FSMonitor):
@@ -34,6 +34,7 @@ class FileSystem(Handler, FSMonitor):
                  name: str,
                  jupyterhub_user_data_dir: str,
                  wps_outputs_dir: str,
+                 secure_data_proxy_name: str,
                  **kwargs: Any) -> None:
         """
         Create the file system instance.
@@ -43,17 +44,23 @@ class FileSystem(Handler, FSMonitor):
         :param jupyterhub_user_data_dir: Path to the JupyterHub user data directory,
                                          which will be symlinked to the working directory
         :param wps_outputs_dir: Path to the wps outputs directory
+        :param secure_data_proxy_name: Name of the secure-data-proxy service found on Magpie
         """
         LOGGER.info("Creating Filesystem handler")
         super(FileSystem, self).__init__(settings, name, **kwargs)
-        self.jupyterhub_user_data_dir = jupyterhub_user_data_dir
 
-        self.public_workspace_wps_outputs_subdir = kwargs.get("public_workspace_wps_outputs_subdir", None)
-        if not self.public_workspace_wps_outputs_subdir:
-            # use default subdir if undefined or an empty string
-            self.public_workspace_wps_outputs_subdir = "public/wpsoutputs"
+        # Required config parameters
+        self.jupyterhub_user_data_dir = jupyterhub_user_data_dir
+        self.secure_data_proxy_name = secure_data_proxy_name
         # Make sure output path is normalized for the regex (e.g.: removing trailing slashes)
         self.wps_outputs_dir = os.path.normpath(wps_outputs_dir)
+
+        # Optional config parameters, use default values if undefined or an empty string
+        self.notebooks_dir_name = kwargs.get("notebooks_dir_name", None) or DEFAULT_NOTEBOOKS_DIR_NAME
+        self.public_workspace_wps_outputs_subdir = (kwargs.get("public_workspace_wps_outputs_subdir", None)
+                                                    or DEFAULT_PUBLIC_WORKSPACE_WPS_OUTPUTS_SUBDIR)
+        self.user_wps_outputs_dir_name = (kwargs.get("user_wps_outputs_dir_name", None)
+                                          or DEFAULT_USER_WPS_OUTPUTS_DIR_NAME)
 
         # Regex to find any directory or file found in the `users` output path of a 'bird' service
         # {self.wps_outputs_dir}/<wps-bird-name>/users/<user-uuid>/...
@@ -71,7 +78,7 @@ class FileSystem(Handler, FSMonitor):
         return os.path.join(self.workspace_dir, user_name)
 
     def get_user_workspace_wps_outputs_dir(self, user_name: str) -> str:
-        return os.path.join(self.get_user_workspace_dir(user_name), USER_WPS_OUTPUTS_USER_DIR_NAME)
+        return os.path.join(self.get_user_workspace_dir(user_name), self.user_wps_outputs_dir_name)
 
     def get_public_workspace_wps_outputs_dir(self) -> str:
         return os.path.join(self.workspace_dir, self.public_workspace_wps_outputs_subdir)
@@ -107,7 +114,7 @@ class FileSystem(Handler, FSMonitor):
         os.chmod(user_workspace_dir, 0o755)  # nosec
 
         FileSystem._create_symlink_dir(src=self._get_jupyterhub_user_data_dir(user_name),
-                                       dst=os.path.join(user_workspace_dir, NOTEBOOKS_DIR_NAME))
+                                       dst=os.path.join(user_workspace_dir, self.notebooks_dir_name))
 
         # Create all hardlinks from the user wps outputs data
         for root, _, filenames in os.walk(self.wps_outputs_dir):
@@ -148,9 +155,9 @@ class FileSystem(Handler, FSMonitor):
         resource) and gets the user permissions on that route.
         """
         magpie_handler = HandlerFactory().get_handler("Magpie")
-        sdp_svc_info = magpie_handler.get_service_info(SECURE_DATA_PROXY_NAME)
+        sdp_svc_info = magpie_handler.get_service_info(self.secure_data_proxy_name)
         # Find the closest related route resource
-        expected_route = re.sub(rf"^{self.wps_outputs_dir}", USER_WPS_OUTPUTS_USER_DIR_NAME, src_path)
+        expected_route = re.sub(rf"^{self.wps_outputs_dir}", self.user_wps_outputs_dir_name, src_path)
 
         # Finds the resource id of the route or the closest matching parent route.
         closest_res_id = None
@@ -246,9 +253,9 @@ class FileSystem(Handler, FSMonitor):
                                                    user_name=user_name,
                                                    subpath=regex_match.group("subpath"))
             api_services = magpie_handler.get_services_by_type(ServiceAPI.service_type)
-            if SECURE_DATA_PROXY_NAME not in api_services:
+            if self.secure_data_proxy_name not in api_services:
                 LOGGER.warning("`%s` service not found. Considering user wpsoutputs data as accessible by default.",
-                               SECURE_DATA_PROXY_NAME)
+                               self.secure_data_proxy_name)
                 apply_new_path_permissions(src_path, True, True, False)
             else:  # get access and apply permissions if the secure-data-proxy exists
                 access_allowed = self.update_secure_data_proxy_path_perms(src_path, user_name)
@@ -334,14 +341,13 @@ class FileSystem(Handler, FSMonitor):
             LOGGER.info("Removing link associated to the deleted path `%s`", path)
             self._delete_wpsoutputs_hardlink(path)
 
-    @staticmethod
-    def _check_if_res_from_secure_data_proxy(res_tree: List[JSON]) -> bool:
+    def _check_if_res_from_secure_data_proxy(self, res_tree: List[JSON]) -> bool:
         """
         Checks if the resource if part of a `secure-data-proxy` service of type API.
         """
         root_res_info = res_tree[0]
-        if root_res_info["resource_name"] == SECURE_DATA_PROXY_NAME:
-            svc_info = HandlerFactory().get_handler("Magpie").get_service_info(SECURE_DATA_PROXY_NAME)
+        if root_res_info["resource_name"] == self.secure_data_proxy_name:
+            svc_info = HandlerFactory().get_handler("Magpie").get_service_info(self.secure_data_proxy_name)
             if svc_info["service_type"] == ServiceAPI.service_type:
                 return True
 

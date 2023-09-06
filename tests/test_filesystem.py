@@ -17,7 +17,7 @@ from webtest.app import TestApp
 
 from cowbird.api.schemas import ValidOperations
 from cowbird.handlers import HandlerFactory
-from cowbird.handlers.impl.filesystem import NOTEBOOKS_DIR_NAME, SECURE_DATA_PROXY_NAME
+from cowbird.handlers.impl.filesystem import DEFAULT_NOTEBOOKS_DIR_NAME
 from cowbird.typedefs import JSON
 from tests import test_magpie, utils
 
@@ -34,6 +34,7 @@ class BaseTestFileSystem(unittest.TestCase):
         cls.jupyterhub_user_data_dir = "/jupyterhub_user_data"
         cls.test_username = "test_user"
         cls.callback_url = "callback_url"
+        cls.secure_data_proxy_name = "secure-data-proxy"
 
         # Mock monitoring to disable monitoring events and to trigger file events manually instead during tests.
         cls.patcher = patch("cowbird.monitoring.monitoring.Monitoring.register")
@@ -103,14 +104,15 @@ class TestFileSystemBasic(BaseTestFileSystem):
         """
         Tests creating and deleting a user workspace.
         """
-        user_symlink = self.user_workspace_dir / NOTEBOOKS_DIR_NAME
+        user_symlink = self.user_workspace_dir / DEFAULT_NOTEBOOKS_DIR_NAME
         app = self.get_test_app({
             "handlers": {
                 "FileSystem": {
                     "active": True,
                     "workspace_dir": self.workspace_dir,
                     "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
-                    "wps_outputs_dir": self.wpsoutputs_dir}}})
+                    "wps_outputs_dir": self.wpsoutputs_dir,
+                    "secure_data_proxy_name": self.secure_data_proxy_name}}})
 
         data = {
             "event": "created",
@@ -189,7 +191,8 @@ class TestFileSystemBasic(BaseTestFileSystem):
                     "active": True,
                     "workspace_dir": workspace_dir,
                     "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
-                    "wps_outputs_dir": "/wpsoutputs"}}})
+                    "wps_outputs_dir": "/wpsoutputs",
+                    "secure_data_proxy_name": self.secure_data_proxy_name}}})
         data = {
             "event": "created",
             "user_name": self.test_username,
@@ -213,7 +216,8 @@ class TestFileSystemBasic(BaseTestFileSystem):
                     "active": True,
                     "workspace_dir": self.workspace_dir,
                     "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
-                    "wps_outputs_dir": self.wpsoutputs_dir}}})
+                    "wps_outputs_dir": self.wpsoutputs_dir,
+                    "secure_data_proxy_name": self.secure_data_proxy_name}}})
 
         # Create a test wps output file
         bird_name = "weaver"
@@ -246,7 +250,8 @@ class TestFileSystemBasic(BaseTestFileSystem):
                     "active": True,
                     "workspace_dir": self.workspace_dir,
                     "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
-                    "wps_outputs_dir": self.wpsoutputs_dir}}})
+                    "wps_outputs_dir": self.wpsoutputs_dir,
+                    "secure_data_proxy_name": self.secure_data_proxy_name}}})
 
         filesystem_handler = HandlerFactory().get_handler("FileSystem")
 
@@ -290,7 +295,8 @@ class TestFileSystemBasic(BaseTestFileSystem):
                     "active": True,
                     "workspace_dir": self.workspace_dir,
                     "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
-                    "wps_outputs_dir": self.wpsoutputs_dir}}})
+                    "wps_outputs_dir": self.wpsoutputs_dir,
+                    "secure_data_proxy_name": self.secure_data_proxy_name}}})
 
         filesystem_handler = HandlerFactory().get_handler("FileSystem")
 
@@ -346,7 +352,8 @@ class TestFileSystemBasic(BaseTestFileSystem):
                     "active": True,
                     "workspace_dir": self.workspace_dir,
                     "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
-                    "wps_outputs_dir": self.wpsoutputs_dir}}})
+                    "wps_outputs_dir": self.wpsoutputs_dir,
+                    "secure_data_proxy_name": self.secure_data_proxy_name}}})
 
         filesystem_handler = HandlerFactory().get_handler("FileSystem")
 
@@ -385,7 +392,8 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
                     "active": True,
                     "workspace_dir": self.workspace_dir,
                     "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
-                    "wps_outputs_dir": self.wpsoutputs_dir}}})
+                    "wps_outputs_dir": self.wpsoutputs_dir,
+                    "secure_data_proxy_name": self.secure_data_proxy_name}}})
 
         # Reset test user
         filesystem_handler = HandlerFactory().get_handler("FileSystem")
@@ -413,7 +421,7 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
         os.chmod(self.test_file, 0o666)
 
         # Delete the service if it already exists
-        test_magpie.delete_service(magpie_handler, SECURE_DATA_PROXY_NAME)
+        test_magpie.delete_service(magpie_handler, self.secure_data_proxy_name)
 
     def create_secure_data_proxy_service(self):
         """
@@ -421,10 +429,10 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
         """
         # Create service
         data = {
-            "service_name": SECURE_DATA_PROXY_NAME,
+            "service_name": self.secure_data_proxy_name,
             "service_type": ServiceAPI.service_type,
             "service_sync_type": ServiceAPI.service_type,
-            "service_url": f"http://localhost:9000/{SECURE_DATA_PROXY_NAME}",
+            "service_url": f"http://localhost:9000/{self.secure_data_proxy_name}",
             "configuration": {}
         }
         return test_magpie.create_service(HandlerFactory().get_handler("Magpie"), data)
