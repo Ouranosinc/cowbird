@@ -2,7 +2,7 @@ import os
 import re
 import shutil
 from pathlib import Path
-from typing import Any, List, Tuple, cast
+from typing import Any, List, Optional, Tuple, cast
 
 from magpie.permissions import Access
 from magpie.permissions import Permission as MagpiePermission
@@ -19,7 +19,7 @@ from cowbird.utils import apply_new_path_permissions, get_logger
 LOGGER = get_logger(__name__)
 
 DEFAULT_NOTEBOOKS_DIR_NAME = "notebooks"
-DEFAULT_PUBLIC_WORKSPACE_WPS_OUTPUTS_SUBDIR = "public/wpsoutputs"
+DEFAULT_PUBLIC_WORKSPACE_WPS_OUTPUTS_SUBPATH = "public/wpsoutputs"
 DEFAULT_USER_WPS_OUTPUTS_DIR_NAME = "wpsoutputs"
 
 
@@ -35,6 +35,9 @@ class FileSystem(Handler, FSMonitor):
                  jupyterhub_user_data_dir: str,
                  wps_outputs_dir: str,
                  secure_data_proxy_name: str,
+                 notebooks_dir_name: Optional[str] = DEFAULT_NOTEBOOKS_DIR_NAME,
+                 public_workspace_wps_outputs_subpath: Optional[str] = DEFAULT_PUBLIC_WORKSPACE_WPS_OUTPUTS_SUBPATH,
+                 user_wps_outputs_dir_name: Optional[str] = DEFAULT_USER_WPS_OUTPUTS_DIR_NAME,
                  **kwargs: Any) -> None:
         """
         Create the file system instance.
@@ -45,6 +48,12 @@ class FileSystem(Handler, FSMonitor):
                                          which will be symlinked to the working directory
         :param wps_outputs_dir: Path to the wps outputs directory
         :param secure_data_proxy_name: Name of the secure-data-proxy service found on Magpie
+        :param notebooks_dir_name: Name of the symlink directory found in the user workspace and which directs to the
+                                   user's notebook directory
+        :param public_workspace_wps_outputs_subpath: Subpath to the directory containing hardlinks to the public WPS
+                                                     outputs data
+        :param user_wps_outputs_dir_name: Name of the directory found in the user workspace and which contains the
+                                          hardlinks to the user WPS outputs data
         """
         LOGGER.info("Creating Filesystem handler")
         super(FileSystem, self).__init__(settings, name, **kwargs)
@@ -56,11 +65,9 @@ class FileSystem(Handler, FSMonitor):
         self.wps_outputs_dir = os.path.normpath(wps_outputs_dir)
 
         # Optional config parameters, use default values if undefined or an empty string
-        self.notebooks_dir_name = kwargs.get("notebooks_dir_name", None) or DEFAULT_NOTEBOOKS_DIR_NAME
-        self.public_workspace_wps_outputs_subdir = (kwargs.get("public_workspace_wps_outputs_subdir", None)
-                                                    or DEFAULT_PUBLIC_WORKSPACE_WPS_OUTPUTS_SUBDIR)
-        self.user_wps_outputs_dir_name = (kwargs.get("user_wps_outputs_dir_name", None)
-                                          or DEFAULT_USER_WPS_OUTPUTS_DIR_NAME)
+        self.notebooks_dir_name = notebooks_dir_name
+        self.public_workspace_wps_outputs_subpath = public_workspace_wps_outputs_subpath
+        self.user_wps_outputs_dir_name = user_wps_outputs_dir_name
 
         # Regex to find any directory or file found in the `users` output path of a 'bird' service
         # {self.wps_outputs_dir}/<wps-bird-name>/users/<user-uuid>/...
@@ -81,7 +88,7 @@ class FileSystem(Handler, FSMonitor):
         return os.path.join(self.get_user_workspace_dir(user_name), self.user_wps_outputs_dir_name)
 
     def get_public_workspace_wps_outputs_dir(self) -> str:
-        return os.path.join(self.workspace_dir, self.public_workspace_wps_outputs_subdir)
+        return os.path.join(self.workspace_dir, self.public_workspace_wps_outputs_subpath)
 
     def _get_jupyterhub_user_data_dir(self, user_name: str) -> str:
         return os.path.join(self.jupyterhub_user_data_dir, user_name)

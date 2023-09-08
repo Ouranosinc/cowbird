@@ -64,9 +64,6 @@ GeoserverFunc = Union[
     GeoserverFuncSupportsShapefile,
 ]
 
-HANDLER_ADMIN_USER = "admin_user"  # nosec: B105
-HANDLER_ADMIN_PASSWORD = "admin_password"  # nosec: B105
-
 SHAPEFILE_MAIN_EXTENSION = ".shp"
 SHAPEFILE_REQUIRED_EXTENSIONS = [SHAPEFILE_MAIN_EXTENSION, ".prj", ".dbf", ".shx"]
 SHAPEFILE_OPTIONAL_EXTENSIONS = [".atx", ".sbx", ".qix", ".aih", ".ain", ".shp.xml", ".cpg"]
@@ -156,18 +153,25 @@ class Geoserver(Handler, FSMonitor):
     """
     required_params = [HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PARAM]
 
-    def __init__(self, settings: SettingsType, name: str, **kwargs: Any) -> None:
+    def __init__(self,
+                 settings: SettingsType,
+                 name: str,
+                 admin_user: Optional[str] = None,
+                 admin_password: Optional[str] = None,
+                 **kwargs: Any) -> None:
         """
         Create the geoserver handler instance.
 
         :param settings: Cowbird settings for convenience
         :param name: Handler name
+        :param admin_user: Geoserver admin username
+        :param admin_password: Geoserver admin password
         """
         super(Geoserver, self).__init__(settings, name, **kwargs)
         self.api_url = f"{self.url}/rest"
         self.headers = {"Content-type": CONTENT_TYPE_JSON}
-        self.admin_user = kwargs.get(HANDLER_ADMIN_USER, None)
-        self.admin_password = kwargs.get(HANDLER_ADMIN_PASSWORD, None)
+        self.admin_user = admin_user
+        self.admin_password = admin_password
         self.auth = (self.admin_user, self.admin_password)
         self.datastore_regex = rf"^{self.workspace_dir}/\w+/{DEFAULT_DATASTORE_DIR_NAME}/?$"
 
