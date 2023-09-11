@@ -111,8 +111,7 @@ class TestFileSystemBasic(BaseTestFileSystem):
                     "active": True,
                     "workspace_dir": self.workspace_dir,
                     "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
-                    "wps_outputs_dir": self.wpsoutputs_dir,
-                    "secure_data_proxy_name": self.secure_data_proxy_name}}})
+                    "wps_outputs_dir": self.wpsoutputs_dir}}})
 
         data = {
             "event": "created",
@@ -191,8 +190,7 @@ class TestFileSystemBasic(BaseTestFileSystem):
                     "active": True,
                     "workspace_dir": workspace_dir,
                     "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
-                    "wps_outputs_dir": "/wpsoutputs",
-                    "secure_data_proxy_name": self.secure_data_proxy_name}}})
+                    "wps_outputs_dir": "/wpsoutputs"}}})
         data = {
             "event": "created",
             "user_name": self.test_username,
@@ -216,8 +214,7 @@ class TestFileSystemBasic(BaseTestFileSystem):
                     "active": True,
                     "workspace_dir": self.workspace_dir,
                     "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
-                    "wps_outputs_dir": self.wpsoutputs_dir,
-                    "secure_data_proxy_name": self.secure_data_proxy_name}}})
+                    "wps_outputs_dir": self.wpsoutputs_dir}}})
 
         # Create a test wps output file
         bird_name = "weaver"
@@ -250,8 +247,7 @@ class TestFileSystemBasic(BaseTestFileSystem):
                     "active": True,
                     "workspace_dir": self.workspace_dir,
                     "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
-                    "wps_outputs_dir": self.wpsoutputs_dir,
-                    "secure_data_proxy_name": self.secure_data_proxy_name}}})
+                    "wps_outputs_dir": self.wpsoutputs_dir}}})
 
         filesystem_handler = HandlerFactory().get_handler("FileSystem")
 
@@ -295,8 +291,7 @@ class TestFileSystemBasic(BaseTestFileSystem):
                     "active": True,
                     "workspace_dir": self.workspace_dir,
                     "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
-                    "wps_outputs_dir": self.wpsoutputs_dir,
-                    "secure_data_proxy_name": self.secure_data_proxy_name}}})
+                    "wps_outputs_dir": self.wpsoutputs_dir}}})
 
         filesystem_handler = HandlerFactory().get_handler("FileSystem")
 
@@ -352,8 +347,7 @@ class TestFileSystemBasic(BaseTestFileSystem):
                     "active": True,
                     "workspace_dir": self.workspace_dir,
                     "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
-                    "wps_outputs_dir": self.wpsoutputs_dir,
-                    "secure_data_proxy_name": self.secure_data_proxy_name}}})
+                    "wps_outputs_dir": self.wpsoutputs_dir}}})
 
         filesystem_handler = HandlerFactory().get_handler("FileSystem")
 
@@ -392,8 +386,7 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
                     "active": True,
                     "workspace_dir": self.workspace_dir,
                     "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
-                    "wps_outputs_dir": self.wpsoutputs_dir,
-                    "secure_data_proxy_name": self.secure_data_proxy_name}}})
+                    "wps_outputs_dir": self.wpsoutputs_dir}}})
 
         # Reset test user
         filesystem_handler = HandlerFactory().get_handler("FileSystem")

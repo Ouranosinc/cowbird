@@ -2,7 +2,7 @@ import os
 import re
 import shutil
 from pathlib import Path
-from typing import Any, List, Optional, Tuple, cast
+from typing import Any, List, Tuple, cast
 
 from magpie.permissions import Access
 from magpie.permissions import Permission as MagpiePermission
@@ -20,6 +20,7 @@ LOGGER = get_logger(__name__)
 
 DEFAULT_NOTEBOOKS_DIR_NAME = "notebooks"
 DEFAULT_PUBLIC_WORKSPACE_WPS_OUTPUTS_SUBPATH = "public/wpsoutputs"
+DEFAULT_SECURE_DATA_PROXY_NAME = "secure-data-proxy"
 DEFAULT_USER_WPS_OUTPUTS_DIR_NAME = "wpsoutputs"
 
 
@@ -34,10 +35,10 @@ class FileSystem(Handler, FSMonitor):
                  name: str,
                  jupyterhub_user_data_dir: str,
                  wps_outputs_dir: str,
-                 secure_data_proxy_name: str,
-                 notebooks_dir_name: Optional[str] = DEFAULT_NOTEBOOKS_DIR_NAME,
-                 public_workspace_wps_outputs_subpath: Optional[str] = DEFAULT_PUBLIC_WORKSPACE_WPS_OUTPUTS_SUBPATH,
-                 user_wps_outputs_dir_name: Optional[str] = DEFAULT_USER_WPS_OUTPUTS_DIR_NAME,
+                 secure_data_proxy_name: str = DEFAULT_SECURE_DATA_PROXY_NAME,
+                 notebooks_dir_name: str = DEFAULT_NOTEBOOKS_DIR_NAME,
+                 public_workspace_wps_outputs_subpath: str = DEFAULT_PUBLIC_WORKSPACE_WPS_OUTPUTS_SUBPATH,
+                 user_wps_outputs_dir_name: str = DEFAULT_USER_WPS_OUTPUTS_DIR_NAME,
                  **kwargs: Any) -> None:
         """
         Create the file system instance.
@@ -58,13 +59,10 @@ class FileSystem(Handler, FSMonitor):
         LOGGER.info("Creating Filesystem handler")
         super(FileSystem, self).__init__(settings, name, **kwargs)
 
-        # Required config parameters
         self.jupyterhub_user_data_dir = jupyterhub_user_data_dir
         self.secure_data_proxy_name = secure_data_proxy_name
         # Make sure output path is normalized for the regex (e.g.: removing trailing slashes)
         self.wps_outputs_dir = os.path.normpath(wps_outputs_dir)
-
-        # Optional config parameters, use default values if undefined or an empty string
         self.notebooks_dir_name = notebooks_dir_name
         self.public_workspace_wps_outputs_subpath = public_workspace_wps_outputs_subpath
         self.user_wps_outputs_dir_name = user_wps_outputs_dir_name
