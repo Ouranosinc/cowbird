@@ -348,7 +348,7 @@ class FileSystem(Handler, FSMonitor):
 
     def _check_if_res_from_secure_data_proxy(self, res_tree: List[JSON]) -> bool:
         """
-        Checks if the resource if part of a `secure-data-proxy` service of type API.
+        Checks if the resource is part of a `secure-data-proxy` service of type API.
         """
         root_res_info = res_tree[0]
         if root_res_info["resource_name"] == self.secure_data_proxy_name:
@@ -363,7 +363,13 @@ class FileSystem(Handler, FSMonitor):
         magpie_handler = HandlerFactory().get_handler("Magpie")
         res_tree = magpie_handler.get_parents_resource_tree(permission.resource_id)
 
-        if self._check_if_res_from_secure_data_proxy(res_tree):
+        # Only process WPS outputs permissions on the secure-data-proxy service
+        if (self._check_if_res_from_secure_data_proxy(res_tree) and
+                # permission applied directly on the secure-data-proxy service
+                (len(res_tree) == 1 or
+                 # permission applied on the wps outputs resource or on one of its children
+                 res_tree[1]["resource_name"] == self.user_wps_outputs_dir_name)):
+
             full_route = self.wps_outputs_dir
             # Add subpath if the resource is a child of the main wpsoutputs resource
             if len(res_tree) > 2:  # /secure-data-proxy/wpsoutputs/<subpath>

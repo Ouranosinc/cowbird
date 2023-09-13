@@ -704,7 +704,7 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
 
         # Create resources
         svc_id = self.create_secure_data_proxy_service()
-        res_id = magpie_handler.create_resource("wpsoutputs", Route.resource_type_name, svc_id)
+        wpsoutputs_res_id = magpie_handler.create_resource("wpsoutputs", Route.resource_type_name, svc_id)
 
         # Create other user from a group different than the test group
         test_magpie.delete_group(magpie_handler, "others")
@@ -747,76 +747,77 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
             Path(file).touch()
             os.chmod(file, 0o660)
 
-        data = {
-            "event": ValidOperations.CreateOperation.value,
-            "service_name": None,
-            "service_type": ServiceAPI.service_type,
-            "resource_id": res_id,
-            "resource_full_name": "test-full-name",
-            "name": Permission.READ.value,
-            "access": Access.ALLOW.value,
-            "scope": Scope.RECURSIVE.value,
-            "user": self.test_username,
-            "group": None
-        }
-        magpie_handler.create_permission_by_res_id(data["resource_id"], data["name"], data["access"], data["scope"],
-                                                   user_name=data["user"])
-        # Check that perms are only updated for concerned user files
-        resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
-        assert resp.status_code == 200
-        self.check_path_perms_and_hardlink(self.test_file, self.test_hardlink, 0o664)
-        self.check_path_perms_and_hardlink(ignored_file, ignored_hardlink, 0o660)
-        self.check_path_perms_and_hardlink(same_group_file, same_group_hardlink, 0o660)
-        utils.check_path_permissions(public_file, 0o660)
-        utils.check_path_permissions(public_subfile, 0o660)
+        for res_id in [svc_id, wpsoutputs_res_id]:
+            data = {
+                "event": ValidOperations.CreateOperation.value,
+                "service_name": None,
+                "service_type": ServiceAPI.service_type,
+                "resource_id": res_id,
+                "resource_full_name": "test-full-name",
+                "name": Permission.READ.value,
+                "access": Access.ALLOW.value,
+                "scope": Scope.RECURSIVE.value,
+                "user": self.test_username,
+                "group": None
+            }
+            magpie_handler.create_permission_by_res_id(data["resource_id"], data["name"], data["access"], data["scope"],
+                                                       user_name=data["user"])
+            # Check that perms are only updated for concerned user files
+            resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
+            assert resp.status_code == 200
+            self.check_path_perms_and_hardlink(self.test_file, self.test_hardlink, 0o664)
+            self.check_path_perms_and_hardlink(ignored_file, ignored_hardlink, 0o660)
+            self.check_path_perms_and_hardlink(same_group_file, same_group_hardlink, 0o660)
+            utils.check_path_permissions(public_file, 0o660)
+            utils.check_path_permissions(public_subfile, 0o660)
 
-        # Check that perms are updated for all the users of the concerned group
-        data["user"] = None
-        data["group"] = "users"
-        data["name"] = Permission.WRITE.value
-        magpie_handler.create_permission_by_res_id(data["resource_id"], data["name"], data["access"], data["scope"],
-                                                   grp_name=data["group"])
-        resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
-        assert resp.status_code == 200
-        self.check_path_perms_and_hardlink(self.test_file, self.test_hardlink, 0o666)
-        self.check_path_perms_and_hardlink(ignored_file, ignored_hardlink, 0o660)
-        self.check_path_perms_and_hardlink(same_group_file, same_group_hardlink, 0o662)
-        utils.check_path_permissions(public_file, 0o660)
-        utils.check_path_permissions(public_subfile, 0o660)
+            # Check that perms are updated for all the users of the concerned group
+            data["user"] = None
+            data["group"] = "users"
+            data["name"] = Permission.WRITE.value
+            magpie_handler.create_permission_by_res_id(data["resource_id"], data["name"], data["access"], data["scope"],
+                                                       grp_name=data["group"])
+            resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
+            assert resp.status_code == 200
+            self.check_path_perms_and_hardlink(self.test_file, self.test_hardlink, 0o666)
+            self.check_path_perms_and_hardlink(ignored_file, ignored_hardlink, 0o660)
+            self.check_path_perms_and_hardlink(same_group_file, same_group_hardlink, 0o662)
+            utils.check_path_permissions(public_file, 0o660)
+            utils.check_path_permissions(public_subfile, 0o660)
 
-        # Add read-deny group permissions for next test cases
-        data["name"] = Permission.READ.value
-        data["access"] = Access.DENY.value
-        magpie_handler.create_permission_by_res_id(data["resource_id"], data["name"], data["access"], data["scope"],
-                                                   grp_name=data["group"])
-        utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
-        self.check_path_perms_and_hardlink(self.test_file, self.test_hardlink, 0o666)
+            # Add read-deny group permissions for next test cases
+            data["name"] = Permission.READ.value
+            data["access"] = Access.DENY.value
+            magpie_handler.create_permission_by_res_id(data["resource_id"], data["name"], data["access"], data["scope"],
+                                                       grp_name=data["group"])
+            utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
+            self.check_path_perms_and_hardlink(self.test_file, self.test_hardlink, 0o666)
 
-        # Test deleting a specific user permission, removing read-allow on user
-        data["event"] = ValidOperations.DeleteOperation.value
-        data["user"] = self.test_username
-        data["group"] = None
-        magpie_handler.delete_permission_by_user_and_res_id(data["user"], data["resource_id"], data["name"])
-        resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
-        assert resp.status_code == 200
-        self.check_path_perms_and_hardlink(self.test_file, self.test_hardlink, 0o662)
-        self.check_path_perms_and_hardlink(ignored_file, ignored_hardlink, 0o660)
-        self.check_path_perms_and_hardlink(same_group_file, same_group_hardlink, 0o662)
-        utils.check_path_permissions(public_file, 0o660)
-        utils.check_path_permissions(public_subfile, 0o660)
+            # Test deleting a specific user permission, removing read-allow on user
+            data["event"] = ValidOperations.DeleteOperation.value
+            data["user"] = self.test_username
+            data["group"] = None
+            magpie_handler.delete_permission_by_user_and_res_id(data["user"], data["resource_id"], data["name"])
+            resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
+            assert resp.status_code == 200
+            self.check_path_perms_and_hardlink(self.test_file, self.test_hardlink, 0o662)
+            self.check_path_perms_and_hardlink(ignored_file, ignored_hardlink, 0o660)
+            self.check_path_perms_and_hardlink(same_group_file, same_group_hardlink, 0o662)
+            utils.check_path_permissions(public_file, 0o660)
+            utils.check_path_permissions(public_subfile, 0o660)
 
-        # Test deleting a group permission
-        data["name"] = Permission.WRITE.value
-        data["user"] = None
-        data["group"] = "users"
-        magpie_handler.delete_permission_by_grp_and_res_id(data["group"], data["resource_id"], data["name"])
-        resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
-        assert resp.status_code == 200
-        self.check_path_perms_and_hardlink(self.test_file, self.test_hardlink, 0o660)
-        self.check_path_perms_and_hardlink(ignored_file, ignored_hardlink, 0o660)
-        self.check_path_perms_and_hardlink(same_group_file, same_group_hardlink, 0o660)
-        utils.check_path_permissions(public_file, 0o660)
-        utils.check_path_permissions(public_subfile, 0o660)
+            # Test deleting a group permission
+            data["name"] = Permission.WRITE.value
+            data["user"] = None
+            data["group"] = "users"
+            magpie_handler.delete_permission_by_grp_and_res_id(data["group"], data["resource_id"], data["name"])
+            resp = utils.test_request(self.app, "POST", "/webhooks/permissions", json=data)
+            assert resp.status_code == 200
+            self.check_path_perms_and_hardlink(self.test_file, self.test_hardlink, 0o660)
+            self.check_path_perms_and_hardlink(ignored_file, ignored_hardlink, 0o660)
+            self.check_path_perms_and_hardlink(same_group_file, same_group_hardlink, 0o660)
+            utils.check_path_permissions(public_file, 0o660)
+            utils.check_path_permissions(public_subfile, 0o660)
 
     def test_permission_updates_other_svc(self):
         """
