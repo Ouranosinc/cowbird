@@ -210,9 +210,10 @@ class FileSystem(Handler, FSMonitor):
         is_readable, is_writable = self._get_secure_data_proxy_file_perms(src_path, user_name)
 
         if is_writable:
-            LOGGER.warning(f"Found enabled `write` permissions from the `{self.secure_data_proxy_name}` service for the"
-                           f" path `{src_path}` and user `{user_name}. Write permissions will be ignored and will not "
-                           "be added to the path to prevent modifications on WPS outputs data.")
+            LOGGER.warning("Found enabled `write` permissions from the `%s` service for the path `%s` and user `%s`. "
+                           "Write permissions will be ignored and will not be added to the path to prevent "
+                           "modifications on WPS outputs data.",
+                           self.secure_data_proxy_name, src_path, user_name)
 
         # Files do not require the `executable` permission and must not be writable to prevent changing wps outputs data
         apply_new_path_permissions(src_path, is_readable, is_writable=False, is_executable=False)
@@ -371,8 +372,8 @@ class FileSystem(Handler, FSMonitor):
 
             if permission.name == MagpiePermission.WRITE.value:
                 LOGGER.warning("Ignoring `write` permission modification event on the resource "
-                               f"`{permission.resource_full_name}` since WPS outputs files should not allow write "
-                               "modifications by the user.")
+                               "`%s` since WPS outputs files should not allow write modifications by the user.",
+                               permission.resource_full_name)
                 return
 
             full_route = self.wps_outputs_dir
