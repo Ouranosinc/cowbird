@@ -150,7 +150,6 @@ linkcheck_ignore = [
     "https://github.com/Ouranosinc/cowbird/*",    # limit only Cowbird so others are still checked
     # ignore private links
     "https://github.com/Ouranosinc/PAVICS/*",
-    "https://github.com/bird-house/birdhouse-deploy/*",
     "CHANGES.rst",
     "AUTHORS.rst",
     r"docs/\w+.rst",

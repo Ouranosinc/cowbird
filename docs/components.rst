@@ -84,6 +84,11 @@ bird-house/birdhouse-deploy/blob/master/birdhouse/optional-components/README.rst
 outputs>`__). If a file does not have a corresponding route on the `secure-data-proxy` service, it will use the closest
 parent permissions.
 
+.. note::
+    If the access to a WPS outputs file is allowed, the file access will be read-only and any write permissions from the
+    `secure-data-proxy` service will be ignored. This is because WPS outputs are produced by external processes and
+    the resulting data should remain constant.
+
 .. warning::
     The route resources found under the `secure-data-proxy` service must match exactly a path on the filesystem,
     starting with the directory name ``wpsoutputs``, and following with the desired children directories/file names.
