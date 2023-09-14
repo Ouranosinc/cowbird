@@ -209,29 +209,29 @@ class FileSystem(Handler, FSMonitor):
         """
         is_readable, is_writable = self._get_secure_data_proxy_file_perms(src_path, user_name)
 
-        # Files do not require the `executable` permission.
-        apply_new_path_permissions(src_path, is_readable, is_writable, is_executable=False)
+        if is_writable:
+            LOGGER.warning(f"Found enabled `write` permissions from the `{self.secure_data_proxy_name}` service for the"
+                           f" path `{src_path}` and user `{user_name}. Write permissions will be ignored and will not "
+                           "be added to the path to prevent modifications on WPS outputs data.")
 
-        access_allowed = True
-        if not is_readable and not is_writable:
-            # If no permission on the file, the hardlink should not be created.
-            access_allowed = False
-        return access_allowed
+        # Files do not require the `executable` permission and must not be writable to prevent changing wps outputs data
+        apply_new_path_permissions(src_path, is_readable, is_writable=False, is_executable=False)
+
+        # Return read permissions to indicate if access is allowed and if the hardlink should be created.
+        return is_readable
 
     @staticmethod
-    def create_hardlink_path(src_path: str, hardlink_path: str, access_allowed: bool,
-                             is_parent_dir_writable: bool = False) -> None:
+    def create_hardlink_path(src_path: str, hardlink_path: str, access_allowed: bool) -> None:
         """
         Creates a hardlink path from a source file, if the user has access rights.
         """
         if access_allowed:
             os.makedirs(os.path.dirname(hardlink_path), exist_ok=True)
 
-            # Set custom write permissions to the parent directory, since they are required for write permissive files
-            # in JupyterLab.
+            # Set directories as read-only
             apply_new_path_permissions(os.path.dirname(hardlink_path),
                                        is_readable=True,
-                                       is_writable=is_parent_dir_writable,
+                                       is_writable=False,
                                        is_executable=True)
 
             LOGGER.debug("Creating hardlink from file `%s` to the path `%s`", src_path, hardlink_path)
@@ -251,10 +251,6 @@ class FileSystem(Handler, FSMonitor):
             if not process_user_files:
                 return
 
-            # User workspace directories require write permissions to allow file modifications via JupyterLab for
-            # files with write permissions
-            is_parent_dir_writable = True
-
             magpie_handler = HandlerFactory().get_handler("Magpie")
             user_name = magpie_handler.get_user_name_from_user_id(int(regex_match.group("user_id")))
             hardlink_path = self.get_user_hardlink(src_path=src_path,
@@ -265,13 +261,12 @@ class FileSystem(Handler, FSMonitor):
             if self.secure_data_proxy_name not in api_services:
                 LOGGER.warning("`%s` service not found. Considering user wpsoutputs data as accessible by default.",
                                self.secure_data_proxy_name)
-                apply_new_path_permissions(src_path, True, True, False)
+                apply_new_path_permissions(src_path, True, False, False)
             else:  # get access and apply permissions if the secure-data-proxy exists
                 access_allowed = self.update_secure_data_proxy_path_perms(src_path, user_name)
         else:  # public files
             if not process_public_files:
                 return
-            is_parent_dir_writable = False  # public files are read-only
             hardlink_path = self._get_public_hardlink(src_path)
 
         if os.path.exists(hardlink_path):
@@ -283,7 +278,7 @@ class FileSystem(Handler, FSMonitor):
                            "created file.", hardlink_path)
             os.remove(hardlink_path)
 
-        self.create_hardlink_path(src_path, hardlink_path, access_allowed, is_parent_dir_writable)
+        self.create_hardlink_path(src_path, hardlink_path, access_allowed)
 
     def on_created(self, path: str) -> None:
         """
@@ -374,6 +369,12 @@ class FileSystem(Handler, FSMonitor):
                  # permission applied on the wps outputs resource or on one of its children
                  res_tree[1]["resource_name"] == self.wps_outputs_res_name)):
 
+            if permission.name == MagpiePermission.WRITE.value:
+                LOGGER.warning("Ignoring `write` permission modification event on the resource "
+                               f"`{permission.resource_full_name}` since WPS outputs files should not allow write "
+                               "modifications by the user.")
+                return
+
             full_route = self.wps_outputs_dir
             # Add subpath if the resource is a child of the main wpsoutputs resource
             if len(res_tree) > 2:  # /secure-data-proxy/wpsoutputs/<subpath>
@@ -422,7 +423,7 @@ class FileSystem(Handler, FSMonitor):
                 # Resync hardlink path
                 if os.path.exists(hardlink_path):
                     os.remove(hardlink_path)
-                self.create_hardlink_path(user_path, hardlink_path, access_allowed, is_parent_dir_writable=True)
+                self.create_hardlink_path(user_path, hardlink_path, access_allowed)
 
     def permission_created(self, permission: Permission) -> None:
         self._update_permissions_on_filesystem(permission)
