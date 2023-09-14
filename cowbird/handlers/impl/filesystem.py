@@ -20,6 +20,7 @@ LOGGER = get_logger(__name__)
 
 DEFAULT_NOTEBOOKS_DIR_NAME = "notebooks"
 DEFAULT_PUBLIC_WORKSPACE_WPS_OUTPUTS_SUBPATH = "public/wpsoutputs"
+DEFAULT_WPS_OUTPUTS_RES_NAME = "wpsoutputs"
 DEFAULT_SECURE_DATA_PROXY_NAME = "secure-data-proxy"
 DEFAULT_USER_WPS_OUTPUTS_DIR_NAME = "wpsoutputs"
 
@@ -36,6 +37,7 @@ class FileSystem(Handler, FSMonitor):
                  jupyterhub_user_data_dir: str,
                  wps_outputs_dir: str,
                  secure_data_proxy_name: str = DEFAULT_SECURE_DATA_PROXY_NAME,
+                 wps_outputs_res_name: str = DEFAULT_WPS_OUTPUTS_RES_NAME,
                  notebooks_dir_name: str = DEFAULT_NOTEBOOKS_DIR_NAME,
                  public_workspace_wps_outputs_subpath: str = DEFAULT_PUBLIC_WORKSPACE_WPS_OUTPUTS_SUBPATH,
                  user_wps_outputs_dir_name: str = DEFAULT_USER_WPS_OUTPUTS_DIR_NAME,
@@ -49,6 +51,7 @@ class FileSystem(Handler, FSMonitor):
                                          which will be symlinked to the working directory
         :param wps_outputs_dir: Path to the wps outputs directory
         :param secure_data_proxy_name: Name of the secure-data-proxy service found on Magpie
+        :param wps_outputs_res_name: Name of the wpsoutputs resource found on Magpie under the secure-data-proxy service
         :param notebooks_dir_name: Name of the symlink directory found in the user workspace and which directs to the
                                    user's notebook directory
         :param public_workspace_wps_outputs_subpath: Subpath to the directory containing hardlinks to the public WPS
@@ -61,6 +64,7 @@ class FileSystem(Handler, FSMonitor):
 
         self.jupyterhub_user_data_dir = jupyterhub_user_data_dir
         self.secure_data_proxy_name = secure_data_proxy_name
+        self.wps_outputs_res_name = wps_outputs_res_name
         # Make sure output path is normalized for the regex (e.g.: removing trailing slashes)
         self.wps_outputs_dir = os.path.normpath(wps_outputs_dir)
         self.notebooks_dir_name = notebooks_dir_name
@@ -162,7 +166,7 @@ class FileSystem(Handler, FSMonitor):
         magpie_handler = HandlerFactory().get_handler("Magpie")
         sdp_svc_info = magpie_handler.get_service_info(self.secure_data_proxy_name)
         # Find the closest related route resource
-        expected_route = re.sub(rf"^{self.wps_outputs_dir}", self.user_wps_outputs_dir_name, src_path)
+        expected_route = re.sub(rf"^{self.wps_outputs_dir}", self.wps_outputs_res_name, src_path)
 
         # Finds the resource id of the route or the closest matching parent route.
         closest_res_id = None
@@ -368,7 +372,7 @@ class FileSystem(Handler, FSMonitor):
                 # permission applied directly on the secure-data-proxy service
                 (len(res_tree) == 1 or
                  # permission applied on the wps outputs resource or on one of its children
-                 res_tree[1]["resource_name"] == self.user_wps_outputs_dir_name)):
+                 res_tree[1]["resource_name"] == self.wps_outputs_res_name)):
 
             full_route = self.wps_outputs_dir
             # Add subpath if the resource is a child of the main wpsoutputs resource

@@ -106,6 +106,7 @@ HandlerConfig = TypedDict(
         "jupyterhub_user_data_dir": NotRequired[str],
         "wps_outputs_dir": NotRequired[str],
         "secure_data_proxy_name": NotRequired[str],
+        "wps_outputs_res_name": NotRequired[str],
         "notebooks_dir_name": NotRequired[str],
         "public_workspace_wps_outputs_subpath": NotRequired[str],
         "user_wps_outputs_dir_name": NotRequired[str],

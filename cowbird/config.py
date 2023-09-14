@@ -173,6 +173,7 @@ def validate_handlers_config_schema(handlers_cfg: Dict[str, HandlerConfig]) -> N
             Optional("jupyterhub_user_data_dir"): str_not_empty_validator,
             Optional("wps_outputs_dir"): str_not_empty_validator,
             Optional("secure_data_proxy_name"): str_not_empty_validator,
+            Optional("wps_outputs_res_name"): str_not_empty_validator,
             Optional("notebooks_dir_name"): str_not_empty_validator,
             Optional("public_workspace_wps_outputs_subpath"): str_not_empty_validator,
             Optional("user_wps_outputs_dir_name"): str_not_empty_validator,
