@@ -36,7 +36,7 @@ Here are some typical directories found in the ``user_workspaces``:
 
     /user_workspaces/<user_name>/notebooks -> /jupyterhub_user_data/<user_name>
     /user_workspaces/<user_name>/shapefile_datastore  # Managed by the `GeoServer` handler
-    /user_workspaces/public/wpsoutputs  # Managed by the `FileSystem` handler
+    /user_workspaces/public/wps_outputs  # Managed by the `FileSystem` handler
 
 .. _filesystem_jupyterhub_user_data:
 
@@ -64,18 +64,18 @@ There are 2 types of data :
 - User specific data: This data must only be accessible to the related user.
 
 The public WPS outputs data is made accessible by generating hardlinks from the WPS outputs data directory to the
-user workspaces location (e.g.:``/user_workspaces/public/wpsoutputs``). When a `JupyterLab` instance is started via
+user workspaces location (e.g.:``/user_workspaces/public/wps_outputs``). When a `JupyterLab` instance is started via
 `bird-house`_, the directory containing the hardlinks will be mounted as a volume, such that the users obtain access to
 its content via their `JupyterLab` instance. The volume will be made read-only to prevent a user from modifying
 the public data.
 
 The user WPS outputs data is made accessible by generating hardlinks from a WPS outputs data directory containing user
 data to a subdirectory found in the related user's workspace. For example, with a source path
-``/wpsoutputs/<bird-name>/users/<user-id>/<job-id>/<output-file>``, a hardlink is generated at the path
-``/user_workspaces/<user-name>/wpsoutputs/<bird-name>/<job-id>/<output-file>``. The hardlink path uses a similar
+``/wps_outputs/<bird-name>/users/<user-id>/<job-id>/<output-file>``, a hardlink is generated at the path
+``/user_workspaces/<user-name>/wps_outputs/<bird-name>/<job-id>/<output-file>``. The hardlink path uses a similar
 structure as found in the source path, but removes the redundant ``users`` and ``<user-id>`` path segments. The
 hardlink files will be automatically available to the user on a `JupyterLab` instance since the workspace is mounted as
-a volume. Any file that is found under a directory ``/wpsoutputs/<bird-name>/users/<user-id>/`` is considered to be
+a volume. Any file that is found under a directory ``/wps_outputs/<bird-name>/users/<user-id>/`` is considered to be
 user data and any outside file is considered public.
 
 The permissions found on the user data are synchronized with the permissions found on `Magpie`_. If `Magpie`_ uses a
@@ -95,7 +95,7 @@ closest parent permissions.
 
 .. warning::
     The route resources found under the ``secure-data-proxy`` service must match exactly a path on the filesystem,
-    starting with the directory name ``wpsoutputs``, and following with the desired children directories/file names.
+    starting with the directory name ``wps_outputs``, and following with the desired children directories/file names.
 
 If the file does not have any read or write permissions, the hardlink will not be available in the user's workspace.
 

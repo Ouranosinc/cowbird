@@ -19,10 +19,10 @@ from cowbird.utils import apply_new_path_permissions, get_logger
 LOGGER = get_logger(__name__)
 
 DEFAULT_NOTEBOOKS_DIR_NAME = "notebooks"
-DEFAULT_PUBLIC_WORKSPACE_WPS_OUTPUTS_SUBPATH = "public/wpsoutputs"
-DEFAULT_WPS_OUTPUTS_RES_NAME = "wpsoutputs"
+DEFAULT_PUBLIC_WORKSPACE_WPS_OUTPUTS_SUBPATH = "public/wps_outputs"
+DEFAULT_WPS_OUTPUTS_RES_NAME = "wps_outputs"
 DEFAULT_SECURE_DATA_PROXY_NAME = "secure-data-proxy"
-DEFAULT_USER_WPS_OUTPUTS_DIR_NAME = "wpsoutputs"
+DEFAULT_USER_WPS_OUTPUTS_DIR_NAME = "wps_outputs"
 
 
 class FileSystem(Handler, FSMonitor):
@@ -51,7 +51,8 @@ class FileSystem(Handler, FSMonitor):
                                          which will be symlinked to the working directory
         :param wps_outputs_dir: Path to the wps outputs directory
         :param secure_data_proxy_name: Name of the secure-data-proxy service found on Magpie
-        :param wps_outputs_res_name: Name of the wpsoutputs resource found on Magpie under the secure-data-proxy service
+        :param wps_outputs_res_name: Name of the WPS outputs resource found on Magpie under the secure-data-proxy
+                                     service
         :param notebooks_dir_name: Name of the symlink directory found in the user workspace and which directs to the
                                    user's notebook directory
         :param public_workspace_wps_outputs_subpath: Subpath to the directory containing hardlinks to the public WPS
@@ -76,12 +77,12 @@ class FileSystem(Handler, FSMonitor):
         self.wps_outputs_user_data_regex = re.compile(
             rf"^{self.wps_outputs_dir}/(?P<bird_name>\w+)/users/(?P<user_id>\d+)/(?P<subpath>.+)")
 
-    def start_wpsoutputs_monitoring(self, monitoring: Monitoring) -> None:
+    def start_wps_outputs_monitoring(self, monitoring: Monitoring) -> None:
         if os.path.exists(self.wps_outputs_dir):
-            LOGGER.info("Start monitoring wpsoutputs folder [%s]", self.wps_outputs_dir)
+            LOGGER.info("Start monitoring WPS outputs folder [%s]", self.wps_outputs_dir)
             monitoring.register(self.wps_outputs_dir, True, self)
         else:
-            LOGGER.warning("Input wpsoutputs folder [%s] does not exist.", self.wps_outputs_dir)
+            LOGGER.warning("Input WPS outputs folder [%s] does not exist.", self.wps_outputs_dir)
 
     def get_user_workspace_dir(self, user_name: str) -> str:
         return os.path.join(self.workspace_dir, user_name)
@@ -129,8 +130,8 @@ class FileSystem(Handler, FSMonitor):
         for root, _, filenames in os.walk(self.wps_outputs_dir):
             for file in filenames:
                 full_path = os.path.join(root, file)
-                self._create_wpsoutputs_hardlink(src_path=full_path, overwrite=True,
-                                                 process_user_files=True, process_public_files=False)
+                self._create_wps_outputs_hardlink(src_path=full_path, overwrite=True,
+                                                  process_user_files=True, process_public_files=False)
 
     def user_deleted(self, user_name: str) -> None:
         user_workspace_dir = self.get_user_workspace_dir(user_name)
@@ -244,8 +245,8 @@ class FileSystem(Handler, FSMonitor):
             LOGGER.info("Access to the WPS output file `%s` is not allowed for the user. No hardlink created.",
                         src_path)
 
-    def _create_wpsoutputs_hardlink(self, src_path: str, overwrite: bool = False,
-                                    process_user_files: bool = True, process_public_files: bool = True) -> None:
+    def _create_wps_outputs_hardlink(self, src_path: str, overwrite: bool = False,
+                                     process_user_files: bool = True, process_public_files: bool = True) -> None:
         regex_match = self.wps_outputs_user_data_regex.search(src_path)
         access_allowed = True
         if regex_match:  # user files
@@ -260,7 +261,7 @@ class FileSystem(Handler, FSMonitor):
                                                    subpath=regex_match.group("subpath"))
             api_services = magpie_handler.get_services_by_type(ServiceAPI.service_type)
             if self.secure_data_proxy_name not in api_services:
-                LOGGER.warning("`%s` service not found. Considering user wpsoutputs data as accessible by default.",
+                LOGGER.warning("`%s` service not found. Considering user WPS outputs data as accessible by default.",
                                self.secure_data_proxy_name)
                 apply_new_path_permissions(src_path, True, False, False)
             else:  # get access and apply permissions if the secure-data-proxy exists
@@ -290,7 +291,7 @@ class FileSystem(Handler, FSMonitor):
         if not os.path.isdir(path) and Path(self.wps_outputs_dir) in Path(path).parents:
             # Only process files, since hardlinks are not permitted on directories
             LOGGER.info("Creating hardlink for the new file path `%s`", path)
-            self._create_wpsoutputs_hardlink(src_path=path, overwrite=True)
+            self._create_wps_outputs_hardlink(src_path=path, overwrite=True)
 
     def on_modified(self, path: str) -> None:
         """
@@ -299,14 +300,14 @@ class FileSystem(Handler, FSMonitor):
         :param path: Absolute path of a new file/directory
         """
         # Nothing to do for files in the wps_outputs folder.
-        # Permission modifications (e.g.: via `chmod`) are not supported to simplify the management of wpsoutputs
+        # Permission modifications (e.g.: via `chmod`) are not supported to simplify the management of WPS outputs
         # permissions. Any permission modifications should be done via Magpie, which will synchronize the permissions on
         # any related hardlinks automatically.
         LOGGER.warning("Modification event detected on path [%s]. Event ignored as there is nothing to be done by the "
                        "handler.", path)
 
-    def _delete_wpsoutputs_hardlink(self, src_path: str,
-                                    process_user_paths: bool = True, process_public_paths: bool = True) -> bool:
+    def _delete_wps_outputs_hardlink(self, src_path: str,
+                                     process_user_paths: bool = True, process_public_paths: bool = True) -> bool:
         """
         Deletes the hardlink path that corresponds to the input source path.
 
@@ -344,7 +345,7 @@ class FileSystem(Handler, FSMonitor):
         """
         if Path(self.wps_outputs_dir) in Path(path).parents:
             LOGGER.info("Removing link associated to the deleted path `%s`", path)
-            self._delete_wpsoutputs_hardlink(path)
+            self._delete_wps_outputs_hardlink(path)
 
     def _check_if_res_from_secure_data_proxy(self, res_tree: List[JSON]) -> bool:
         """
@@ -377,8 +378,8 @@ class FileSystem(Handler, FSMonitor):
                 return
 
             full_route = self.wps_outputs_dir
-            # Add subpath if the resource is a child of the main wpsoutputs resource
-            if len(res_tree) > 2:  # /secure-data-proxy/wpsoutputs/<subpath>
+            # Add subpath if the resource is a child of the main WPS outputs resource
+            if len(res_tree) > 2:  # /secure-data-proxy/wps_outputs/<subpath>
                 child_route = "/".join(cast(List[str], [res["resource_name"] for res in res_tree[2:]]))
                 full_route = os.path.join(full_route, child_route)
 
@@ -434,11 +435,11 @@ class FileSystem(Handler, FSMonitor):
 
     def resync(self) -> None:
         """
-        Resync operation, regenerating required links (user_workspace, wpsoutputs, ...)
+        Resync operation, regenerating required links (user_workspace, wps_outputs, ...)
         """
         LOGGER.info("Applying resync operation.")
         if not os.path.exists(self.wps_outputs_dir):
-            LOGGER.warning("Skipping resync operation for wpsoutputs folder since the source folder `%s` could not be "
+            LOGGER.warning("Skipping resync operation for WPS outputs folder since the source folder `%s` could not be "
                            "found", self.wps_outputs_dir)
         else:
             # Delete the content of the linked public folder, but keep the folder to avoid breaking the volume
@@ -467,6 +468,6 @@ class FileSystem(Handler, FSMonitor):
             for root, _, filenames in os.walk(self.wps_outputs_dir):
                 for file in filenames:
                     full_path = os.path.join(root, file)
-                    self._create_wpsoutputs_hardlink(src_path=full_path, overwrite=True)
+                    self._create_wps_outputs_hardlink(src_path=full_path, overwrite=True)
         # TODO: add resync of the user_workspace symlinks to the jupyterhub dirs,
         #   will be added during the resync task implementation

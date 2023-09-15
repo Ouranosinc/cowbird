@@ -47,9 +47,9 @@ class BaseTestFileSystem(unittest.TestCase):
     def setUp(self):
         self.test_directory = tempfile.TemporaryDirectory()  # pylint: disable=R1732,consider-using-with
         self.workspace_dir = os.path.join(self.test_directory.name, "user_workspaces")
-        self.wpsoutputs_dir = os.path.join(self.test_directory.name, "wpsoutputs")
+        self.wps_outputs_dir = os.path.join(self.test_directory.name, "wps_outputs")
         os.mkdir(self.workspace_dir)
-        os.mkdir(self.wpsoutputs_dir)
+        os.mkdir(self.wps_outputs_dir)
 
         self.user_workspace_dir = Path(self.workspace_dir) / self.test_username
 
@@ -111,7 +111,7 @@ class TestFileSystemBasic(BaseTestFileSystem):
                     "active": True,
                     "workspace_dir": self.workspace_dir,
                     "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
-                    "wps_outputs_dir": self.wpsoutputs_dir}}})
+                    "wps_outputs_dir": self.wps_outputs_dir}}})
 
         data = {
             "event": "created",
@@ -190,7 +190,7 @@ class TestFileSystemBasic(BaseTestFileSystem):
                     "active": True,
                     "workspace_dir": workspace_dir,
                     "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
-                    "wps_outputs_dir": "/wpsoutputs"}}})
+                    "wps_outputs_dir": "/wps_outputs"}}})
         data = {
             "event": "created",
             "user_name": self.test_username,
@@ -214,12 +214,12 @@ class TestFileSystemBasic(BaseTestFileSystem):
                     "active": True,
                     "workspace_dir": self.workspace_dir,
                     "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
-                    "wps_outputs_dir": self.wpsoutputs_dir}}})
+                    "wps_outputs_dir": self.wps_outputs_dir}}})
 
         # Create a test wps output file
         bird_name = "weaver"
         output_subpath = f"{bird_name}/test_output.txt"
-        output_file = os.path.join(self.wpsoutputs_dir, output_subpath)
+        output_file = os.path.join(self.wps_outputs_dir, output_subpath)
         os.makedirs(os.path.dirname(output_file))
         Path(output_file).touch()
 
@@ -234,7 +234,7 @@ class TestFileSystemBasic(BaseTestFileSystem):
         # A create event on a folder should not be processed (no corresponding target folder created)
         target_dir = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(), bird_name)
         shutil.rmtree(target_dir)
-        filesystem_handler.on_created(os.path.join(self.wpsoutputs_dir, bird_name))
+        filesystem_handler.on_created(os.path.join(self.wps_outputs_dir, bird_name))
         assert not os.path.exists(target_dir)
 
     def test_public_wps_output_deleted(self):
@@ -247,12 +247,12 @@ class TestFileSystemBasic(BaseTestFileSystem):
                     "active": True,
                     "workspace_dir": self.workspace_dir,
                     "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
-                    "wps_outputs_dir": self.wpsoutputs_dir}}})
+                    "wps_outputs_dir": self.wps_outputs_dir}}})
 
         filesystem_handler = HandlerFactory().get_handler("FileSystem")
 
         output_subpath = "weaver/test_output.txt"
-        output_file_path = os.path.join(self.wpsoutputs_dir, output_subpath)
+        output_file_path = os.path.join(self.wps_outputs_dir, output_subpath)
 
         # Create a file at the hardlink location
         hardlink_path = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(), output_subpath)
@@ -272,7 +272,7 @@ class TestFileSystemBasic(BaseTestFileSystem):
         # Test folder paths, the removal of a source folder should also remove the linked folder.
         weaver_linked_dir = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(), "weaver")
         assert os.path.exists(weaver_linked_dir)
-        filesystem_handler.on_deleted(os.path.join(self.wpsoutputs_dir, "weaver"))
+        filesystem_handler.on_deleted(os.path.join(self.wps_outputs_dir, "weaver"))
         assert not os.path.exists(weaver_linked_dir)
 
     def test_resync(self):
@@ -291,7 +291,7 @@ class TestFileSystemBasic(BaseTestFileSystem):
                     "active": True,
                     "workspace_dir": self.workspace_dir,
                     "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
-                    "wps_outputs_dir": self.wpsoutputs_dir}}})
+                    "wps_outputs_dir": self.wps_outputs_dir}}})
 
         filesystem_handler = HandlerFactory().get_handler("FileSystem")
 
@@ -311,13 +311,13 @@ class TestFileSystemBasic(BaseTestFileSystem):
 
         # Create a new test wps output file
         output_subpath = "weaver/test_output.txt"
-        output_file = os.path.join(self.wpsoutputs_dir, output_subpath)
+        output_file = os.path.join(self.wps_outputs_dir, output_subpath)
         os.makedirs(os.path.dirname(output_file))
         Path(output_file).touch()
         hardlink_path = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(), output_subpath)
 
-        # Create a new empty dir (should not appear in the resynced wpsoutputs since only files are processed)
-        new_dir = os.path.join(self.wpsoutputs_dir, "new_dir")
+        # Create a new empty dir (should not appear in the resynced WPS outputs since only files are processed)
+        new_dir = os.path.join(self.wps_outputs_dir, "new_dir")
         os.mkdir(new_dir)
         new_dir_linked_path = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(), "new_dir")
 
@@ -337,9 +337,9 @@ class TestFileSystemBasic(BaseTestFileSystem):
         assert not os.path.exists(old_root_file)
         assert not os.path.exists(old_subdir)
 
-    def test_resync_no_src_wpsoutputs(self):
+    def test_resync_no_src_wps_outputs(self):
         """
-        Tests the resync operation when the source wpsoutputs folder does not exist.
+        Tests the resync operation when the source WPS outputs folder does not exist.
         """
         app = self.get_test_app({
             "handlers": {
@@ -347,11 +347,11 @@ class TestFileSystemBasic(BaseTestFileSystem):
                     "active": True,
                     "workspace_dir": self.workspace_dir,
                     "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
-                    "wps_outputs_dir": self.wpsoutputs_dir}}})
+                    "wps_outputs_dir": self.wps_outputs_dir}}})
 
         filesystem_handler = HandlerFactory().get_handler("FileSystem")
 
-        shutil.rmtree(self.wpsoutputs_dir)
+        shutil.rmtree(self.wps_outputs_dir)
 
         # Create a file in a subfolder of the linked folder that should normally be removed by the resync
         old_nested_file = os.path.join(filesystem_handler.get_public_workspace_wps_outputs_dir(),
@@ -359,7 +359,7 @@ class TestFileSystemBasic(BaseTestFileSystem):
         os.makedirs(os.path.dirname(old_nested_file))
         Path(old_nested_file).touch()
 
-        # Applying the resync should not crash even if the source wpsoutputs folder doesn't exist
+        # Applying the resync should not crash even if the source WPS outputs folder doesn't exist
         resp = utils.test_request(app, "PUT", "/handlers/FileSystem/resync")
         assert resp.status_code == 200
 
@@ -394,7 +394,7 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
                     "active": True,
                     "workspace_dir": self.workspace_dir,
                     "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
-                    "wps_outputs_dir": self.wpsoutputs_dir}}})
+                    "wps_outputs_dir": self.wps_outputs_dir}}})
 
         # Reset test user
         filesystem_handler = HandlerFactory().get_handler("FileSystem")
@@ -408,7 +408,7 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
         self.bird_name = "weaver"
         self.test_filename = "test_output.txt"
         subpath = f"{self.job_id}/{self.test_filename}"
-        self.test_file = os.path.join(self.wpsoutputs_dir,
+        self.test_file = os.path.join(self.wps_outputs_dir,
                                       f"{self.bird_name}/users/{self.user_id}/{subpath}")
         self.wps_outputs_user_dir = filesystem_handler.get_user_workspace_wps_outputs_dir(self.test_username)
         self.test_hardlink = filesystem_handler.get_user_hardlink(src_path=self.test_file,
@@ -472,7 +472,7 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
 
         # A create event on a folder should not be processed (no corresponding target folder created)
         subpath = str(self.job_id)
-        src_dir = os.path.join(self.wpsoutputs_dir, f"{self.bird_name}/users/{self.user_id}/{subpath}")
+        src_dir = os.path.join(self.wps_outputs_dir, f"{self.bird_name}/users/{self.user_id}/{subpath}")
         target_dir = filesystem_handler.get_user_hardlink(src_path=src_dir,
                                                           bird_name=self.bird_name,
                                                           user_name=self.test_username,
@@ -483,7 +483,7 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
 
     def test_user_created(self):
         """
-        Tests if creating a user generates the hardlinks to the pre-existing user wpsoutputs data.
+        Tests if creating a user generates the hardlinks to the pre-existing user WPS outputs data.
         """
         filesystem_handler = HandlerFactory().get_handler("FileSystem")
         shutil.rmtree(filesystem_handler.get_user_workspace_dir(self.test_username))
@@ -504,14 +504,14 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
         # Note that the following test cases are made to be executed in a specific order and are not interchangeable.
         # Each permission case specifies the permission's name and access to add and the resulting expected file perms.
         test_cases = [{
-            # If secure-data-proxy service exists but no route is defined for wpsoutputs, assume access is not allowed.
+            # If secure-data-proxy service exists but no route is defined for WPS outputs, assume access is not allowed.
             "routes_to_create": [],
             "permissions_cases": [("", "", 0o660)]
         }, {
             # Permission applied only on a parent resource
             # If the route is only defined on a parent resource and no route are defined for the actual file,
             # assume access is the same as the access of the parent.
-            "routes_to_create": ["wpsoutputs"],
+            "routes_to_create": ["wps_outputs"],
             "permissions_cases": [(Permission.READ.value, Access.DENY.value, 0o660),
                                   (Permission.READ.value, Access.ALLOW.value, 0o664),
                                   # Write permissions should be ignored by the handler
@@ -521,7 +521,7 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
         }, {
             # Permission applied on the actual resource - Test access with an exact route match
             # Create the rest of the route to get a route that match the actual full path of the resource
-            "routes_to_create": re.sub(rf"^{self.wpsoutputs_dir}", "", self.test_file).strip("/").split("/"),
+            "routes_to_create": re.sub(rf"^{self.wps_outputs_dir}", "", self.test_file).strip("/").split("/"),
             "permissions_cases": [(Permission.READ.value, Access.DENY.value, 0o660),
                                   (Permission.READ.value, Access.ALLOW.value, 0o664),
                                   # Write permissions should be ignored by the handler
@@ -566,7 +566,7 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
         assert not os.path.exists(self.test_hardlink)
 
         # Test deleting a user directory
-        src_dir = os.path.join(self.wpsoutputs_dir, f"{self.bird_name}/users/{self.user_id}/{self.job_id}")
+        src_dir = os.path.join(self.wps_outputs_dir, f"{self.bird_name}/users/{self.user_id}/{self.job_id}")
         target_dir = os.path.join(self.wps_outputs_user_dir, f"{self.bird_name}/{self.job_id}")
         assert os.path.exists(target_dir)
         filesystem_handler.on_deleted(src_dir)
@@ -574,7 +574,7 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
 
     def test_resync(self):
         """
-        Tests resync operation on wpsoutputs user data.
+        Tests resync operation on WPS outputs user data.
         """
         filesystem_handler = HandlerFactory().get_handler("FileSystem")
         test_dir = os.path.join(self.wps_outputs_user_dir, f"{self.bird_name}/{self.job_id}")
@@ -588,9 +588,9 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
         old_subdir = os.path.join(test_dir, "empty_subdir")
         os.mkdir(old_subdir)
 
-        # Create a new empty dir (should not appear in the resynced wpsoutputs since only files are processed)
+        # Create a new empty dir (should not appear in the resynced WPS outputs since only files are processed)
         subpath = "new_dir"
-        new_dir = os.path.join(self.wpsoutputs_dir, f"{self.bird_name}/users/{self.user_id}/{subpath}")
+        new_dir = os.path.join(self.wps_outputs_dir, f"{self.bird_name}/users/{self.user_id}/{subpath}")
         os.mkdir(new_dir)
 
         new_dir_linked_path = filesystem_handler.get_user_hardlink(src_path=new_dir,
@@ -624,7 +624,7 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
         subdir_test_file = self.test_file
         subdir_hardlink = self.test_hardlink
         root_test_filename = "other_file.txt"
-        root_test_file = os.path.join(self.wpsoutputs_dir,
+        root_test_file = os.path.join(self.wps_outputs_dir,
                                       f"{self.bird_name}/users/{self.user_id}/{root_test_filename}")
         root_hardlink = HandlerFactory().get_handler("FileSystem").get_user_hardlink(
             src_path=root_test_file, bird_name=self.bird_name, user_name=self.test_username, subpath=root_test_filename)
@@ -634,7 +634,7 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
 
         # Prepare test routes
         user_dir_res_id = None
-        routes = re.sub(rf"^{self.wpsoutputs_dir}", "wpsoutputs", self.test_file).strip("/")
+        routes = re.sub(rf"^{self.wps_outputs_dir}", "wps_outputs", self.test_file).strip("/")
         last_res_id = svc_id
         for route in routes.split("/"):
             last_res_id = magpie_handler.create_resource(route, Route.resource_type_name, last_res_id)
@@ -703,7 +703,7 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
         self.check_path_perms_and_hardlink(root_test_file, root_hardlink, 0o660)
         self.check_path_perms_and_hardlink(subdir_test_file, subdir_hardlink, 0o660)
 
-    def test_permission_updates_wpsoutputs_data(self):
+    def test_permission_updates_wps_outputs_data(self):
         """
         Tests updating permissions on data found outside of the user directories, including testing permissions on a
         user and on a group.
@@ -713,7 +713,7 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
 
         # Create resources
         svc_id = self.create_secure_data_proxy_service()
-        wpsoutputs_res_id = magpie_handler.create_resource("wpsoutputs", Route.resource_type_name, svc_id)
+        wps_outputs_res_id = magpie_handler.create_resource("wps_outputs", Route.resource_type_name, svc_id)
 
         # Create other user from a group different than the test group
         test_magpie.delete_group(magpie_handler, "others")
@@ -734,17 +734,18 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
         # Create other test files
         # Public files should be ignored by following test cases,
         # since public files are not concerned by perm change events.
-        public_file = os.path.join(self.wpsoutputs_dir, "public_file.txt")
-        public_subfile = os.path.join(self.wpsoutputs_dir, "public_dir/public_file.txt")
+        public_file = os.path.join(self.wps_outputs_dir, "public_file.txt")
+        public_subfile = os.path.join(self.wps_outputs_dir, "public_dir/public_file.txt")
 
         # This file should be ignored by following test cases, being in a group different than the test group.
         ignored_filename = "ignored.txt"
-        ignored_file = os.path.join(self.wpsoutputs_dir, f"{self.bird_name}/users/{ignored_user_id}/{ignored_filename}")
+        ignored_file = os.path.join(self.wps_outputs_dir,
+                                    f"{self.bird_name}/users/{ignored_user_id}/{ignored_filename}")
         ignored_hardlink = filesystem_handler.get_user_hardlink(
             src_path=ignored_file, bird_name=self.bird_name, user_name=ignored_username, subpath=ignored_filename)
 
         same_group_filename = "same_group.txt"
-        same_group_file = os.path.join(self.wpsoutputs_dir,
+        same_group_file = os.path.join(self.wps_outputs_dir,
                                        f"{self.bird_name}/users/{same_group_user_id}/{same_group_filename}")
         same_group_hardlink = filesystem_handler.get_user_hardlink(src_path=same_group_file,
                                                                    bird_name=self.bird_name,
@@ -756,7 +757,7 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
             Path(file).touch()
             os.chmod(file, 0o660)
 
-        for res_id in [svc_id, wpsoutputs_res_id]:
+        for res_id in [svc_id, wps_outputs_res_id]:
             data = {
                 "event": ValidOperations.CreateOperation.value,
                 "service_name": None,
@@ -818,7 +819,7 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
 
     def test_permission_updates_other_svc(self):
         """
-        Tests permission updates on a wpsoutputs resource from a service other than the secure-data-proxy, which should
+        Tests permission updates on a WPS outputs resource from a service other than the secure-data-proxy, which should
         not be processed by the filesystem handler.
         """
         magpie_handler = HandlerFactory().get_handler("Magpie")
@@ -836,7 +837,7 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
 
         # Create resource associated with the test file, on the other service
         last_res_id = other_svc_id
-        routes = re.sub(rf"^{self.wpsoutputs_dir}", "wpsoutputs", self.test_file).strip("/")
+        routes = re.sub(rf"^{self.wps_outputs_dir}", "wps_outputs", self.test_file).strip("/")
         for route in routes.split("/"):
             last_res_id = magpie_handler.create_resource(route, Route.resource_type_name, last_res_id)
 

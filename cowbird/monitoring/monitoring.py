@@ -49,10 +49,10 @@ class Monitoring(metaclass=SingletonMeta):
             self.monitors[mon.path][mon.callback] = mon
             mon.start()
 
-        # Initialize FileSystem handler which must monitor the wpsoutputs folder on startup
+        # Initialize FileSystem handler which must monitor the WPS outputs folder on startup
         filesystem_handler = HandlerFactory().get_handler("FileSystem")
         if filesystem_handler:
-            filesystem_handler.start_wpsoutputs_monitoring(self)
+            filesystem_handler.start_wps_outputs_monitoring(self)
 
     def register(self,
                  path: str,
