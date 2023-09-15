@@ -610,7 +610,12 @@ def apply_new_path_permissions(path: str, is_readable: bool, is_writable: bool, 
 
 def update_filesystem_permissions(permission: int, is_readable: bool, is_writable: bool, is_executable: bool) -> int:
     """
-    Applies/remove read, write and execute permissions (user only) to the input file system permissions.
+    Applies/remove read, write and execute permissions (on ``others`` only) to the input file system permissions.
+
+    Note that ``others`` permissions are used instead of the ``user``/``group`` permissions, to manage the user's data
+    access.
+    See :ref:`Components - Usage of 'others' permissions <components_others_permissions>` for more details on the usage
+    of ``others`` permissions.
     """
     for perm_enabled, perm_mode in zip([is_readable, is_writable, is_executable],
                                        [stat.S_IROTH, stat.S_IWOTH, stat.S_IXOTH]):

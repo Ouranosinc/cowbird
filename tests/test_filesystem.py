@@ -371,6 +371,14 @@ class TestFileSystemBasic(BaseTestFileSystem):
 class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
     """
     FileSystem tests specific to the user wps outputs data.
+
+    These tests can include verifications on the different path permissions. Note that ``others`` permissions are used
+    instead of the ``user``/``group`` permissions, to manage the user's data access.
+    See :ref:`Components - Usage of 'others' permissions <components_others_permissions>` for more details on the
+    usage of ``others`` permissions.
+
+    .. seealso::
+        - :func:`cowbird.utils.update_filesystem_permissions`
     """
     def setUp(self):
         super().setUp()
@@ -506,6 +514,8 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
             "routes_to_create": ["wpsoutputs"],
             "permissions_cases": [(Permission.READ.value, Access.DENY.value, 0o660),
                                   (Permission.READ.value, Access.ALLOW.value, 0o664),
+                                  # Write permissions should be ignored by the handler
+                                  # and should not affect the path permissions.
                                   (Permission.WRITE.value, Access.ALLOW.value, 0o664),
                                   (Permission.WRITE.value, Access.DENY.value, 0o664)]
         }, {
@@ -514,6 +524,8 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
             "routes_to_create": re.sub(rf"^{self.wpsoutputs_dir}", "", self.test_file).strip("/").split("/"),
             "permissions_cases": [(Permission.READ.value, Access.DENY.value, 0o660),
                                   (Permission.READ.value, Access.ALLOW.value, 0o664),
+                                  # Write permissions should be ignored by the handler
+                                  # and should not affect the path permissions.
                                   (Permission.WRITE.value, Access.ALLOW.value, 0o664),
                                   (Permission.WRITE.value, Access.DENY.value, 0o664)]}]
         # Resource id of the last existing route resource found from the path of the test file

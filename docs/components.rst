@@ -79,30 +79,34 @@ a volume. Any file that is found under a directory ``/wpsoutputs/<bird-name>/use
 user data and any outside file is considered public.
 
 The permissions found on the user data are synchronized with the permissions found on `Magpie`_. If `Magpie`_ uses a
-`secure-data-proxy` service, this service handles the permissions of those files (see `here <https://github.com/
+``secure-data-proxy`` service, this service handles the permissions of those files (see `here <https://github.com/
 bird-house/birdhouse-deploy/blob/master/birdhouse/optional-components/README.rst#control-secured-access-to-wps-
-outputs>`__). If a file does not have a corresponding route on the `secure-data-proxy` service, it will use the closest
-parent permissions.
+outputs>`__). If a file does not have a corresponding route on the ``secure-data-proxy`` service, it will use the
+closest parent permissions.
 
 .. note::
     If the access to a WPS outputs file is allowed, the file access will be read-only and any write permissions from the
-    `secure-data-proxy` service will be ignored. This is because WPS outputs are produced by external processes and
+    ``secure-data-proxy`` service will be ignored. This is because WPS outputs are produced by external processes and
     the resulting data should remain constant.
 
+.. note::
+    The files/directories permissions are only applied to ``others`` (see :ref:`Components - Usage of 'others'
+    permissions <components_others_permissions>` section for details).
+
 .. warning::
-    The route resources found under the `secure-data-proxy` service must match exactly a path on the filesystem,
+    The route resources found under the ``secure-data-proxy`` service must match exactly a path on the filesystem,
     starting with the directory name ``wpsoutputs``, and following with the desired children directories/file names.
 
 If the file does not have any read or write permissions, the hardlink will not be available in the user's workspace.
 
 .. note::
     Permissions should not be modified via the file system, but should only be managed via the
-    `secure-data-proxy` service on Magpie. Permission modifications on the file system will be ignored.
+    ``secure-data-proxy`` service on Magpie. Permission modifications on the file system will be ignored.
 
     Refer to `DAC-571 <https://crim-ca.atlassian.net/browse/DAC-571>`_ for more details on the design choices for the
     management of permissions.
 
-If no `secure-data-proxy` service is found, the user files are assumed to be fully available
+If no ``secure-data-proxy`` service is found, the user files are assumed to be fully available
 with read and write permissions for the user.
 
 Note that different design choices were made to respect the constraints of the file system and to prevent the user from
@@ -204,16 +208,12 @@ all at once, which will trigger a change to remove the ``read`` permission on th
 having eventual undesired re-enabled `Magpie`_ permissions.
 The same would apply if we use ``write`` permissions in this last example.
 
-The permissions applied on the files/directories are only applied to ``others``, and the permissions on the ``user``
-and on the ``group`` are not modified by the `GeoServer`_ handler. The user and group associated with the files will be
-the admin user/group (``root`` by default), while the user who will interact with the files, for example in
-`JupyterHub`, is a distinct user, hence why the permissions are applied to ``others``. This will also prevent the user
-from changing the permissions if he decides to interact with the terminal accessible via `JupyterLab`.
-Note that, consequently, the concept of a `Magpie`_ group is not used on the file system for now. This means that if a
-permission is applied to a group in `Magpie`_, `Cowbird` will detect the permission change but will not do anything,
-since the group on the file system does not correspond to the groups found on `Magpie`_. Also, it would not make sense
-to update the file associated to a resource for all the users of a group, since the file is supposed to be associated
-to a single user anyway.
+The files/directories permissions are only applied to ``others`` (see :ref:`Components - Usage of 'others' permissions
+<components_others_permissions>` section for details).
+If a permission is applied to a group in `Magpie`_, the `GeoServer`_ handler will detect the permission change but will
+not do anything since `Magpie`_ groups are different than the groups found on the file system. Also, it would not make
+sense to update the path associated to a resource for all the users of a group, since the path is supposed to be
+associated to a single user anyway.
 
 Note that even if group permission changes on `Magpie`_ are not handled by `Cowbird`, a group permission could still
 have an impact on permission resolution. For example, if a shapefile needs to allow a readable permission on `Magpie`_,
@@ -275,3 +275,17 @@ Note that some operations should be avoided, as they are undesirable and not sup
     This operation will only display a warning in `Cowbird`'s logs. It should never be done manually, since it will
     create inconsistencies with the `GeoServer`_ workspace and the `Magpie`_ resources. The user workspace and the
     datastore directory should only be deleted when a user is deleted via `Magpie`_.
+
+.. _components_others_permissions:
+
+Usage of ``others`` permissions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+With the `GeoServer`_ and the `FileSystem`_ handlers, the permissions applied on the files/directories are only applied
+to ``others``, and the permissions on the ``user`` and on the ``group`` are not modified. The user and group associated
+with the paths will be the admin user/group (``root`` by default), while the user who will interact with the paths, for
+example in `JupyterHub`, is a distinct user, hence why the permissions are applied to ``others``. This will also prevent
+the user from changing the permissions if he decides to interact with the terminal accessible via `JupyterLab`.
+
+Note that, consequently, the concept of a `Magpie`_ group is not used on the file system for now, since the group on the
+file system does not correspond to the groups found on `Magpie`_.
