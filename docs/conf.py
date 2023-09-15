@@ -155,13 +155,11 @@ linkcheck_ignore = [
     r"docs/\w+.rst",
 ]
 linkcheck_anchors_ignore = [
-    r".*issuecomment.*",  # github issue comment anchors not resolved
+    r".*issuecomment.*"  # github issue comment anchors not resolved
+]
 
-    # ignore anchors for specific links :
-    # https://github.com/bird-house/birdhouse-deploy/blob/master/birdhouse/components/README.rst#cowbird
-    "cowbird",
-    # https://github.com/bird-house/birdhouse-deploy/blob/master/birdhouse/optional-components/README.rst#control-secured-access-to-wps-outputs
-    "control-secured-access-to-wps-outputs"
+linkcheck_anchors_ignore_for_url = [
+    "https://github.com/bird-house/birdhouse-deploy/*"
 ]
 
 linkcheck_timeout = 20
