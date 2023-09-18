@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`2.1.0 <https://github.com/Ouranosinc/cowbird/tree/2.1.0>`_ (2023-09-18)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Add monitoring to the ``FileSystem`` handler to watch WPS outputs data.
