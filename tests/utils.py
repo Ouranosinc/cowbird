@@ -28,6 +28,7 @@ from cowbird.utils import (
     NullType,
     SingletonMeta,
     get_header,
+    get_logger,
     get_settings_from_config_ini,
     is_null,
     null
@@ -36,6 +37,8 @@ from cowbird.utils import (
 # employ example INI config for tests where needed to ensure that configurations are valid
 TEST_INI_FILE = os.path.join(COWBIRD_ROOT, "config/cowbird.example.ini")
 TEST_CFG_FILE = os.path.join(COWBIRD_ROOT, "config/config.example.yml")
+
+LOGGER = get_logger(__name__)
 
 
 class TestAppContainer(object):
@@ -136,9 +139,6 @@ class MockMagpieHandler(Handler):
                 "event_perms": self.event_perms,
                 "outbound_perms": self.outbound_perms}
 
-    def get_resource_id(self, resource_full_name):
-        pass
-
     def get_geoserver_workspace_res_id(self, user_name):
         pass
 
@@ -166,6 +166,9 @@ class MockMagpieHandler(Handler):
     def delete_resource(self, res_id):
         pass
 
+    def resync(self):
+        pass
+
     @staticmethod
     def get_service_types() -> List[str]:
         """
@@ -189,9 +192,6 @@ class MockMagpieHandler(Handler):
 class MockAnyHandlerBase(Handler):  # noqa  # missing abstract method 'required_params'
     ResourceId = 1000
 
-    def get_resource_id(self, resource_full_name):
-        return MockAnyHandler.ResourceId
-
     def user_created(self, user_name):
         pass
 
@@ -202,6 +202,9 @@ class MockAnyHandlerBase(Handler):  # noqa  # missing abstract method 'required_
         pass
 
     def permission_deleted(self, permission):
+        pass
+
+    def resync(self):
         pass
 
 
@@ -703,11 +706,20 @@ def check_error_param_structure(body: JSON,
             check_val_equal(body["param"]["compare"], param_compare)
 
 
-def check_path_permissions(path: Union[str, os.PathLike], permissions: int) -> None:
+def check_path_permissions(path: Union[str, os.PathLike], permissions: int, check_others_only: bool = False) -> None:
     """
     Checks if the path has the right permissions, by verifying the last digits of the octal permissions.
     """
-    assert oct(os.stat(path)[ST_MODE] & 0o777) == oct(permissions & 0o777)
+    check_mask = 0o777
+    if check_others_only:
+        check_mask = 0o007
+    expected_perms = oct(permissions & check_mask)
+    actual_perms = oct(os.stat(path)[ST_MODE] & check_mask)
+    try:
+        assert actual_perms == expected_perms
+    except AssertionError as err:
+        LOGGER.error("Actual permissions `%s` not equal to expected permissions `%s`.", actual_perms, expected_perms)
+        raise err
 
 
 def check_mock_has_calls(mocked_fct, calls):

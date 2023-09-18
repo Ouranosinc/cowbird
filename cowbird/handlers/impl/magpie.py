@@ -108,9 +108,6 @@ class Magpie(Handler):
             self.service_types = list(resp.json()["service_types"])
         return self.service_types
 
-    def get_resource_id(self, resource_full_name: str) -> int:
-        raise NotImplementedError
-
     def get_services_by_type(self, service_type: str) -> Dict[str, JSON]:
         resp = self._send_request(method="GET", url=f"{self.url}/services/types/{service_type}")
         if resp.status_code != 200:
@@ -216,6 +213,36 @@ class Magpie(Handler):
                 parent_id=workspace_res_id)
         return layer_res_id
 
+    def get_user_list(self) -> List[str]:
+        """
+        Returns the list of all Magpie usernames.
+        """
+        resp = self._send_request(method="GET", url=f"{self.url}/users", params={"detail": False})
+        if resp.status_code != 200:
+            raise MagpieHttpError(f"Could not find the list of users. HttpError {resp.status_code} : {resp.text}")
+        return resp.json()["user_names"]
+
+    def get_user_id_from_user_name(self, user_name: str) -> int:
+        """
+        Finds the id of a user from his username.
+        """
+        resp = self._send_request(method="GET", url=f"{self.url}/users/{user_name}")
+        if resp.status_code != 200:
+            raise MagpieHttpError(f"Could not find the user `{user_name}`. HttpError {resp.status_code} : {resp.text}")
+        return resp.json()["user"]["user_id"]
+
+    def get_user_name_from_user_id(self, user_id: int) -> str:
+        """
+        Finds the name of a user from his user id.
+        """
+        resp = self._send_request(method="GET", url=f"{self.url}/users", params={"detail": True})
+        if resp.status_code != 200:
+            raise MagpieHttpError(f"Could not find the list of users. HttpError {resp.status_code} : {resp.text}")
+        for user_info in resp.json()["users"]:
+            if "user_id" in user_info and user_info["user_id"] == user_id:
+                return user_info["user_name"]
+        raise MagpieHttpError(f"Could not find any user with the id `{user_id}`.")
+
     def get_user_permissions(self, user: str) -> Dict[str, JSON]:
         """
         Gets all user resource permissions.
@@ -233,6 +260,16 @@ class Magpie(Handler):
             raise MagpieHttpError(f"Could not find the user `{user}` permissions for the resource `{res_id}`. "
                                   f"HttpError {resp.status_code} : {resp.text}")
         return resp.json()
+
+    def get_user_names_by_group_name(self, grp_name: str) -> List[str]:
+        """
+        Returns the list of Magpie usernames from a group.
+        """
+        resp = self._send_request(method="GET", url=f"{self.url}/groups/{grp_name}/users")
+        if resp.status_code != 200:
+            raise MagpieHttpError(f"Could not find the list of usernames from group `{grp_name}`. "
+                                  f"HttpError {resp.status_code} : {resp.text}")
+        return resp.json()["user_names"]
 
     def get_group_permissions(self, grp: str) -> Dict[str, JSON]:
         """
@@ -263,6 +300,10 @@ class Magpie(Handler):
 
     def permission_deleted(self, permission: Permission) -> None:
         self.permissions_synch.delete_permission(permission)
+
+    def resync(self) -> None:
+        # FIXME: this should be implemented in the eventual task addressing the resync mechanism.
+        raise NotImplementedError
 
     def create_permissions(self, permissions_data: List[PermissionConfigItemType]) -> None:
         """

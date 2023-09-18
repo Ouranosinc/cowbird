@@ -20,9 +20,6 @@ class Nginx(Handler):
         """
         super(Nginx, self).__init__(settings, name, **kwargs)
 
-    def get_resource_id(self, resource_full_name: str) -> int:
-        raise NotImplementedError
-
     def user_created(self, user_name: str) -> None:
         raise NotImplementedError
 
@@ -33,4 +30,8 @@ class Nginx(Handler):
         raise NotImplementedError
 
     def permission_deleted(self, permission: Permission) -> None:
+        raise NotImplementedError
+
+    def resync(self) -> None:
+        # FIXME: this should be implemented in the eventual task addressing the resync mechanism.:
         raise NotImplementedError

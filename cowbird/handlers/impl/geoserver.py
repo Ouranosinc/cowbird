@@ -11,7 +11,6 @@ from celery import Task, chain, shared_task
 from magpie.models import Layer, Workspace
 from magpie.permissions import Access, Scope
 
-from cowbird.constants import DEFAULT_ADMIN_GID, DEFAULT_ADMIN_UID
 from cowbird.handlers.handler import HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PARAM, Handler
 from cowbird.handlers.handler_factory import HandlerFactory
 from cowbird.handlers.impl.magpie import GEOSERVER_READ_PERMISSIONS, GEOSERVER_WRITE_PERMISSIONS
@@ -20,7 +19,7 @@ from cowbird.monitoring.monitoring import Monitoring
 from cowbird.permissions_synchronizer import Permission
 from cowbird.request_task import RequestTask
 from cowbird.typedefs import JSON, SettingsType
-from cowbird.utils import CONTENT_TYPE_JSON, get_logger, update_filesystem_permissions
+from cowbird.utils import CONTENT_TYPE_JSON, apply_default_path_ownership, apply_new_path_permissions, get_logger
 
 GeoserverType: TypeAlias = "Geoserver"  # need a reference for the decorator before it gets defined
 
@@ -64,9 +63,6 @@ GeoserverFunc = Union[
     GeoserverFuncSupportsDatastore,
     GeoserverFuncSupportsShapefile,
 ]
-
-HANDLER_ADMIN_USER = "admin_user"  # nosec: B105
-HANDLER_ADMIN_PASSWORD = "admin_password"  # nosec: B105
 
 SHAPEFILE_MAIN_EXTENSION = ".shp"
 SHAPEFILE_REQUIRED_EXTENSIONS = [SHAPEFILE_MAIN_EXTENSION, ".prj", ".dbf", ".shx"]
@@ -157,18 +153,25 @@ class Geoserver(Handler, FSMonitor):
     """
     required_params = [HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PARAM]
 
-    def __init__(self, settings: SettingsType, name: str, **kwargs: Any) -> None:
+    def __init__(self,
+                 settings: SettingsType,
+                 name: str,
+                 admin_user: Optional[str] = None,
+                 admin_password: Optional[str] = None,
+                 **kwargs: Any) -> None:
         """
         Create the geoserver handler instance.
 
         :param settings: Cowbird settings for convenience
         :param name: Handler name
+        :param admin_user: Geoserver admin username
+        :param admin_password: Geoserver admin password
         """
         super(Geoserver, self).__init__(settings, name, **kwargs)
         self.api_url = f"{self.url}/rest"
         self.headers = {"Content-type": CONTENT_TYPE_JSON}
-        self.admin_user = kwargs.get(HANDLER_ADMIN_USER, None)
-        self.admin_password = kwargs.get(HANDLER_ADMIN_PASSWORD, None)
+        self.admin_user = admin_user
+        self.admin_password = admin_password
         self.auth = (self.admin_user, self.admin_password)
         self.datastore_regex = rf"^{self.workspace_dir}/\w+/{DEFAULT_DATASTORE_DIR_NAME}/?$"
 
@@ -177,9 +180,6 @@ class Geoserver(Handler, FSMonitor):
     #
 
     # Handler class functions
-    def get_resource_id(self, resource_full_name: str) -> int:
-        raise NotImplementedError
-
     def user_created(self, user_name: str) -> None:
         self._create_datastore_dir(user_name)
         res = chain(create_workspace.si(user_name), create_datastore.si(user_name))
@@ -206,39 +206,6 @@ class Geoserver(Handler, FSMonitor):
         """
         base_filename = self._shapefile_folder_dir(workspace_name) + "/" + shapefile_name
         return [base_filename + ext for ext in SHAPEFILE_ALL_EXTENSIONS]
-
-    @staticmethod
-    def _apply_new_path_permissions(path: str, is_readable: bool, is_writable: bool, is_executable: bool) -> None:
-        """
-        Applies new permissions to a path, if required.
-        """
-        # Only use the 3 last octal digits
-        previous_perms = os.stat(path)[stat.ST_MODE] & 0o777
-
-        new_perms = update_filesystem_permissions(previous_perms,
-                                                  is_readable=is_readable,
-                                                  is_writable=is_writable,
-                                                  is_executable=is_executable)
-        # Only apply chmod if there is an actual change, to avoid looping events between Magpie and Cowbird
-        if new_perms != previous_perms:
-            try:
-                os.chmod(path, new_perms)
-            except PermissionError as exc:
-                LOGGER.warning("Failed to change permissions on the %s path: %s", path, exc)
-
-    @staticmethod
-    def _apply_default_path_ownership(path: str) -> None:
-        """
-        Applies default ownership to a path, if required.
-        """
-        path_stat = os.stat(path)
-        # Only apply chown if there is an actual change, to avoid looping events between Magpie and Cowbird
-        if path_stat.st_uid != DEFAULT_ADMIN_UID or path_stat.st_gid != DEFAULT_ADMIN_GID:
-            try:
-                # This operation only works as root.
-                os.chown(path, DEFAULT_ADMIN_UID, DEFAULT_ADMIN_GID)
-            except PermissionError as exc:
-                LOGGER.warning("Failed to change ownership of the %s path: %s", path, exc)
 
     def _update_resource_paths_permissions(self,
                                            resource_type: str,
@@ -277,8 +244,8 @@ class Geoserver(Handler, FSMonitor):
                 if path.endswith(tuple(SHAPEFILE_REQUIRED_EXTENSIONS)):
                     LOGGER.warning("%s could not be found and its permissions could not be updated.", path)
                 continue
-            self._apply_new_path_permissions(path, is_readable, is_writable, is_executable)
-            self._apply_default_path_ownership(path)
+            apply_new_path_permissions(path, is_readable, is_writable, is_executable)
+            apply_default_path_ownership(path)
 
     def _update_resource_paths_permissions_recursive(self,
                                                      resource: JSON,
@@ -419,6 +386,10 @@ class Geoserver(Handler, FSMonitor):
             workspace_name, shapefile_name = self._get_shapefile_info(path)
             self._update_magpie_layer_permissions(workspace_name, shapefile_name)
 
+    def resync(self) -> None:
+        # FIXME: this should be implemented in the eventual task addressing the resync mechanism.
+        raise NotImplementedError
+
     @staticmethod
     def _is_permission_update_required(effective_permissions: List[JSON],
                                        user_name: str,
@@ -527,7 +498,7 @@ class Geoserver(Handler, FSMonitor):
 
         datastore_dir_path = self._shapefile_folder_dir(workspace_name)
         # Make sure the directory has the right ownership
-        self._apply_default_path_ownership(datastore_dir_path)
+        apply_default_path_ownership(datastore_dir_path)
 
         workspace_status = os.stat(datastore_dir_path)[stat.ST_MODE]
         is_readable = bool(workspace_status & stat.S_IROTH and workspace_status & stat.S_IXOTH)
@@ -658,11 +629,11 @@ class Geoserver(Handler, FSMonitor):
         """
         for shapefile in self.get_shapefile_list(workspace_name, shapefile_name):
             if os.path.exists(shapefile):
-                self._apply_default_path_ownership(shapefile)
-                self._apply_new_path_permissions(shapefile,
-                                                 is_readable=is_readable,
-                                                 is_writable=is_writable,
-                                                 is_executable=False)
+                apply_default_path_ownership(shapefile)
+                apply_new_path_permissions(shapefile,
+                                           is_readable=is_readable,
+                                           is_writable=is_writable,
+                                           is_executable=False)
 
     def remove_shapefile(self, workspace_name: str, filename: str) -> None:
         """

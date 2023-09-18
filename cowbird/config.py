@@ -4,7 +4,7 @@ import re
 from typing import Any, Dict, List, Literal, Tuple, Union, cast, overload
 
 import yaml
-from schema import Optional, Regex, Schema
+from schema import And, Optional, Regex, Schema
 
 from cowbird.typedefs import (
     ConfigDict,
@@ -160,12 +160,23 @@ def validate_handlers_config_schema(handlers_cfg: Dict[str, HandlerConfig]) -> N
     """
     Validates the schema of the `handlers` section found in the config.
     """
+    str_not_empty_validator = And(str, lambda s: len(s) > 0)
     schema = Schema({
         str: {  # Handler name
+            # parameters common to all handlers
             Optional("active"): bool,
             Optional("priority"): int,
             Optional("url"): str,
             Optional("workspace_dir"): str,
+
+            # parameters for specific handlers
+            Optional("jupyterhub_user_data_dir"): str_not_empty_validator,
+            Optional("wps_outputs_dir"): str_not_empty_validator,
+            Optional("secure_data_proxy_name"): str_not_empty_validator,
+            Optional("wps_outputs_res_name"): str_not_empty_validator,
+            Optional("notebooks_dir_name"): str_not_empty_validator,
+            Optional("public_workspace_wps_outputs_subpath"): str_not_empty_validator,
+            Optional("user_wps_outputs_dir_name"): str_not_empty_validator,
         }
     }, ignore_extra_keys=True)
     schema.validate(handlers_cfg)

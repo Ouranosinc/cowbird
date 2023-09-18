@@ -7,7 +7,12 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Add monitoring to the ``FileSystem`` handler to watch WPS outputs data.
+* Synchronize both public and user WPS outputs data to the workspace folder with hardlinks for user access.
+* Add resync endpoint ``/handlers/{handler_name}/resync`` to trigger a handler's resync operations. Only the
+  ``FileSystem`` handler is implemented for now, regenerating hardlinks associated to WPS outputs public data.
 
 `2.0.0 <https://github.com/Ouranosinc/cowbird/tree/2.0.0>`_ (2023-07-21)
 ------------------------------------------------------------------------------------

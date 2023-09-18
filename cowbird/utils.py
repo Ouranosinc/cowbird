@@ -28,7 +28,7 @@ from requests.structures import CaseInsensitiveDict
 from webob.headers import EnvironHeaders, ResponseHeaders
 
 from cowbird import __meta__
-from cowbird.constants import get_constant, validate_required
+from cowbird.constants import DEFAULT_ADMIN_GID, DEFAULT_ADMIN_UID, get_constant, validate_required
 from cowbird.typedefs import (
     JSON,
     AnyHeadersType,
@@ -588,9 +588,34 @@ def get_timeout(container: Optional[AnySettingsContainer] = None) -> int:
                             raise_missing=False, raise_not_set=False))
 
 
+def apply_new_path_permissions(path: str, is_readable: bool, is_writable: bool, is_executable: bool) -> None:
+    """
+    Applies new permissions to a path, if required.
+    """
+    # Only use the 3 last octal digits
+    previous_perms = os.stat(path)[stat.ST_MODE] & 0o777
+
+    new_perms = update_filesystem_permissions(previous_perms,
+                                              is_readable=is_readable,
+                                              is_writable=is_writable,
+                                              is_executable=is_executable)
+    # Only apply chmod if there is an actual change, to avoid looping events between Magpie and Cowbird
+    if new_perms != previous_perms:
+        try:
+            os.chmod(path, new_perms)
+        except PermissionError as exc:
+            LOGGER.warning("Failed to change permissions from `%o` to `%o` on the path [%s] : %s",
+                           previous_perms, new_perms, path, exc)
+
+
 def update_filesystem_permissions(permission: int, is_readable: bool, is_writable: bool, is_executable: bool) -> int:
     """
-    Applies/remove read, write and execute permissions (user only) to the input file system permissions.
+    Applies/remove read, write and execute permissions (on ``others`` only) to the input file system permissions.
+
+    Note that ``others`` permissions are used instead of the ``user``/``group`` permissions, to manage the user's data
+    access.
+    See :ref:`Components - Usage of 'others' permissions <components_others_permissions>` for more details on the usage
+    of ``others`` permissions.
     """
     for perm_enabled, perm_mode in zip([is_readable, is_writable, is_executable],
                                        [stat.S_IROTH, stat.S_IWOTH, stat.S_IXOTH]):
@@ -598,3 +623,18 @@ def update_filesystem_permissions(permission: int, is_readable: bool, is_writabl
     # Only use the 3 last octal digits
     permission = permission & 0o777
     return permission
+
+
+def apply_default_path_ownership(path: str) -> None:
+    """
+    Applies default ownership to a path, if required.
+    """
+    path_stat = os.stat(path)
+    # Only apply chown if there is an actual change, to avoid looping events between Magpie and Cowbird
+    if path_stat.st_uid != DEFAULT_ADMIN_UID or path_stat.st_gid != DEFAULT_ADMIN_GID:
+        try:
+            # This operation only works as root.
+            os.chown(path, DEFAULT_ADMIN_UID, DEFAULT_ADMIN_GID)
+        except PermissionError as exc:
+            LOGGER.warning("Failed to change ownership from [uid=%s;gid=%s] to [uid=%s;gid=%s] on the path [%s] : %s",
+                           path_stat.st_uid, path_stat.st_gid, DEFAULT_ADMIN_UID, DEFAULT_ADMIN_GID, path, exc)

@@ -17,7 +17,7 @@ from tests import utils
 CURR_DIR = Path(__file__).resolve().parent
 
 
-def create_user(magpie: Magpie, user_name: str, email: str, password: str, group_name: str) -> None:
+def create_user(magpie: Magpie, user_name: str, email: str, password: str, group_name: str) -> int:
     resp = magpie._send_request(method="POST", url=f"{magpie.url}/users",
                                 json={
                                     "user_name": user_name,
@@ -26,10 +26,28 @@ def create_user(magpie: Magpie, user_name: str, email: str, password: str, group
                                     "group_name": group_name
                                 })
     assert resp.status_code == 201
+    return resp.json()["user"]["user_id"]
 
 
 def delete_user(magpie: Magpie, user_name: str) -> None:
     resp = magpie._send_request(method="DELETE", url=f"{magpie.url}/users/{user_name}")
+    assert resp.status_code in [200, 404]
+
+
+def create_group(magpie: Magpie, group_name: str, descr: str, discoverable: bool, terms: str) -> int:
+    resp = magpie._send_request(method="POST", url=f"{magpie.url}/groups",
+                                json={
+                                    "group_name": group_name,
+                                    "description": descr,
+                                    "discoverable": discoverable,
+                                    "terms": terms
+                                })
+    assert resp.status_code == 201
+    return resp.json()["group"]["group_id"]
+
+
+def delete_group(magpie: Magpie, group_name: str) -> None:
+    resp = magpie._send_request(method="DELETE", url=f"{magpie.url}/groups/{group_name}")
     assert resp.status_code in [200, 404]
 
 

@@ -87,6 +87,9 @@ Example :
         priority: 1
         workspace_dir: ${WORKSPACE_DIR}
         jupyterhub_user_data_dir: ${JUPYTERHUB_USER_DATA_DIR}
+        wps_outputs_dir: ${WPS_OUTPUTS_DIR}
+        secure_data_proxy_name: ${SECURE_DATA_PROXY_NAME}
+        public_workspace_wps_outputs_subpath: ${PUBLIC_WORKSPACE_WPS_OUTPUTS_SUBPATH}
 
 sync_permissions:
 #################
