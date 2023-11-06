@@ -108,6 +108,7 @@ def post_permission_webhook_view(request: Request) -> AnyResponseType:
                     msg_on_fail=s.PermissionWebhook_POST_BadRequestResponseSchema.description)
     # Use raw value for service name, to avoid errors with `None` values
     # when the permission is not applied to a `service` type resource.
+    resource_display_name = ar.get_multiformat_body(request, "resource_display_name", check_type=(str, type(None)))
     service_name = ar.get_multiformat_body(request, "service_name", check_type=(str, type(None)))
     service_type = ar.get_multiformat_body(request, "service_type")
     resource_id = ar.get_multiformat_body(request, "resource_id", check_type=int)
@@ -127,6 +128,7 @@ def post_permission_webhook_view(request: Request) -> AnyResponseType:
         service_type=service_type,
         resource_id=resource_id,
         resource_full_name=resource_full_name,
+        resource_display_name=resource_display_name,
         name=name,
         access=access,
         scope=scope,
