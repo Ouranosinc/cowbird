@@ -119,7 +119,7 @@ ConfigItem = Dict[str, JSON]
 ConfigList = List[ConfigItem]
 ConfigDict = Dict[str, Union[str, ConfigItem, ConfigList, JSON]]
 ConfigResTokenInfo = TypedDict("ConfigResTokenInfo", {"has_multi_token": bool, "named_tokens": MutableSet[str]})
-ConfigSegment = TypedDict("ConfigSegment", {"name": str, "type": str})
+ConfigSegment = TypedDict("ConfigSegment", {"name": str, "type": str, "field": str | None, "regex": str | None})
 
 SyncPointMappingType = List[str]
 SyncPointServicesType = Dict[
@@ -142,7 +142,7 @@ SyncPointConfig = Dict[
     SyncPermissionConfig,
 ]
 
-ResourceSegment = TypedDict("ResourceSegment", {"resource_name": str, "resource_type": str})
+ResourceSegment = TypedDict("ResourceSegment", {"resource_name": str, "resource_type": str, "resource_display_name": str | None})
 ResourceTree = List[
     Dict[
         str,
