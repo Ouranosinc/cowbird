@@ -1,6 +1,6 @@
 import re
 from copy import deepcopy
-from typing import TYPE_CHECKING, Callable, Dict, Iterator, List, MutableMapping, Tuple, cast
+from typing import TYPE_CHECKING, Callable, Dict, Iterator, List, MutableMapping, Optional, Tuple, Union, cast
 
 from cowbird.config import (
     BIDIRECTIONAL_ARROW,
@@ -64,7 +64,7 @@ class Permission:
                  service_type: str,
                  resource_id: int,
                  resource_full_name: str,
-                 resource_display_name: str | None,
+                 resource_display_name: Optional[str],
                  name: str,
                  access: str,
                  scope: str,
@@ -237,7 +237,7 @@ class SyncPoint:
                 formatted_path += "/" + segment.split(RES_NAMETYPE_SEPARATOR)[0]
         return formatted_path
 
-    def _find_matching_res(self, permission: Permission, src_resource_tree: ResourceTree) -> Tuple[str, Dict[str, str] | str]:
+    def _find_matching_res(self, permission: Permission, src_resource_tree: ResourceTree) -> Tuple[str, Dict[str, str] or str]:
         """
         Finds a resource key that matches the input resource path, in the sync_permissions config. Note that it returns
         the longest match and only the named segments of the path are included in the length value. Any tokenized
@@ -352,7 +352,7 @@ class SyncPoint:
 
     def _get_resource_full_name_and_type(self,
                                          res_key: str,
-                                         matched_groups: Dict[str, str] | str,
+                                         matched_groups: Dict[str, str] or str,
                                          ) -> Tuple[str, List[ResourceSegment]]:
         """
         Finds the resource data from the config by using the resource key.
@@ -548,7 +548,7 @@ class SyncPoint:
 
     def _find_permissions_to_sync(self,
                                   src_res_key: str,
-                                  src_matched_groups: Dict[str, str] | str,
+                                  src_matched_groups: Dict[str, str] or str,
                                   input_permission: Permission,
                                   perm_operation: Callable[[List[PermissionConfigItemType]], None],
                                   ) -> PermissionData:
