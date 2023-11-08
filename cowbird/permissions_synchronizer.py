@@ -64,12 +64,12 @@ class Permission:
                  service_type: str,
                  resource_id: int,
                  resource_full_name: str,
-                 resource_display_name: Optional[str],
                  name: str,
                  access: str,
                  scope: str,
                  user: str = None,
-                 group: str = None
+                 group: str = None,
+                 resource_display_name: str = None
                  ) -> None:
         self.service_name = service_name
         self.service_type = service_type
@@ -188,11 +188,12 @@ class SyncPoint:
             matched_groups = re.match(NAMED_TOKEN_REGEX, segment["name"])
             if matched_groups:
                 if segment.get('regex') is not None:
-                    # if a regex is passed, override the current regex
+                    # if a regex is passed, override the current regex and return
                     regex = segment.get('regex')
                     res_regex = (
                             rf"{regex}"
                         )
+                    return res_regex, -1
                 else:
                     # match any name with specific type 1 time only
                     res_regex += (
@@ -206,6 +207,7 @@ class SyncPoint:
                 # match name and type exactly
                 res_regex += rf"/{segment['name']}{RES_NAMETYPE_SEPARATOR}{segment['type']}"
                 named_segments_count += 1
+        res_regex += r"$"
         return res_regex, named_segments_count
 
     @staticmethod
@@ -274,18 +276,23 @@ class SyncPoint:
             for res_key, res_segments in service_resources.items():
                 res_regex, named_segments_count = SyncPoint._generate_regex_from_segments(res_segments)
                 resource_nametype_path = SyncPoint._generate_nametype_path_from_segments(res_segments, src_resource_tree)
-                # to be able to match anywhere in the string use search instead of match
-                matches = re.search(res_regex, resource_nametype_path)
+                if named_segments_count == -1:
+                    # To be able to match a path anywhere in the resource_nametype_path we need to use search 
+                    # only when the field regex is passed in the res_segments. This allow to stay backward compatible.
+                    matches = re.search(res_regex, resource_nametype_path)
+                else:
+                    matches = re.match(res_regex, resource_nametype_path)
                 if matches:
-                    # if we have an exact match use the string directly
                     exact_match = matches.group()
-                    matched_groups = matches.groupdict() if exact_match is None else exact_match
+                    matched_groups = matches.groupdict() if named_segments_count != -1 else exact_match
                     if "multi_token" in matched_groups:
                         matched_groups["multi_token"] = SyncPoint._remove_type_from_nametype_path(
                             matched_groups["multi_token"]
                         )
                     matched_groups_by_res[res_key] = matched_groups
-                    matched_length_by_res[res_key] = named_segments_count if exact_match is None else len(exact_match)
+                    # Since we want to be able to match multiple dir /dir1/dir2/dir3/** in the same segment if a custom regex is passed.
+                    # We need to use the len of the exact match to avoid matching the wrong res_key 
+                    matched_length_by_res[res_key] = named_segments_count if named_segments_count != -1 else len(exact_match)
 
             # Find the longest match
             max_match_len = max(matched_length_by_res.values(), default=0)
