@@ -142,7 +142,7 @@ SyncPointConfig = Dict[
     SyncPermissionConfig,
 ]
 
-ResourceSegment = TypedDict("ResourceSegment", {"resource_name": str, "resource_type": str, "resource_display_name": Optional[str]})
+ResourceSegment = TypedDict("ResourceSegment", {"resource_name": str, "resource_type": str, "resource_display_name": NotRequired[str]})
 ResourceTree = List[
     Dict[
         str,

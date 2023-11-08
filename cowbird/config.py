@@ -191,7 +191,7 @@ def validate_sync_perm_config_schema(sync_cfg: SyncPointConfig) -> None:
             "services": {
                 str: {  # Service type, must correspond to an actual Magpie service type
                     str: [  # Resource key, used to identify the resource here and in the permissions_mapping
-                        {"name": str, "type": str, Optional('field'): str, Optional('regex'): str}
+                        {"name": str, "type": str, Optional("field"): str, Optional("regex"): str}
                     ]
                 }
             },

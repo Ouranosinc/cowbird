@@ -1,6 +1,6 @@
 import re
 from copy import deepcopy
-from typing import TYPE_CHECKING, Callable, Dict, Iterator, List, MutableMapping, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, Callable, Dict, Iterator, List, MutableMapping, Tuple, Union, cast
 
 from cowbird.config import (
     BIDIRECTIONAL_ARROW,
@@ -187,18 +187,17 @@ class SyncPoint:
         for segment in res_segments:
             matched_groups = re.match(NAMED_TOKEN_REGEX, segment["name"])
             if matched_groups:
-                if segment.get('regex') is not None:
+                if segment.get("regex") is not None:
                     # if a regex is passed, override the current regex and return
-                    regex = segment.get('regex')
+                    regex = segment.get("regex")
                     res_regex = (
-                            rf"{regex}"
-                        )
+                        rf"{regex}"
+                    )
                     return res_regex, -1
-                else:
-                    # match any name with specific type 1 time only
-                    res_regex += (
-                        rf"/(?P<{matched_groups.groups()[0]}>{SEGMENT_NAME_REGEX})"
-                        rf"{RES_NAMETYPE_SEPARATOR}{segment['type']}"
+                # match any name with specific type 1 time only
+                res_regex += (
+                    rf"/(?P<{matched_groups.groups()[0]}>{SEGMENT_NAME_REGEX})"
+                    rf"{RES_NAMETYPE_SEPARATOR}{segment['type']}"
                 )
             elif segment["name"] == MULTI_TOKEN:
                 # match any name with specific type, 0 or more times
@@ -211,22 +210,21 @@ class SyncPoint:
         return res_regex, named_segments_count
 
     @staticmethod
-    def _generate_nametype_path_from_segments(res_segments: List[ConfigSegment], src_resource_tree: ResourceTree ) -> str:
+    def _generate_nametype_path_from_segments(res_segments: List[ConfigSegment], src_resource_tree: ResourceTree) -> str:
         """
         Generate nametype path (ex.: /name1::type1/name2::type2 where name can be a key from src_resource_tree ).
         """
         resource_nametype_path = ""
         index = 0
         for res in src_resource_tree:
-            if(index < len(res_segments)):
-                key = res_segments[index].get('field') if res_segments[index].get('field') is not None else "resource_name"
+            if index < len(res_segments):
+                key = res_segments[index].get("field") if res_segments[index].get("field") is not None else "resource_name"
             else:
-                key = 'resource_name'
-            resource_nametype_path += f"/{res[key]}{RES_NAMETYPE_SEPARATOR}{res['resource_type']}"
+                key = "resource_name"
+            resource_nametype_path += f'/{res[key]}{RES_NAMETYPE_SEPARATOR}{res["resource_type"]}'
             index = index + 1
 
         return resource_nametype_path
-
 
     @staticmethod
     def _remove_type_from_nametype_path(nametype_path: str) -> str:
@@ -249,7 +247,7 @@ class SyncPoint:
         :param resource_nametype_path: Full resource path name, which includes the type of each segment
                                        (ex.: /name1::type1/name2::type2)
         """
-        
+
         service_type = permission.service_type
         if service_type in self.services:
             # Find which resource from the config matches with the input permission's resource tree
@@ -277,7 +275,7 @@ class SyncPoint:
                 res_regex, named_segments_count = SyncPoint._generate_regex_from_segments(res_segments)
                 resource_nametype_path = SyncPoint._generate_nametype_path_from_segments(res_segments, src_resource_tree)
                 if named_segments_count == -1:
-                    # To be able to match a path anywhere in the resource_nametype_path we need to use search 
+                    # To be able to match a path anywhere in the resource_nametype_path we need to use search
                     # only when the field regex is passed in the res_segments. This allow to stay backward compatible.
                     matches = re.search(res_regex, resource_nametype_path)
                 else:
@@ -291,7 +289,7 @@ class SyncPoint:
                         )
                     matched_groups_by_res[res_key] = matched_groups
                     # Since we want to be able to match multiple dir /dir1/dir2/dir3/** in the same segment if a custom regex is passed.
-                    # We need to use the len of the exact match to avoid matching the wrong res_key 
+                    # We need to use the len of the exact match to avoid matching the wrong res_key
                     matched_length_by_res[res_key] = named_segments_count if named_segments_count != -1 else len(exact_match)
 
             # Find the longest match
@@ -321,17 +319,17 @@ class SyncPoint:
         res_data: List[ResourceSegment] = []
         for segment in target_segments:
             # Use the regex to create the res_data
-            if segment.get('regex') is not None:
-                    regex = segment.get('regex')
-                    matches = re.search(regex, input_matched_groups)
-                    multi_segments = matches.group()
-                    if multi_segments:
-                        for seg in multi_segments.split("/"):
-                            if seg: 
-                                res_data.append({
-                                    "resource_name": seg,
-                                    "resource_type": segment["type"]
-                                })
+            if segment.get("regex") is not None:
+                regex = segment.get("regex")
+                matches = re.search(regex, input_matched_groups)
+                multi_segments = matches.group()
+                if multi_segments:
+                    for seg in multi_segments.split("/"):
+                        if seg:
+                            res_data.append({
+                                "resource_name": seg,
+                                "resource_type": segment["type"]
+                            })
 
             else:
                 matched_groups = re.match(NAMED_TOKEN_REGEX, segment["name"])
