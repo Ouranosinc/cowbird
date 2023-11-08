@@ -1,6 +1,6 @@
 import re
 from copy import deepcopy
-from typing import TYPE_CHECKING, Callable, Dict, Iterator, List, MutableMapping, Tuple, Union, cast
+from typing import TYPE_CHECKING, Callable, Collection, Dict, Iterator, List, MutableMapping, Tuple, cast
 
 from cowbird.config import (
     BIDIRECTIONAL_ARROW,
@@ -237,7 +237,7 @@ class SyncPoint:
                 formatted_path += "/" + segment.split(RES_NAMETYPE_SEPARATOR)[0]
         return formatted_path
 
-    def _find_matching_res(self, permission: Permission, src_resource_tree: ResourceTree) -> Tuple[str, Dict[str, str] or str]:
+    def _find_matching_res(self, permission: Permission, src_resource_tree: ResourceTree) -> Tuple[str, Collection[str]]:
         """
         Finds a resource key that matches the input resource path, in the sync_permissions config. Note that it returns
         the longest match and only the named segments of the path are included in the length value. Any tokenized
@@ -307,7 +307,7 @@ class SyncPoint:
 
     @staticmethod
     def _create_res_data(target_segments: List[ConfigSegment],
-                         input_matched_groups: Dict[str, str],
+                         input_matched_groups: Collection[str],
                          ) -> List[ResourceSegment]:
         """
         Creates resource data, by replacing any tokens found in the segment names to their actual corresponding values.
@@ -357,7 +357,7 @@ class SyncPoint:
 
     def _get_resource_full_name_and_type(self,
                                          res_key: str,
-                                         matched_groups: Dict[str, str] or str,
+                                         matched_groups: Collection[str],
                                          ) -> Tuple[str, List[ResourceSegment]]:
         """
         Finds the resource data from the config by using the resource key.
@@ -417,7 +417,7 @@ class SyncPoint:
     def _filter_used_targets(self,
                              target_res_and_permissions: TargetResourcePermissions,
                              input_src_res_key: str,
-                             src_matched_groups: Dict[str, str],
+                             src_matched_groups: Collection[str],
                              input_permission: Permission,
                              ) -> Tuple[Dict[str, List[str]], Dict[str, List[str]]]:
         """
@@ -496,7 +496,7 @@ class SyncPoint:
     def _get_permission_data(self,
                              user_targets: Dict[str, List[str]],
                              group_targets: Dict[str, List[str]],
-                             src_matched_groups: Dict[str, str],
+                             src_matched_groups: Collection[str],
                              input_permission: Permission) -> PermissionData:
         """
         Formats permissions data to send to Magpie. Output contains, for each target resource key, the resource path
@@ -537,7 +537,7 @@ class SyncPoint:
                                        target_res_and_permissions: TargetResourcePermissions,
                                        input_permission: Permission,
                                        input_src_res_key: str,
-                                       src_matched_groups: Dict[str, str],
+                                       src_matched_groups: Collection[str],
                                        ) -> PermissionData:
         """
         Removes every source resource found in the mappings that has an existing permission that is synced to one of the
@@ -553,7 +553,7 @@ class SyncPoint:
 
     def _find_permissions_to_sync(self,
                                   src_res_key: str,
-                                  src_matched_groups: Dict[str, str] or str,
+                                  src_matched_groups: Collection[str],
                                   input_permission: Permission,
                                   perm_operation: Callable[[List[PermissionConfigItemType]], None],
                                   ) -> PermissionData:
