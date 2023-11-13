@@ -7,7 +7,14 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Add optional key ``field`` and ``regex`` to be used in the ``sync_permissions`` section found in the config.
+  This allow to sync permission using a field other than ``resource_full_name`` when creating the nametype path
+  from the segment ``ex.: /field1::type1/field2::type2``. This adds the support of using ``resource_display_name``.
+* The ``regex`` is used to extract the desired information from the ``nametype_path`` that should be used to do an
+  exact match. This new search overrides the default way of matching each segment with the ``nametype path``. 
+  In the case where a ``regex`` is found in the target segment, the data will be formed using the same ``resource_type``
+  for every match in the same segment. Similary, as using ``- name: "**"`` in the config to match multiple segment,
+  it is possible to use a ``regex`` to match multiple directory in the same segment with ``regex: '(?<=:).*\/?(?=\/)' ``
 
 `2.1.0 <https://github.com/Ouranosinc/cowbird/tree/2.1.0>`_ (2023-09-18)
 ------------------------------------------------------------------------------------

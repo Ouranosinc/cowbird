@@ -147,7 +147,7 @@ ResourceTree = List[
     Dict[
         str,
         # FIXME: replace by a more specific type provided by Magpie directly if eventually implemented
-        #   Only partial fields are provided below (resource_name/resource_type),
+        #   Only partial fields are provided below (resource_name/resource_type/resource_display_name),
         #   because those are the only ones used for now in Cowbird's sync operation.
         #   This actually contains more details such as the resource ID, permission names, etc.
         #   (see the response body of 'GET /magpie/resources/{resource_id}' for exact content).

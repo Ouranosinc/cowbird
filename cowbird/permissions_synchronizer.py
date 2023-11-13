@@ -212,7 +212,10 @@ class SyncPoint:
     @staticmethod
     def _generate_nametype_path_from_segments(res_segments: List[ConfigSegment], src_resource_tree: ResourceTree) -> str:
         """
-        Generate nametype path (ex.: /name1::type1/name2::type2 where name can be a key from src_resource_tree ).
+        Generate nametype path (ex.: /name1::type1/name2::type2 where name can be a field found in ResourceSegment).
+
+        :param res_segments: list of segments
+        :param src_resource_tree: Resource tree associated with the permission to synchronize
         """
         resource_nametype_path = ""
         index = 0
@@ -244,8 +247,7 @@ class SyncPoint:
         segment is ignored in the length.
 
         :param permission: Permission of the service associated with the input resource.
-        :param resource_nametype_path: Full resource path name, which includes the type of each segment
-                                       (ex.: /name1::type1/name2::type2)
+        :param ResourceTree: Resource tree associated with the permission to synchronize
         """
 
         service_type = permission.service_type
@@ -267,6 +269,15 @@ class SyncPoint:
             # An error would be raised because 2 matches of the same length would be found.
             # - /**/file
             # - /file
+            #
+            # In the case where a regex is used, the behavior is changed to search for the exact match in the res_segments.
+            # The lengh of the match is used to favor a more specific match.
+            # Example:
+            # 1:
+            # - //dir1/dir2//
+            # - //dir1/dir2//dir3// # We favor this path if it matches since it is more specific.
+            # note: It is possible to have multiple dir in the same segment when using a custom regex that extract a display_name
+            # containing a path to a target resource.
 
             matched_length_by_res = {}
             matched_groups_by_res = {}
@@ -312,6 +323,8 @@ class SyncPoint:
         """
         Creates resource data, by replacing any tokens found in the segment names to their actual corresponding values.
         This data includes the name and type of each segments of a full resource path.
+        In the case where a regex is found in the target segment, the data will be formed using the same resource_type
+        for every match in the current segment.
 
         :param target_segments: List containing the name and type info of each segment of the target resource path.
         :param input_matched_groups:
