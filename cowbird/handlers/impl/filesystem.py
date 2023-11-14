@@ -78,11 +78,11 @@ class FileSystem(Handler, FSMonitor):
             rf"^{self.wps_outputs_dir}/(?P<bird_name>\w+)/users/(?P<user_id>\d+)/(?P<subpath>.+)")
 
     def start_wps_outputs_monitoring(self, monitoring: Monitoring) -> None:
-        if os.path.exists(self.wps_outputs_dir):
-            LOGGER.info("Start monitoring WPS outputs folder [%s]", self.wps_outputs_dir)
-            monitoring.register(self.wps_outputs_dir, True, self)
-        else:
-            LOGGER.warning("Input WPS outputs folder [%s] does not exist.", self.wps_outputs_dir)
+        if not os.path.exists(self.wps_outputs_dir):
+            LOGGER.warning("Input WPS outputs folder [%s] does not exist. Creating folder...", self.wps_outputs_dir)
+            os.makedirs(self.wps_outputs_dir)
+        LOGGER.info("Start monitoring WPS outputs folder [%s]", self.wps_outputs_dir)
+        monitoring.register(self.wps_outputs_dir, True, self)
 
     def get_user_workspace_dir(self, user_name: str) -> str:
         return os.path.join(self.workspace_dir, user_name)
