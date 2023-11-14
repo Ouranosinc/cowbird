@@ -261,8 +261,8 @@ class FileSystem(Handler, FSMonitor):
                                                    subpath=regex_match.group("subpath"))
             api_services = magpie_handler.get_services_by_type(ServiceAPI.service_type)
             if self.secure_data_proxy_name not in api_services:
-                LOGGER.warning("`%s` service not found. Considering user WPS outputs data as accessible by default.",
-                               self.secure_data_proxy_name)
+                LOGGER.warning("`%s` service not found. Considering user WPS outputs data as accessible (read-only) "
+                               "by default.", self.secure_data_proxy_name)
                 apply_new_path_permissions(src_path, True, False, False)
             else:  # get access and apply permissions if the secure-data-proxy exists
                 access_allowed = self.update_secure_data_proxy_path_perms(src_path, user_name)

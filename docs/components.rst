@@ -106,8 +106,8 @@ If the file does not have any read or write permissions, the hardlink will not b
     Refer to `DAC-571 <https://crim-ca.atlassian.net/browse/DAC-571>`_ for more details on the design choices for the
     management of permissions.
 
-If no ``secure-data-proxy`` service is found, the user files are assumed to be fully available
-with read and write permissions for the user.
+If no ``secure-data-proxy`` service is found, all user files are assumed to be available with read permissions for
+the user.
 
 Note that different design choices were made to respect the constraints of the file system and to prevent the user from
 accessing forbidden data:
