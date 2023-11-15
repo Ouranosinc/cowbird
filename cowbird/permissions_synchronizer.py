@@ -217,11 +217,15 @@ class SyncPoint:
         :param src_resource_tree: Resource tree associated with the permission to synchronize
         """
         resource_nametype_path = ""
-        for res_seg, res in zip(res_segments, src_resource_tree):
-            key = res_seg.get("field")
-            if key is None:
-                key = "resource_name"
+        res_segments_len = len(res_segments)
+        for index, res in enumerate(src_resource_tree):
             res_type = res["resource_type"]
+            if index < res_segments_len:
+                key = res_segments[index].get("field")
+                if key is None:
+                    key = "resource_name"
+            else:
+                key = "resource_name"
             resource_nametype_path += f"/{res[key]}{RES_NAMETYPE_SEPARATOR}{res_type}"
 
         return resource_nametype_path

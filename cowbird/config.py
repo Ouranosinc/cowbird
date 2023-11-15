@@ -4,7 +4,7 @@ import re
 from typing import Any, Dict, List, Literal, Tuple, Union, cast, overload
 
 import yaml
-from schema import And, Optional, Regex, Schema
+from schema import And, Optional, Or, Regex, Schema
 
 from cowbird.typedefs import (
     ConfigDict,
@@ -191,7 +191,7 @@ def validate_sync_perm_config_schema(sync_cfg: SyncPointConfig) -> None:
             "services": {
                 str: {  # Service type, must correspond to an actual Magpie service type
                     str: [  # Resource key, used to identify the resource here and in the permissions_mapping
-                        {"name": str, "type": str, Optional("field"): str, Optional("regex"): str}
+                        {Or("name", "regex", only_one=True): str, "type": str, Optional("field"): str}
                     ]
                 }
             },
@@ -213,21 +213,23 @@ def validate_and_get_resource_info(res_key: str, segments: List[ConfigSegment]) 
     named_tokens = set()
     has_multi_token = False
     for seg in segments:
-        if seg["name"] == MULTI_TOKEN:
-            if has_multi_token:
-                raise ConfigErrorInvalidTokens(f"Invalid config value for resource key {res_key}. Only one "
-                                               f"`{MULTI_TOKEN}` token is permitted per resource.")
-            has_multi_token = True
-        else:
-            matched_groups = re.match(NAMED_TOKEN_REGEX, seg["name"])
-            if matched_groups:
-                # Save the first group as a named token, since there's only 1 matching group in the regex.
-                if matched_groups.groups()[0] in named_tokens:
-                    raise ConfigErrorInvalidTokens(f"Invalid config value for resource key {res_key}. Named token "
-                                                   f"{matched_groups.groups()[0]} was found in multiple segments of "
-                                                   "the resource path. Each named token should only be used once in a "
-                                                   "resource path.")
-                named_tokens.add(matched_groups.groups()[0])
+        if "name" in seg:
+            if seg["name"] == MULTI_TOKEN:
+                if has_multi_token:
+                    raise ConfigErrorInvalidTokens(f"Invalid config value for resource key {res_key}. Only one "
+                                                   f"`{MULTI_TOKEN}` token is permitted per resource.")
+                has_multi_token = True
+            else:
+                matched_groups = re.match(NAMED_TOKEN_REGEX, seg["name"])
+                if matched_groups:
+                    # Save the first group as a named token, since there's only 1 matching group in the regex.
+                    if matched_groups.groups()[0] in named_tokens:
+                        raise ConfigErrorInvalidTokens(
+                            f"Invalid config value for resource key {res_key}. Named token "
+                            f"{matched_groups.groups()[0]} was found in multiple segments of "
+                            "the resource path. Each named token should only be used once in a "
+                            "resource path.")
+                    named_tokens.add(matched_groups.groups()[0])
 
     return {"has_multi_token": has_multi_token, "named_tokens": named_tokens}
 
