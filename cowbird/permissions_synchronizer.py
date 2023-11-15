@@ -208,7 +208,8 @@ class SyncPoint:
         return res_regex, named_segments_count
 
     @staticmethod
-    def _generate_nametype_path_from_segments(res_segments: List[ConfigSegment], src_resource_tree: ResourceTree) -> str:
+    def _generate_nametype_path_from_segments(res_segments: List[ConfigSegment],
+                                              src_resource_tree: ResourceTree) -> str:
         """
         Generate nametype path (ex.: /name1::type1/name2::type2 where name can be a field found in ResourceSegment).
 
@@ -220,7 +221,8 @@ class SyncPoint:
             key = res_seg.get("field")
             if key is None:
                 key = "resource_name"
-            resource_nametype_path += f'/{res[key]}{RES_NAMETYPE_SEPARATOR}{res["resource_type"]}'
+            res_type = res["resource_type"]
+            resource_nametype_path += f"/{res[key]}{RES_NAMETYPE_SEPARATOR}{res_type}"
 
         return resource_nametype_path
 
@@ -235,7 +237,8 @@ class SyncPoint:
                 formatted_path += "/" + segment.split(RES_NAMETYPE_SEPARATOR)[0]
         return formatted_path
 
-    def _find_matching_res(self, permission: Permission, src_resource_tree: ResourceTree) -> Tuple[str, Collection[str]]:
+    def _find_matching_res(self, permission: Permission,
+                           src_resource_tree: ResourceTree) -> Tuple[str, Collection[str]]:
         """
         Finds a resource key that matches the input resource path, in the sync_permissions config. Note that it returns
         the longest match and only the named segments of the path are included in the length value. Any tokenized
@@ -265,21 +268,22 @@ class SyncPoint:
             # - /**/file
             # - /file
             #
-            # In the case where a regex is used, the behavior is changed to search for the exact match in the res_segments.
-            # The lengh of the match is used to favor a more specific match.
+            # In the case where a regex is used, the behavior is changed to search for the exact
+            # match in the res_segments. The lengh of the match is used to favor a more specific match.
             # Example:
             # 1:
             # - //dir1/dir2//
             # - //dir1/dir2//dir3// # We favor this path if it matches since it is more specific.
-            # note: It is possible to have multiple dir in the same segment when using a custom regex that extract a display_name
-            # containing a path to a target resource.
+            # note: It is possible to have multiple resource in the same segment when using a custom
+            # regex that extract a display_name containing a path to a target resource.
 
             matched_length_by_res = {}
             matched_groups_by_res = {}
             service_resources = self.services[service_type]
             for res_key, res_segments in service_resources.items():
                 res_regex, named_segments_count = SyncPoint._generate_regex_from_segments(res_segments)
-                resource_nametype_path = SyncPoint._generate_nametype_path_from_segments(res_segments, src_resource_tree)
+                resource_nametype_path = SyncPoint._generate_nametype_path_from_segments(res_segments,
+                                                                                         src_resource_tree)
                 if named_segments_count == -1:
                     # To be able to match a path anywhere in the resource_nametype_path we need to use search
                     # only when the field regex is passed in the res_segments. This allow to stay backward compatible.
@@ -294,9 +298,11 @@ class SyncPoint:
                             matched_groups["multi_token"]
                         )
                     matched_groups_by_res[res_key] = matched_groups
-                    # Since we want to be able to match multiple dir /dir1/dir2/dir3/** in the same segment if a custom regex is passed.
-                    # We need to use the len of the exact match to avoid matching the wrong res_key
-                    matched_length_by_res[res_key] = named_segments_count if named_segments_count != -1 else len(exact_match)
+                    # Since we want to be able to match multiple dir /dir1/dir2/dir3/** in the same segment
+                    # if a custom regex is passed. We need to use the len of the exact match to avoid matching
+                    # the wrong res_key
+                    matched_length_by_res[res_key] = (named_segments_count if named_segments_count != -1
+                                                      else len(exact_match))
 
             # Find the longest match
             max_match_len = max(matched_length_by_res.values(), default=0)
