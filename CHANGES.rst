@@ -7,7 +7,12 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+* The ``FileSystem`` handler now creates the WPS outputs data folder if it doesn't exist so that monitoring is setup
+  properly.
+* User permissions are set explicitly after creating his datastore folder to make sure the user can create and modify
+  files in it.
 
 `2.1.0 <https://github.com/Ouranosinc/cowbird/tree/2.1.0>`_ (2023-09-18)
 ------------------------------------------------------------------------------------
