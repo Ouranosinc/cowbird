@@ -736,6 +736,11 @@ class Geoserver(Handler, FSMonitor):
             os.mkdir(datastore_folder_path)
         except FileExistsError:
             LOGGER.info("User datastore directory already existing (skip creation): [%s]", datastore_folder_path)
+        # Make sure user can read and write files in his datastore folder
+        apply_new_path_permissions(datastore_folder_path,
+                                   is_readable=True,
+                                   is_writable=True,
+                                   is_executable=True)
 
     @geoserver_response_handling
     def _create_datastore_request(self,

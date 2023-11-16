@@ -123,3 +123,10 @@ class Monitoring(metaclass=SingletonMeta):
             except KeyError:
                 pass
         return False
+
+    def unregister_all(self) -> None:
+        """
+        Stops and unregisters all monitors.
+        """
+        self.monitors.clear()
+        self.store.clear_services(drop=False)

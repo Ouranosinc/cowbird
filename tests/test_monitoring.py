@@ -35,8 +35,8 @@ class TestMonitoring(unittest.TestCase):
         with cls.cfg_file as f:
             f.write(yaml.safe_dump({"handlers": {"": {}}}))  # no specific handler required for these tests
         cls.app = get_test_app(settings={"cowbird.config_path": cls.cfg_file.name})
-        # clear up monitor entries from db
-        Monitoring().store.clear_services(drop=False)
+        # clear up monitor entries
+        Monitoring().unregister_all()
 
     @classmethod
     def tearDownClass(cls):
