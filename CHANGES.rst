@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`2.2.0 <https://github.com/Ouranosinc/cowbird/tree/2.2.0>`_ (2023-11-16)
+------------------------------------------------------------------------------------
+
 Bug Fixes
 ~~~~~~~~~~~~~~~~~~~~~
 * The ``FileSystem`` handler now creates the WPS outputs data folder if it doesn't exist so that monitoring is setup
