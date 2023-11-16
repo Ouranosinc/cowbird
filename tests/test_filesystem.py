@@ -190,7 +190,7 @@ class TestFileSystemBasic(BaseTestFileSystem):
                     "active": True,
                     "workspace_dir": workspace_dir,
                     "jupyterhub_user_data_dir": self.jupyterhub_user_data_dir,
-                    "wps_outputs_dir": "/wps_outputs"}}})
+                    "wps_outputs_dir": self.wps_outputs_dir}}})
         data = {
             "event": "created",
             "user_name": self.test_username,
