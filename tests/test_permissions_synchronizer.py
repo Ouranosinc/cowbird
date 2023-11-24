@@ -667,6 +667,97 @@ class TestSyncPermissions(unittest.TestCase):
         utils.check_raises(lambda: HandlerFactory().create_handler("Magpie"),
                            ConfigErrorInvalidServiceKey, msg="invalid config file should raise")
 
+    def test_webhooks_valid_regex(self):
+        """
+        Tests the permissions synchronization of resources that use a regex to extract a display_name in the config.
+        """
+        self.data["sync_permissions"] = {
+            "user_workspace": {
+                "services": {
+                    ServiceTHREDDS.service_type: {
+                        "Thredds_file_src": [
+                            {"name": self.test_service_name, "type": Service.resource_type_name},
+                            {"name": "private", "type": Directory.resource_type_name},
+                            {"name": "directory1", "type": Directory.resource_type_name},
+                            {"field": "resource_display_name",
+                             "regex": r"[\w]+:[\w\/.-]+",
+                             "type": File.resource_type_name}],
+                        "Thredds_file_target": [
+                            {"name": self.test_service_name, "type": Service.resource_type_name},
+                            {"regex": r"(?<=catalog:)[\w\/]*\/?(?=\/)", "type": Directory.resource_type_name},
+                            {"regex": r"[^\/]+$", "type": File.resource_type_name}],
+                        "Thredds_dir_src": [
+                            {"name": self.test_service_name, "type": Service.resource_type_name},
+                            {"name": "private", "type": Directory.resource_type_name},
+                            {"field": "resource_display_name", "regex": r"[\w]+:[\w\/]+",
+                             "type": Directory.resource_type_name}],
+                        "Thredds_dir_target": [
+                            {"name": self.test_service_name, "type": Service.resource_type_name},
+                            {"regex": r"(?<=:)[\w\/]+", "type": Directory.resource_type_name}]}},
+                "permissions_mapping": [
+                    f"Thredds_file_src : {Permission.READ.value} -> "
+                    f"Thredds_file_target : {Permission.READ.value}",
+                    f"Thredds_dir_src : {Permission.READ.value} -> "
+                    f"Thredds_dir_target : {Permission.READ.value}",
+                ]
+            }
+        }
+        with open(self.cfg_file.name, mode="w", encoding="utf-8") as f:
+            f.write(yaml.safe_dump(self.data))
+        app = utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
+        # Recreate new magpie handler instance with new config
+        HandlerFactory().create_handler("Magpie")
+
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(mock.patch("cowbird.handlers.impl.thredds.Thredds",
+                                           side_effect=utils.MockAnyHandler))
+
+            # Create test resources
+            dir_src_res_id = self.magpie.create_resource("private", Directory.resource_type_name, self.test_service_id)
+            parent_res_id = self.magpie.create_resource("directory", Directory.resource_type_name, dir_src_res_id,
+                                                        f"{self.test_service_name}:directory")
+            dir1_src_res_id = parent_res_id
+            file_src_res_id = self.magpie.create_resource("workspace_file.nc", File.resource_type_name, parent_res_id,
+                                                          f"{self.test_service_name}:directory/file.nc")
+
+            parent_res_id = self.magpie.create_resource("directory", Directory.resource_type_name, self.test_service_id)
+            dir_target_res_id = parent_res_id
+            file_target_res_id = self.magpie.create_resource("file.nc", File.resource_type_name, parent_res_id)
+
+            # Create permissions for 1st mapping case, src resource should match to
+            data = {
+                "event": ValidOperations.CreateOperation.value,
+                "service_name": None,
+                "service_type": ServiceTHREDDS.service_type,
+                "resource_id": dir1_src_res_id,
+                "resource_full_name": f"/{self.test_service_name}/private/directory",
+                "resource_display_name": f"{self.test_service_name}:directory",
+                "name": Permission.READ.value,
+                "access": Access.ALLOW.value,
+                "scope": Scope.RECURSIVE.value,
+                "user": self.usr,
+                "group": None
+            }
+            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
+            utils.check_response_basic_info(resp, 200, expected_method="POST")
+
+            # check permissions with first mapping case
+            self.check_user_permissions(dir_target_res_id,
+                                        [Permission.READ.value,
+                                         f"{Permission.READ.value}-{Access.ALLOW.value}-{Scope.RECURSIVE.value}"])
+
+            # Create and check permissions with 2nd mapping case
+            data["resource_id"] = file_src_res_id
+            data["resource_full_name"] = f"/{self.test_service_name}/private/directory/file.nc"
+            data["resource_display_name_name"] = f"{self.test_service_name}:directory/file.nc"
+
+            # check permissions with first mapping case
+            resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
+            utils.check_response_basic_info(resp, 200, expected_method="POST")
+            self.check_user_permissions(file_target_res_id,
+                                        [Permission.READ.value,
+                                         f"{Permission.READ.value}-{Access.ALLOW.value}-{Scope.RECURSIVE.value}"])
+
 
 def check_config(config_data: Dict, expected_exception_type: Type[Exception] = None) -> None:
     """

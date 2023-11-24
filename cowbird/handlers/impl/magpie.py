@@ -431,13 +431,14 @@ class Magpie(Handler):
         else:
             LOGGER.warning("Empty permission data, no permissions to remove.")
 
-    def create_resource(self, resource_name: str, resource_type: str, parent_id: Optional[int]) -> int:
+    def create_resource(self, resource_name: str, resource_type: str, parent_id: Optional[int],
+                        resource_display_name: Optional[str] = None) -> int:
         """
         Creates the specified resource in Magpie and returns the created resource id if successful.
         """
         resource_data = {
             "resource_name": resource_name,
-            "resource_display_name": resource_name,
+            "resource_display_name": resource_display_name,
             "resource_type": resource_type,
             "parent_id": parent_id
         }
