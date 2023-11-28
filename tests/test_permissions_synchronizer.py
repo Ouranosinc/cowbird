@@ -678,7 +678,7 @@ class TestSyncPermissions(unittest.TestCase):
                         "Thredds_file_src": [
                             {"name": self.test_service_name, "type": Service.resource_type_name},
                             {"name": "private", "type": Directory.resource_type_name},
-                            {"name": "directory1", "type": Directory.resource_type_name},
+                            {"name": "directory", "type": Directory.resource_type_name},
                             {"field": "resource_display_name",
                              "regex": r"[\w]+:[\w\/.-]+",
                              "type": File.resource_type_name}],
@@ -713,11 +713,12 @@ class TestSyncPermissions(unittest.TestCase):
                                            side_effect=utils.MockAnyHandler))
 
             # Create test resources
-            dir_src_res_id = self.magpie.create_resource("private", Directory.resource_type_name, self.test_service_id)
-            parent_res_id = self.magpie.create_resource("directory", Directory.resource_type_name, dir_src_res_id,
+            private_src_res_id = self.magpie.create_resource("private", Directory.resource_type_name,
+                                                             self.test_service_id)
+            parent_res_id = self.magpie.create_resource("directory", Directory.resource_type_name, private_src_res_id,
                                                         f"{self.test_service_name}:directory")
-            dir1_src_res_id = parent_res_id
-            file_src_res_id = self.magpie.create_resource("workspace_file.nc", File.resource_type_name, parent_res_id,
+            dir_src_res_id = parent_res_id
+            file_src_res_id = self.magpie.create_resource("file.nc", File.resource_type_name, parent_res_id,
                                                           f"{self.test_service_name}:directory/file.nc")
 
             parent_res_id = self.magpie.create_resource("directory", Directory.resource_type_name, self.test_service_id)
@@ -729,7 +730,7 @@ class TestSyncPermissions(unittest.TestCase):
                 "event": ValidOperations.CreateOperation.value,
                 "service_name": None,
                 "service_type": ServiceTHREDDS.service_type,
-                "resource_id": dir1_src_res_id,
+                "resource_id": dir_src_res_id,
                 "resource_full_name": f"/{self.test_service_name}/private/directory",
                 "resource_display_name": f"{self.test_service_name}:directory",
                 "name": Permission.READ.value,
@@ -738,6 +739,9 @@ class TestSyncPermissions(unittest.TestCase):
                 "user": self.usr,
                 "group": None
             }
+            # Check permission are initialy empty
+            self.check_user_permissions(dir_target_res_id, [])
+
             resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
             utils.check_response_basic_info(resp, 200, expected_method="POST")
 
@@ -751,7 +755,10 @@ class TestSyncPermissions(unittest.TestCase):
             data["resource_full_name"] = f"/{self.test_service_name}/private/directory/file.nc"
             data["resource_display_name_name"] = f"{self.test_service_name}:directory/file.nc"
 
-            # check permissions with first mapping case
+            # Check permission are initialy empty before 2nd mapping case
+            self.check_user_permissions(file_target_res_id, [])
+
+            # check permissions with 2nd mapping case
             resp = utils.test_request(app, "POST", "/webhooks/permissions", json=data)
             utils.check_response_basic_info(resp, 200, expected_method="POST")
             self.check_user_permissions(file_target_res_id,

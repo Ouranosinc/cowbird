@@ -183,7 +183,7 @@ sync_permissions:
       - "process_job_status : read -> job_status : read"
       # different permission (match), otherwise all jobs/outputs become available.
       - "process_job_status : read -> process_description : read-match"
-stac_permissions:
+  stac_permissions:
     services:
       api:
         stac_collection:
@@ -216,8 +216,8 @@ stac_permissions:
           - name: thredds
             type: service            
           - type: directory
-            regex: '(?<=:)[\w\/]+' # Match everything after ":" but before last "/" (ex: thredds:birdhouse/testdata/xclim/cmip6 will match to : birdhouse/testdata/xclim/cmip6)
-                                   # It would be equivalent as matching any number of directory using "**"
+            regex: '(?<=:)[\w\/]+' # Match everything after ":" but before last "/" (ex: thredds:birdhouse/testdata/xclim/cmip6/sic_SImon_CCCma-CanESM5_ssp245_r13i1p2f1_2020.nc
+                                   # will match to : birdhouse/testdata/xclim/cmip6). It would be equivalent as matching any number of directory using "**".
         thredd_item:
           - name: thredds
             type: service
