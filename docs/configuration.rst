@@ -139,10 +139,12 @@ multiple choices of matching are possible.
 We could match ``seg1/seg2`` with the first token, and ``seg3`` with the second token,
 we could also match ``seg1`` with the first token, and ``seg2/seg3`` with the second token, etc.
 
-In addition of using the name of the segment it is possible to use instead a key found in `Magpie`_ resource schema
-with the :key:`field`. This is useful when we want to be able to have a different mapping between resources.
+The :key:`field` : This is useful when we want to have a different mapping between resources. The resource_name
+is used by default, but another key from the `Magpie`_ resource schema can be used, if specified by using the
+:key:`field`.
+
 A regular expression :key:`regex` may be used to extract the desired information from the ``nametype_path``.
-This will override the default behaviour of matching each segment with other segment and will instead use
+This will override the default behaviour of matching each segment with another segment and will instead use
 what is extracted from the segment and prioritize the longest match. When used in the target, the :key:`regex`
 extracts each resource in the segment with the same type.
 
