@@ -438,7 +438,7 @@ class Magpie(Handler):
         """
         resource_data = {
             "resource_name": resource_name,
-            "resource_display_name": resource_display_name,
+            "resource_display_name": resource_display_name or resource_name,
             "resource_type": resource_type,
             "parent_id": parent_id
         }
