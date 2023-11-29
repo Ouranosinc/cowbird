@@ -11,7 +11,7 @@ Changes
   This allows to sync permissions using a field other than ``resource_full_name`` when creating the ``name:type``
   from the segment ``ex.: /field1::type1/field2::type2``. Adds support to use ``resource_display_name``.
 * The ``regex`` is used to extract the desired information from the ``nametype_path``. It should be used to do an
-  exact match. This new search overrides the default way of matching each segment with the ``nametype_path``. 
+  exact match. This new search overrides the default way of matching each segment with the ``nametype_path``.
   In the case where a ``regex`` is found in the target segment, the data will be formed using the same ``resource_type``
   for every match in the same segment. Similary, as using ``- name: "**"`` in the config to match multiple segment,
   it is possible to use a ``regex`` to match multiple resources in the same segment with ``regex: '(?<=:).*\/?(?=\/)'``
