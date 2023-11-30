@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`2.3.0 <https://github.com/Ouranosinc/cowbird/tree/2.3.0>`_ (2023-11-30)
+------------------------------------------------------------------------------------
+
 * Add optional key ``field`` and ``regex`` to be used in the ``sync_permissions`` section found in the config.
   This allows to sync permissions using a field other than ``resource_full_name`` when creating the ``name:type``
   from the segment ``ex.: /field1::type1/field2::type2``. Adds support to use ``resource_display_name``.
