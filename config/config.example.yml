@@ -183,3 +183,58 @@ sync_permissions:
       - "process_job_status : read -> job_status : read"
       # different permission (match), otherwise all jobs/outputs become available.
       - "process_job_status : read -> process_description : read-match"
+  stac_permissions:
+    services:
+      api:
+        stac_collection:
+          - name: stac
+            type: service
+          - name: stac
+            type: route
+          - name: collections
+            type: route
+          - type: route
+            field: resource_display_name # Use the resource_display_name for permission mapping.
+            regex: '[\w]+:[\w\/]+' # This will extract the display name (ex: thredds:birdhouse/testdata/xclim/cmip6).
+        stac_item:
+          - name: stac
+            type: service
+          - name: stac
+            type: route
+          - name: collections
+            type: route
+          - name: "{collectionId}"
+            type: route
+          - name: items
+            type: route
+          - type: route
+            field: resource_display_name # Use the resource_display_name for permission mapping.
+            regex: '[\w]+:[\w\/.-]+' # This will extract the display name (ex: thredds:birdhouse/testdata/xclim/cmip6/sic_SImon_CCCma-CanESM5_ssp245_r13i1p2f1_2020.nc)
+
+      thredds: 
+        thredd_collection:
+          - name: thredds
+            type: service            
+          - type: directory
+            regex: '(?<=:).*\/?(?=\/)' # Match everything after ":" but before last "/" (ex: thredds:birdhouse/testdata/xclim/cmip6/sic_SImon_CCCma-CanESM5_ssp245_r13i1p2f1_2020.nc
+                                   # will match to : birdhouse/testdata/xclim/cmip6). It would be equivalent as matching any number of directory using "**".
+        thredd_item:
+          - name: thredds
+            type: service
+          - type: directory
+            regex: '(?<=:).*\/?(?=\/)' # Match everything after ":" but before last "/" example thredds:birdhouse/testdata/xclim/cmip6/sic_SImon_CCCma-CanESM5_ssp245_r13i1p2f1_2020.nc
+                                       # will return birdhouse/testdata/xclim/cmip6. This would create recreate the same hierarchy of directories. 
+          - type: file
+            regex: '[^\/]+$' # Match a file in a leaf directory (ex: sic_SImon_CCCma-CanESM5_ssp245_r13i1p2f1_2020.nc).
+
+    permissions_mapping:
+      # Permission mapping relating to the stac collection mapped to a thredd directory.
+      - "stac_collection : read-match -> thredd_collection : browse-match"
+      - "stac_collection : read-allow-recursive -> thredd_collection : browse-allow-recursive"
+      - "stac_collection : read-deny-match -> thredd_collection : browse-deny-match"
+      - "stac_collection : read-deny-recursive -> thredd_collection : browse-deny-recursive"
+      # Permission mapping relating to the stac item mapped to a thredd file.
+      - "stac_item : read-match -> thredd_item : browse-match"
+      - "stac_item : read-allow-recursive -> thredd_item : browse-allow-recursive"
+      - "stac_item : read-deny-match -> thredd_item : browse-deny-match"
+      - "stac_item : read-deny-recursive -> thredd_item : browse-deny-recursive"

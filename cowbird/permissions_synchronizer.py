@@ -1,6 +1,6 @@
 import re
 from copy import deepcopy
-from typing import TYPE_CHECKING, Callable, Dict, Iterator, List, MutableMapping, Tuple, cast
+from typing import TYPE_CHECKING, Callable, Collection, Dict, Iterator, List, MutableMapping, Tuple, Union, cast
 
 from cowbird.config import (
     BIDIRECTIONAL_ARROW,
@@ -68,12 +68,14 @@ class Permission:
                  access: str,
                  scope: str,
                  user: str = None,
-                 group: str = None
+                 group: str = None,
+                 resource_display_name: str = None
                  ) -> None:
         self.service_name = service_name
         self.service_type = service_type
         self.resource_id = resource_id
         self.resource_full_name = resource_full_name
+        self.resource_display_name = resource_display_name
         self.name = name
         self.access = access
         self.scope = scope
@@ -85,6 +87,7 @@ class Permission:
                 self.service_type == other.service_type and
                 self.resource_id == other.resource_id and
                 self.resource_full_name == other.resource_full_name and
+                self.resource_display_name == other.resource_display_name and
                 self.name == other.name and
                 self.access == other.access and
                 self.scope == other.scope and
@@ -182,6 +185,11 @@ class SyncPoint:
         named_segments_count = 0
         res_regex = r"^"
         for segment in res_segments:
+            # if a regex is passed, override the current regex and return
+            regex = segment.get("regex")
+            if regex is not None:
+                return regex, -1
+
             matched_groups = re.match(NAMED_TOKEN_REGEX, segment["name"])
             if matched_groups:
                 # match any name with specific type 1 time only
@@ -200,6 +208,29 @@ class SyncPoint:
         return res_regex, named_segments_count
 
     @staticmethod
+    def _generate_nametype_path_from_segments(res_segments: List[ConfigSegment],
+                                              src_resource_tree: ResourceTree) -> str:
+        """
+        Generate nametype path (ex.: /name1::type1/name2::type2 where name can be a field found in ResourceSegment).
+
+        :param res_segments: list of segments
+        :param src_resource_tree: Resource tree associated with the permission to synchronize
+        """
+        resource_nametype_path = ""
+        res_segments_len = len(res_segments)
+        for index, res in enumerate(src_resource_tree):
+            res_type = res["resource_type"]
+            if index < res_segments_len:
+                key = res_segments[index].get("field")
+                if key is None:
+                    key = "resource_name"
+            else:
+                key = "resource_name"
+            resource_nametype_path += f"/{res[key]}{RES_NAMETYPE_SEPARATOR}{res_type}"
+
+        return resource_nametype_path
+
+    @staticmethod
     def _remove_type_from_nametype_path(nametype_path: str) -> str:
         """
         Removes the type from a nametype path (ex.: /name1::type1/name2::type2 becomes /name1/name2).
@@ -210,16 +241,18 @@ class SyncPoint:
                 formatted_path += "/" + segment.split(RES_NAMETYPE_SEPARATOR)[0]
         return formatted_path
 
-    def _find_matching_res(self, service_type: str, resource_nametype_path: str) -> Tuple[str, Dict[str, str]]:
+    def _find_matching_res(self, permission: Permission,
+                           src_resource_tree: ResourceTree) -> Tuple[str, Union[Collection[str], Dict[str, str]]]:
         """
         Finds a resource key that matches the input resource path, in the sync_permissions config. Note that it returns
         the longest match and only the named segments of the path are included in the length value. Any tokenized
         segment is ignored in the length.
 
-        :param service_type: Type of the service associated with the input resource.
-        :param resource_nametype_path: Full resource path name, which includes the type of each segment
-                                       (ex.: /name1::type1/name2::type2)
+        :param permission: Permission of the service associated with the input resource.
+        :param ResourceTree: Resource tree associated with the permission to synchronize
         """
+
+        service_type = permission.service_type
         if service_type in self.services:
             # Find which resource from the config matches with the input permission's resource tree
             # The length of a match is determined by the number of named segments matching the input resource.
@@ -238,21 +271,42 @@ class SyncPoint:
             # An error would be raised because 2 matches of the same length would be found.
             # - /**/file
             # - /file
+            #
+            # In the case where a regex is used, the behavior is changed to search for the exact
+            # match in the resource_nametype_path. The lengh of the match is used to favor a more specific match.
+            # Example:
+            # 1:
+            # - //res1/res2//
+            # - //res1/res2//res3// # We favor this path if it matches since it is more specific.
+            # note: It is possible to have multiple resource in the same segment when using a custom
+            # regex that extract a display_name containing a path to a specific resource.
 
             matched_length_by_res = {}
             matched_groups_by_res = {}
             service_resources = self.services[service_type]
             for res_key, res_segments in service_resources.items():
                 res_regex, named_segments_count = SyncPoint._generate_regex_from_segments(res_segments)
-                matches = re.match(res_regex, resource_nametype_path)
+                resource_nametype_path = SyncPoint._generate_nametype_path_from_segments(res_segments,
+                                                                                         src_resource_tree)
+                if named_segments_count == -1:
+                    # To be able to match a path anywhere in the resource_nametype_path we need to use search
+                    # only when the field regex is passed in the res_segments. This allow to stay backward compatible.
+                    matches = re.search(res_regex, resource_nametype_path)
+                else:
+                    matches = re.match(res_regex, resource_nametype_path)
                 if matches:
-                    matched_groups = matches.groupdict()
+                    exact_match = matches.group()
+                    matched_groups = matches.groupdict() if named_segments_count != -1 else exact_match
                     if "multi_token" in matched_groups:
                         matched_groups["multi_token"] = SyncPoint._remove_type_from_nametype_path(
                             matched_groups["multi_token"]
                         )
                     matched_groups_by_res[res_key] = matched_groups
-                    matched_length_by_res[res_key] = named_segments_count
+                    # Since we want to be able to match multiple dir /dir1/dir2/dir3/** in the same segment
+                    # if a custom regex is passed. We need to use the len of the exact match to avoid matching
+                    # the wrong res_key
+                    matched_length_by_res[res_key] = (named_segments_count if named_segments_count != -1
+                                                      else len(exact_match))
 
             # Find the longest match
             max_match_len = max(matched_length_by_res.values(), default=0)
@@ -269,43 +323,59 @@ class SyncPoint:
 
     @staticmethod
     def _create_res_data(target_segments: List[ConfigSegment],
-                         input_matched_groups: Dict[str, str],
+                         input_matched_groups: Union[Collection[str], Dict[str, str]],
                          ) -> List[ResourceSegment]:
         """
         Creates resource data, by replacing any tokens found in the segment names to their actual corresponding values.
-        This data includes the name and type of each segments of a full resource path.
+        This data includes the name and type of each segments of a full resource path. In the case where a regex is
+        found in the target segment, the data will be formed using the same resource_type for every match in the current
+        segment.
 
         :param target_segments: List containing the name and type info of each segment of the target resource path.
         :param input_matched_groups:
         """
         res_data: List[ResourceSegment] = []
         for segment in target_segments:
-            matched_groups = re.match(NAMED_TOKEN_REGEX, segment["name"])
-            if matched_groups:
-                res_data.append({
-                    "resource_name": input_matched_groups[matched_groups.groups()[0]],
-                    "resource_type": segment["type"]
-                })
-            elif segment["name"] == MULTI_TOKEN:
-                multi_segments = input_matched_groups["multi_token"]
-                # Skip the segment if the multi_token matched 0 times, resulting in an empty string.
+            # Use the regex to create the res_data
+            if segment.get("regex") is not None:
+                regex = segment.get("regex")
+                matches = re.search(regex, input_matched_groups)
+                multi_segments = matches.group()
                 if multi_segments:
                     for seg in multi_segments.split("/"):
-                        if seg:  # Ignore empty splits
+                        if seg:
                             res_data.append({
                                 "resource_name": seg,
                                 "resource_type": segment["type"]
                             })
+
             else:
-                res_data.append({
-                    "resource_name": segment["name"],
-                    "resource_type": segment["type"]
-                })
+                matched_groups = re.match(NAMED_TOKEN_REGEX, segment["name"])
+                if matched_groups:
+                    res_data.append({
+                        "resource_name": input_matched_groups[matched_groups.groups()[0]],
+                        "resource_type": segment["type"]
+                    })
+                elif segment["name"] == MULTI_TOKEN:
+                    multi_segments = input_matched_groups["multi_token"]
+                    # Skip the segment if the multi_token matched 0 times, resulting in an empty string.
+                    if multi_segments:
+                        for seg in multi_segments.split("/"):
+                            if seg:  # Ignore empty splits
+                                res_data.append({
+                                    "resource_name": seg,
+                                    "resource_type": segment["type"]
+                                })
+                else:
+                    res_data.append({
+                        "resource_name": segment["name"],
+                        "resource_type": segment["type"]
+                    })
         return res_data
 
     def _get_resource_full_name_and_type(self,
                                          res_key: str,
-                                         matched_groups: Dict[str, str],
+                                         matched_groups: Union[Collection[str], Dict[str, str]],
                                          ) -> Tuple[str, List[ResourceSegment]]:
         """
         Finds the resource data from the config by using the resource key.
@@ -365,7 +435,7 @@ class SyncPoint:
     def _filter_used_targets(self,
                              target_res_and_permissions: TargetResourcePermissions,
                              input_src_res_key: str,
-                             src_matched_groups: Dict[str, str],
+                             src_matched_groups: Union[Collection[str], Dict[str, str]],
                              input_permission: Permission,
                              ) -> Tuple[Dict[str, List[str]], Dict[str, List[str]]]:
         """
@@ -444,7 +514,7 @@ class SyncPoint:
     def _get_permission_data(self,
                              user_targets: Dict[str, List[str]],
                              group_targets: Dict[str, List[str]],
-                             src_matched_groups: Dict[str, str],
+                             src_matched_groups: Union[Collection[str], Dict[str, str]],
                              input_permission: Permission) -> PermissionData:
         """
         Formats permissions data to send to Magpie. Output contains, for each target resource key, the resource path
@@ -485,7 +555,7 @@ class SyncPoint:
                                        target_res_and_permissions: TargetResourcePermissions,
                                        input_permission: Permission,
                                        input_src_res_key: str,
-                                       src_matched_groups: Dict[str, str],
+                                       src_matched_groups: Union[Collection[str], Dict[str, str]],
                                        ) -> PermissionData:
         """
         Removes every source resource found in the mappings that has an existing permission that is synced to one of the
@@ -501,7 +571,7 @@ class SyncPoint:
 
     def _find_permissions_to_sync(self,
                                   src_res_key: str,
-                                  src_matched_groups: Dict[str, str],
+                                  src_matched_groups: Union[Collection[str], Dict[str, str]],
                                   input_permission: Permission,
                                   perm_operation: Callable[[List[PermissionConfigItemType]], None],
                                   ) -> PermissionData:
@@ -543,11 +613,7 @@ class SyncPoint:
         :param permission: Permission to synchronize with others services
         :param src_resource_tree: Resource tree associated with the permission to synchronize
         """
-        resource_nametype_path = ""
-        for res in src_resource_tree:
-            resource_nametype_path += f"/{res['resource_name']}{RES_NAMETYPE_SEPARATOR}{res['resource_type']}"
-
-        src_res_key, src_matched_groups = self._find_matching_res(permission.service_type, resource_nametype_path)
+        src_res_key, src_matched_groups = self._find_matching_res(permission, src_resource_tree)
         if not src_res_key:
             # A matching resource was not found in the sync config, nothing to do.
             return

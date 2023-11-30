@@ -114,6 +114,7 @@ def post_permission_webhook_view(request: Request) -> AnyResponseType:
     param_regex_with_slashes = r"^/?[A-Za-z0-9]+(?:[\s_\-\./:][A-Za-z0-9]+)*$"
     resource_full_name = ar.get_multiformat_body(request, "resource_full_name",
                                                  pattern=param_regex_with_slashes)
+    resource_display_name = ar.get_multiformat_body(request, "resource_display_name", check_type=(str, type(None)))
     name = ar.get_multiformat_body(request, "name")
     access = ar.get_multiformat_body(request, "access")
     scope = ar.get_multiformat_body(request, "scope")
@@ -127,6 +128,7 @@ def post_permission_webhook_view(request: Request) -> AnyResponseType:
         service_type=service_type,
         resource_id=resource_id,
         resource_full_name=resource_full_name,
+        resource_display_name=resource_display_name,
         name=name,
         access=access,
         scope=scope,

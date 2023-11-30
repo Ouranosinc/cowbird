@@ -119,7 +119,7 @@ ConfigItem = Dict[str, JSON]
 ConfigList = List[ConfigItem]
 ConfigDict = Dict[str, Union[str, ConfigItem, ConfigList, JSON]]
 ConfigResTokenInfo = TypedDict("ConfigResTokenInfo", {"has_multi_token": bool, "named_tokens": MutableSet[str]})
-ConfigSegment = TypedDict("ConfigSegment", {"name": str, "type": str})
+ConfigSegment = TypedDict("ConfigSegment", {"name": str, "type": str, "field": Optional[str], "regex": Optional[str]})
 
 SyncPointMappingType = List[str]
 SyncPointServicesType = Dict[
@@ -142,12 +142,13 @@ SyncPointConfig = Dict[
     SyncPermissionConfig,
 ]
 
-ResourceSegment = TypedDict("ResourceSegment", {"resource_name": str, "resource_type": str})
+ResourceSegment = TypedDict("ResourceSegment", {"resource_name": str, "resource_type": str,
+                                                "resource_display_name": NotRequired[str]})
 ResourceTree = List[
     Dict[
         str,
         # FIXME: replace by a more specific type provided by Magpie directly if eventually implemented
-        #   Only partial fields are provided below (resource_name/resource_type),
+        #   Only partial fields are provided below (resource_name/resource_type/resource_display_name),
         #   because those are the only ones used for now in Cowbird's sync operation.
         #   This actually contains more details such as the resource ID, permission names, etc.
         #   (see the response body of 'GET /magpie/resources/{resource_id}' for exact content).
