@@ -341,18 +341,24 @@ install-dev: conda-env install-xargs	## install package requirements for develop
 
 # install locally to ensure they can be found by config extending them
 .PHONY: install-npm
-install-npm:		## install npm package manager if it cannot be found
+install-npm:	## install npm package manager and dependencies if they cannot be found
 	@[ -f "$(shell which npm)" ] || ( \
 		echo "Binary package manager npm not found. Attempting to install it."; \
 		apt-get install npm \
 	)
-	@[ `npm ls 2>/dev/null | grep stylelint-config-standard | wc -l` = 1 ] || ( \
-		echo "Install required libraries for style checks." && \
+
+.PHONY: install-npm-stylelint
+install-npm-stylelint: install-npm	## install stylelint dependency for 'check-css' target using npm
+	@[ `npm ls 2>/dev/null | grep stylelint-config-standard | grep -v UNMET | wc -l` = 1 ] || ( \
+		echo "Install required dependencies for CSS checks." && \
 		npm install --save-dev \
-			stylelint \
-			stylelint-scss \
-			stylelint-config-standard \
-			stylelint-csstree-validator \
+	)
+
+.PHONY: install-npm-remarklint
+install-npm-remarklint: install-npm		## install remark-lint dependency for 'check-md' target using npm
+	@[ `npm ls 2>/dev/null | grep remark-lint | grep -v UNMET | wc -l` = 1 ] || ( \
+		echo "Install required dependencies for Markdown checks." && \
+		npm install --save-dev
 	)
 
 ## --- Launchers targets --- ##
@@ -512,7 +518,7 @@ mkdir-reports:
 # autogen check variants with pre-install of dependencies using the '-only' target references
 CHECKS_EXCLUDE ?=
 CHECKS_PYTHON := pep8 lint security doc8 docf links imports types
-CHECKS_NPM := css
+CHECKS_NPM := css md
 CHECKS_PYTHON := $(filter-out $(CHECKS_EXCLUDE),$(CHECKS_PYTHON))
 CHECKS_NPM := $(filter-out $(CHECKS_EXCLUDE),$(CHECKS_NPM))
 CHECKS := $(CHECKS_PYTHON) $(CHECKS_NPM)
@@ -606,15 +612,34 @@ check-types-only: mkdir-reports  ## run typing validation
 .PHONY: check-css-only
 check-css-only: mkdir-reports
 	@echo "Running CSS style checks..."
-	@npx stylelint \
-		--config "$(APP_ROOT)/.stylelintrc.json" \
+	@npx --no-install stylelint \
+		--config "$(APP_ROOT)/package.json" \
 		--output-file "$(REPORTS_DIR)/fixed-css.txt" \
 		"$(APP_ROOT)/**/*.css"
+
+.PHONY: check-css
+check-css: install-npm-stylelint check-css-only	## check CSS linting after dependency installation
+
+# must pass 2 search paths because '<dir>/.<subdir>' are somehow not correctly detected with only the top-level <dir>
+.PHONY: check-md-only
+check-md-only: mkdir-reports 	## check Markdown linting
+	@echo "Running Markdown style checks..."
+	@npx --no-install remark \
+		--inspect --frail \
+		--silently-ignore \
+		--stdout --color \
+		--rc-path "$(APP_ROOT)/package.json" \
+		--ignore-path "$(APP_ROOT)/.remarkignore" \
+		"$(APP_ROOT)" "$(APP_ROOT)/.*/" \
+		> "$(REPORTS_DIR)/check-md.txt"
+
+.PHONY: check-md
+check-md: install-npm-remarklint check-md-only	## check Markdown linting after dependency installation
 
 # autogen fix variants with pre-install of dependencies using the '-only' target references
 FIXES_EXCLUDE ?=
 FIXES_PYTHON := imports lint docf fstring
-FIXES_NPM := css
+FIXES_NPM := css md
 FIXES_PYTHON := $(filter-out $(FIXES_EXCLUDE),$(FIXES_PYTHON))
 FIXES_NPM := $(filter-out $(FIXES_EXCLUDE),$(FIXES_NPM))
 FIXES := $(FIXES_PYTHON) $(FIXES_NPM)
@@ -672,16 +697,31 @@ fix-fstring-only: mkdir-reports		## fix code string formats substitutions to f-s
 		1> >(tee "$(REPORTS_DIR)/fixed-fstring.txt")'
 
 .PHONY: fix-css
-fix-css: install-npm fix-css-only
+fix-css: install-npm-stylelint fix-css-only
 
 .PHONY: fix-css-only
 fix-css-only: mkdir-reports		## fix CSS styles problems automatically
 	@echo "Fixing CSS style problems..."
-	@npx stylelint \
+	@npx --no-install stylelint \
 		--fix \
-		--config "$(APP_ROOT)/.stylelintrc.json" \
+		--config "$(APP_ROOT)/package.json" \
 		--output-file "$(REPORTS_DIR)/fixed-css.txt" \
 		"$(APP_ROOT)/**/*.css"
+
+# must pass 2 search paths because '<dir>/.<subdir>' are somehow not correctly detected with only the top-level <dir>
+.PHONY: fix-md-only
+fix-md-only: mkdir-reports 	## fix Markdown linting problems automatically
+	@echo "Running Markdown style checks..."
+	@npx --no-install remark \
+		--output --frail \
+		--silently-ignore \
+		--rc-path "$(APP_ROOT)/package.json" \
+		--ignore-path "$(APP_ROOT)/.remarkignore" \
+		"$(APP_ROOT)" "$(APP_ROOT)/.*/" \
+		2>&1 | tee "$(REPORTS_DIR)/fixed-md.txt"
+
+.PHONY: fix-md
+fix-md: install-npm-remarklint fix-md-only	## fix Markdown linting problems after dependency installation
 
 ## --- Test targets --- ##
 
