@@ -1,4 +1,4 @@
-FROM python:3.10-alpine
+FROM python:3.11-alpine3.19
 LABEL description.short="Cowbird base"
 LABEL description.long="Cowbird middleware to manage interactions between various birds of the bird-house stack."
 LABEL Maintainer="Ouranos, CRIM"
