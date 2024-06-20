@@ -29,7 +29,6 @@ jobs:
     env:
       # override make command to install directly in active python
       CONDA_COMMAND: ""
-      CHECKS_EXCLUDE: types
     strategy:
       matrix:
         os: [ubuntu-latest]
@@ -43,10 +42,6 @@ jobs:
             python-version: "3.10"
             allow-failure: false
             test-case: check-only
-          - os: ubuntu-latest
-            python-version: "3.10"
-            allow-failure: true
-            test-case: check-types-only
           # docker smoke tests
           - os: ubuntu-latest
             python-version: "3.10"
@@ -89,7 +84,7 @@ jobs:
         run: make install-pkg install-dev
       - if: ${{ matrix.test-case == 'check-only' }}
         name: Install Extra Test Dependencies
-        run: make install-npm
+        run: make install-npm install-npm-stylelint install-npm-remarklint
       - name: Display Packages
         run: pip freeze
       - name: Display Version
