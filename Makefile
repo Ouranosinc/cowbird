@@ -358,7 +358,7 @@ install-npm-stylelint: install-npm	## install stylelint dependency for 'check-cs
 install-npm-remarklint: install-npm		## install remark-lint dependency for 'check-md' target using npm
 	@[ `npm ls 2>/dev/null | grep remark-lint | grep -v UNMET | wc -l` = 1 ] || ( \
 		echo "Install required dependencies for Markdown checks." && \
-		npm install --save-dev
+		npm install --save-dev \
 	)
 
 .PHONY: install-dev-npm
