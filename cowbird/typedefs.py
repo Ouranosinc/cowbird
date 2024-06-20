@@ -58,7 +58,7 @@ AnyRegistryContainer = Union[Configurator, Registry, Request, Celery]
 ParamsType = Dict[str, Any]
 CookiesType = Union[Dict[str, str], List[Tuple[str, str]]]
 HeadersType = Union[Dict[str, str], List[Tuple[str, str]]]
-AnyHeadersType = Union[HeadersType, ResponseHeaders, EnvironHeaders, CaseInsensitiveDict]
+AnyHeadersType = Union[HeadersType, ResponseHeaders, EnvironHeaders, CaseInsensitiveDict]  # type: ignore[type-arg]
 AnyCookiesType = Union[CookiesType, RequestsCookieJar]
 AnyResponseType = Union[WebobResponse, PyramidResponse, RequestsResponse, HTTPException, TestResponseType]
 
