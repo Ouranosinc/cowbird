@@ -13,6 +13,7 @@ Features / Changes
 * Pin Docker base to ``python:3.11-alpine3.19`` for various security fixes.
 * Update ``magpie==4.0.0`` for corresponding fixes
   (see `Changes: magpie @ 4.0.0 <https://github.com/Ouranosinc/Magpie/blob/master/CHANGES.rst#400-2024-04-26>`_).
+* Pin ``watchdog>=4`` for latest typing additions.
 
 `2.3.0 <https://github.com/Ouranosinc/cowbird/tree/2.3.0>`_ (2023-11-30)
 ------------------------------------------------------------------------------------
