@@ -7,18 +7,26 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+* Pin ``gunicorn>=22`` to address CVE-2024-1135.
+* Pin Docker base to ``python:3.11-alpine3.19`` for various security fixes.
+* Update ``magpie==4.0.0`` for corresponding fixes
+  (see `Changes: magpie @ 4.0.0 <https://github.com/Ouranosinc/Magpie/blob/master/CHANGES.rst#400-2024-04-26>`_).
+* Pin ``watchdog>=4`` for latest typing additions.
 
 `2.3.0 <https://github.com/Ouranosinc/cowbird/tree/2.3.0>`_ (2023-11-30)
 ------------------------------------------------------------------------------------
 
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
 * Add optional key ``field`` and ``regex`` to be used in the ``sync_permissions`` section found in the config.
   This allows to sync permissions using a field other than ``resource_full_name`` when creating the ``name:type``
   from the segment ``ex.: /field1::type1/field2::type2``. Adds support to use ``resource_display_name``.
 * The ``regex`` is used to extract the desired information from the ``nametype_path``. It should be used to do an
   exact match. This new search overrides the default way of matching each segment with the ``nametype_path``.
   In the case where a ``regex`` is found in the target segment, the data will be formed using the same ``resource_type``
-  for every match in the same segment. Similary, as using ``- name: "**"`` in the config to match multiple segment,
+  for every match in the same segment. Similarly, as using ``- name: "**"`` in the config to match multiple segment,
   it is possible to use a ``regex`` to match multiple resources in the same segment with ``regex: '(?<=:).*\/?(?=\/)'``
 
 `2.2.0 <https://github.com/Ouranosinc/cowbird/tree/2.2.0>`_ (2023-11-16)
