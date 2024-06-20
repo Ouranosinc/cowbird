@@ -170,7 +170,7 @@ class Monitor(FileSystemEventHandler):
         self.__event_observer.join()
         self.__event_observer = None
 
-    def on_moved(self, event: Union[DirMovedEvent, FileMovedEvent]) -> None:
+    def on_moved(self, event: Union[DirMovedEvent, FileMovedEvent]) -> None:  # type: ignore[override]
         """
         Called when a file or a directory is moved or renamed.
 
@@ -186,7 +186,7 @@ class Monitor(FileSystemEventHandler):
                     os.path.dirname(self.__src_path):
                 self.__callback.on_created(event.dest_path)
 
-    def on_created(self, event: Union[DirCreatedEvent, FileCreatedEvent]) -> None:
+    def on_created(self, event: Union[DirCreatedEvent, FileCreatedEvent]) -> None:  # type: ignore[override]
         """
         Called when a file or directory is created.
 
@@ -194,7 +194,7 @@ class Monitor(FileSystemEventHandler):
         """
         self.__callback.on_created(event.src_path)
 
-    def on_deleted(self, event: Union[DirDeletedEvent, FileDeletedEvent]) -> None:
+    def on_deleted(self, event: Union[DirDeletedEvent, FileDeletedEvent]) -> None:  # type: ignore[override]
         """
         Called when a file or directory is deleted.
 
@@ -202,7 +202,7 @@ class Monitor(FileSystemEventHandler):
         """
         self.__callback.on_deleted(event.src_path)
 
-    def on_modified(self, event: Union[DirModifiedEvent, FileModifiedEvent]) -> None:
+    def on_modified(self, event: Union[DirModifiedEvent, FileModifiedEvent]) -> None:  # type: ignore[override]
         """
         Called when a file or directory is modified.
 
