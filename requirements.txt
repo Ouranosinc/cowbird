@@ -23,3 +23,4 @@ threddsclient==0.4.4
 typing_extensions
 watchdog>=4
 webob
+urllib3>=2.2.2 # not directly required, pinned by Snyk to avoid a vulnerability
