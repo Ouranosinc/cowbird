@@ -525,10 +525,13 @@ class SyncPoint:
 
         .. code-block:: json
 
-            { <target_key>: {
-                "res_path": [<list of segment names/types>],
-                "permissions": { <permission_key>: [user, grp], ...}},
-              ...
+            {
+                "<target_key>": {
+                    "res_path": ["<list of segment names/types>"],
+                    "permissions": {
+                        "<permission_key>": [{"user": "...", "group": "..."}]
+                    }
+                }
             }
         """
         permission_data: PermissionData = {}

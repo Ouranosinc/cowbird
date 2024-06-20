@@ -150,12 +150,13 @@ linkcheck_ignore = [
     "https://github.com/Ouranosinc/cowbird/*",    # limit only Cowbird so others are still checked
     # ignore private links
     "https://github.com/Ouranosinc/PAVICS/*",
-    "CHANGES.rst",
+    ".*CHANGES.rst.*",
     "AUTHORS.rst",
     r"docs/\w+.rst",
 ]
 linkcheck_anchors_ignore = [
-    r".*issuecomment.*"  # github issue comment anchors not resolved
+    r".*issuecomment.*",  # GitHub issue comment anchors not resolved
+    r".*CHANGES.rst.*",   # GitHub anchor to specific changelog version
 ]
 
 linkcheck_anchors_ignore_for_url = [
