@@ -334,8 +334,8 @@ install-docs: conda-env install-xargs  ## install package requirements for docum
 	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) -r "$(APP_ROOT)/requirements-doc.txt"'
 	@echo "Successfully installed docs requirements."
 
-.PHONY: install-dev
-install-dev: conda-env install-xargs	## install package requirements for development and testing
+.PHONY: install-dev-python
+install-dev-python: conda-env install-xargs	## install all Python package requirements for development and testing
 	@bash -c '$(CONDA_CMD) pip install $(PIP_XARGS) -r "$(APP_ROOT)/requirements-dev.txt"'
 	@echo "Successfully installed dev requirements."
 
@@ -360,6 +360,12 @@ install-npm-remarklint: install-npm		## install remark-lint dependency for 'chec
 		echo "Install required dependencies for Markdown checks." && \
 		npm install --save-dev
 	)
+
+.PHONY: install-dev-npm
+install-dev-npm: install-npm install-npm-remarklint install-npm-remarklint	## install all npm development dependencies
+
+.PHONY: install-dev
+install-dev: install-dev-python install-dev-npm		## install all development dependencies
 
 ## --- Launchers targets --- ##
 
@@ -525,10 +531,10 @@ CHECKS := $(CHECKS_PYTHON) $(CHECKS_NPM)
 CHECKS := $(addprefix check-, $(CHECKS))
 
 CHECKS_PYTHON := $(addprefix check-, $(CHECKS_PYTHON))
-$(CHECKS_PYTHON): check-%: install-dev check-%-only
+$(CHECKS_PYTHON): check-%: install-dev-python check-%-only
 
 CHECKS_NPM := $(addprefix check-, $(CHECKS_NPM))
-$(CHECKS_NPM): check-%: install-npm check-%-only
+$(CHECKS_NPM): check-%: install-dev-npm check-%-only
 
 .PHONY: check
 check: check-all	## alias for 'check-all' target
@@ -646,10 +652,10 @@ FIXES := $(FIXES_PYTHON) $(FIXES_NPM)
 FIXES := $(addprefix fix-, $(FIXES))
 
 FIXES_PYTHON := $(addprefix fix-, $(FIXES_PYTHON))
-$(FIXES_PYTHON): fix-%: install-dev fix-%-only
+$(FIXES_PYTHON): fix-%: install-dev-python fix-%-only
 
 FIXES_NPM := $(addprefix fix-, $(FIXES_NPM))
-$(FIXES_NPM): fix-%: install-npm fix-%-only
+$(FIXES_NPM): fix-%: install-dev-npm fix-%-only
 
 .PHONY: fix
 fix: fix-all	## alias for 'fix-all' target
@@ -729,10 +735,10 @@ fix-md: install-npm-remarklint fix-md-only	## fix Markdown linting problems afte
 test: test-all	## alias for 'test-all' target
 
 .PHONY: test-all
-test-all: install-dev install test-only  ## run all tests combinations
+test-all: install-dev-python install test-only  ## run all tests combinations
 
 .PHONY: test-all
-test-all: install-dev install test-only  ## run all tests combinations
+test-all: install-dev-python install test-only  ## run all tests combinations
 
 .PHONY: test-only
 test-only:  ## run all tests, but without prior dependency check and installation
@@ -740,28 +746,28 @@ test-only:  ## run all tests, but without prior dependency check and installatio
 	@bash -c '$(CONDA_CMD) pytest tests -vv --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-api
-test-api: install-dev install		## run only API tests with the environment Python
+test-api: install-dev-python install		## run only API tests with the environment Python
 	@echo "Running local tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "api" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 
 .PHONY: test-cli
-test-cli: install-dev install		## run only CLI tests with the environment Python
+test-cli: install-dev-python install		## run only CLI tests with the environment Python
 	@echo "Running local tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "cli" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-geoserver
-test-geoserver: install-dev install		## run Geoserver requests tests against a configured Geoserver instance. Most of these tests are "online" tests
+test-geoserver: install-dev-python install		## run Geoserver requests tests against a configured Geoserver instance. Most of these tests are "online" tests
 	@echo "Running local tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "geoserver" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-magpie
-test-magpie: install-dev install		## run Magpie requests tests against a configured Magpie instance. Most of these tests are "online" tests
+test-magpie: install-dev-python install		## run Magpie requests tests against a configured Magpie instance. Most of these tests are "online" tests
 	@echo "Running local tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "magpie" --junitxml "$(APP_ROOT)/tests/results.xml"'
 
 .PHONY: test-custom
-test-custom: install-dev install	## run custom marker tests using SPEC="<marker-specification>"
+test-custom: install-dev-python install	## run custom marker tests using SPEC="<marker-specification>"
 	@echo "Running custom tests..."
 	@[ "${SPEC}" ] || ( echo ">> 'TESTS' is not set"; exit 1 )
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "${SPEC}" --junitxml "$(APP_ROOT)/tests/results.xml"'
@@ -773,7 +779,7 @@ test-docker: docker-test			## alias for 'docker-test' target [WARNING: could bui
 COVERAGE_FILE     := $(APP_ROOT)/.coverage
 COVERAGE_HTML_DIR := $(REPORTS_DIR)/coverage
 COVERAGE_HTML_IDX := $(COVERAGE_HTML_DIR)/index.html
-$(COVERAGE_FILE): install-dev
+$(COVERAGE_FILE): install-dev-python
 	@echo "Running coverage analysis..."
 	@bash -c '$(CONDA_CMD) coverage run --source "$(APP_ROOT)/$(APP_NAME)" \
 		`which pytest` tests -m "not remote" || true'
@@ -783,7 +789,7 @@ $(COVERAGE_FILE): install-dev
 	@-echo "Coverage report available: file://$(COVERAGE_HTML_IDX)"
 
 .PHONY: coverage
-coverage: install-dev install $(COVERAGE_FILE)	## check code coverage and generate an analysis report
+coverage: install-dev-python install $(COVERAGE_FILE)	## check code coverage and generate an analysis report
 
 .PHONY: coverage-show
 coverage-show: $(COVERAGE_HTML_IDX)		## display HTML webpage of generated coverage report (run coverage if missing)
