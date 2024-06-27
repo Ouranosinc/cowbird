@@ -24,3 +24,4 @@ typing_extensions
 urllib3>=2.2.2
 watchdog>=4
 webob
+tornado>=6.4.1 # not directly required, pinned by Snyk to avoid a vulnerability
