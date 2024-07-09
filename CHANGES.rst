@@ -9,6 +9,8 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
+* Pin ``threddsclient==0.4.6`` to support Python 3.12
+  (relates to `bird-house/threddsclient#17 <https://github.com/bird-house/threddsclient/pull/17>`_).
 * Pin ``urllib3>=2.2.2`` to address CVE-2024-37891.
 * Pin ``gunicorn>=22`` to address CVE-2024-1135.
 * Pin Docker base to ``python:3.11-alpine3.19`` for various security fixes.
