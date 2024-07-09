@@ -9,6 +9,12 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
+* Pin ``crim-ca/pyramid_celery==5.0.0a`` fork
+  (`crim-ca/pyramid_celery@5.0.0a <https://github.com/crim-ca/pyramid_celery/tree/5.0.0a>`_)
+  to support Python 3.12 and other package cross-dependency improvements
+  (relates to `sontek/pyramid_celery#102 <https://github.com/sontek/pyramid_celery/pull/102>`_).
+* Pin ``threddsclient==0.4.6`` to support Python 3.12
+  (relates to `bird-house/threddsclient#17 <https://github.com/bird-house/threddsclient/pull/17>`_).
 * Pin ``urllib3>=2.2.2`` to address CVE-2024-37891.
 * Pin ``gunicorn>=22`` to address CVE-2024-1135.
 * Pin Docker base to ``python:3.11-alpine3.19`` for various security fixes.
