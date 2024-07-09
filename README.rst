@@ -44,13 +44,13 @@ the resources under those services such that the complete ecosystem can seamless
     :alt: Requires Python 3.7+
     :target: https://www.python.org/getit
 
-.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/cowbird/2.3.0.svg
+.. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/cowbird/2.4.0.svg
     :alt: Commits since latest release
-    :target: https://github.com/Ouranosinc/cowbird/compare/2.3.0...master
+    :target: https://github.com/Ouranosinc/cowbird/compare/2.4.0...master
 
-.. |version| image:: https://img.shields.io/badge/tag-2.3.0-blue.svg?style=flat
+.. |version| image:: https://img.shields.io/badge/tag-2.4.0-blue.svg?style=flat
     :alt: Latest Tag
-    :target: https://github.com/Ouranosinc/cowbird/tree/2.3.0
+    :target: https://github.com/Ouranosinc/cowbird/tree/2.4.0
 
 .. |dependencies| image:: https://pyup.io/repos/github/Ouranosinc/cowbird/shield.svg
     :alt: Dependencies Status
@@ -60,9 +60,9 @@ the resources under those services such that the complete ecosystem can seamless
     :alt: Github Actions CI Build Status (master branch)
     :target: https://github.com/Ouranosinc/cowbird/actions?query=branch%3Amaster
 
-.. |github_tagged| image:: https://img.shields.io/github/actions/workflow/status/Ouranosinc/cowbird/tests.yml?label=2.3.0&branch=2.3.0
+.. |github_tagged| image:: https://img.shields.io/github/actions/workflow/status/Ouranosinc/cowbird/tests.yml?label=2.4.0&branch=2.4.0
     :alt: Github Actions CI Build Status (latest tag)
-    :target: https://github.com/Ouranosinc/cowbird/tree/2.3.0
+    :target: https://github.com/Ouranosinc/cowbird/tree/2.4.0
 
 .. |readthedocs| image:: https://img.shields.io/readthedocs/pavics-cowbird
     :alt: Readthedocs Build Status (master branch)
@@ -134,12 +134,12 @@ Following most recent variants are available:
       - |cowbird_latest_websvc|_
 
 
-.. |cowbird_tag_base| replace:: pavics/cowbird:2.3.0
-.. _cowbird_tag_base: https://hub.docker.com/r/pavics/cowbird/tags?page=1&ordering=last_updated&name=2.3.0
-.. |cowbird_tag_worker| replace:: pavics/cowbird:2.3.0-worker
-.. _cowbird_tag_worker: https://hub.docker.com/r/pavics/cowbird/tags?page=1&ordering=last_updated&name=2.3.0-worker
-.. |cowbird_tag_websvc| replace:: pavics/cowbird:2.3.0-webservice
-.. _cowbird_tag_websvc: https://hub.docker.com/r/pavics/cowbird/tags?page=1&ordering=last_updated&name=2.3.0-webservice
+.. |cowbird_tag_base| replace:: pavics/cowbird:2.4.0
+.. _cowbird_tag_base: https://hub.docker.com/r/pavics/cowbird/tags?page=1&ordering=last_updated&name=2.4.0
+.. |cowbird_tag_worker| replace:: pavics/cowbird:2.4.0-worker
+.. _cowbird_tag_worker: https://hub.docker.com/r/pavics/cowbird/tags?page=1&ordering=last_updated&name=2.4.0-worker
+.. |cowbird_tag_websvc| replace:: pavics/cowbird:2.4.0-webservice
+.. _cowbird_tag_websvc: https://hub.docker.com/r/pavics/cowbird/tags?page=1&ordering=last_updated&name=2.4.0-webservice
 
 .. |cowbird_latest_base| replace:: pavics/cowbird:latest
 .. _cowbird_latest_base: https://hub.docker.com/r/pavics/cowbird/tags?page=1&ordering=last_updated&name=latest

@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`2.4.0 <https://github.com/Ouranosinc/cowbird/tree/2.4.0>`_ (2024-07-09)
+------------------------------------------------------------------------------------
+
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
 * Pin ``crim-ca/pyramid_celery==5.0.0a`` fork
