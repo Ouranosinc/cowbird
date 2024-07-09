@@ -22,7 +22,7 @@ Features / Changes
   (relates to `bird-house/threddsclient#17 <https://github.com/bird-house/threddsclient/pull/17>`_).
 * Pin ``urllib3>=2.2.2`` to address CVE-2024-37891.
 * Pin ``gunicorn>=22`` to address CVE-2024-1135.
-* Pin Docker base to ``python:3.11-alpine3.19`` for various security fixes.
+* Pin Docker base to ``python:3.12.3-alpine`` for various security fixes.
 * Update ``magpie==4.0.0`` for corresponding fixes
   (see `Changes: magpie @ 4.0.0 <https://github.com/Ouranosinc/Magpie/blob/master/CHANGES.rst#400-2024-04-26>`_).
 * Pin ``watchdog>=4`` for latest typing additions.
