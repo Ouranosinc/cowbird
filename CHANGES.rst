@@ -9,6 +9,7 @@ Changes
 
 Features / Changes
 ~~~~~~~~~~~~~~~~~~~~~
+* Pin ``urllib3>=2.2.2`` to address CVE-2024-37891.
 * Pin ``gunicorn>=22`` to address CVE-2024-1135.
 * Pin Docker base to ``python:3.11-alpine3.19`` for various security fixes.
 * Update ``magpie==4.0.0`` for corresponding fixes
