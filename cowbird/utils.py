@@ -169,7 +169,7 @@ def bool2str(value: Any) -> str:
     return "true" if str(value).lower() in truthy else "false"
 
 
-def bytes2str(string: str | bytes) -> str:
+def bytes2str(string: Union[str, bytes]) -> str:
     """
     Ensures a string is represented in UTF-8.
     """
