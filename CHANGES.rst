@@ -7,7 +7,10 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Drop Python 3.8 support.
+* Pin ``watchdog>=5`` to employ typing fixes.
+* Pin ``requests>=2.32.3`` to fix security vulnerability.
+* Pin ``setuptools>=70.0.0`` to fix security vulnerability.
 
 `2.4.0 <https://github.com/Ouranosinc/cowbird/tree/2.4.0>`_ (2024-07-09)
 ------------------------------------------------------------------------------------

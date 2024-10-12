@@ -17,7 +17,7 @@ from watchdog.observers import Observer
 from watchdog.observers.api import BaseObserver
 
 from cowbird.monitoring.fsmonitor import FSMonitor
-from cowbird.utils import get_logger
+from cowbird.utils import bytes2str, get_logger
 
 LOGGER = get_logger(__name__)
 
@@ -153,11 +153,11 @@ class Monitor(FileSystemEventHandler):
             LOGGER.error(msg)
             raise MonitorException(msg)
         self.__event_observer = Observer()
-        self.__event_observer.schedule(self,  # type: ignore[no-untyped-call]
+        self.__event_observer.schedule(self,
                                        self.__src_path,
                                        recursive=self.__recursive)
         try:
-            self.__event_observer.start()  # type: ignore[no-untyped-call]
+            self.__event_observer.start()
         except OSError:
             LOGGER.warning("Cannot monitor the following file or directory [%s]: No such file or directory",
                            self.__src_path)
@@ -166,46 +166,47 @@ class Monitor(FileSystemEventHandler):
         """
         Stop the monitoring so that events stop to be fired.
         """
-        self.__event_observer.stop()  # type: ignore[no-untyped-call]
+        self.__event_observer.stop()
         self.__event_observer.join()
         self.__event_observer = None
 
-    def on_moved(self, event: Union[DirMovedEvent, FileMovedEvent]) -> None:  # type: ignore[override]
+    def on_moved(self, event: Union[DirMovedEvent, FileMovedEvent]) -> None:
         """
         Called when a file or a directory is moved or renamed.
 
         :param event: Event representing file/directory movement.
         """
-        self.__callback.on_deleted(event.src_path)
+        event_dest_path = bytes2str(event.dest_path)
+        event_src_path = bytes2str(event.src_path)
+        self_src_path = bytes2str(self.__src_path)
+        self.__callback.on_deleted(event_src_path)
         # If moved outside of __src_path don't send a create event
-        if event.dest_path.startswith(self.__src_path):
+        if event_dest_path.startswith(self_src_path):
             # If move under subdirectory and recursive is False don't send a
             # create event neither
-            if self.__recursive or \
-                    os.path.dirname(event.dest_path) == \
-                    os.path.dirname(self.__src_path):
-                self.__callback.on_created(event.dest_path)
+            if self.__recursive or os.path.dirname(event_dest_path) == os.path.dirname(self_src_path):
+                self.__callback.on_created(event_dest_path)
 
-    def on_created(self, event: Union[DirCreatedEvent, FileCreatedEvent]) -> None:  # type: ignore[override]
+    def on_created(self, event: Union[DirCreatedEvent, FileCreatedEvent]) -> None:
         """
         Called when a file or directory is created.
 
         :param event: Event representing file/directory creation.
         """
-        self.__callback.on_created(event.src_path)
+        self.__callback.on_created(bytes2str(event.src_path))
 
-    def on_deleted(self, event: Union[DirDeletedEvent, FileDeletedEvent]) -> None:  # type: ignore[override]
+    def on_deleted(self, event: Union[DirDeletedEvent, FileDeletedEvent]) -> None:
         """
         Called when a file or directory is deleted.
 
         :param event: Event representing file/directory deletion.
         """
-        self.__callback.on_deleted(event.src_path)
+        self.__callback.on_deleted(bytes2str(event.src_path))
 
-    def on_modified(self, event: Union[DirModifiedEvent, FileModifiedEvent]) -> None:  # type: ignore[override]
+    def on_modified(self, event: Union[DirModifiedEvent, FileModifiedEvent]) -> None:
         """
         Called when a file or directory is modified.
 
         :param event: Event representing file/directory modification.
         """
-        self.__callback.on_modified(event.src_path)
+        self.__callback.on_modified(bytes2str(event.src_path))

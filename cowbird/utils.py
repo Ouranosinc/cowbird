@@ -169,6 +169,15 @@ def bool2str(value: Any) -> str:
     return "true" if str(value).lower() in truthy else "false"
 
 
+def bytes2str(string: Union[str, bytes]) -> str:
+    """
+    Ensures a string is represented in UTF-8.
+    """
+    if isinstance(string, bytes):
+        return string.decode("utf-8")
+    return string
+
+
 def islambda(func: Any) -> bool:
     """
     Evaluate if argument is a callable :class:`lambda` expression.
