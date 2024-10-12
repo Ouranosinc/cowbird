@@ -127,6 +127,7 @@ endif
 
 # docker
 DOCKER_REPO := pavics/cowbird
+DOCKER_COMPOSE ?= docker compose
 BASE_TAG := $(APP_NAME):base
 LATEST_TAG := $(APP_NAME):latest
 VERSION_TAG := $(APP_NAME):$(APP_VERSION)
@@ -449,7 +450,7 @@ docker-config:  ## update docker specific config from examples files
 	sed 's/mongodb:\/\/.*:/mongodb:\/\/mongodb:/g' config/celeryconfig.py > config/celeryconfig.docker.py
 	sed 's/mongodb:\/\/.*:/mongodb:\/\/mongodb:/g' config/cowbird.example.ini > config/cowbird.docker.ini
 
-DOCKER_COMPOSE_WITH_ENV := docker-compose --env-file $(DOCKER_COMPOSE_ENV_FILE)
+DOCKER_COMPOSE_WITH_ENV := $(DOCKER_COMPOSE) --env-file $(DOCKER_COMPOSE_ENV_FILE)
 DOCKER_TEST_COMPOSES := -f "$(APP_ROOT)/tests/ci/docker-compose.smoke-test.yml"
 .PHONY: docker-test
 docker-test: docker-build	## execute a smoke test of the built Docker image (validate that it boots)
