@@ -26,3 +26,4 @@ urllib3>=2.2.2
 watchdog>=5
 webob
 zipp>=3.19.1 # not directly required, pinned by Snyk to avoid a vulnerability
+dnspython>=2.6.1 # not directly required, pinned by Snyk to avoid a vulnerability
