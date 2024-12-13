@@ -33,8 +33,6 @@ def dispatch(handler_fct: Callable[[Handler], None]) -> None:
         try:
             LOGGER.info("Dispatching event [%s] for handler [%s].", event_name, handler.name)
             handler_fct(handler)
-        except NotImplementedError:
-            LOGGER.debug("Event [%s] for handler [%s] is not implemented.", event_name, handler.name)
         except Exception as exception:  # noqa
             exceptions.append(exception)
             LOGGER.error("Exception raised while handling event [%s] for handler [%s] : [%r].",
