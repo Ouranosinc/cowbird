@@ -35,10 +35,10 @@ class Catalog(Handler, FSMonitor):
         Monitoring().unregister(self._user_workspace_dir(user_name), self)
 
     def permission_created(self, permission: Permission) -> None:
-        LOGGER.debug("Event [permission_created] for handler [%s] is not implemented", self.name)
+        LOGGER.info("Event [permission_created] for handler [%s] is not implemented", self.name)
 
     def permission_deleted(self, permission: Permission) -> None:
-        LOGGER.debug("Event [permission_deleted] for handler [%s] is not implemented", self.name)
+        LOGGER.info("Event [permission_deleted] for handler [%s] is not implemented", self.name)
 
     @staticmethod
     def get_instance() -> Optional["Catalog"]:
@@ -74,4 +74,4 @@ class Catalog(Handler, FSMonitor):
 
     def resync(self) -> None:
         # FIXME: this should be implemented in the eventual task addressing the resync mechanism.
-        LOGGER.debug("Event [resync] for handler [%s] is not implemented", self.name)
+        LOGGER.warning("Event [resync] for handler [%s] is not implemented but should be in the future", self.name)
