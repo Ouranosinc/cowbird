@@ -14,4 +14,5 @@ jobs:
     steps:
     - uses: actions/labeler@v4.3.0
       with:
+        sync-labels: ''  # see https://github.com/actions/labeler/issues/112
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
