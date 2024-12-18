@@ -5,7 +5,6 @@ from cowbird.permissions_synchronizer import Permission
 from cowbird.typedefs import SettingsType
 from cowbird.utils import get_logger
 
-
 LOGGER = get_logger(__name__)
 
 
