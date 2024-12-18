@@ -290,10 +290,12 @@ class Magpie(Handler):
         return resp.json()
 
     def user_created(self, user_name: str) -> None:
-        LOGGER.info("Event [user_created] for handler [%s] is not implemented", self.name)
+        LOGGER.warning("Event [user_created] for handler [%s] is not implemented since Magpie "
+                       "has already created the user.", self.name)
 
     def user_deleted(self, user_name: str) -> None:
-        LOGGER.info("Event [user_deleted] for handler [%s] is not implemented", self.name)
+        LOGGER.warning("Event [user_deleted] for handler [%s] is not implemented since Magpie "
+                       "has already deleted the user.", self.name)
 
     def permission_created(self, permission: Permission) -> None:
         self.permissions_synch.create_permission(permission)
