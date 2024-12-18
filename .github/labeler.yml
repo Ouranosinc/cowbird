@@ -6,6 +6,13 @@ api:
 cli:
   - cowbird/cli/**/*
 
+handler:
+  - cowbird/handlers/**/*
+  - cowbird/monitoring/**/*
+
+permissions:
+  - cowbird/permissions_synchronizer.py
+
 # label 'ci' all automation-related steps and files
 ci:
   - .*  # all '.<>' files
