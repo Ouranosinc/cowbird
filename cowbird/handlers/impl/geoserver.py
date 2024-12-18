@@ -388,7 +388,7 @@ class Geoserver(Handler, FSMonitor):
 
     def resync(self) -> None:
         # FIXME: this should be implemented in the eventual task addressing the resync mechanism.
-        raise NotImplementedError
+        LOGGER.warning("Event [resync] for handler [%s] is not implemented but should be in the future", self.name)
 
     @staticmethod
     def _is_permission_update_required(effective_permissions: List[JSON],

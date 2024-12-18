@@ -290,10 +290,12 @@ class Magpie(Handler):
         return resp.json()
 
     def user_created(self, user_name: str) -> None:
-        raise NotImplementedError
+        LOGGER.warning("Event [user_created] for handler [%s] is not implemented since Magpie "
+                       "has already created the user.", self.name)
 
     def user_deleted(self, user_name: str) -> None:
-        raise NotImplementedError
+        LOGGER.warning("Event [user_deleted] for handler [%s] is not implemented since Magpie "
+                       "has already deleted the user.", self.name)
 
     def permission_created(self, permission: Permission) -> None:
         self.permissions_synch.create_permission(permission)
@@ -303,7 +305,7 @@ class Magpie(Handler):
 
     def resync(self) -> None:
         # FIXME: this should be implemented in the eventual task addressing the resync mechanism.
-        raise NotImplementedError
+        LOGGER.warning("Event [resync] for handler [%s] is not implemented but should be in the future", self.name)
 
     def create_permissions(self, permissions_data: List[PermissionConfigItemType]) -> None:
         """
