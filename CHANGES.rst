@@ -7,7 +7,14 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+Features / Changes
+~~~~~~~~~~~~~~~~~~~~~
+
+* Pin ``setuptools>78.1.1`` to fix flagged security issues.
+
+Bug Fixes
+~~~~~~~~~~~~~~~~~~~~~
+n/a
 
 `2.5.0 <https://github.com/Ouranosinc/cowbird/tree/2.5.0>`_ (2024-12-18)
 ------------------------------------------------------------------------------------
