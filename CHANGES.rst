@@ -9,6 +9,11 @@ Changes
 
 * Nothing yet.
 
+`2.5.2 <https://github.com/Ouranosinc/cowbird/tree/2.5.2>`_ (2025-07-17)
+------------------------------------------------------------------------------------
+
+* Security update of dependencies.
+
 `2.5.1 <https://github.com/Ouranosinc/cowbird/tree/2.5.1>`_ (2025-05-06)
 ------------------------------------------------------------------------------------
 
