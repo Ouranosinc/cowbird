@@ -16,7 +16,7 @@ pyramid_mako>=1.0.2
 pyramid_celery @ git+https://github.com/crim-ca/pyramid_celery.git@5.0.0a
 python-dotenv
 pyyaml>=5.1
-requests>=2.32.3
+requests>=2.32.4
 requests_file
 schema
 simplejson
