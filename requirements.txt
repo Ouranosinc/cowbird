@@ -27,3 +27,4 @@ watchdog>=5
 webob
 zipp>=3.19.1 # not directly required, pinned by Snyk to avoid a vulnerability
 dnspython>=2.6.1 # not directly required, pinned by Snyk to avoid a vulnerability
+pypdf>=6.0.0 # not directly required, pinned by Snyk to avoid a vulnerability
