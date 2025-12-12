@@ -7,7 +7,7 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Security update of `urllib` and `requests` dependencies.
 
 `2.5.2 <https://github.com/Ouranosinc/cowbird/tree/2.5.2>`_ (2025-07-17)
 ------------------------------------------------------------------------------------
