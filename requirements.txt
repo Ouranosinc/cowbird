@@ -22,9 +22,10 @@ schema
 simplejson
 threddsclient==0.4.6
 typing_extensions
-urllib3>=2.5.0
+urllib3>=2.6.0
 watchdog>=5
 webob
 zipp>=3.19.1 # not directly required, pinned by Snyk to avoid a vulnerability
 dnspython>=2.6.1 # not directly required, pinned by Snyk to avoid a vulnerability
 pypdf>=6.4.0 # not directly required, pinned by Snyk to avoid a vulnerability
+tornado>=6.5.3 # not directly required, pinned by Snyk to avoid a vulnerability
