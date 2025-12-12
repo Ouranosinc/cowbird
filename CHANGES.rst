@@ -8,6 +8,7 @@ Changes
 ------------------------------------------------------------------------------------
 
 * Security update of `urllib` and `requests` dependencies.
+* Security update of docker `python:3.13.11-alpine3.23` base.
 
 `2.5.2 <https://github.com/Ouranosinc/cowbird/tree/2.5.2>`_ (2025-07-17)
 ------------------------------------------------------------------------------------
