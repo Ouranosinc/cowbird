@@ -20,7 +20,7 @@ requests>=2.32.5
 requests_file
 schema
 simplejson
-threddsclient==0.4.6
+threddsclient==0.4.7
 typing_extensions
 urllib3>=2.6.0
 watchdog>=5
