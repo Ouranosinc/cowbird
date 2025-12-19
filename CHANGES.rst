@@ -11,6 +11,7 @@ Changes
 * Security update of docker `python:3.13.11-alpine3.23` base.
 * Update threddsclient==0.4.7 to allow Python 3.13 support.
 * Add Python 3.13 to CI and project setup.
+* Drop Python 3.9 support.
 
 `2.5.2 <https://github.com/Ouranosinc/cowbird/tree/2.5.2>`_ (2025-07-17)
 ------------------------------------------------------------------------------------
