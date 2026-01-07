@@ -8,6 +8,9 @@ Changes
 ------------------------------------------------------------------------------------
 
 * Move generic test functions relevant to ``Magpie`` under its handler implementation.
+* Fix handler ``Magpie.login()`` method having trouble with ``requests`` session cookies when passed directly
+  as ``RequestsCookieJar`` object with additional metadata generated from returned response from Magpie API.
+  The raw cookies dictionary is now passed instead to retrieve the original behavior with successful authentication.
 * Security update of ``urllib`` and ``requests`` dependencies.
 * Security update of docker ``python:3.13.11-alpine3.23`` base.
 * Update ``threddsclient==0.4.7`` to allow Python 3.13 support.

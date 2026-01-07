@@ -509,8 +509,10 @@ class Magpie(Handler):
         """
         Login to Magpie app using admin credentials.
         """
-        if not self.cookies or not self.last_cookies_update_time \
-                or time.time() - self.last_cookies_update_time > COOKIES_TIMEOUT:
+        if (
+            not self.cookies or not self.last_cookies_update_time
+            or time.time() - self.last_cookies_update_time > COOKIES_TIMEOUT
+        ):
             data = {"user_name": self.admin_user, "password": self.admin_password}
             try:
                 resp = requests.post(f"{self.url}/signin", json=data, timeout=self.timeout)
@@ -519,6 +521,9 @@ class Magpie(Handler):
                                    f"Exception : {exc}. ")
             self.cookies = resp.cookies
             self.last_cookies_update_time = time.time()
+        # fix subsequent requests having trouble with the cookie jar
+        if isinstance(self.cookies, RequestsCookieJar):
+            self.cookies = self.cookies.get_dict()
         return self.cookies
 
 
