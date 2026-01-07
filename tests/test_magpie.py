@@ -1,7 +1,6 @@
 # pylint: disable=protected-access
 import os
 from pathlib import Path
-from typing import Dict
 
 import pytest
 import yaml
@@ -11,7 +10,6 @@ from magpie.permissions import Access, Permission, Scope
 from magpie.services import ServiceGeoserver
 
 from cowbird.handlers import HandlerFactory
-from cowbird.handlers.impl.magpie import Magpie
 from tests import utils
 
 CURR_DIR = Path(__file__).resolve().parent
