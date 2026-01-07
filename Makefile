@@ -471,7 +471,8 @@ docker-stat:  ## query docker-compose images status (from 'docker-test')
 
 DOCKER_COMPOSES := \
 	-f "$(APP_ROOT)/docker/docker-compose.example.yml" \
-	-f "$(APP_ROOT)/docker/docker-compose.override.example.yml"
+	-f "$(APP_ROOT)/docker/docker-compose.override.example.yml" \
+	$(if $(wildcard $(APP_ROOT)/docker/docker-compose.override.yml),-f "$(APP_ROOT)/docker/docker-compose.override.yml")
 .PHONY: docker-up
 docker-up: docker-build docker-config   ## run all containers using compose
 	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_COMPOSES) up
@@ -479,7 +480,8 @@ docker-up: docker-build docker-config   ## run all containers using compose
 DOCKER_DEV_COMPOSES := \
 	-f "$(APP_ROOT)/docker/docker-compose.example.yml" \
 	-f "$(APP_ROOT)/docker/docker-compose.dev.example.yml" \
-	-f "$(APP_ROOT)/docker/docker-compose.dev.override.yml"
+	-f "$(APP_ROOT)/docker/docker-compose.dev.override.yml" \
+	$(if $(wildcard $(APP_ROOT)/docker/docker-compose.override.yml),-f "$(APP_ROOT)/docker/docker-compose.override.yml")
 .PHONY: docker-up-dev
 docker-up-dev: docker-build   ## run all dependencies containers using compose ready to be used by a local cowbird
 	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_DEV_COMPOSES) up
