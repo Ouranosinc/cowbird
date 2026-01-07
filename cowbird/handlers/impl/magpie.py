@@ -307,6 +307,52 @@ class Magpie(Handler):
         # FIXME: this should be implemented in the eventual task addressing the resync mechanism.
         LOGGER.warning("Event [resync] for handler [%s] is not implemented but should be in the future", self.name)
 
+    def create_user(self, user_name: str, email: str, password: str, group_name: str) -> int:
+        resp = self._send_request(method="POST", url=f"{self.url}/users",
+                                    json={
+                                        "user_name": user_name,
+                                        "email": email,
+                                        "password": password,
+                                        "group_name": group_name
+                                    })
+        assert resp.status_code == 201
+        return resp.json()["user"]["user_id"]
+
+    def delete_user(self, user_name: str) -> None:
+        resp = self._send_request(method="DELETE", url=f"{self.url}/users/{user_name}")
+        assert resp.status_code in [200, 404]
+
+    def create_group(self, group_name: str, descr: str, discoverable: bool, terms: str) -> int:
+        data = {
+            "group_name": group_name,
+            "description": descr,
+            "discoverable": discoverable,
+            "terms": terms
+        }
+        resp = self._send_request(method="POST", url=f"{self.url}/groups", json=data)
+        assert resp.status_code == 201
+        return resp.json()["group"]["group_id"]
+
+    def delete_group(self, group_name: str) -> None:
+        resp = self._send_request(method="DELETE", url=f"{self.url}/groups/{group_name}")
+        assert resp.status_code in [200, 404]
+
+    def create_service(self, service_data: Dict[str, str]) -> int:
+        resp = self._send_request(method="POST", url=f"{self.url}/services", json=service_data)
+        assert resp.status_code == 201
+        return resp.json()["service"]["resource_id"]
+
+    def delete_service(self, service_name: str) -> None:
+        resp = self._send_request(method="DELETE", url=f"{self.url}/services/{service_name}")
+        assert resp.status_code in [200, 404]
+
+    def delete_all_services(self) -> None:
+        resp = self._send_request(method="GET", url=f"{self.url}/services")
+        assert resp.status_code == 200
+        for services_by_svc_type in resp.json()["services"].values():
+            for svc in services_by_svc_type.values():
+                self.delete_service(svc["service_name"])
+
     def create_permissions(self, permissions_data: List[PermissionConfigItemType]) -> None:
         """
         Make sure that the specified permissions exist on Magpie.

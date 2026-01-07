@@ -23,7 +23,7 @@ from cowbird.config import (
     ConfigErrorInvalidTokens
 )
 from cowbird.handlers import HandlerFactory
-from tests import test_magpie, utils
+from tests import utils
 
 CURR_DIR = Path(__file__).resolve().parent
 
@@ -96,13 +96,13 @@ class TestSyncPermissions(unittest.TestCase):
             "service_url": f"http://localhost:9000/{self.test_service_name}",
             "configuration": {}
         }
-        return test_magpie.create_service(self.magpie, data)
+        return self.magpie.create_service(data)
 
     def delete_test_service(self):
         """
         Deletes the test service if it exists.
         """
-        test_magpie.delete_service(self.magpie, self.test_service_name)
+        self.magpie.delete_service(self.test_service_name)
 
     def create_test_permission(self,
                                resource_id: int,

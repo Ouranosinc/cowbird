@@ -7,9 +7,10 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Security update of `urllib` and `requests` dependencies.
-* Security update of docker `python:3.13.11-alpine3.23` base.
-* Update threddsclient==0.4.7 to allow Python 3.13 support.
+* Move generic test functions relevant to ``Magpie`` under its handler implementation.
+* Security update of ``urllib`` and ``requests`` dependencies.
+* Security update of docker ``python:3.13.11-alpine3.23`` base.
+* Update ``threddsclient==0.4.7`` to allow Python 3.13 support.
 * Add Python 3.13 to CI and project setup.
 * Drop Python 3.9 support.
 

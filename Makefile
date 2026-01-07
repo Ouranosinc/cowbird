@@ -751,7 +751,6 @@ test-api: install-dev-python install		## run only API tests with the environment
 	@echo "Running local tests..."
 	@bash -c '$(CONDA_CMD) pytest tests -vv -m "api" --junitxml "$(APP_ROOT)/tests/results.xml" $(PYTEST_XARGS)'
 
-
 .PHONY: test-cli
 test-cli: install-dev-python install		## run only CLI tests with the environment Python
 	@echo "Running local tests..."

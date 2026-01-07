@@ -27,7 +27,7 @@ from cowbird.handlers.impl.geoserver import SHAPEFILE_MAIN_EXTENSION, Geoserver,
 from cowbird.handlers.impl.magpie import GEOSERVER_READ_PERMISSIONS, GEOSERVER_WRITE_PERMISSIONS, MagpieHttpError
 from cowbird.permissions_synchronizer import Permission
 from cowbird.typedefs import JSON
-from tests import test_magpie, utils
+from tests import utils
 
 CURR_DIR = Path(__file__).resolve().parent
 
@@ -303,18 +303,17 @@ class TestGeoserverPermissions(TestGeoserver):
         self.magpie = HandlerFactory().create_handler("Magpie")
 
         # Reset test user
-        test_magpie.delete_user(self.magpie, self.magpie_test_user)
-        test_magpie.create_user(self.magpie, self.magpie_test_user, "test@test.com", "qwertyqwerty",
-                                self.magpie_test_group)
+        self.magpie.delete_user(self.magpie_test_user)
+        self.magpie.create_user(self.magpie_test_user, "test@test.com", "qwertyqwerty", self.magpie_test_group)
 
         # Reset geoserver service
-        test_magpie.delete_service(self.magpie, "geoserver")
+        self.magpie.delete_service("geoserver")
         data = {
             "service_name": "geoserver",
             "service_type": ServiceGeoserver.service_type,
             "service_url": "http://localhost:9000/geoserver",
         }
-        self.test_service_id = test_magpie.create_service(self.magpie, data)
+        self.test_service_id = self.magpie.create_service(data)
 
         self.geoserver = TestGeoserver.get_geoserver()
 
@@ -345,8 +344,8 @@ class TestGeoserverPermissions(TestGeoserver):
         yield
         # Teardown
         reset_geoserver_test_workspace(self, self.geoserver)
-        test_magpie.delete_user(self.magpie, self.magpie_test_user)
-        test_magpie.delete_service(self.magpie, "geoserver")
+        self.magpie.delete_user(self.magpie_test_user)
+        self.magpie.delete_service("geoserver")
 
     def check_magpie_permissions(self, res_id, expected_perms, expected_access=Access.ALLOW.value,
                                  expected_scope=Scope.MATCH.value, effective=True):

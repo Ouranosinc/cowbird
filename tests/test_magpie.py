@@ -17,59 +17,6 @@ from tests import utils
 CURR_DIR = Path(__file__).resolve().parent
 
 
-def create_user(magpie: Magpie, user_name: str, email: str, password: str, group_name: str) -> int:
-    resp = magpie._send_request(method="POST", url=f"{magpie.url}/users",
-                                json={
-                                    "user_name": user_name,
-                                    "email": email,
-                                    "password": password,
-                                    "group_name": group_name
-                                })
-    assert resp.status_code == 201
-    return resp.json()["user"]["user_id"]
-
-
-def delete_user(magpie: Magpie, user_name: str) -> None:
-    resp = magpie._send_request(method="DELETE", url=f"{magpie.url}/users/{user_name}")
-    assert resp.status_code in [200, 404]
-
-
-def create_group(magpie: Magpie, group_name: str, descr: str, discoverable: bool, terms: str) -> int:
-    resp = magpie._send_request(method="POST", url=f"{magpie.url}/groups",
-                                json={
-                                    "group_name": group_name,
-                                    "description": descr,
-                                    "discoverable": discoverable,
-                                    "terms": terms
-                                })
-    assert resp.status_code == 201
-    return resp.json()["group"]["group_id"]
-
-
-def delete_group(magpie: Magpie, group_name: str) -> None:
-    resp = magpie._send_request(method="DELETE", url=f"{magpie.url}/groups/{group_name}")
-    assert resp.status_code in [200, 404]
-
-
-def create_service(magpie: Magpie, service_data: Dict[str, str]) -> int:
-    resp = magpie._send_request(method="POST", url=f"{magpie.url}/services", json=service_data)
-    assert resp.status_code == 201
-    return resp.json()["service"]["resource_id"]
-
-
-def delete_service(magpie: Magpie, service_name: str) -> None:
-    resp = magpie._send_request(method="DELETE", url=f"{magpie.url}/services/{service_name}")
-    assert resp.status_code in [200, 404]
-
-
-def delete_all_services(magpie: Magpie) -> None:
-    resp = magpie._send_request(method="GET", url=f"{magpie.url}/services")
-    assert resp.status_code == 200
-    for services_by_svc_type in resp.json()["services"].values():
-        for svc in services_by_svc_type.values():
-            delete_service(magpie, svc["service_name"])
-
-
 @pytest.mark.magpie
 @pytest.mark.online
 class TestMagpie:
@@ -115,7 +62,7 @@ class TestMagpie:
         # Create new magpie handler instance with new config
         self.magpie = HandlerFactory().create_handler("Magpie")
         # Reset all magpie services for testing
-        delete_all_services(self.magpie)
+        self.magpie.delete_all_services()
         yield
         utils.clear_handlers_instances()
 
@@ -138,9 +85,9 @@ class TestMagpie:
             "service_url": "http://localhost:9000/geoserver",
             "configuration": {}
         }
-        svc1_id = create_service(self.magpie, data)
+        svc1_id = self.magpie.create_service(data)
         data["service_name"] = "geoserver2"
-        svc2_id = create_service(self.magpie, data)
+        svc2_id = self.magpie.create_service(data)
 
         # If workspace and layer don't yet exist, it should create both of them in the first service found.
         layer1_id = self.magpie.get_geoserver_layer_res_id(workspace_name, layer_name, create_if_missing=True)
@@ -179,7 +126,7 @@ class TestMagpie:
             "service_url": "http://localhost:9000/geoserver",
             "configuration": {}
         }
-        create_service(self.magpie, data)
+        self.magpie.create_service(data)
         layer_id = self.magpie.get_geoserver_layer_res_id(workspace_name, layer_name, create_if_missing=True)
 
         # Should fail if no user name or group name is used
