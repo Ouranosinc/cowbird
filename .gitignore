@@ -19,12 +19,14 @@ package-lock.json
 Makefile.config
 
 ## Environment
+*.env
 .env
 venv
 env/
 
 ## IDE
 .idea
+.run
 .vscode
 
 ## Tests & CI
@@ -53,6 +55,7 @@ celerybeat-schedule.*
 ## Repo
 config.yml
 config.yaml
+config/*.yml
 cowbird*.ini
 custom.ini
 cowbird/api_docs
@@ -64,3 +67,4 @@ cowbird/lib
 cowbird/local
 gunicorn.app.wsgiapp
 error_log.txt
+!config/*.example.*

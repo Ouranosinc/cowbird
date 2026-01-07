@@ -744,34 +744,34 @@ test-all: install-dev-python install test-only  ## run all tests combinations
 .PHONY: test-only
 test-only:  ## run all tests, but without prior dependency check and installation
 	@echo "Running tests..."
-	@bash -c '$(CONDA_CMD) pytest tests -vv --junitxml "$(APP_ROOT)/tests/results.xml"'
+	bash -c '$(CONDA_CMD) pytest tests -vv --junitxml "$(APP_ROOT)/tests/results.xml" $(PYTEST_XARGS)'
 
 .PHONY: test-api
 test-api: install-dev-python install		## run only API tests with the environment Python
 	@echo "Running local tests..."
-	@bash -c '$(CONDA_CMD) pytest tests -vv -m "api" --junitxml "$(APP_ROOT)/tests/results.xml"'
+	@bash -c '$(CONDA_CMD) pytest tests -vv -m "api" --junitxml "$(APP_ROOT)/tests/results.xml" $(PYTEST_XARGS)'
 
 
 .PHONY: test-cli
 test-cli: install-dev-python install		## run only CLI tests with the environment Python
 	@echo "Running local tests..."
-	@bash -c '$(CONDA_CMD) pytest tests -vv -m "cli" --junitxml "$(APP_ROOT)/tests/results.xml"'
+	@bash -c '$(CONDA_CMD) pytest tests -vv -m "cli" --junitxml "$(APP_ROOT)/tests/results.xml" $(PYTEST_XARGS)'
 
 .PHONY: test-geoserver
 test-geoserver: install-dev-python install		## run Geoserver requests tests against a configured Geoserver instance. Most of these tests are "online" tests
 	@echo "Running local tests..."
-	@bash -c '$(CONDA_CMD) pytest tests -vv -m "geoserver" --junitxml "$(APP_ROOT)/tests/results.xml"'
+	@bash -c '$(CONDA_CMD) pytest tests -vv -m "geoserver" --junitxml "$(APP_ROOT)/tests/results.xml" $(PYTEST_XARGS)'
 
 .PHONY: test-magpie
 test-magpie: install-dev-python install		## run Magpie requests tests against a configured Magpie instance. Most of these tests are "online" tests
 	@echo "Running local tests..."
-	@bash -c '$(CONDA_CMD) pytest tests -vv -m "magpie" --junitxml "$(APP_ROOT)/tests/results.xml"'
+	@bash -c '$(CONDA_CMD) pytest tests -vv -m "magpie" --junitxml "$(APP_ROOT)/tests/results.xml" $(PYTEST_XARGS)'
 
 .PHONY: test-custom
 test-custom: install-dev-python install	## run custom marker tests using SPEC="<marker-specification>"
 	@echo "Running custom tests..."
 	@[ "${SPEC}" ] || ( echo ">> 'TESTS' is not set"; exit 1 )
-	@bash -c '$(CONDA_CMD) pytest tests -vv -m "${SPEC}" --junitxml "$(APP_ROOT)/tests/results.xml"'
+	@bash -c '$(CONDA_CMD) pytest tests -vv -m "${SPEC}" --junitxml "$(APP_ROOT)/tests/results.xml" $(PYTEST_XARGS)'
 
 .PHONY: test-docker
 test-docker: docker-test			## alias for 'docker-test' target [WARNING: could build image if missing]
@@ -783,7 +783,7 @@ COVERAGE_HTML_IDX := $(COVERAGE_HTML_DIR)/index.html
 $(COVERAGE_FILE): install-dev-python
 	@echo "Running coverage analysis..."
 	@bash -c '$(CONDA_CMD) coverage run --source "$(APP_ROOT)/$(APP_NAME)" \
-		`which pytest` tests -m "not remote" || true'
+		`which pytest` tests -m "not remote" $(PYTEST_XARGS) || true'
 	@bash -c '$(CONDA_CMD) coverage xml -i -o "$(REPORTS_DIR)/coverage.xml"'
 	@bash -c '$(CONDA_CMD) coverage report -m'
 	@bash -c '$(CONDA_CMD) coverage html -d "$(COVERAGE_HTML_DIR)"'
