@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import mock
 import pytest
 import yaml
 from dotenv import load_dotenv
@@ -327,7 +328,8 @@ class TestFileSystemBasic(BaseTestFileSystem):
         assert os.path.exists(old_root_file)
         assert os.path.exists(old_subdir)
 
-        resp = utils.test_request(app, "PUT", "/handlers/FileSystem/resync")
+        with mock.patch("cowbird.handlers.impl.magpie.Magpie", side_effect=utils.MockMagpieHandler):
+            resp = utils.test_request(app, "PUT", "/handlers/FileSystem/resync")
 
         # Check that new hardlinks are generated and old files are removed
         assert resp.status_code == 200

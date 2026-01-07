@@ -139,6 +139,9 @@ class MockMagpieHandler(Handler):
                 "event_perms": self.event_perms,
                 "outbound_perms": self.outbound_perms}
 
+    def get_user_list(self):
+        return self.event_users
+
     def get_geoserver_workspace_res_id(self, user_name):
         pass
 
