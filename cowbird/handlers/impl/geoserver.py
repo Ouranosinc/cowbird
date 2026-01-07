@@ -42,7 +42,7 @@ class GeoserverFuncSupportsDatastore(Protocol):
         *,
         workspace_name: str,
         datastore_name: str,
-        datastore_path: str,
+        datastore_path: str = None,  # not required by all functions
     ) -> requests.Response:
         ...
 

@@ -11,7 +11,7 @@ import types
 from configparser import ConfigParser
 from enum import Enum
 from inspect import isclass, isfunction
-from typing import Any, Callable, Dict, List, NoReturn, Optional, Type, TypeVar, Union, cast
+from typing import Any, Callable, Dict, Generic, List, NoReturn, Optional, Type, TypeVar, Union, cast
 from typing_extensions import TypeAlias
 
 from celery.app import Celery
@@ -519,10 +519,11 @@ class ExtendedEnum(Enum):
 
 
 SingletonMetaType: TypeAlias = "SingletonMeta"
+SingletonObjectType = TypeVar("SingletonObjectType")
 
 
 # taken from https://stackoverflow.com/questions/6760685/creating-a-singleton-in-python
-class SingletonMeta(type):
+class SingletonMeta(Generic[SingletonObjectType], type):
     """
     A metaclass that creates a Singleton base class when called.
 
@@ -546,7 +547,7 @@ class SingletonMeta(type):
     """
     _instances: Dict[SingletonMetaType, SingletonMetaType] = {}
 
-    def __call__(cls, *args: Any, **kwargs: Any) -> SingletonMetaType:
+    def __call__(cls: Type[SingletonObjectType], *args: Any, **kwargs: Any) -> SingletonObjectType:
         if cls not in cls._instances:
             cls._instances[cls] = super(SingletonMeta, cls).__call__(*args, **kwargs)
         return cls._instances[cls]
