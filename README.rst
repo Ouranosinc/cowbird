@@ -40,8 +40,8 @@ the resources under those services such that the complete ecosystem can seamless
     * - releases
       - | |version| |commits-since|
 
-.. |py_ver| image:: https://img.shields.io/badge/python-3.7%2B-blue.svg
-    :alt: Requires Python 3.7+
+.. |py_ver| image:: https://img.shields.io/badge/python-3.10%2B-blue.svg
+    :alt: Requires Python 3.10+
     :target: https://www.python.org/getit
 
 .. |commits-since| image:: https://img.shields.io/github/commits-since/Ouranosinc/cowbird/2.6.0.svg
