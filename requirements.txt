@@ -6,23 +6,23 @@ cornice_swagger>=0.7.0
 dicttoxml>=1.7.16
 # flag --paste breaks for >20 unless using pserve
 gunicorn>=20
-magpie @ git+https://github.com/Ouranosinc/Magpie@4.0.0
+magpie @ git+https://github.com/Ouranosinc/Magpie@4.3.0
 paste
 pastedeploy
 pymongo[srv]>=4.4,<5  # required to work with pinned celery
-pyramid>=1.10.2,<2
+pyramid>=1.10.2,<3
 pyramid_mako>=1.0.2
 # see https://github.com/sontek/pyramid_celery/pull/102 to fix Python 3.12 support and other improvements
 pyramid_celery @ git+https://github.com/crim-ca/pyramid_celery.git@5.0.0a
 python-dotenv
 pyyaml>=5.1
-requests>=2.32.4
+requests>=2.32.5
 requests_file
 schema
 simplejson
-threddsclient==0.4.6
+threddsclient==0.4.7
 typing_extensions
-urllib3>=2.5.0
+urllib3>=2.6.3
 watchdog>=5
 webob
 zipp>=3.19.1 # not directly required, pinned by Snyk to avoid a vulnerability

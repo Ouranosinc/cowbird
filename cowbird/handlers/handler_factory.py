@@ -1,5 +1,5 @@
 import importlib
-from typing import TYPE_CHECKING, Dict, List, Literal, MutableMapping, Optional, overload
+from typing import TYPE_CHECKING, Dict, List, Literal, MutableMapping, Optional, Type, cast, overload
 
 from cowbird.config import get_all_configs
 from cowbird.typedefs import HandlerConfig
@@ -74,14 +74,14 @@ class HandlerFactory(metaclass=SingletonMeta):
         """
         Instantiates a new `Handler` implementation using its name, overwriting an existing instance if required.
         """
-        handler = None
+        handler: Optional["Handler"] = None
         if (
             name in VALID_HANDLERS and
             name in self.handlers_cfg and
             self.handlers_cfg[name].get("active", False)
         ):
             module = importlib.import_module(".".join(["cowbird.handlers.impl", name.lower()]))
-            cls = getattr(module, name)
+            cls = cast(Type["Handler"], getattr(module, name))
             handler = cls(settings=self.settings, name=name, **self.handlers_cfg[name])
         self.handlers[name] = handler
         return handler

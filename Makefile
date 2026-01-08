@@ -471,7 +471,8 @@ docker-stat:  ## query docker-compose images status (from 'docker-test')
 
 DOCKER_COMPOSES := \
 	-f "$(APP_ROOT)/docker/docker-compose.example.yml" \
-	-f "$(APP_ROOT)/docker/docker-compose.override.example.yml"
+	-f "$(APP_ROOT)/docker/docker-compose.override.example.yml" \
+	$(if $(wildcard $(APP_ROOT)/docker/docker-compose.override.yml),-f "$(APP_ROOT)/docker/docker-compose.override.yml")
 .PHONY: docker-up
 docker-up: docker-build docker-config   ## run all containers using compose
 	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_COMPOSES) up
@@ -479,7 +480,8 @@ docker-up: docker-build docker-config   ## run all containers using compose
 DOCKER_DEV_COMPOSES := \
 	-f "$(APP_ROOT)/docker/docker-compose.example.yml" \
 	-f "$(APP_ROOT)/docker/docker-compose.dev.example.yml" \
-	-f "$(APP_ROOT)/docker/docker-compose.dev.override.yml"
+	-f "$(APP_ROOT)/docker/docker-compose.dev.override.yml" \
+	$(if $(wildcard $(APP_ROOT)/docker/docker-compose.override.yml),-f "$(APP_ROOT)/docker/docker-compose.override.yml")
 .PHONY: docker-up-dev
 docker-up-dev: docker-build   ## run all dependencies containers using compose ready to be used by a local cowbird
 	$(DOCKER_COMPOSE_WITH_ENV) $(DOCKER_DEV_COMPOSES) up
@@ -524,7 +526,7 @@ mkdir-reports:
 
 # autogen check variants with pre-install of dependencies using the '-only' target references
 CHECKS_EXCLUDE ?=
-CHECKS_PYTHON := pep8 lint security doc8 docf links imports types
+CHECKS_PYTHON := pep8 lint fstring security doc8 docf links imports types
 CHECKS_NPM := css md
 CHECKS_PYTHON := $(filter-out $(CHECKS_EXCLUDE),$(CHECKS_PYTHON))
 CHECKS_NPM := $(filter-out $(CHECKS_EXCLUDE),$(CHECKS_NPM))
@@ -572,6 +574,21 @@ check-security-only: mkdir-reports	## run security code checks
 	@bash -c '$(CONDA_CMD) \
 		bandit -v --ini "$(APP_ROOT)/setup.cfg" -r \
 		1> >(tee "$(REPORTS_DIR)/check-security.txt")'
+
+# FIXME: no configuration file support
+define FLYNT_FLAGS
+--line-length 120 \
+--transform-concats \
+--verbose
+endef
+
+.PHONY: check-fstring-only
+check-fstring-only: | mkdir-reports	## check f-string format definitions
+	@echo "Running code f-string formats substitutions..."
+	@-rm -f "$(REPORTS_DIR)/check-fstring.txt"
+	@bash -c '$(CONDA_CMD) \
+		flynt --dry-run --fail-on-change $(FLYNT_FLAGS) "$(APP_ROOT)" \
+		1> >(tee "$(REPORTS_DIR)/check-fstring.txt")'
 
 .PHONY: check-docs-only
 check-docs-only: check-doc8-only check-docf-only	## run every code documentation checks
@@ -744,34 +761,33 @@ test-all: install-dev-python install test-only  ## run all tests combinations
 .PHONY: test-only
 test-only:  ## run all tests, but without prior dependency check and installation
 	@echo "Running tests..."
-	@bash -c '$(CONDA_CMD) pytest tests -vv --junitxml "$(APP_ROOT)/tests/results.xml"'
+	bash -c '$(CONDA_CMD) pytest tests -vv --junitxml "$(APP_ROOT)/tests/results.xml" $(PYTEST_XARGS)'
 
 .PHONY: test-api
 test-api: install-dev-python install		## run only API tests with the environment Python
 	@echo "Running local tests..."
-	@bash -c '$(CONDA_CMD) pytest tests -vv -m "api" --junitxml "$(APP_ROOT)/tests/results.xml"'
-
+	@bash -c '$(CONDA_CMD) pytest tests -vv -m "api" --junitxml "$(APP_ROOT)/tests/results.xml" $(PYTEST_XARGS)'
 
 .PHONY: test-cli
 test-cli: install-dev-python install		## run only CLI tests with the environment Python
 	@echo "Running local tests..."
-	@bash -c '$(CONDA_CMD) pytest tests -vv -m "cli" --junitxml "$(APP_ROOT)/tests/results.xml"'
+	@bash -c '$(CONDA_CMD) pytest tests -vv -m "cli" --junitxml "$(APP_ROOT)/tests/results.xml" $(PYTEST_XARGS)'
 
 .PHONY: test-geoserver
 test-geoserver: install-dev-python install		## run Geoserver requests tests against a configured Geoserver instance. Most of these tests are "online" tests
 	@echo "Running local tests..."
-	@bash -c '$(CONDA_CMD) pytest tests -vv -m "geoserver" --junitxml "$(APP_ROOT)/tests/results.xml"'
+	@bash -c '$(CONDA_CMD) pytest tests -vv -m "geoserver" --junitxml "$(APP_ROOT)/tests/results.xml" $(PYTEST_XARGS)'
 
 .PHONY: test-magpie
 test-magpie: install-dev-python install		## run Magpie requests tests against a configured Magpie instance. Most of these tests are "online" tests
 	@echo "Running local tests..."
-	@bash -c '$(CONDA_CMD) pytest tests -vv -m "magpie" --junitxml "$(APP_ROOT)/tests/results.xml"'
+	@bash -c '$(CONDA_CMD) pytest tests -vv -m "magpie" --junitxml "$(APP_ROOT)/tests/results.xml" $(PYTEST_XARGS)'
 
 .PHONY: test-custom
 test-custom: install-dev-python install	## run custom marker tests using SPEC="<marker-specification>"
 	@echo "Running custom tests..."
 	@[ "${SPEC}" ] || ( echo ">> 'TESTS' is not set"; exit 1 )
-	@bash -c '$(CONDA_CMD) pytest tests -vv -m "${SPEC}" --junitxml "$(APP_ROOT)/tests/results.xml"'
+	@bash -c '$(CONDA_CMD) pytest tests -vv -m "${SPEC}" --junitxml "$(APP_ROOT)/tests/results.xml" $(PYTEST_XARGS)'
 
 .PHONY: test-docker
 test-docker: docker-test			## alias for 'docker-test' target [WARNING: could build image if missing]
@@ -783,7 +799,7 @@ COVERAGE_HTML_IDX := $(COVERAGE_HTML_DIR)/index.html
 $(COVERAGE_FILE): install-dev-python
 	@echo "Running coverage analysis..."
 	@bash -c '$(CONDA_CMD) coverage run --source "$(APP_ROOT)/$(APP_NAME)" \
-		`which pytest` tests -m "not remote" || true'
+		`which pytest` tests -m "not remote" $(PYTEST_XARGS) || true'
 	@bash -c '$(CONDA_CMD) coverage xml -i -o "$(REPORTS_DIR)/coverage.xml"'
 	@bash -c '$(CONDA_CMD) coverage report -m'
 	@bash -c '$(CONDA_CMD) coverage html -d "$(COVERAGE_HTML_DIR)"'

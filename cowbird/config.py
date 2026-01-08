@@ -160,7 +160,7 @@ def validate_handlers_config_schema(handlers_cfg: Dict[str, HandlerConfig]) -> N
     """
     Validates the schema of the `handlers` section found in the config.
     """
-    str_not_empty_validator: Schema = And(str, lambda s: len(s) > 0)
+    str_not_empty_validator: And[Schema] = And(str, lambda s: len(s) > 0)
     schema = Schema({
         str: {  # Handler name
             # parameters common to all handlers

@@ -33,6 +33,7 @@ share
 
 ## IDEs
 .idea
+.run
 .vscode
 
 ## Build artifacts

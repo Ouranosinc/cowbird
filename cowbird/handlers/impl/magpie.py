@@ -307,6 +307,60 @@ class Magpie(Handler):
         # FIXME: this should be implemented in the eventual task addressing the resync mechanism.
         LOGGER.warning("Event [resync] for handler [%s] is not implemented but should be in the future", self.name)
 
+    def create_user(self, user_name: str, email: str, password: str, group_name: str) -> int:
+        data = {
+            "user_name": user_name,
+            "email": email,
+            "password": password,
+            "group_name": group_name
+        }
+        resp = self._send_request(method="POST", url=f"{self.url}/users", json=data)
+        if resp.status_code != 201:
+            raise ValueError(f"Could not create user [{user_name}]. HTTP Error {resp.status_code} : {resp.text}")
+        return resp.json()["user"]["user_id"]
+
+    def delete_user(self, user_name: str) -> None:
+        resp = self._send_request(method="DELETE", url=f"{self.url}/users/{user_name}")
+        if resp.status_code not in [200, 404]:
+            raise ValueError(f"Could not delete user [{user_name}]. HTTP Error {resp.status_code} : {resp.text}")
+
+    def create_group(self, group_name: str, descr: str, discoverable: bool, terms: str) -> int:
+        data = {
+            "group_name": group_name,
+            "description": descr,
+            "discoverable": discoverable,
+            "terms": terms
+        }
+        resp = self._send_request(method="POST", url=f"{self.url}/groups", json=data)
+        if resp.status_code != 201:
+            raise ValueError(f"Could not create group [{group_name}]. HTTP Error {resp.status_code} : {resp.text}")
+        return resp.json()["group"]["group_id"]
+
+    def delete_group(self, group_name: str) -> None:
+        resp = self._send_request(method="DELETE", url=f"{self.url}/groups/{group_name}")
+        if resp.status_code not in [200, 404]:
+            raise ValueError(f"Could not delete group [{group_name}]. HTTP Error {resp.status_code} : {resp.text}")
+
+    def create_service(self, service_data: Dict[str, str]) -> int:
+        resp = self._send_request(method="POST", url=f"{self.url}/services", json=service_data)
+        if resp.status_code != 201:
+            svc_name = service_data.get("service_name", "<unknown>")
+            raise ValueError(f"Could not create service [{svc_name}]. HTTP Error {resp.status_code} : {resp.text}")
+        return resp.json()["service"]["resource_id"]
+
+    def delete_service(self, service_name: str) -> None:
+        resp = self._send_request(method="DELETE", url=f"{self.url}/services/{service_name}")
+        if resp.status_code not in [200, 404]:
+            raise ValueError(f"Could not delete service [{service_name}]. HTTP Error {resp.status_code} : {resp.text}")
+
+    def delete_all_services(self) -> None:
+        resp = self._send_request(method="GET", url=f"{self.url}/services")
+        if resp.status_code != 200:
+            raise ValueError(f"Could not retrieve service details. HTTP Error {resp.status_code} : {resp.text}")
+        for services_by_svc_type in resp.json()["services"].values():
+            for svc in services_by_svc_type.values():
+                self.delete_service(svc["service_name"])
+
     def create_permissions(self, permissions_data: List[PermissionConfigItemType]) -> None:
         """
         Make sure that the specified permissions exist on Magpie.
@@ -463,8 +517,10 @@ class Magpie(Handler):
         """
         Login to Magpie app using admin credentials.
         """
-        if not self.cookies or not self.last_cookies_update_time \
-                or time.time() - self.last_cookies_update_time > COOKIES_TIMEOUT:
+        if (
+            not self.cookies or not self.last_cookies_update_time
+            or time.time() - self.last_cookies_update_time > COOKIES_TIMEOUT
+        ):
             data = {"user_name": self.admin_user, "password": self.admin_password}
             try:
                 resp = requests.post(f"{self.url}/signin", json=data, timeout=self.timeout)
@@ -473,6 +529,9 @@ class Magpie(Handler):
                                    f"Exception : {exc}. ")
             self.cookies = resp.cookies
             self.last_cookies_update_time = time.time()
+        # fix subsequent requests having trouble with the cookie jar
+        if isinstance(self.cookies, RequestsCookieJar):
+            self.cookies = self.cookies.get_dict()
         return self.cookies
 
 

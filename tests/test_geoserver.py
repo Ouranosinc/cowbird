@@ -27,7 +27,7 @@ from cowbird.handlers.impl.geoserver import SHAPEFILE_MAIN_EXTENSION, Geoserver,
 from cowbird.handlers.impl.magpie import GEOSERVER_READ_PERMISSIONS, GEOSERVER_WRITE_PERMISSIONS, MagpieHttpError
 from cowbird.permissions_synchronizer import Permission
 from cowbird.typedefs import JSON
-from tests import test_magpie, utils
+from tests import utils
 
 CURR_DIR = Path(__file__).resolve().parent
 
@@ -126,7 +126,7 @@ def copy_shapefile(basename: str, destination: str) -> None:
 
 
 def get_datastore_path(workspace_path: str) -> str:
-    return workspace_path + "/shapefile_datastore"
+    return f"{workspace_path}/shapefile_datastore"
 
 
 class TestGeoserver:
@@ -282,7 +282,7 @@ class TestGeoserverPermissions(TestGeoserver):
 
     @pytest.fixture(autouse=True)
     def setup(self, tmpdir):
-        self.cfg_filepath = tmpdir.strpath + "/test.cfg"
+        self.cfg_filepath = f"{tmpdir.strpath}/test.cfg"
         with open(self.cfg_filepath, "w", encoding="utf-8") as f:
             f.write(yaml.safe_dump({
                 "handlers": {
@@ -303,18 +303,17 @@ class TestGeoserverPermissions(TestGeoserver):
         self.magpie = HandlerFactory().create_handler("Magpie")
 
         # Reset test user
-        test_magpie.delete_user(self.magpie, self.magpie_test_user)
-        test_magpie.create_user(self.magpie, self.magpie_test_user, "test@test.com", "qwertyqwerty",
-                                self.magpie_test_group)
+        self.magpie.delete_user(self.magpie_test_user)
+        self.magpie.create_user(self.magpie_test_user, "test@test.com", "qwertyqwerty", self.magpie_test_group)
 
         # Reset geoserver service
-        test_magpie.delete_service(self.magpie, "geoserver")
+        self.magpie.delete_service("geoserver")
         data = {
             "service_name": "geoserver",
             "service_type": ServiceGeoserver.service_type,
             "service_url": "http://localhost:9000/geoserver",
         }
-        self.test_service_id = test_magpie.create_service(self.magpie, data)
+        self.test_service_id = self.magpie.create_service(data)
 
         self.geoserver = TestGeoserver.get_geoserver()
 
@@ -345,8 +344,8 @@ class TestGeoserverPermissions(TestGeoserver):
         yield
         # Teardown
         reset_geoserver_test_workspace(self, self.geoserver)
-        test_magpie.delete_user(self.magpie, self.magpie_test_user)
-        test_magpie.delete_service(self.magpie, "geoserver")
+        self.magpie.delete_user(self.magpie_test_user)
+        self.magpie.delete_service("geoserver")
 
     def check_magpie_permissions(self, res_id, expected_perms, expected_access=Access.ALLOW.value,
                                  expected_scope=Scope.MATCH.value, effective=True):
@@ -434,7 +433,7 @@ class TestGeoserverPermissions(TestGeoserver):
         Tests modification events on any other file of the shapefile that does not have the main extension (.shp), which
         should not trigger any other event or modification.
         """
-        other_shapefile_path = os.path.join(self.datastore_path, self.test_shapefile_name + ".shx")
+        other_shapefile_path = os.path.join(self.datastore_path, f"{self.test_shapefile_name}.shx")
         os.chmod(other_shapefile_path, 0o666)
         self.geoserver.on_modified(other_shapefile_path)
 
@@ -451,7 +450,7 @@ class TestGeoserverPermissions(TestGeoserver):
         """
         Tests if the right Magpie permissions are deleted upon a shapefile removal in a Geoserver workspace.
         """
-        self.geoserver.on_deleted(self.datastore_path + f"/{self.test_shapefile_name}.shp")
+        self.geoserver.on_deleted(f"{self.datastore_path}/{self.test_shapefile_name}.shp")
         for file in self.shapefile_list:
             assert not os.path.exists(file)
 
@@ -595,7 +594,7 @@ class TestGeoserverPermissions(TestGeoserver):
 
         # If a file is missing, an update from Magpie's permissions should not trigger an error,
         # the missing file is simply ignored.
-        os.remove(self.datastore_path + f"/{self.test_shapefile_name}.shx")
+        os.remove(f"{self.datastore_path}/{self.test_shapefile_name}.shx")
         updated_shapefile_list = [f for f in self.shapefile_list if not f.endswith(".shx")]
         updated_chown_checklist = [mock.call(file, DEFAULT_ADMIN_UID, DEFAULT_ADMIN_GID)
                                    for file in updated_shapefile_list]

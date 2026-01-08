@@ -186,7 +186,7 @@ setup(
     name=__meta__.__package__,
     version=__meta__.__version__,
     description=__meta__.__description__,
-    long_description=README + "\n\n" + CHANGES,
+    long_description=f"{README}\n\n{CHANGES}",
     author=__meta__.__author__,
     maintainer=__meta__.__maintainer__,
     maintainer_email=__meta__.__email__,
@@ -203,12 +203,12 @@ setup(
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3 :: Only",
-        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
     ],
-    python_requires=">=3.9, <4",
+    python_requires=">=3.10, <4",
 
     # -- Package structure -------------------------------------------------
     packages=[__meta__.__package__],

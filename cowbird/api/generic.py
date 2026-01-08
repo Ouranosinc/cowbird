@@ -51,7 +51,7 @@ class RemoveSlashNotFoundViewFactory(object):
                 if route.match(no_slash_path) is not None:
                     query = request.query_string
                     if query:
-                        no_slash_path += "?" + query
+                        no_slash_path += f"?{query}"
                     return HTTPMovedPermanently(location=no_slash_path)
         return self.notfound_view(request)
 
