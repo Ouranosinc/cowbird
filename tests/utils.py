@@ -300,7 +300,7 @@ def get_json_body(response: AnyResponseType) -> JSON:
     """
     Obtains the JSON payload of the response regardless of its class implementation.
     """
-    if isinstance(response, TestResponse):
+    if isinstance(response, (TestResponse, HTTPException)):
         return response.json
     return response.json()
 
@@ -474,6 +474,9 @@ def test_request(test_item: AnyTestItemType,
         except HTTPException as exc:
             err_code = exc.status_code
             err_msg = str(exc) + str(getattr(exc, "exception", ""))
+            if kwargs.get("expect_errors"):
+                err_code = None  # skip finally
+                return exc
         except Exception as exc:
             err_code = 500
             err_msg = f"Unknown: {exc!s}"
