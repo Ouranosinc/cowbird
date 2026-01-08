@@ -143,6 +143,7 @@ autoapi_python_class_content = "both"
 
 # cases to ignore during link checking
 linkcheck_ignore = [
+    "https://medium.com/@scythargon/6d61c91775d9",
     # might not exist yet (we are generating it!)
     "https://pavics-cowbird.readthedocs.io/en/latest/api.html",
     # FIXME: tmp disable due to Retry-After header for rate-limiting by Github not respected
