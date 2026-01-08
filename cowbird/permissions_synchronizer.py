@@ -238,7 +238,7 @@ class SyncPoint:
         formatted_path = ""
         for segment in nametype_path.split("/"):
             if segment:
-                formatted_path += "/" + segment.split(RES_NAMETYPE_SEPARATOR)[0]
+                formatted_path += f"/{segment.split(RES_NAMETYPE_SEPARATOR)[0]}"
         return formatted_path
 
     def _find_matching_res(self, permission: Permission,

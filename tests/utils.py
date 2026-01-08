@@ -451,7 +451,7 @@ def test_request(test_item: AnyTestItemType,
 
         # update path with query parameters since TestApp does not have an explicit argument when not using GET
         if params:
-            path += "?" + "&".join(f"{k!s}={v!s}" for k, v in params.items() if v is not None)
+            path += f"?{'&'.join((f'{k!s}={v!s}' for k, v in params.items() if v is not None))}"
 
         kwargs.update({
             "params": _body,  # TestApp uses 'params' for the body during POST (these are not the query parameters)
@@ -634,7 +634,7 @@ def check_response_basic_info(response: AnyResponseType,
     :returns: json body of the response for convenience.
     """
     def _(_msg):
-        return _msg + " " + extra_message if extra_message else _msg
+        return f"{_msg} {extra_message}" if extra_message else _msg
 
     check_val_is_in("Content-Type", dict(response.headers), msg=_("Response doesn't define 'Content-Type' header."))
     content_types = get_response_content_types_list(response)

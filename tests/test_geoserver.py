@@ -126,7 +126,7 @@ def copy_shapefile(basename: str, destination: str) -> None:
 
 
 def get_datastore_path(workspace_path: str) -> str:
-    return workspace_path + "/shapefile_datastore"
+    return f"{workspace_path}/shapefile_datastore"
 
 
 class TestGeoserver:
@@ -282,7 +282,7 @@ class TestGeoserverPermissions(TestGeoserver):
 
     @pytest.fixture(autouse=True)
     def setup(self, tmpdir):
-        self.cfg_filepath = tmpdir.strpath + "/test.cfg"
+        self.cfg_filepath = f"{tmpdir.strpath}/test.cfg"
         with open(self.cfg_filepath, "w", encoding="utf-8") as f:
             f.write(yaml.safe_dump({
                 "handlers": {
@@ -433,7 +433,7 @@ class TestGeoserverPermissions(TestGeoserver):
         Tests modification events on any other file of the shapefile that does not have the main extension (.shp), which
         should not trigger any other event or modification.
         """
-        other_shapefile_path = os.path.join(self.datastore_path, self.test_shapefile_name + ".shx")
+        other_shapefile_path = os.path.join(self.datastore_path, f"{self.test_shapefile_name}.shx")
         os.chmod(other_shapefile_path, 0o666)
         self.geoserver.on_modified(other_shapefile_path)
 
@@ -450,7 +450,7 @@ class TestGeoserverPermissions(TestGeoserver):
         """
         Tests if the right Magpie permissions are deleted upon a shapefile removal in a Geoserver workspace.
         """
-        self.geoserver.on_deleted(self.datastore_path + f"/{self.test_shapefile_name}.shp")
+        self.geoserver.on_deleted(f"{self.datastore_path}/{self.test_shapefile_name}.shp")
         for file in self.shapefile_list:
             assert not os.path.exists(file)
 
@@ -594,7 +594,7 @@ class TestGeoserverPermissions(TestGeoserver):
 
         # If a file is missing, an update from Magpie's permissions should not trigger an error,
         # the missing file is simply ignored.
-        os.remove(self.datastore_path + f"/{self.test_shapefile_name}.shx")
+        os.remove(f"{self.datastore_path}/{self.test_shapefile_name}.shx")
         updated_shapefile_list = [f for f in self.shapefile_list if not f.endswith(".shx")]
         updated_chown_checklist = [mock.call(file, DEFAULT_ADMIN_UID, DEFAULT_ADMIN_GID)
                                    for file in updated_shapefile_list]

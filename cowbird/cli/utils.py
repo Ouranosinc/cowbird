@@ -100,7 +100,7 @@ def print_format(data: JSON, fmt: PrintFormat, section: Optional[str] = None) ->
             for field, value in data.items():
                 widths[0] = max(widths[0], len(field))
                 widths[1] = max(widths[1], len(value))
-            separator = "+" + "-" * (widths[0] + 2) + "+" + "-" * (widths[1] + 2) + "+"
+            separator = f"+{'-' * (widths[0] + 2)}+{'-' * (widths[1] + 2)}+"
             print(separator)
             print(f"| {'Fields'.ljust(widths[0])} | {'Values'.ljust(widths[1])} |")
             print(separator.replace("-", "="))
@@ -111,7 +111,7 @@ def print_format(data: JSON, fmt: PrintFormat, section: Optional[str] = None) ->
             width = max(8, len(section or ""))
             for item in data:
                 width = max(width, len(item))
-            separator = "+" + "-" * (width + 2) + "+"
+            separator = f"+{'-' * (width + 2)}+"
             print(separator)
             if section:
                 print(f"| {section.ljust(width)} |")

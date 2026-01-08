@@ -186,7 +186,7 @@ setup(
     name=__meta__.__package__,
     version=__meta__.__version__,
     description=__meta__.__description__,
-    long_description=README + "\n\n" + CHANGES,
+    long_description=f"{README}\n\n{CHANGES}",
     author=__meta__.__author__,
     maintainer=__meta__.__maintainer__,
     maintainer_email=__meta__.__email__,

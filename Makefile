@@ -526,7 +526,7 @@ mkdir-reports:
 
 # autogen check variants with pre-install of dependencies using the '-only' target references
 CHECKS_EXCLUDE ?=
-CHECKS_PYTHON := pep8 lint security doc8 docf links imports types
+CHECKS_PYTHON := pep8 lint fstring security doc8 docf links imports types
 CHECKS_NPM := css md
 CHECKS_PYTHON := $(filter-out $(CHECKS_EXCLUDE),$(CHECKS_PYTHON))
 CHECKS_NPM := $(filter-out $(CHECKS_EXCLUDE),$(CHECKS_NPM))
@@ -574,6 +574,21 @@ check-security-only: mkdir-reports	## run security code checks
 	@bash -c '$(CONDA_CMD) \
 		bandit -v --ini "$(APP_ROOT)/setup.cfg" -r \
 		1> >(tee "$(REPORTS_DIR)/check-security.txt")'
+
+# FIXME: no configuration file support
+define FLYNT_FLAGS
+--line-length 120 \
+--transform-concats \
+--verbose
+endef
+
+.PHONY: check-fstring-only
+check-fstring-only: | mkdir-reports	## check f-string format definitions
+	@echo "Running code f-string formats substitutions..."
+	@-rm -f "$(REPORTS_DIR)/check-fstring.txt"
+	@bash -c '$(CONDA_CMD) \
+		flynt --dry-run --fail-on-change $(FLYNT_FLAGS) "$(APP_ROOT)" \
+		1> >(tee "$(REPORTS_DIR)/check-fstring.txt")'
 
 .PHONY: check-docs-only
 check-docs-only: check-doc8-only check-docf-only	## run every code documentation checks

@@ -204,7 +204,7 @@ class Geoserver(Handler, FSMonitor):
         """
         Generates the list of all files associated with a shapefile name.
         """
-        base_filename = self._shapefile_folder_dir(workspace_name) + "/" + shapefile_name
+        base_filename = f"{self._shapefile_folder_dir(workspace_name)}/{shapefile_name}"
         return [base_filename + ext for ext in SHAPEFILE_ALL_EXTENSIONS]
 
     def _update_resource_paths_permissions(self,
@@ -610,7 +610,7 @@ class Geoserver(Handler, FSMonitor):
         is_shapefile_writable = False
 
         # Only consider the shapefile's main file for the permissions
-        shapefile_path = self._shapefile_folder_dir(workspace_name) + "/" + shapefile_name + SHAPEFILE_MAIN_EXTENSION
+        shapefile_path = f"{self._shapefile_folder_dir(workspace_name)}/{shapefile_name}{SHAPEFILE_MAIN_EXTENSION}"
 
         if os.path.exists(shapefile_path):
             file_status = os.stat(shapefile_path)[stat.ST_MODE]

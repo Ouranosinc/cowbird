@@ -4,7 +4,6 @@
 -r requirements-sys.txt
 -r requirements.txt
 # these are doc-only requirements
-astroid>=2.11.0,<3
 jinja2>=3.1.4,<3.2  # pyup: ignore  # all versions flagged, no fix possible!
 sphinx-autoapi>=2.1.0
 sphinx-paramlinks>=0.4.1

@@ -519,7 +519,7 @@ class ExtendedEnum(Enum):
 
 
 SingletonMetaType: TypeAlias = "SingletonMeta"
-SingletonObjectType = TypeVar("SingletonObjectType")
+SingletonObjectType = TypeVar("SingletonObjectType")  # pylint: disable=invalid-name
 
 
 # taken from https://stackoverflow.com/questions/6760685/creating-a-singleton-in-python
