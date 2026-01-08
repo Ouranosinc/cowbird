@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`2.6.0 <https://github.com/Ouranosinc/cowbird/tree/2.6.0>`_ (2026-01-07)
+------------------------------------------------------------------------------------
+
 * Move generic test functions relevant to ``Magpie`` under its handler implementation.
 * Fix handler ``Magpie.login()`` method having trouble with ``requests`` session cookies when passed directly
   as ``RequestsCookieJar`` object with additional metadata generated from returned response from Magpie API.
