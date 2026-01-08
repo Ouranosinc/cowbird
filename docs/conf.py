@@ -154,6 +154,8 @@ linkcheck_ignore = [
     ".*CHANGES.rst.*",
     "AUTHORS.rst",
     r"docs/\w+.rst",
+    # internal dev/test doc
+    "https://medium.com/@scythargon/how-to-use-celery-pytest-fixtures-for-celery-integration-testing-6d61c91775d9",
 ]
 linkcheck_anchors_ignore = [
     r".*issuecomment.*",  # GitHub issue comment anchors not resolved
