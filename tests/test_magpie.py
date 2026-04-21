@@ -1,5 +1,6 @@
 # pylint: disable=protected-access
 import os
+import unittest
 from pathlib import Path
 
 import pytest
@@ -12,30 +13,18 @@ from magpie.services import ServiceGeoserver
 from cowbird.handlers import HandlerFactory
 from tests import utils
 
-CURR_DIR = Path(__file__).resolve().parent
-
 
 @pytest.mark.magpie
 @pytest.mark.online
-class TestMagpie:
+class TestMagpie(utils.TestConfig, unittest.TestCase):
     """
     Tests different methods found in the Magpie handler.
 
     These tests require a running instance of Magpie.
     """
-
-    # pylint: disable=attribute-defined-outside-init
-    def setup_class(self):
-
-        load_dotenv(CURR_DIR / "../docker/.env.example")
-
-        self.grp = "administrators"
-        self.usr = os.getenv("MAGPIE_ADMIN_USER")
-        self.pwd = os.getenv("MAGPIE_ADMIN_PASSWORD")
-        self.url = os.getenv("COWBIRD_TEST_MAGPIE_URL")
-
-        # Reset handlers instances in case any are left from other test cases
-        utils.clear_handlers_instances()
+    @classmethod
+    def setUpClass(cls):
+        cls.load_config(cls)
 
     # pylint: disable=attribute-defined-outside-init
     @pytest.fixture(autouse=True)

@@ -129,12 +129,15 @@ def get_datastore_path(workspace_path: str) -> str:
     return f"{workspace_path}/shapefile_datastore"
 
 
-class TestGeoserver:
+class TestGeoserver(utils.TestConfig):
     geoserver_settings = get_geoserver_settings()
     workspaces = {}
     workspace_folders = {}
 
     test_shapefile_name = "Espace_Vert"
+
+    def setup_class(self):
+        self.load_config(self)
 
     def teardown_class(self):
         # Couldn't pass fixture to teardown function.
@@ -261,6 +264,7 @@ class TestGeoserverPermissions(TestGeoserver):
     See :ref:`Components - Geoserver <components_geoserver>` for more details on the design/implementation choices.
     """
     def setup_class(self):
+        super().setup_class(self)
         self.magpie_test_user = "test_user"
         self.magpie_test_group = "users"
         self.workspace_name = self.magpie_test_user

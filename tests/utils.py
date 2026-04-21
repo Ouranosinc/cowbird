@@ -1,6 +1,7 @@
 import functools
 import json as json_pkg  # avoid conflict name with json argument employed for some function
 import os
+from pathlib import Path
 from stat import ST_MODE
 from typing import Any, Callable, Collection, Dict, Iterable, List, Literal, Optional, Tuple, Type, Union
 from typing_extensions import TypeAlias
@@ -9,8 +10,10 @@ from urllib.parse import urlparse
 import mock
 import requests
 import requests.exceptions
+from dotenv import load_dotenv
 from packaging.version import Version as LooseVersion
 from packaging.version import _Version as TupleVersion
+from pyramid.settings import asbool
 from pyramid.httpexceptions import HTTPException
 from pyramid.request import Request
 from pyramid.testing import DummyRequest
@@ -38,6 +41,8 @@ from cowbird.utils import (
 TEST_INI_FILE = os.path.join(COWBIRD_ROOT, "config/cowbird.example.ini")
 TEST_CFG_FILE = os.path.join(COWBIRD_ROOT, "config/config.example.yml")
 
+CURR_DIR = Path(__file__).resolve().parent
+
 LOGGER = get_logger(__name__)
 
 
@@ -54,6 +59,28 @@ AnyTestItemType = Union[TestAppOrUrlType, TestAppContainer]
 _TestVersion: TypeAlias = "TestVersion"   # pylint: disable=C0103
 LatestVersion = Literal["latest"]
 AnyTestVersion = Union[str, Iterable[str], LooseVersion, _TestVersion, LatestVersion]
+
+
+class TestConfig(object):  # unittest.TestSuite structure, but not inheriting from it to avoid auto-detecting it
+    grp: str
+    usr: str
+    pwd: str
+    url: str
+
+    def load_config(self: "TestConfig") -> None:
+        # default test suite for CI uses the sample configuration
+        # allow custom override for local developement in case slight differences are needed
+        load_docker_env = asbool(os.getenv("COWBIRD_TEST_LOAD_DOCKER_ENV_EXAMPLE", True))
+        if load_docker_env:
+            load_dotenv(CURR_DIR / "../docker/.env.example")
+
+        self.grp = "administrators"
+        self.usr = os.getenv("MAGPIE_ADMIN_USER") or ""
+        self.pwd = os.getenv("MAGPIE_ADMIN_PASSWORD") or ""
+        self.url = os.getenv("COWBIRD_TEST_MAGPIE_URL") or ""
+
+        # Reset handlers instances in case any are left from other test cases
+        clear_handlers_instances()
 
 
 class TestVersion(LooseVersion):

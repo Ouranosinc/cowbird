@@ -25,13 +25,14 @@ from tests import utils
 CURR_DIR = Path(__file__).resolve().parent
 
 
-class BaseTestFileSystem(unittest.TestCase):
+class BaseTestFileSystem(utils.TestConfig, unittest.TestCase):
     """
     Base test FileSystem parent class, containing some utility functions and common setup/teardown operations.
     """
 
     @classmethod
     def setUpClass(cls):
+        cls.load_config(cls)
         cls.jupyterhub_user_data_dir = "/jupyterhub_user_data"
         cls.test_username = "test_user"
         cls.callback_url = "callback_url"

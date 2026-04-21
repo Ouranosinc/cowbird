@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from collections import Counter
 from pathlib import Path
-from typing import Dict, List, Type
+from typing import Dict, List, Optional, Type, cast
 
 import mock
 import pytest
@@ -23,6 +23,7 @@ from cowbird.config import (
     ConfigErrorInvalidTokens
 )
 from cowbird.handlers import HandlerFactory
+from cowbird.typedefs import SharedConfig
 from tests import utils
 
 CURR_DIR = Path(__file__).resolve().parent
@@ -31,7 +32,7 @@ CURR_DIR = Path(__file__).resolve().parent
 @pytest.mark.permissions
 @pytest.mark.magpie
 @pytest.mark.online
-class TestSyncPermissions(unittest.TestCase):
+class TestSyncPermissions(utils.TestConfig, unittest.TestCase):
     """
     Test permissions synchronization.
 
@@ -42,37 +43,36 @@ class TestSyncPermissions(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        cls.test_service_name = "catalog"  # name of a THREDDS catalog
+        cls.load_config(cls)
 
-        load_dotenv(CURR_DIR / "../docker/.env.example")
-
-        cls.grp = "administrators"
-        cls.usr = os.getenv("MAGPIE_ADMIN_USER")
-        cls.pwd = os.getenv("MAGPIE_ADMIN_PASSWORD")
-        cls.url = os.getenv("COWBIRD_TEST_MAGPIE_URL")
-        cls.test_service_name = "catalog"
-
-        # Reset handlers instances in case any are left from other test cases
-        utils.clear_handlers_instances()
-
-    def setUp(self):
-        self.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)  # pylint: disable=R1732
-        self.data = {
+        cls.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)  # pylint: disable=R1732
+        cls.data: SharedConfig = {
             "handlers": {
                 "Magpie": {
                     "active": True,
-                    "url": self.url,
-                    "admin_user": self.usr,
-                    "admin_password": self.pwd
+                    "url": cls.url,
+                    "admin_user": cls.usr,
+                    "admin_password": cls.pwd
                 },
                 "Thredds": {"active": True}
             }
         }
-        with self.cfg_file as f:
-            f.write(yaml.safe_dump(self.data))
+        with cls.cfg_file as f:
+            f.write(yaml.safe_dump(cls.data))
         # Set environment variables with config
-        utils.get_test_app(settings={"cowbird.config_path": self.cfg_file.name})
+        utils.get_test_app(settings={"cowbird.config_path": cls.cfg_file.name})
         # Create new magpie handler instance with new config
-        self.magpie = HandlerFactory().create_handler("Magpie")
+        cls.magpie = HandlerFactory().create_handler("Magpie")
+
+        # because we are using the same admin user to sync permissions, we must make sure it exists beforehand
+        # Magpie does not allow inline creation of an admin if it does not already exist (contrary to another user)
+        try:
+            cls.magpie.create_user(cls.usr, f"{cls.usr}@mail.com", cls.pwd, cls.grp)
+        except ValueError:
+            pass  # allow conflict if it already exists
+
+    def setUp(self):
         # Create test service
         self.test_service_id = self.reset_test_service()
 
@@ -109,8 +109,8 @@ class TestSyncPermissions(unittest.TestCase):
                                perm_name: Permission,
                                perm_access: Access,
                                perm_scope: Scope,
-                               user_name: str,
-                               group_name: str,
+                               user_name: Optional[str],
+                               group_name: Optional[str],
                                ) -> None:
         """
         Creates a test permission in Magpie app.
@@ -133,8 +133,8 @@ class TestSyncPermissions(unittest.TestCase):
     def delete_test_permission(self,
                                resource_id: int,
                                permission_name: Permission,
-                               user_name: str,
-                               group_name: str,
+                               user_name: Optional[str],
+                               group_name: Optional[str],
                                ) -> None:
         """
         Creates a test permission in Magpie app.

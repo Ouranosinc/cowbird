@@ -7,7 +7,10 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Add more typing definitions.
+* Add option to skip ``docker/.env.example`` load during test for local debugging of alternative setups.
+* Configure tests to preemptively create the `Magpie` administrator user as needed to test permission synchronization
+  (relates to `Ouranosinc/Magpie#651 <https://github.com/Ouranosinc/Magpie/pull/651>`_).
 
 `2.6.0 <https://github.com/Ouranosinc/cowbird/tree/2.6.0>`_ (2026-01-07)
 ------------------------------------------------------------------------------------
