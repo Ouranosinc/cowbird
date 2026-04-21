@@ -21,7 +21,8 @@ from cowbird.request_task import RequestTask
 from cowbird.typedefs import JSON, SettingsType
 from cowbird.utils import CONTENT_TYPE_JSON, apply_default_path_ownership, apply_new_path_permissions, get_logger
 
-GeoserverType: TypeAlias = "Geoserver"  # need a reference for the decorator before it gets defined
+# need a reference for the decorator before it gets defined
+GeoserverType: TypeAlias = "Geoserver"  # pylint: disable=C0103
 
 # see https://github.com/sbdchd/celery-types
 Task.__class_getitem__ = classmethod(lambda cls, *args, **kwargs: cls)
@@ -846,7 +847,7 @@ class Geoserver(Handler, FSMonitor):
                 "name": filename,
                 "nativeCRS": """
                                 GEOGCS[
-                                    "WGS 84", 
+                                    "WGS 84",
                                     DATUM[
                                         "World Geodetic System 1984",
                                         SPHEROID["WGS 84", 6378137.0, 298.257223563, AUTHORITY["EPSG","7030"]],

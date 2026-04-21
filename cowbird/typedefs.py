@@ -3,6 +3,8 @@
 Additional typing definitions.
 """
 
+# pylint: disable=C0103,invalid-name
+
 from typing import (
     TYPE_CHECKING,
     Any,

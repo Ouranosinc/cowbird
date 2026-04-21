@@ -4,12 +4,11 @@ import tempfile
 import unittest
 from collections import Counter
 from pathlib import Path
-from typing import Dict, List, Optional, Type, cast
+from typing import Dict, List, Optional, Type
 
 import mock
 import pytest
 import yaml
-from dotenv import load_dotenv
 from magpie.models import Directory, File, Service, Workspace
 from magpie.permissions import Access, Permission, Scope
 from magpie.services import ServiceGeoserver, ServiceTHREDDS

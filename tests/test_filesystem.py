@@ -10,7 +10,6 @@ from unittest.mock import patch
 import mock
 import pytest
 import yaml
-from dotenv import load_dotenv
 from magpie.models import Permission, Route
 from magpie.permissions import Access, Scope
 from magpie.services import ServiceAPI
@@ -281,14 +280,14 @@ class TestFileSystemBasic(BaseTestFileSystem):
         """
         Tests resync operation for the handler.
         """
-        load_dotenv(CURR_DIR / "../docker/.env.example")
+        self.load_config()
         app = self.get_test_app({
             "handlers": {
                 "Magpie": {
                     "active": True,
-                    "url": os.getenv("COWBIRD_TEST_MAGPIE_URL"),
-                    "admin_user": os.getenv("MAGPIE_ADMIN_USER"),
-                    "admin_password": os.getenv("MAGPIE_ADMIN_PASSWORD")},
+                    "url": self.url,
+                    "admin_user": self.usr,
+                    "admin_password": self.pwd},
                 "FileSystem": {
                     "active": True,
                     "workspace_dir": self.workspace_dir,
@@ -386,7 +385,7 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
     """
     def setUp(self):
         super().setUp()
-        load_dotenv(CURR_DIR / "../docker/.env.example")
+
         self.app = self.get_test_app({
             "handlers": {
                 "Magpie": {

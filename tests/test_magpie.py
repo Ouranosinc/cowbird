@@ -1,11 +1,8 @@
 # pylint: disable=protected-access
-import os
 import unittest
-from pathlib import Path
 
 import pytest
 import yaml
-from dotenv import load_dotenv
 from magpie.models import Layer, Workspace
 from magpie.permissions import Access, Permission, Scope
 from magpie.services import ServiceGeoserver

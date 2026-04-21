@@ -13,9 +13,9 @@ import requests.exceptions
 from dotenv import load_dotenv
 from packaging.version import Version as LooseVersion
 from packaging.version import _Version as TupleVersion
-from pyramid.settings import asbool
 from pyramid.httpexceptions import HTTPException
 from pyramid.request import Request
+from pyramid.settings import asbool
 from pyramid.testing import DummyRequest
 from pyramid.testing import setUp as PyramidSetUp
 from webtest.app import AppError, TestApp  # noqa
@@ -67,17 +67,18 @@ class TestConfig(object):  # unittest.TestSuite structure, but not inheriting fr
     pwd: str
     url: str
 
-    def load_config(self: "TestConfig") -> None:
+    def load_config(self: "Union[TestConfig, Type[TestConfig], None]" = None) -> None:
         # default test suite for CI uses the sample configuration
         # allow custom override for local developement in case slight differences are needed
         load_docker_env = asbool(os.getenv("COWBIRD_TEST_LOAD_DOCKER_ENV_EXAMPLE", True))
         if load_docker_env:
             load_dotenv(CURR_DIR / "../docker/.env.example")
 
-        self.grp = "administrators"
-        self.usr = os.getenv("MAGPIE_ADMIN_USER") or ""
-        self.pwd = os.getenv("MAGPIE_ADMIN_PASSWORD") or ""
-        self.url = os.getenv("COWBIRD_TEST_MAGPIE_URL") or ""
+        if self:
+            self.grp = "administrators"
+            self.usr = os.getenv("MAGPIE_ADMIN_USER") or ""
+            self.pwd = os.getenv("MAGPIE_ADMIN_PASSWORD") or ""
+            self.url = os.getenv("COWBIRD_TEST_MAGPIE_URL") or ""
 
         # Reset handlers instances in case any are left from other test cases
         clear_handlers_instances()

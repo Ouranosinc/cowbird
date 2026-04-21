@@ -15,7 +15,6 @@ from typing import List, Tuple, cast
 import mock
 import pytest
 import yaml
-from dotenv import load_dotenv
 from magpie.permissions import Access
 from magpie.permissions import Permission as MagpiePermission
 from magpie.permissions import Scope
@@ -29,15 +28,13 @@ from cowbird.permissions_synchronizer import Permission
 from cowbird.typedefs import JSON
 from tests import utils
 
-CURR_DIR = Path(__file__).resolve().parent
-
 
 def get_geoserver_settings():
     """
     Setup basic parameters for an unmodified local test run (using the example files) unless environment variables are
     set.
     """
-    load_dotenv(CURR_DIR / "../docker/.env.example")
+    utils.TestConfig.load_config()
     config_path = os.path.join(COWBIRD_ROOT, "config/config.example.yml")
 
     with open(config_path, "r", encoding="utf-8") as f:
@@ -137,7 +134,7 @@ class TestGeoserver(utils.TestConfig):
     test_shapefile_name = "Espace_Vert"
 
     def setup_class(self):
-        self.load_config(self)
+        self.load_config()
 
     def teardown_class(self):
         # Couldn't pass fixture to teardown function.
@@ -264,7 +261,7 @@ class TestGeoserverPermissions(TestGeoserver):
     See :ref:`Components - Geoserver <components_geoserver>` for more details on the design/implementation choices.
     """
     def setup_class(self):
-        super().setup_class(self)
+        super().setup_class(self)  # noqa  # pylint: disable=E1121
         self.magpie_test_user = "test_user"
         self.magpie_test_group = "users"
         self.workspace_name = self.magpie_test_user

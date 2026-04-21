@@ -428,7 +428,7 @@ def raise_http(http_error: Type[HTTPError] = HTTPInternalServerError,
 
     # fail-fast if recursion generates too many calls
     # this would happen only if a major programming error occurred within this function
-    global RAISE_RECURSIVE_SAFEGUARD_MAX    # pylint: disable=W0602,W0603
+    global RAISE_RECURSIVE_SAFEGUARD_MAX    # pylint: disable=W0602,W0603  # noqa: F824
     global RAISE_RECURSIVE_SAFEGUARD_COUNT  # pylint: disable=W0603
     RAISE_RECURSIVE_SAFEGUARD_COUNT = RAISE_RECURSIVE_SAFEGUARD_COUNT + 1
     if RAISE_RECURSIVE_SAFEGUARD_COUNT > RAISE_RECURSIVE_SAFEGUARD_MAX:
