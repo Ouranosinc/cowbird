@@ -10,6 +10,11 @@ magpie @ git+https://github.com/Ouranosinc/Magpie@4.3.0
 paste
 pastedeploy
 pymongo[srv]>=4.4,<5  # required to work with pinned celery
+# FIXME: setuptools/pkg_resources deprecated dependency
+#   (https://github.com/Pylons/pyramid/issues/3731, https://github.com/pypa/setuptools/pull/5007)
+# below setuptools pin is placed here purposely instead of 'requirements-sys.txt' in order to keep it
+# aligned with its upstream 'pyramid' dependency expecting 'pkg_resources' that has official been removed
+setuptools<82
 pyramid>=1.10.2,<3
 pyramid_mako>=1.0.2
 # see https://github.com/sontek/pyramid_celery/pull/102 to fix Python 3.12 support and other improvements
@@ -27,4 +32,3 @@ watchdog>=5
 webob
 zipp>=3.19.1 # not directly required, pinned by Snyk to avoid a vulnerability
 dnspython>=2.6.1 # not directly required, pinned by Snyk to avoid a vulnerability
-pypdf>=6.4.0 # not directly required, pinned by Snyk to avoid a vulnerability
