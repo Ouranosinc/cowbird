@@ -5,7 +5,7 @@ from celery.local import Proxy
 
 #SharedTaskCallable = Callable[..., Callable[[Proxy], Task[Any, Any]]]
 class SharedTaskCallable(Protocol):
-    def __call__(self, *args: Any, **kwargs: Any) -> Callable[[Proxy], Task[Any, Any]]: ...
+    def __call__(self, *args: Any, **kwargs: Any) -> Callable[[Proxy[Any]], Task[Any, Any]]: ...
 
 
 class shared_task:
