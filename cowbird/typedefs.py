@@ -3,6 +3,8 @@
 Additional typing definitions.
 """
 
+# pylint: disable=C0103,invalid-name
+
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -18,7 +20,7 @@ from typing import (
     TypedDict,
     Union
 )
-from typing_extensions import NotRequired, TypeAlias
+from typing_extensions import NotRequired, Required, TypeAlias
 
 from celery.app import Celery
 from pyramid.config import Configurator
@@ -45,6 +47,44 @@ if TYPE_CHECKING:
 PermissionActionType: TypeAlias = "PermissionAction"
 PermissionConfigItemType: TypeAlias = "PermissionConfigItem"
 PermissionDictType: TypeAlias = "PermissionDict"
+PermissionsResponse = TypedDict(
+    "PermissionsResponse",
+    {
+        "permission_names": List[str],
+        "permissions": List[PermissionDictType],
+    },
+    total=False,  # other generic HTTP metadata included
+)
+_ResourceInfoType: TypeAlias = "ResourceInfo"
+ResourceInfo = TypedDict(
+    "ResourceInfo",
+    {
+        "service_name": str,
+        "service_type": str,
+        "service_sync_type": Optional[str],
+        "service_configurable": bool,
+        "resource_id": int,
+        "public_url": str,
+        "permission_names": List[str],
+        "permissions": List[PermissionDictType],
+        "resources": Dict[str, _ResourceInfoType],
+    },
+    total=True,
+)
+ResourcesPermissions = Dict[
+    str,  # service type
+    Dict[
+        str,  # service name
+        ResourceInfo,
+    ]
+]
+ResourcesResponse = TypedDict(
+    "ResourcesResponse",
+    {
+        "resources": ResourcesPermissions
+    },
+    total=False,  # other generic HTTP metadata included
+)
 
 StoreInterfaceType: TypeAlias = "StoreInterface"
 TestResponseType: TypeAlias = "TestResponse"
@@ -142,8 +182,23 @@ SyncPointConfig = Dict[
     SyncPermissionConfig,
 ]
 
-ResourceSegment = TypedDict("ResourceSegment", {"resource_name": str, "resource_type": str,
-                                                "resource_display_name": NotRequired[str]})
+SharedConfig = TypedDict(
+    "SharedConfig",
+    {
+        "handlers": Required[Dict[str, HandlerConfig]],
+        "sync_permissions": NotRequired[SyncPointConfig],
+    },
+    total=True,
+)
+
+ResourceSegment = TypedDict(
+    "ResourceSegment",
+    {
+        "resource_name": str,
+        "resource_type": str,
+        "resource_display_name": NotRequired[str],
+    }
+)
 ResourceTree = List[
     Dict[
         str,

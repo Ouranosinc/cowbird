@@ -16,13 +16,13 @@ from cowbird.config import (
 )
 from cowbird.handlers.handler_factory import HandlerFactory
 from cowbird.typedefs import (
-    JSON,
     ConfigSegment,
     PermissionConfigItemType,
     PermissionData,
     PermissionDictType,
     PermissionResourceData,
     ResourceSegment,
+    ResourcesPermissions,
     ResourceTree,
     SyncPointMappingType,
     SyncPointServicesType
@@ -402,7 +402,7 @@ class SyncPoint:
     def _is_in_permissions(target_permission: str,
                            svc_name: str,
                            src_res_data: List[ResourceSegment],
-                           permissions: JSON,
+                           permissions: ResourcesPermissions,
                            ) -> bool:
         """
         Checks if a target permission is found in a permissions dict.

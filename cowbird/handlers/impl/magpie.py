@@ -11,7 +11,14 @@ from requests.cookies import RequestsCookieJar
 from cowbird.config import ConfigError
 from cowbird.handlers.handler import HANDLER_URL_PARAM, Handler
 from cowbird.permissions_synchronizer import PermissionSynchronizer
-from cowbird.typedefs import JSON, PermissionActionType, PermissionConfigItemType, SettingsType
+from cowbird.typedefs import (
+    JSON,
+    PermissionActionType,
+    PermissionConfigItemType,
+    PermissionsResponse,
+    ResourcesPermissions,
+    SettingsType
+)
 from cowbird.utils import CONTENT_TYPE_JSON, get_logger
 
 LOGGER = get_logger(__name__)
@@ -243,7 +250,7 @@ class Magpie(Handler):
                 return user_info["user_name"]
         raise MagpieHttpError(f"Could not find any user with the id `{user_id}`.")
 
-    def get_user_permissions(self, user: str) -> Dict[str, JSON]:
+    def get_user_permissions(self, user: str) -> ResourcesPermissions:
         """
         Gets all user resource permissions.
         """
@@ -253,7 +260,7 @@ class Magpie(Handler):
                                   f"HttpError {resp.status_code} : {resp.text}")
         return resp.json()["resources"]
 
-    def get_user_permissions_by_res_id(self, user: str, res_id: int, effective: bool = False) -> Dict[str, JSON]:
+    def get_user_permissions_by_res_id(self, user: str, res_id: int, effective: bool = False) -> PermissionsResponse:
         resp = self._send_request(method="GET", url=f"{self.url}/users/{user}/resources/{res_id}/permissions",
                                   params={"effective": effective})
         if resp.status_code != 200:
@@ -271,7 +278,7 @@ class Magpie(Handler):
                                   f"HttpError {resp.status_code} : {resp.text}")
         return resp.json()["user_names"]
 
-    def get_group_permissions(self, grp: str) -> Dict[str, JSON]:
+    def get_group_permissions(self, grp: str) -> ResourcesPermissions:
         """
         Gets all group resource permissions.
         """
@@ -281,7 +288,7 @@ class Magpie(Handler):
                                   f"HttpError {resp.status_code} : {resp.text}")
         return resp.json()["resources"]
 
-    def get_group_permissions_by_res_id(self, grp: str, res_id: int, effective: bool = False) -> Dict[str, JSON]:
+    def get_group_permissions_by_res_id(self, grp: str, res_id: int, effective: bool = False) -> PermissionsResponse:
         resp = self._send_request(method="GET", url=f"{self.url}/groups/{grp}/resources/{res_id}/permissions",
                                   params={"effective": effective})
         if resp.status_code != 200:
