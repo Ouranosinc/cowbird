@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`2.7.0 <https://github.com/Ouranosinc/cowbird/tree/2.7.0>`_ (2026-04-23)
+------------------------------------------------------------------------------------
+
 * Update |magpie-5.1.0|_ with latest dependencies for security and permission synchronization fixes.
 * Add more typing definitions.
 * Add option to skip ``docker/.env.example`` load during test for local debugging of alternative setups.
