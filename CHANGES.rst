@@ -7,10 +7,14 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Update |magpie-5.1.0|_ with latest dependencies for security and permission synchronization fixes.
 * Add more typing definitions.
 * Add option to skip ``docker/.env.example`` load during test for local debugging of alternative setups.
 * Configure tests to preemptively create the `Magpie` administrator user as needed to test permission synchronization
   (relates to `Ouranosinc/Magpie#651 <https://github.com/Ouranosinc/Magpie/pull/651>`_).
+
+.. |magpie-5.1.0| replace:: ``magpie==5.1.0``
+.. _magpie-5.1.0: https://github.com/Ouranosinc/Magpie/tree/5.1.0
 
 `2.6.0 <https://github.com/Ouranosinc/cowbird/tree/2.6.0>`_ (2026-01-07)
 ------------------------------------------------------------------------------------
