@@ -13,6 +13,7 @@ WORKDIR ${COWBIRD_DIR}
 COPY cowbird/__init__.py cowbird/__meta__.py ${COWBIRD_DIR}/cowbird/
 COPY requirements* setup.py README.rst CHANGES.rst ${COWBIRD_DIR}/
 RUN apk update \
+    && apk upgrade --no-cache \
     && apk add \
     bash \
     grep \
