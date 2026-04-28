@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`2.7.1 <https://github.com/Ouranosinc/cowbird/tree/2.7.1>`_ (2026-04-28)
+------------------------------------------------------------------------------------
+
 * Security update of Docker Alpine packages to
   address `CVE-2026-31789 <https://nvd.nist.gov/vuln/detail/CVE-2026-31789>`_
   (OpenSSL ``libcrypto3`` and ``libssl3`` upgraded to ``3.5.6-r0``) by adding ``apk upgrade`` to the Dockerfile.
