@@ -30,9 +30,10 @@ class Monitoring(metaclass=SingletonMeta):
         """
         Initialize the monitoring instance from configured application settings.
 
-        :param config: AnySettingsContainer object from which the db can be retrieved.
-                       The default value of None is only there to disable pylint E1120. The singleton instance
-                       must be initialized with a proper config and after that the init function should not be hit.
+        :param config:
+            AnySettingsContainer object from which the db can be retrieved. The default value of None is only
+            there to disable pylint E1120. The singleton instance must be initialized with a proper config and after
+            that the init function should not be hit.
         """
         if not config:  # pragma: no cover
             raise MonitoringConfigurationException("Without proper application settings, the Monitoring class cannot "
@@ -60,18 +61,21 @@ class Monitoring(metaclass=SingletonMeta):
                  cb_monitor: Union[FSMonitor, Type[FSMonitor], str],
                  ) -> Optional[Monitor]:
         """
-        Register a monitor for a specific path and start it. If a monitor already exists for the specific
-        path/cb_monitor combination it is directly returned. If this monitor was not recursively monitoring its path and
-        the `recursive` flag is now true, this one take precedence and the monitor is updated accordingly. If the
-        `recursive` flag was true, and now it is false it has no effect.
+        Register a monitor for a specific path and start it.
+
+        If a monitor already exists for the specific path/cb_monitor combination it is directly returned.
+        If this monitor was not recursively monitoring its path and the `recursive` flag is now true,
+        this one take precedence and the monitor is updated accordingly.
+        If the `recursive` flag was true, and now it is false it has no effect.
 
         :param path: Path to monitor
         :param recursive: Monitor subdirectory recursively?
-        :param cb_monitor: FSMonitor for which an instance is created and events are sent
-                           Can be an object, a class type implementing FSMonitor or a string containing module and class
-                           name.
-        :returns: The monitor registered or already existing for the specific path/cb_monitor combination. Note that
-                  the monitor is not created/returned if a MonitorException occurs.
+        :param cb_monitor:
+            FSMonitor for which an instance is created and events are sent
+            Can be an object, a class type implementing FSMonitor or a string containing module and class name.
+        :returns:
+            The monitor registered or already existing for the specific path/cb_monitor combination.
+            Note that the monitor is not created/returned if a MonitorException occurs.
         """
         callback = None
         try:
@@ -105,9 +109,9 @@ class Monitoring(metaclass=SingletonMeta):
         Stop a monitor and unregister it.
 
         :param path: Path used by the monitor
-        :param cb_monitor: FSMonitor object to remove
-                           Can be an object, a class type implementing FSMonitor or a string containing module and class
-                           name.
+        :param cb_monitor:
+            FSMonitor object to remove Can be an object, a class type implementing FSMonitor or a string
+            containing module and class name.
         :returns: True if the monitor is found and successfully stopped, False otherwise
         """
         mon_qualname = Monitor.get_qualified_class_name(Monitor.get_fsmonitor_instance(cb_monitor))

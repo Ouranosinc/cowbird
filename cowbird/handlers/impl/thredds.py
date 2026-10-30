@@ -12,6 +12,7 @@ class Thredds(Handler):
     """
     Nothing to do right now.
     """
+
     required_params = []
 
     def __init__(self, settings: SettingsType, name: str, **kwargs: Any) -> None:

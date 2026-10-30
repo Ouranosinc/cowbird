@@ -11,7 +11,7 @@ import types
 from configparser import ConfigParser
 from enum import Enum
 from inspect import isclass, isfunction
-from typing import Any, Callable, Dict, Generic, List, NoReturn, Optional, Type, TypeVar, Union, cast
+from typing import Any, Callable, Dict, Generic, List, NoReturn, Optional, Type, TypeVar, Union
 
 from celery.app import Celery
 from pyramid.config import Configurator
@@ -332,6 +332,7 @@ def get_header(header_name: str,
     :param default: value to returned if `header_container` is invalid or `header_name` could not be found.
     :param split: character(s) to use to split the *found* `header_name`.
     """
+
     def fuzzy_name(name: str) -> str:
         return name.lower().replace("-", "_")
 
@@ -447,6 +448,7 @@ def log_exception_tween(
 
     Application errors are marked as ``ERROR`` while non-critical HTTP errors are marked as ``WARNING``.
     """
+
     def log_exc(request: Request) -> AnyResponseType:
         try:
             return handler(request)
@@ -510,7 +512,7 @@ class ExtendedEnum(Enum):
         # Python 3.8 disallow direct check of 'str' in 'enum'
         members: List[EnumClassType] = [member for member in cls]
         if key_or_value in members:                                             # pylint: disable=E1133
-            return cast(EnumClassType, key_or_value)
+            return key_or_value
         for m_key, m_val in cls.__members__.items():                            # pylint: disable=E1101
             if key_or_value == m_key or key_or_value == m_val.value:            # pylint: disable=R1714
                 return m_val

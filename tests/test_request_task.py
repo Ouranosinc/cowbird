@@ -9,6 +9,7 @@ TL;DR :
 - Don't forget to use the shared_task decorator instead of the usual ``app.task`` because ``shared_task`` uses
   a proxy allowing the task to be bound to any app (including the ``celery_session_app`` fixture).
 """
+
 import contextlib
 import unittest
 from abc import ABC

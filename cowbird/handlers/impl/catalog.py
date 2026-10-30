@@ -14,6 +14,7 @@ class Catalog(Handler, FSMonitor):
     """
     Keep the catalog index in sync when files are created/deleted/updated.
     """
+
     required_params: List[AnyHandlerParameter] = [HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PARAM]
 
     def __init__(self, settings: SettingsType, name: str, **kwargs: Any) -> None:

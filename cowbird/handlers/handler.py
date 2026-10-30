@@ -75,8 +75,10 @@ class Handler(abc.ABC):
             if required_param not in HANDLER_PARAMETERS:
                 raise HandlerConfigurationException(f"Invalid handler parameter : {required_param}")
             if getattr(self, required_param) is None:
-                error_msg = f"{self.__class__.__name__} handler requires the following missing configuration " \
-                            f"parameter : [{required_param}]"
+                error_msg = (
+                    f"{self.__class__.__name__} handler requires the following missing configuration "
+                    f"parameter : [{required_param}]"
+                )
                 LOGGER.error(error_msg)
                 raise HandlerConfigurationException(error_msg)
 

@@ -15,7 +15,7 @@ ParsedArgs = Optional[argparse.Namespace]
 ParserArgs = Optional[Sequence[str]]
 HelperParser = Optional[argparse.ArgumentParser]
 ParseResult = int
-ParserMaker = Callable[[SharedParsers, CommandPrefixes], argparse.ArgumentParser]
+ParserMaker = Callable[[SharedParsers, CommandPrefixes], HelperParser]
 ParserRunner = Callable[[ParserArgs, HelperParser, ParsedArgs], ParseResult]
 SubParserArgs = TypedDict(
     "SubParserArgs",

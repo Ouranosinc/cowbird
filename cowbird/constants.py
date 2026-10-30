@@ -11,6 +11,7 @@ settings formatted as ``cowbird.[variable_name]`` in the ``cowbird.ini`` configu
     constant ``COWBIRD_INI_FILE_PATH`` (or any other `path variable` defined before it - see below) has to be defined
     by environment variable if the default location is not desired (ie: if you want to provide your own configuration).
 """
+
 import logging
 import os
 import re

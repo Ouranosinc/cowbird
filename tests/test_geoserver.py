@@ -2,9 +2,10 @@
 """
 These tests require a working Geoserver instance.
 
-They can be run with the `Make test-geoserver` target.
-More integration tests should be in Jupyter Notebook format as is the case with Birdhouse-deploy / DACCS platform.
+They can be run with the `Make test-geoserver` target. More integration tests should be in Jupyter Notebook format as is
+the case with Birdhouse-deploy / DACCS platform.
 """
+
 import glob
 import logging
 import os
@@ -260,6 +261,7 @@ class TestGeoserverPermissions(TestGeoserver):
 
     See :ref:`Components - Geoserver <components_geoserver>` for more details on the design/implementation choices.
     """
+
     def setup_class(self):
         super().setup_class(self)  # noqa  # pylint: disable=E1121
         self.magpie_test_user = "test_user"
@@ -487,7 +489,6 @@ class TestGeoserverPermissions(TestGeoserver):
         """
         Tests if Magpie resources associated with the user workspace are updated correctly.
         """
-
         self.magpie.create_permission_by_user_and_res_id(user_name=self.magpie_test_user,
                                                          res_id=self.workspace_res_id,
                                                          perm_name=MagpiePermission.DESCRIBE_LAYER.value,

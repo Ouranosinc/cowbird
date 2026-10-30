@@ -6,6 +6,7 @@ test_cli
 
 Tests for :mod:`cowbird.cli` module.
 """
+
 import contextlib
 import subprocess
 from io import StringIO

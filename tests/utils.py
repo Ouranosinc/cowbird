@@ -92,6 +92,7 @@ class TestVersion(LooseVersion):
         Environment variable ``COWBIRD_TEST_VERSION`` should be set with the desired version or ``latest`` to evaluate
         even new features above the last tagged version.
     """
+
     __test__ = False  # avoid invalid collect depending on specified input path/items to pytest
 
     def __init__(self, vstring: AnyTestVersion) -> None:
@@ -651,10 +652,12 @@ def check_response_basic_info(response: AnyResponseType,
                               extra_message: Optional[str] = None,
                               ) -> Union[JSON, str]:
     """
-    Validates basic `Cowbird` API response metadata. For UI pages, employ :func:`check_ui_response_basic_info` instead.
+    Validates basic `Cowbird` API response metadata.
 
-    If the expected content-type is JSON, further validations are accomplished with specific metadata fields that are
-    always expected in the response body. Otherwise, minimal validation of basic fields that can be validated regardless
+    For UI pages, employ :func:`check_ui_response_basic_info` instead.
+    If the expected content-type is JSON, further validations are accomplished
+    with specific metadata fields that are always expected in the response body.
+    Otherwise, minimal validation of basic fields that can be validated regardless
     of content-type is done.
 
     :param response: response to validate.
@@ -664,6 +667,7 @@ def check_response_basic_info(response: AnyResponseType,
     :param extra_message: additional message to append to every specific test message if provided.
     :returns: json body of the response for convenience.
     """
+
     def _(_msg):
         return f"{_msg} {extra_message}" if extra_message else _msg
 

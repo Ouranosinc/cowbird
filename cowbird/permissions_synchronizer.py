@@ -105,8 +105,7 @@ class SyncPoint:
     """
     A sync point contains services sharing resources via multiple APIs.
 
-    It defines how the same resource is defined in
-    each service and what are the mapping between permission accesses.
+    It defines how the same resource is defined in each service and what are the mapping between permission accesses.
     """
 
     def __init__(self,
@@ -114,11 +113,11 @@ class SyncPoint:
                  permissions_mapping_list: SyncPointMappingType,
                  ) -> None:
         """
-        Init the sync point, holding services with their respective resources root and how access are mapped between
-        them.
+        Init sync point holding services with their respective resources root and how access are mapped between them.
 
-        :param services: Dict containing the resource keys by service type and all the names/types of each segment of
-                         those resource keys
+        :param services:
+            Dict containing the resource keys by service type and all the names/types
+            of each segment of those resource keys
         :param permissions_mapping_list: List of strings representing a permission mapping between two resource keys
         """
         self.services: SyncPointServicesType = services
@@ -142,6 +141,8 @@ class SyncPoint:
     @staticmethod
     def _get_explicit_permission(permission: str) -> str:
         """
+        Converts to explicit permission format.
+
         Converts a permission that could use an implicit format ('<name>' or '<name>-match') and converts it to use an
         explicit format ('<name>-<access>-<scope>').
         """
@@ -244,14 +245,14 @@ class SyncPoint:
     def _find_matching_res(self, permission: Permission,
                            src_resource_tree: ResourceTree) -> Tuple[str, Union[Collection[str], Dict[str, str]]]:
         """
-        Finds a resource key that matches the input resource path, in the sync_permissions config. Note that it returns
-        the longest match and only the named segments of the path are included in the length value. Any tokenized
-        segment is ignored in the length.
+        Finds a resource key that matches the input resource path, in the sync_permissions config.
+
+        Note that it returns the longest match and only the named segments of the path are included in the length value.
+        Any tokenized segment is ignored in the length.
 
         :param permission: Permission of the service associated with the input resource.
         :param ResourceTree: Resource tree associated with the permission to synchronize
         """
-
         service_type = permission.service_type
         if service_type in self.services:
             # Find which resource from the config matches with the input permission's resource tree
@@ -459,7 +460,6 @@ class SyncPoint:
         If the `A -> C` mapping was triggered for a `deleted` webhook event, the `C` target permission should
         only be synced if both `A` and `B` permissions don't exist.
         """
-
         handler = HandlerFactory().get_handler("Magpie")
         user_permissions = None
         grp_permissions = None
@@ -517,8 +517,11 @@ class SyncPoint:
                              src_matched_groups: Union[Collection[str], Dict[str, str]],
                              input_permission: Permission) -> PermissionData:
         """
-        Formats permissions data to send to Magpie. Output contains, for each target resource key, the resource path
-        (with the name of each segment and its corresponding type), and all the permissions to sync, defining for each
+        Formats permissions data to send to Magpie.
+
+        Output contains, for each target resource key, the resource path
+        (with the name of each segment and its corresponding type),
+        and all the permissions to sync, defining for each
         permission, if it is on a user, a group, or both.
 
         Output dict format :

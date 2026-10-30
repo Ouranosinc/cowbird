@@ -5,7 +5,7 @@ import sys
 from typing import Optional, Sequence
 
 from cowbird import __meta__
-from cowbird.cli.utils import ParserMaker, ParserRunner, get_logger_parser, subparser_help
+from cowbird.cli.utils import HelperParser, ParserMaker, ParserRunner, get_logger_parser, subparser_help
 from cowbird.utils import get_logger
 
 LOGGER = get_logger(__name__,
@@ -39,7 +39,7 @@ def main(args: Optional[Sequence[str]] = None) -> Optional[int]:
             helper_runner: ParserRunner = getattr(helper_module, "main", None)
             if parser_maker and helper_runner:
                 # add help disabled otherwise conflicts with this main helper's help
-                helper_parser = parser_maker([log], [parser.prog])
+                helper_parser: HelperParser = parser_maker([log], [parser.prog])
                 subparsers.add_parser(helper_name, parents=[helper_parser], add_help=False,
                                       **subparser_help(helper_parser.description, helper_parser))
                 helpers[helper_name] = {"caller": helper_runner, "parser": helper_parser}

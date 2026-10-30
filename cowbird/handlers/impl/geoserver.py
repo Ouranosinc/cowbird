@@ -152,6 +152,7 @@ class Geoserver(Handler, FSMonitor):
     """
     Keep Geoserver internal representation in sync with the platform.
     """
+
     required_params = [HANDLER_URL_PARAM, HANDLER_WORKSPACE_DIR_PARAM]
 
     def __init__(self,
@@ -542,7 +543,9 @@ class Geoserver(Handler, FSMonitor):
 
     def remove_workspace(self, name: str) -> None:
         """
-        Removes a workspace from geoserver. Will also remove all datastores associated with the workspace.
+        Removes a workspace from geoserver.
+
+        Will also remove all datastores associated with the workspace.
 
         :param name: Workspace name
         """
@@ -556,7 +559,6 @@ class Geoserver(Handler, FSMonitor):
         :param self: Geoserver instance
         :param workspace_name: Workspace name where the datastore must be created
         """
-
         datastore_name = self._get_datastore_name(workspace_name)
         LOGGER.info("Creating datastore [%s] in geoserver workspace [%s]", datastore_name, workspace_name)
 
@@ -587,8 +589,8 @@ class Geoserver(Handler, FSMonitor):
         """
         Validate shapefile.
 
-        Will look for the three other files necessary for Geoserver publishing (.prj, .dbf, .shx)
-        and raise a FileNotFoundError exception if one is missing.
+        Will look for the three other files necessary for Geoserver publishing (.prj, .dbf, .shx) and raise a
+        FileNotFoundError exception if one is missing.
 
         :param workspace_name: Name of the workspace from which the shapefile will be published
         :param shapefile_name: The shapefile's name, without file extension
@@ -681,8 +683,7 @@ class Geoserver(Handler, FSMonitor):
         """
         Return datastore name used to represent the datastore inside Geoserver.
 
-        To be used in the HTTP requests sent to Geoserver.
-        This name does not exist on the file system.
+        To be used in the HTTP requests sent to Geoserver. This name does not exist on the file system.
         """
         return f"shapefile_datastore_{workspace_name}"
 
@@ -831,7 +832,9 @@ class Geoserver(Handler, FSMonitor):
                                    filename: str,
                                    ) -> requests.Response:
         """
-        Request to publish a shapefile in Geoserver. Does so by creating a `Feature type` in Geoserver.
+        Request to publish a shapefile in Geoserver.
+
+        Does so by creating a `Feature type` in Geoserver.
 
         :param workspace_name: Workspace where file will be published
         :param datastore_name: Datastore where file will be published
@@ -846,20 +849,20 @@ class Geoserver(Handler, FSMonitor):
             "featureType": {
                 "name": filename,
                 "nativeCRS": """
-                                GEOGCS[
-                                    "WGS 84",
-                                    DATUM[
-                                        "World Geodetic System 1984",
-                                        SPHEROID["WGS 84", 6378137.0, 298.257223563, AUTHORITY["EPSG","7030"]],
-                                        AUTHORITY["EPSG","6326"]
-                                    ],
-                                    PRIMEM["Greenwich", 0.0, AUTHORITY["EPSG","8901"]],
-                                    UNIT["degree", 0.017453292519943295],
-                                    AXIS["Geodetic longitude", EAST],
-                                    AXIS["Geodetic latitude", NORTH],
-                                    AUTHORITY["EPSG","4326"]
-                                ]
-                            """,
+                    GEOGCS[
+                        "WGS 84",
+                        DATUM[
+                            "World Geodetic System 1984",
+                            SPHEROID["WGS 84", 6378137.0, 298.257223563, AUTHORITY["EPSG","7030"]],
+                            AUTHORITY["EPSG","6326"]
+                        ],
+                        PRIMEM["Greenwich", 0.0, AUTHORITY["EPSG","8901"]],
+                        UNIT["degree", 0.017453292519943295],
+                        AXIS["Geodetic longitude", EAST],
+                        AXIS["Geodetic latitude", NORTH],
+                        AUTHORITY["EPSG","4326"]
+                    ]
+                """,
                 "srs": "EPSG:4326",
                 "projectionPolicy": "REPROJECT_TO_DECLARED",
                 "maxFeatures": 5000,

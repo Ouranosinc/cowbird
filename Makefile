@@ -70,6 +70,12 @@ ifneq ("$(CONDA_COMMAND)","undefined")
   CONDA_CMD := $(CONDA_COMMAND)
 endif
 
+# npm or pnpm
+NODE_MANAGER ?= npm
+ifeq ($(NODE_MANAGER),npm)
+  NODE_MANAGER_INSTALL_FLAGS ?= --save-dev
+endif
+
 DOWNLOAD_CACHE ?= $(APP_ROOT)/downloads
 REPORTS_DIR ?= $(APP_ROOT)/reports
 PYTHON_VERSION ?= `python -c 'import platform; print(platform.python_version())'`
@@ -152,7 +158,7 @@ all: help
 
 # Auto documented help targets & sections from comments
 #	- detects lines marked by double octothorpe (#), then applies the corresponding target/section markup
-#   - target comments must be defined after their dependencies (if any)
+#   - target comments must be defined after thr warning you that you are using the wrong manager,eir dependencies (if any)
 #	- section comments must have at least a double dash (-)
 #
 # 	Original Reference:
@@ -342,31 +348,43 @@ install-dev-python: conda-env install-xargs	## install all Python package requir
 
 # install locally to ensure they can be found by config extending them
 .PHONY: install-npm
-install-npm:	## install npm package manager and dependencies if they cannot be found
+install-npm:	## install npm package manager if it cannot be found
 	@[ -f "$(shell which npm)" ] || ( \
 		echo "Binary package manager npm not found. Attempting to install it."; \
 		apt-get install npm \
 	)
 
-.PHONY: install-npm-stylelint
-install-npm-stylelint: install-npm	## install stylelint dependency for 'check-css' target using npm
-	@[ `npm ls 2>/dev/null | grep stylelint-config-standard | grep -v UNMET | wc -l` = 1 ] || ( \
+.PHONY: install-pnpm
+install-pnpm:	## install pnpm package manager if it cannot be found
+	@[ -f "$(shell which pnpm)" ] || ( \
+		echo "Binary package manager pnpm not found. Attempting to install it."; \
+		curl -fsSL https://get.pnpm.io/install.sh | sh -; \
+	)
+	corepack enable
+
+.PHONY: install-node-stylelint
+install-node-stylelint: install-$(NODE_MANAGER)	## install stylelint dependency for 'check-css' target using npm
+	@[ `$(NODE_MANAGER) ls 2>/dev/null | grep stylelint-config-standard | grep -v UNMET | wc -l` = 1 ] || ( \
 		echo "Install required dependencies for CSS checks." && \
-		npm install --save-dev \
+		$(NODE_MANAGER) install $(NODE_MANAGER_INSTALL_FLAGS) \
 	)
+install-$(NODE_MANAGER)-stylelint: install-node-stylelint
 
-.PHONY: install-npm-remarklint
-install-npm-remarklint: install-npm		## install remark-lint dependency for 'check-md' target using npm
-	@[ `npm ls 2>/dev/null | grep remark-lint | grep -v UNMET | wc -l` = 1 ] || ( \
+.PHONY: install-node-remarklint
+install-node-remarklint: install-$(NODE_MANAGER)		## install remark-lint dependency for 'check-md' target using npm
+	@[ `$(NODE_MANAGER) ls 2>/dev/null | grep remark-lint | grep -v UNMET | wc -l` = 1 ] || ( \
 		echo "Install required dependencies for Markdown checks." && \
-		npm install --save-dev \
+		$(NODE_MANAGER) install $(NODE_MANAGER_INSTALL_FLAGS) \
 	)
+install-$(NODE_MANAGER)-remarklint: install-node-remarklint
 
-.PHONY: install-dev-npm
-install-dev-npm: install-npm install-npm-remarklint install-npm-remarklint	## install all npm development dependencies
+override _INSTALL_DEV_NODE := install-$(NODE_MANAGER) install-$(NODE_MANAGER)-remarklint install-$(NODE_MANAGER)-remarklint
+.PHONY: install-dev-node
+install-dev-node: $(_INSTALL_DEV_NODE)	## install all npm development dependencies
+install-dev-$(NODE_MANAGER): install-dev-node
 
 .PHONY: install-dev
-install-dev: install-dev-python install-dev-npm		## install all development dependencies
+install-dev: install-dev-python install-dev-$(NODE_MANAGER)		## install all development dependencies
 
 ## --- Launchers targets --- ##
 
@@ -527,17 +545,17 @@ mkdir-reports:
 # autogen check variants with pre-install of dependencies using the '-only' target references
 CHECKS_EXCLUDE ?=
 CHECKS_PYTHON := pep8 lint fstring security doc8 docf links imports types
-CHECKS_NPM := css md
+CHECKS_NODE := css md
 CHECKS_PYTHON := $(filter-out $(CHECKS_EXCLUDE),$(CHECKS_PYTHON))
-CHECKS_NPM := $(filter-out $(CHECKS_EXCLUDE),$(CHECKS_NPM))
-CHECKS := $(CHECKS_PYTHON) $(CHECKS_NPM)
+CHECKS_NODE := $(filter-out $(CHECKS_EXCLUDE),$(CHECKS_NODE))
+CHECKS := $(CHECKS_PYTHON) $(CHECKS_NODE)
 CHECKS := $(addprefix check-, $(CHECKS))
 
 CHECKS_PYTHON := $(addprefix check-, $(CHECKS_PYTHON))
 $(CHECKS_PYTHON): check-%: install-dev-python check-%-only
 
-CHECKS_NPM := $(addprefix check-, $(CHECKS_NPM))
-$(CHECKS_NPM): check-%: install-dev-npm check-%-only
+CHECKS_NODE := $(addprefix check-, $(CHECKS_NODE))
+$(CHECKS_NODE): check-%: install-dev-$(NODE_MANAGER) check-%-only
 
 .PHONY: check
 check: check-all	## alias for 'check-all' target
@@ -642,7 +660,7 @@ check-css-only: mkdir-reports
 		"$(APP_ROOT)/**/*.css"
 
 .PHONY: check-css
-check-css: install-npm-stylelint check-css-only	## check CSS linting after dependency installation
+check-css: install-$(NODE_MANAGER)-stylelint check-css-only	## check CSS linting after dependency installation
 
 # must pass 2 search paths because '<dir>/.<subdir>' are somehow not correctly detected with only the top-level <dir>
 .PHONY: check-md-only
@@ -658,22 +676,22 @@ check-md-only: mkdir-reports 	## check Markdown linting
 		> "$(REPORTS_DIR)/check-md.txt"
 
 .PHONY: check-md
-check-md: install-npm-remarklint check-md-only	## check Markdown linting after dependency installation
+check-md: install-$(NODE_MANAGER)-remarklint check-md-only	## check Markdown linting after dependency installation
 
 # autogen fix variants with pre-install of dependencies using the '-only' target references
 FIXES_EXCLUDE ?=
 FIXES_PYTHON := imports lint docf fstring
-FIXES_NPM := css md
+FIXES_NODE := css md
 FIXES_PYTHON := $(filter-out $(FIXES_EXCLUDE),$(FIXES_PYTHON))
-FIXES_NPM := $(filter-out $(FIXES_EXCLUDE),$(FIXES_NPM))
+FIXES_NODE := $(filter-out $(FIXES_EXCLUDE),$(FIXES_NODE))
 FIXES := $(FIXES_PYTHON) $(FIXES_NPM)
 FIXES := $(addprefix fix-, $(FIXES))
 
 FIXES_PYTHON := $(addprefix fix-, $(FIXES_PYTHON))
 $(FIXES_PYTHON): fix-%: install-dev-python fix-%-only
 
-FIXES_NPM := $(addprefix fix-, $(FIXES_NPM))
-$(FIXES_NPM): fix-%: install-dev-npm fix-%-only
+FIXES_NODE := $(addprefix fix-, $(FIXES_NODE))
+$(FIXES_NODE): fix-%: install-dev-$(NODE_MANAGER) fix-%-only
 
 .PHONY: fix
 fix: fix-all	## alias for 'fix-all' target
@@ -721,7 +739,7 @@ fix-fstring-only: mkdir-reports		## fix code string formats substitutions to f-s
 		1> >(tee "$(REPORTS_DIR)/fixed-fstring.txt")'
 
 .PHONY: fix-css
-fix-css: install-npm-stylelint fix-css-only
+fix-css: install-$(NODE_MANAGER)-stylelint fix-css-only
 
 .PHONY: fix-css-only
 fix-css-only: mkdir-reports		## fix CSS styles problems automatically
