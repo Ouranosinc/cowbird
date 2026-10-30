@@ -68,7 +68,8 @@ def _load_config(path_or_dict: Union[str, ConfigDict], section: str, allow_missi
                 cfg = yaml.safe_load(f)
         else:
             cfg = path_or_dict
-        return _expand_all(cfg[section])
+        cfg_section = cast(ConfigDict, cfg[section])
+        return _expand_all(cfg_section)
     except KeyError:
         msg = f"Config file section [{section!s}] not found."
         if allow_missing:

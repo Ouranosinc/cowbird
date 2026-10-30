@@ -155,9 +155,10 @@ HandlerConfig = TypedDict(
 )
 
 # registered configurations
+_ConfigDict: TypeAlias = "ConfigDict"
 ConfigItem = Dict[str, JSON]
 ConfigList = List[ConfigItem]
-ConfigDict = Dict[str, Union[str, ConfigItem, ConfigList, JSON]]
+ConfigDict = Dict[str, Union[str, ConfigItem, ConfigList, _ConfigDict, JSON]]
 ConfigResTokenInfo = TypedDict("ConfigResTokenInfo", {"has_multi_token": bool, "named_tokens": MutableSet[str]})
 ConfigSegment = TypedDict("ConfigSegment", {"name": str, "type": str, "field": Optional[str], "regex": Optional[str]})
 

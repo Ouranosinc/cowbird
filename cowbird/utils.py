@@ -512,7 +512,7 @@ class ExtendedEnum(Enum):
         # Python 3.8 disallow direct check of 'str' in 'enum'
         members: List[EnumClassType] = [member for member in cls]
         if key_or_value in members:                                             # pylint: disable=E1133
-            return cast(EnumClassType, key_or_value)
+            return key_or_value
         for m_key, m_val in cls.__members__.items():                            # pylint: disable=E1101
             if key_or_value == m_key or key_or_value == m_val.value:            # pylint: disable=R1714
                 return m_val
