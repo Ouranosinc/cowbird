@@ -39,17 +39,17 @@ jobs:
         include:
           # linter tests
           - os: ubuntu-latest
-            python-version: "3.10"
+            python-version: "3.13"
             allow-failure: false
             test-case: check-only
           # docker smoke tests
           - os: ubuntu-latest
-            python-version: "3.10"
+            python-version: "3.13"
             allow-failure: false
             test-case: test-docker
           # coverage tests
           - os: ubuntu-latest
-            python-version: "3.10"
+            python-version: "3.13"
             allow-failure: false
             test-case: coverage
     steps:
