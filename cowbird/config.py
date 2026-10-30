@@ -303,7 +303,6 @@ def validate_sync_mapping_config(sync_cfg: SyncPermissionConfig, res_info: Dict[
     """
     Validates if mappings in the config have valid resource keys and use tokens properly.
     """
-
     for mapping in sync_cfg["permissions_mapping"]:
         res_key1, _, direction, res_key2, _ = get_mapping_info(mapping)
 
@@ -342,7 +341,6 @@ def validate_sync_config_services(sync_cfg: SyncPermissionConfig, available_serv
 
     All services should correspond to actual services available in Magpie.
     """
-
     for svc in sync_cfg["services"]:
         if svc not in available_services:
             raise ConfigErrorInvalidServiceKey(f"Service `{svc}` used in sync config is not valid since it was not "

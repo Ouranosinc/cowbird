@@ -19,6 +19,7 @@ class TestMagpie(utils.TestConfig, unittest.TestCase):
 
     These tests require a running instance of Magpie.
     """
+
     @classmethod
     def setUpClass(cls):
         cls.load_config(cls)
@@ -54,7 +55,6 @@ class TestMagpie(utils.TestConfig, unittest.TestCase):
         """
         Tests the method used with geoserver to get a layer resource id.
         """
-
         workspace_name = "test_workspace"
         layer_name = "test_layer"
 
@@ -99,7 +99,6 @@ class TestMagpie(utils.TestConfig, unittest.TestCase):
         """
         Tests the method used to create a permission on a specific resource id.
         """
-
         workspace_name = "test_workspace"
         layer_name = "test_layer"
 

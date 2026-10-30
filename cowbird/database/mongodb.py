@@ -90,7 +90,6 @@ def get_mongodb_connection(container: AnySettingsContainer) -> Database:
     """
     Obtains the basic database connection from settings.
     """
-
     settings = get_settings(container)
     default_mongo_uri = "mongodb://0.0.0.0:27017/cowbird"
     if settings.get("mongo_uri", None) is None:

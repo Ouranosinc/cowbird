@@ -29,6 +29,7 @@ class FileSystem(Handler, FSMonitor):
     """
     Keep the proper directory structure in sync with the platform.
     """
+
     required_params = [HANDLER_WORKSPACE_DIR_PARAM]
 
     def __init__(self,
@@ -47,18 +48,20 @@ class FileSystem(Handler, FSMonitor):
 
         :param settings: Cowbird settings for convenience
         :param name: Handler name
-        :param jupyterhub_user_data_dir: Path to the JupyterHub user data directory,
-                                         which will be symlinked to the working directory
+        :param jupyterhub_user_data_dir:
+            Path to the JupyterHub user data directory, which will be symlinked to the working directory
         :param wps_outputs_dir: Path to the wps outputs directory
         :param secure_data_proxy_name: Name of the secure-data-proxy service found on Magpie
-        :param wps_outputs_res_name: Name of the WPS outputs resource found on Magpie under the secure-data-proxy
-                                     service
-        :param notebooks_dir_name: Name of the symlink directory found in the user workspace and which directs to the
-                                   user's notebook directory
-        :param public_workspace_wps_outputs_subpath: Subpath to the directory containing hardlinks to the public WPS
-                                                     outputs data
-        :param user_wps_outputs_dir_name: Name of the directory found in the user workspace and which contains the
-                                          hardlinks to the user WPS outputs data
+        :param wps_outputs_res_name:
+            Name of the WPS outputs resource found on Magpie under the service found on Mapgie service
+        :param notebooks_dir_name:
+            Name of the symlink directory found in the user workspace and which directs to the user's
+            notebook directory
+        :param public_workspace_wps_outputs_subpath:
+            Subpath to the directory containing hardlinks to the public WPS outputs data
+        :param user_wps_outputs_dir_name:
+            Name of the directory found in the user workspace and which contains the hardlinks to the
+            user WPS outputs data
         """
         LOGGER.info("Creating Filesystem handler")
         super(FileSystem, self).__init__(settings, name, **kwargs)

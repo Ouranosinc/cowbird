@@ -83,6 +83,7 @@ class ValidOperations(ExtendedEnum):
     """
     Valid values as webhook event.
     """
+
     CreateOperation = "created"
     DeleteOperation = "deleted"
 

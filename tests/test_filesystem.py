@@ -100,6 +100,7 @@ class TestFileSystemBasic(BaseTestFileSystem):
     """
     Test FileSystem generic operations.
     """
+
     @patch("cowbird.api.webhooks.views.requests.head")
     def test_manage_user_workspace(self, mock_head_request):
         """
@@ -383,6 +384,7 @@ class TestFileSystemWpsOutputsUser(BaseTestFileSystem):
     .. seealso::
         - :func:`cowbird.utils.update_filesystem_permissions`
     """
+
     def setUp(self):
         super().setUp()
 

@@ -71,9 +71,9 @@ def not_found_or_method_not_allowed(request: Request) -> HTTPException:
     Overrides the default ``HTTPNotFound`` [404] by appropriate ``HTTPMethodNotAllowed`` [405] when applicable.
 
     Not found response can correspond to underlying process operation not finding a required item, or a completely
-    unknown route (path did not match any existing API definition).
-    Method not allowed is more specific to the case where the path matches an existing API route, but the specific
-    request method (GET, POST, etc.) is not allowed on this path.
+    unknown route (path did not match any existing API definition). Method not allowed is more specific to the case
+    where the path matches an existing API route, but the specific request method (GET, POST, etc.) is not allowed on
+    this path.
 
     Without this fix, both situations return [404] regardless.
     """
@@ -121,6 +121,7 @@ def validate_accept_header_tween(handler: Callable[[Request], Response],
 
     :raises HTTPNotAcceptable: if desired ``Content-Type`` is not supported.
     """
+
     def validate_format(request: Request) -> Response:
         """
         Validates the specified request according to its ``Accept`` header or ``format`` query, ignoring UI related
@@ -151,6 +152,7 @@ def apply_response_format_tween(handler: Callable[[Request], HTTPException],
     The tween also ensures that additional request metadata extracted from :func:`get_request_info` is applied to
     the response body if not already provided by a previous operation.
     """
+
     def apply_format(request: Request) -> HTTPException:
         """
         Validates the specified request according to its ``Accept`` header, ignoring UI related routes that request more

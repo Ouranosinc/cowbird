@@ -62,6 +62,7 @@ class MonitoringStore(StoreInterface, MongodbStore):
 
     Uses `MongoDB` to store what is monitored and by whom.
     """
+
     type = "monitors"
     index_fields = ["callback", "path"]
 

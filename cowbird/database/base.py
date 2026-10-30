@@ -9,6 +9,7 @@ class DatabaseInterface(metaclass=abc.ABCMeta):
     """
     Return the unique identifier of db type matching settings.
     """
+
     __slots__ = ["type"]
 
     def __init__(self, _: AnySettingsContainer) -> None:

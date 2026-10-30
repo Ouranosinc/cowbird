@@ -3,6 +3,7 @@
 """
 Cowbird is a middleware that manages interactions between various birds of the bird-house stack.
 """
+
 import sys
 from typing import Optional
 

@@ -73,7 +73,6 @@ def autodoc_skip_member(app, what, name, obj, skip, options):  # noqa
     Avoids an error where documentation is having trouble resolving inherited members (methods/properties) from Celery
     Task in 'cowbird.request_task.RequestTask'.
     """
-
     if skip:
         return skip
 

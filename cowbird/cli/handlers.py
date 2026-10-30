@@ -2,6 +2,7 @@
 """
 Cowbird CLI helper to execute handler operations.
 """
+
 import argparse
 from typing import List, cast
 

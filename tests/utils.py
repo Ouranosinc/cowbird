@@ -92,6 +92,7 @@ class TestVersion(LooseVersion):
         Environment variable ``COWBIRD_TEST_VERSION`` should be set with the desired version or ``latest`` to evaluate
         even new features above the last tagged version.
     """
+
     __test__ = False  # avoid invalid collect depending on specified input path/items to pytest
 
     def __init__(self, vstring: AnyTestVersion) -> None:

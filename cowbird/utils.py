@@ -332,6 +332,7 @@ def get_header(header_name: str,
     :param default: value to returned if `header_container` is invalid or `header_name` could not be found.
     :param split: character(s) to use to split the *found* `header_name`.
     """
+
     def fuzzy_name(name: str) -> str:
         return name.lower().replace("-", "_")
 
@@ -447,6 +448,7 @@ def log_exception_tween(
 
     Application errors are marked as ``ERROR`` while non-critical HTTP errors are marked as ``WARNING``.
     """
+
     def log_exc(request: Request) -> AnyResponseType:
         try:
             return handler(request)
