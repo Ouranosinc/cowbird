@@ -832,7 +832,9 @@ class Geoserver(Handler, FSMonitor):
                                    filename: str,
                                    ) -> requests.Response:
         """
-        Request to publish a shapefile in Geoserver. Does so by creating a `Feature type` in Geoserver.
+        Request to publish a shapefile in Geoserver.
+
+        Does so by creating a `Feature type` in Geoserver.
 
         :param workspace_name: Workspace where file will be published
         :param datastore_name: Datastore where file will be published
@@ -847,20 +849,20 @@ class Geoserver(Handler, FSMonitor):
             "featureType": {
                 "name": filename,
                 "nativeCRS": """
-                                GEOGCS[
-                                    "WGS 84",
-                                    DATUM[
-                                        "World Geodetic System 1984",
-                                        SPHEROID["WGS 84", 6378137.0, 298.257223563, AUTHORITY["EPSG","7030"]],
-                                        AUTHORITY["EPSG","6326"]
-                                    ],
-                                    PRIMEM["Greenwich", 0.0, AUTHORITY["EPSG","8901"]],
-                                    UNIT["degree", 0.017453292519943295],
-                                    AXIS["Geodetic longitude", EAST],
-                                    AXIS["Geodetic latitude", NORTH],
-                                    AUTHORITY["EPSG","4326"]
-                                ]
-                            """,
+                    GEOGCS[
+                        "WGS 84",
+                        DATUM[
+                            "World Geodetic System 1984",
+                            SPHEROID["WGS 84", 6378137.0, 298.257223563, AUTHORITY["EPSG","7030"]],
+                            AUTHORITY["EPSG","6326"]
+                        ],
+                        PRIMEM["Greenwich", 0.0, AUTHORITY["EPSG","8901"]],
+                        UNIT["degree", 0.017453292519943295],
+                        AXIS["Geodetic longitude", EAST],
+                        AXIS["Geodetic latitude", NORTH],
+                        AUTHORITY["EPSG","4326"]
+                    ]
+                """,
                 "srs": "EPSG:4326",
                 "projectionPolicy": "REPROJECT_TO_DECLARED",
                 "maxFeatures": 5000,

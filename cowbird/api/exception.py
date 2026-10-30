@@ -357,8 +357,9 @@ def valid_http(http_success: Union[Type[HTTPSuccessful], Type[HTTPRedirection]] 
                content_type: Optional[str] = CONTENT_TYPE_JSON,
                ) -> Union[HTTPSuccessful, HTTPRedirection]:
     """
-    Returns successful HTTP with standardized information formatted with content type. (see :func:`raise_http` for HTTP
-    error calls)
+    Returns successful HTTP with standardized information formatted with content type.
+
+    See :func:`raise_http` for HTTP error calls.
 
     :param http_success: any derived class from *valid* HTTP codes (<400) (default: `HTTPOk`)
     :param http_kwargs: additional keyword arguments to pass to `http_success` when called
