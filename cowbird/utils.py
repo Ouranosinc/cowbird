@@ -11,7 +11,7 @@ import types
 from configparser import ConfigParser
 from enum import Enum
 from inspect import isclass, isfunction
-from typing import Any, Callable, Dict, Generic, List, NoReturn, Optional, Type, TypeVar, Union, cast
+from typing import Any, Callable, Dict, Generic, List, NoReturn, Optional, Type, TypeVar, Union
 
 from celery.app import Celery
 from pyramid.config import Configurator

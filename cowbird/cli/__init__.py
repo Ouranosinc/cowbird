@@ -2,7 +2,7 @@ import argparse
 import importlib
 import os
 import sys
-from typing import Optional, Sequence, cast
+from typing import Optional, Sequence
 
 from cowbird import __meta__
 from cowbird.cli.utils import HelperParser, ParserMaker, ParserRunner, get_logger_parser, subparser_help
