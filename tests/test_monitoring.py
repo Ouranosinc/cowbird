@@ -63,7 +63,9 @@ class TestMonitoring(unittest.TestCase):
         os.unlink(cls.cfg_file.name)
 
     def test_register_unregister_monitor(self):
-        """Tests monitoring file changes are delivered to each applicable monitor."""
+        """
+        Tests monitoring file changes are delivered to each applicable monitor.
+        """
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = os.path.join(tmpdir, "testfile")
             test_subdir = os.path.join(tmpdir, "subdir")
@@ -157,7 +159,8 @@ class TestMonitor(FSMonitor):
         self._modified_condition = Condition()
 
     def wait_for_modified(self, path, expected_count, timeout=5):
-        """Wait for each file mutation to be observed before performing the next one.
+        """
+        Wait for each file mutation to be observed before performing the next one.
 
         This prevents rapid identical filesystem notifications (inotify) from being coalesced.
         When such coalescion occurs, the number of events would not match the expected count,
