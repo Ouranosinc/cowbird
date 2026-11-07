@@ -7,7 +7,10 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Update |magpie-5.2.0|_ with latest dependencies for security fixes.
+
+.. |magpie-5.2.0| replace:: ``magpie==5.2.0``
+.. _magpie-5.2.0: https://github.com/Ouranosinc/Magpie/tree/5.2.0
 
 `2.7.1 <https://github.com/Ouranosinc/cowbird/tree/2.7.1>`_ (2026-04-28)
 ------------------------------------------------------------------------------------
