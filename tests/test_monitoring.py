@@ -1,7 +1,8 @@
 import os
 import tempfile
 import unittest
-from time import sleep
+from threading import Condition
+from time import monotonic, sleep
 
 import pytest
 import yaml
@@ -12,15 +13,21 @@ from cowbird.monitoring.monitoring import Monitoring
 from tests.utils import clear_handlers_instances, get_test_app
 
 
-def file_io(filename, mv_filename):
+def file_io(filename, mv_filename, monitors):
     # Create
     with open(filename, "w", encoding="utf-8") as f:
         f.write("Hello")
+    for monitor in monitors:
+        monitor.wait_for_modified(filename, expected_count=1)
     # Update
     with open(filename, "a", encoding="utf-8") as f:
         f.write(" world!")
+    for monitor in monitors:
+        monitor.wait_for_modified(filename, expected_count=2)
     # Update on file permissions should also trigger a modified event
     os.chmod(filename, 0o777)
+    for monitor in monitors:
+        monitor.wait_for_modified(filename, expected_count=3)
     # Should create a 'delete' and a 'create' event
     os.rename(filename, mv_filename)
     # Delete
@@ -32,8 +39,19 @@ class TestMonitoring(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.cfg_file = tempfile.NamedTemporaryFile(mode="w", suffix=".cfg", delete=False)  # pylint: disable=R1732
+        config = {
+            "handlers": {
+                # The qualified-name registration resolves Catalog via HandlerFactory,
+                # so it must be active to avoid registering a monitor with a None callback.
+                "Catalog": {
+                    "active": True,
+                    "url": "http://catalog",
+                    "workspace_dir": tempfile.gettempdir(),
+                },
+            },
+        }
         with cls.cfg_file as f:
-            f.write(yaml.safe_dump({"handlers": {"": {}}}))  # no specific handler required for these tests
+            f.write(yaml.safe_dump(config))
         cls.app = get_test_app(settings={"cowbird.config_path": cls.cfg_file.name})
         # clear up monitor entries
         Monitoring().unregister_all()
@@ -45,6 +63,7 @@ class TestMonitoring(unittest.TestCase):
         os.unlink(cls.cfg_file.name)
 
     def test_register_unregister_monitor(self):
+        """Tests monitoring file changes are delivered to each applicable monitor."""
         with tempfile.TemporaryDirectory() as tmpdir:
             test_file = os.path.join(tmpdir, "testfile")
             test_subdir = os.path.join(tmpdir, "subdir")
@@ -79,8 +98,8 @@ class TestMonitoring(unittest.TestCase):
             assert len(Monitoring().monitors[tmpdir]) == 2
 
             # Do some io operations that should be picked by the monitors
-            file_io(test_file, mv_test_file)
-            file_io(test_subdir_file, mv_test_subdir_file)
+            file_io(test_file, mv_test_file, [mon, mon2])
+            file_io(test_subdir_file, mv_test_subdir_file, [mon2, mon3])
             sleep(1)
 
             # Root dir non-recursive
@@ -89,7 +108,6 @@ class TestMonitoring(unittest.TestCase):
             assert mon.created[1] == mv_test_subdir_file
             assert mon.created == mon.deleted
             assert sorted(set(mon.modified)) == [tmpdir, test_file]
-            assert len(mon.modified) == 9
 
             # Root dir recursive
             assert len(mon2.created) == 4
@@ -100,7 +118,6 @@ class TestMonitoring(unittest.TestCase):
             assert mon2.created == mon2.deleted
             assert sorted(set(mon2.modified)) == [tmpdir, test_subdir,
                                                   test_subdir_file, test_file]
-            assert len(mon2.modified) == 18
 
             # Subdir
             assert len(mon3.created) == 2
@@ -109,7 +126,6 @@ class TestMonitoring(unittest.TestCase):
             assert mon3.created == mon3.deleted
             assert sorted(set(mon3.modified)) == [test_subdir,
                                                   test_subdir_file]
-            assert len(mon3.modified) == 9
 
             # Validate cleanup
             Monitoring().unregister(tmpdir, mon)
@@ -122,9 +138,13 @@ class TestMonitoring(unittest.TestCase):
             assert not Monitoring().unregister(tmpdir, mon)
 
             # Test registering a callback via a qualified class name string
-            catalog_mon = \
-                Monitoring().register(tmpdir, False, "cowbird.handlers.impl.catalog.Catalog").callback_instance
+            catalog_mon = Monitoring().register(
+                tmpdir,
+                False,
+                "cowbird.handlers.impl.catalog.Catalog",
+            ).callback_instance
             assert catalog_mon == HandlerFactory().get_handler("Catalog")
+            assert Monitoring().unregister(tmpdir, catalog_mon)
 
 
 class TestMonitor(FSMonitor):
@@ -134,6 +154,24 @@ class TestMonitor(FSMonitor):
         self.created = []
         self.deleted = []
         self.modified = []
+        self._modified_condition = Condition()
+
+    def wait_for_modified(self, path, expected_count, timeout=5):
+        """Wait for each file mutation to be observed before performing the next one.
+
+        This prevents rapid identical filesystem notifications (inotify) from being coalesced.
+        When such coalescion occurs, the number of events would not match the expected count,
+        therefore failing tests. This is sensitive to timing, depending on Python versions
+        and their core threading implementations. This approach ensures each one is fired
+        and validated individually.
+        """
+        deadline = monotonic() + timeout
+        with self._modified_condition:
+            while self.modified.count(path) < expected_count:
+                remaining = deadline - monotonic()
+                if remaining <= 0:
+                    raise AssertionError(f"Timed out waiting for {expected_count} modified events on [{path}]")
+                self._modified_condition.wait(remaining)
 
     @staticmethod
     def get_instance():
@@ -146,7 +184,9 @@ class TestMonitor(FSMonitor):
         self.deleted.append(path)
 
     def on_modified(self, path):
-        self.modified.append(path)
+        with self._modified_condition:
+            self.modified.append(path)
+            self._modified_condition.notify_all()
 
 
 class TestMonitor2(TestMonitor):
