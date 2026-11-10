@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`2.8.0 <https://github.com/Ouranosinc/cowbird/tree/2.8.0>`_ (2026-11-09)
+------------------------------------------------------------------------------------
+
 * Add Python 3.14 support.
 * Drop Python 3.10 EOL.
 * Update |magpie-5.2.0|_ with latest dependencies for security fixes.
