@@ -7,7 +7,16 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Add Python 3.14 support.
+* Drop Python 3.10 EOL.
+* Update |magpie-5.2.0|_ with latest dependencies for security fixes.
+* In ``Monitor.on_attrib()``, forward watchdog ``FileAttribEvent`` and ``DirAttribEvent`` notifications
+  to ``FSMonitor.on_modified()``. This handles Linux ``inotify`` events such as ``chmod`` changes, for
+  which ``watchdog==7.1.0`` reports as ``attrib`` rather than ``modified`` events.
+  The Cowbird ``FSMonitor`` combines them under the same ``modified`` event for backward compatibility.
+
+.. |magpie-5.2.0| replace:: ``magpie==5.2.0``
+.. _magpie-5.2.0: https://github.com/Ouranosinc/Magpie/tree/5.2.0
 
 `2.7.1 <https://github.com/Ouranosinc/cowbird/tree/2.7.1>`_ (2026-04-28)
 ------------------------------------------------------------------------------------

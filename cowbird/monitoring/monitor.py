@@ -3,10 +3,12 @@ import os
 from typing import Optional, Type, TypedDict, Union
 
 from watchdog.events import (
+    DirAttribEvent,
     DirCreatedEvent,
     DirDeletedEvent,
     DirModifiedEvent,
     DirMovedEvent,
+    FileAttribEvent,
     FileCreatedEvent,
     FileDeletedEvent,
     FileModifiedEvent,
@@ -208,5 +210,13 @@ class Monitor(FileSystemEventHandler):
         Called when a file or directory is modified.
 
         :param event: Event representing file/directory modification.
+        """
+        self.__callback.on_modified(bytes2str(event.src_path))
+
+    def on_attrib(self, event: Union[DirAttribEvent, FileAttribEvent]) -> None:
+        """
+        Called when a file or directory's attributes are modified.
+
+        :param event: Event representing file/directory attribute modification.
         """
         self.__callback.on_modified(bytes2str(event.src_path))
