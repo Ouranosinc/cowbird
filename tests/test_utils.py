@@ -198,6 +198,12 @@ class TestUtils(unittest.TestCase):
         utils.check_val_equal(DummyEnum.get("random"), None)
         utils.check_val_equal(DummyEnum.get("random", "something"), "something")
 
+    def test_enum_get_by_member(self):
+        """
+        Tests [ExtendedEnum.get] returns an enum member passed directly.
+        """
+        utils.check_val_equal(DummyEnum.get(DummyEnum.VALUE1), DummyEnum.VALUE1)
+
     def test_enum_other(self):
         class OtherEnum(ExtendedEnum):
             VALUE1 = DummyEnum.VALUE1.value  # copy internal string representation
