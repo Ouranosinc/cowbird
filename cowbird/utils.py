@@ -509,9 +509,7 @@ class ExtendedEnum(Enum):
 
         Returns the entry directly if it is already a valid enum.
         """
-        # Python 3.8 disallow direct check of 'str' in 'enum'
-        members: List[EnumClassType] = [member for member in cls]
-        if key_or_value in members:                                             # pylint: disable=E1133
+        if isinstance(key_or_value, cls):
             return key_or_value
         for m_key, m_val in cls.__members__.items():                            # pylint: disable=E1101
             if key_or_value == m_key or key_or_value == m_val.value:            # pylint: disable=R1714
