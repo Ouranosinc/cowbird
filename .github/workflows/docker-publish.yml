@@ -1,0 +1,131 @@
+name: Docker Hub Publishing
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "docker/Dockerfile-base"
+      - "docker/Dockerfile-webservice"
+      - "docker/Dockerfile-worker"
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+
+concurrency:
+  # For a given workflow, if we push to the same branch, cancel all previous builds on that branch except on master.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref == 'refs/heads/master' }}
+
+permissions:
+  contents: read
+
+jobs:
+  build-publish-base:
+    name: Build and publish (Cowbird base)
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: "pavics/cowbird"
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          disable-sudo: true
+          egress-policy: audit
+
+      - name: Check out Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Gather Docker metadata
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=tag
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/') }}
+          labels: |
+            org.opencontainers.image.title=Cowbird
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build Docker image and publish to Docker Hub
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/Dockerfile-base
+          labels: ${{ steps.meta.outputs.labels }}
+          load: true  # needed so the image is available locally for the "Inspect labels" step below
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+
+      - name: Inspect labels
+        run: |
+          docker inspect --format='{{json .Config.Labels}}' ${{ env.IMAGE_NAME }}:latest
+
+  build-publish-variants:
+    name: Build and publish (${{ matrix.image }})
+    needs: build-publish-base
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: "pavics/cowbird"
+    strategy:
+      matrix:
+        include:
+          - image: Cowbird webservice
+            dockerfile: Dockerfile-webservice
+            suffix: "-webservice"
+          - image: Cowbird worker
+            dockerfile: Dockerfile-worker
+            suffix: "-worker"
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          disable-sudo: true
+          egress-policy: audit
+
+      - name: Check out Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Gather Docker metadata
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest${{ matrix.suffix }},enable={{is_default_branch}}
+            type=ref,event=tag,suffix=${{ matrix.suffix }}
+            type=raw,value=latest${{ matrix.suffix }},enable=${{ startsWith(github.ref, 'refs/tags/') }}
+          labels: |
+            org.opencontainers.image.title=${{ matrix.image }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build Docker image and publish to Docker Hub
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/${{ matrix.dockerfile }}
+          labels: ${{ steps.meta.outputs.labels }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+

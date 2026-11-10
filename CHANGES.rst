@@ -7,7 +7,7 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
-* Nothing yet.
+* Add CI Docker build and publish (base, webservice, worker) since DockerHub will not auto-build them anymore.
 
 `2.8.0 <https://github.com/Ouranosinc/cowbird/tree/2.8.0>`_ (2026-11-09)
 ------------------------------------------------------------------------------------
