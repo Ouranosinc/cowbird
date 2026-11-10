@@ -10,6 +10,12 @@ on:
       - "docker/Dockerfile-worker"
     tags:
       - "[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Cowbird tag to build and publish Docker images
+        required: true
+        type: string
 
 concurrency:
   # For a given workflow, if we push to the same branch, cancel all previous builds on that branch except on master.
@@ -32,9 +38,20 @@ jobs:
           disable-sudo: true
           egress-policy: audit
 
+      - name: Validate requested tag
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          DOCKER_TAG: ${{ inputs.tag }}
+        run: |
+          if [[ ! "$DOCKER_TAG" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
+            echo "::error::Tag must be a Docker-compatible slug of at most 128 characters."
+            exit 1
+          fi
+
       - name: Check out Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
+          ref: ${{ inputs.tag || github.ref }}
           persist-credentials: false
 
       - name: Gather Docker metadata
@@ -43,9 +60,10 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
             type=ref,event=tag
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/') }}
+            type=raw,value=latest,enable=${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+            type=raw,value=${{ inputs.tag || github.ref_name }},enable=${{ github.event_name == 'workflow_dispatch' }}
           labels: |
             org.opencontainers.image.title=Cowbird
 
@@ -70,7 +88,8 @@ jobs:
 
       - name: Inspect labels
         run: |
-          docker inspect --format='{{json .Config.Labels}}' ${{ env.IMAGE_NAME }}:latest
+          docker inspect --format='{{json .Config.Labels}}' \
+            ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
 
   build-publish-variants:
     name: Build and publish (${{ matrix.image }})
@@ -97,6 +116,7 @@ jobs:
       - name: Check out Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
+          ref: ${{ inputs.tag || github.ref }}
           persist-credentials: false
 
       - name: Gather Docker metadata
@@ -105,9 +125,10 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=latest${{ matrix.suffix }},enable={{is_default_branch}}
+            type=raw,value=latest${{ matrix.suffix }},enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
             type=ref,event=tag,suffix=${{ matrix.suffix }}
-            type=raw,value=latest${{ matrix.suffix }},enable=${{ startsWith(github.ref, 'refs/tags/') }}
+            type=raw,value=latest${{ matrix.suffix }},enable=${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+            type=raw,value=${{ inputs.tag || github.ref_name }}${{ matrix.suffix }},enable=${{ github.event_name == 'workflow_dispatch' }}
           labels: |
             org.opencontainers.image.title=${{ matrix.image }}
 
