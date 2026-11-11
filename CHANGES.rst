@@ -7,6 +7,11 @@ Changes
 `Unreleased <https://github.com/Ouranosinc/cowbird/tree/master>`_ (latest)
 ------------------------------------------------------------------------------------
 
+* Nothing yet.
+
+`2.8.1 <https://github.com/Ouranosinc/cowbird/tree/2.8.1>`_ (2026-11-11)
+------------------------------------------------------------------------------------
+
 * Add CI Docker build and publish (base, webservice, worker) since DockerHub will not auto-build them anymore.
 * Require ``watchdog>=7.1.0`` for attribute-change events used by ``Monitor``.
 * Pin ``mypy==1.19.1`` to keep CI type checking deterministic.
