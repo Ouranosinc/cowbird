@@ -1,6 +1,6 @@
 ## Dependency stubs to help analyse typing annotations
 
-mypy
+mypy==1.19.1
 mypy-zope
 mongo-types
 celery-types

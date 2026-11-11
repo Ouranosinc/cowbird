@@ -1,4 +1,5 @@
-FROM cowbird:base
-LABEL description.short="Cowbird Web Service"
+FROM pavics/cowbird:latest
+LABEL org.opencontainers.image.description="Cowbird web service middleware to manage interactions between various birds of the bird-house stack."
+LABEL org.opencontainers.image.title="Cowbird Web Service"
 
 CMD pserve ${COWBIRD_CONFIG_DIR}/cowbird.ini

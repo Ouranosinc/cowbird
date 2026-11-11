@@ -1,9 +1,10 @@
 FROM python:3.13.11-alpine3.23
-LABEL description.short="Cowbird base"
-LABEL description.long="Cowbird middleware to manage interactions between various birds of the bird-house stack."
-LABEL Maintainer="Ouranos, CRIM"
-LABEL Vendor="Ouranos inc."
-LABEL Version="2.8.0"
+LABEL org.opencontainers.image.authors="Ouranos, CRIM"
+LABEL org.opencontainers.image.description="Cowbird middleware to manage interactions between various birds of the bird-house stack."
+LABEL org.opencontainers.image.source="https://github.com/Ouranosinc/cowbird"
+LABEL org.opencontainers.image.title="Cowbird"
+LABEL org.opencontainers.image.vendor="Ouranos inc."
+LABEL org.opencontainers.image.version="2.8.0"
 
 ENV COWBIRD_DIR=/opt/local/src/cowbird
 ENV COWBIRD_CONFIG_DIR=${COWBIRD_DIR}/config

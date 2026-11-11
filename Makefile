@@ -814,20 +814,22 @@ test-docker: docker-test			## alias for 'docker-test' target [WARNING: could bui
 COVERAGE_FILE     := $(APP_ROOT)/.coverage
 COVERAGE_HTML_DIR := $(REPORTS_DIR)/coverage
 COVERAGE_HTML_IDX := $(COVERAGE_HTML_DIR)/index.html
-$(COVERAGE_FILE): install-dev-python
+
+.PHONY: coverage-only
+coverage-only:
 	@echo "Running coverage analysis..."
 	@bash -c '$(CONDA_CMD) coverage run --source "$(APP_ROOT)/$(APP_NAME)" \
-		`which pytest` tests -m "not remote" $(PYTEST_XARGS) || true'
+		`which pytest` tests -m "not online" $(PYTEST_XARGS) || true'
 	@bash -c '$(CONDA_CMD) coverage xml -i -o "$(REPORTS_DIR)/coverage.xml"'
 	@bash -c '$(CONDA_CMD) coverage report -m'
 	@bash -c '$(CONDA_CMD) coverage html -d "$(COVERAGE_HTML_DIR)"'
 	@-echo "Coverage report available: file://$(COVERAGE_HTML_IDX)"
 
 .PHONY: coverage
-coverage: install-dev-python install $(COVERAGE_FILE)	## check code coverage and generate an analysis report
+coverage: install-dev-python install coverage-only	## check code coverage and generate an analysis report
 
 .PHONY: coverage-show
-coverage-show: $(COVERAGE_HTML_IDX)		## display HTML webpage of generated coverage report (run coverage if missing)
+coverage-show: $(COVERAGE_FILE) $(COVERAGE_HTML_IDX)		## display HTML webpage of generated coverage report (run coverage if missing)
 	@-test -f "$(COVERAGE_HTML_IDX)" || $(MAKE) -C "$(APP_ROOT)" coverage
 	$(BROWSER) "$(COVERAGE_HTML_IDX)"
 

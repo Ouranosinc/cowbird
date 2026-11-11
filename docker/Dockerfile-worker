@@ -1,4 +1,5 @@
-FROM cowbird:base
-LABEL description.short="Cowbird Worker"
+FROM pavics/cowbird:latest
+LABEL org.opencontainers.image.description="Cowbird worker middleware to perform the interactions between various birds of the bird-house stack."
+LABEL org.opencontainers.image.title="Cowbird Worker"
 
 CMD celery -A pyramid_celery.celery_app worker --ini "${COWBIRD_CONFIG_DIR}/cowbird.ini"
