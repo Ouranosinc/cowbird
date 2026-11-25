@@ -20,7 +20,7 @@ pyramid_mako>=1.0.2
 # see https://github.com/sontek/pyramid_celery/pull/102 to fix Python 3.12 support and other improvements
 pyramid_celery @ git+https://github.com/crim-ca/pyramid_celery.git@5.0.0a
 python-dotenv
-pyyaml>=5.1
+pyyaml>=6.0.3
 requests>=2.34.2
 requests_file
 schema
