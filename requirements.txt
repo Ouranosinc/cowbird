@@ -5,7 +5,7 @@ cornice>=5
 cornice_swagger>=0.7.0
 dicttoxml>=1.7.16
 # flag --paste breaks for >20 unless using pserve
-gunicorn>=27.0.1
+gunicorn[fast]>=27.0.1
 magpie @ git+https://github.com/Ouranosinc/Magpie@5.2.0
 paste
 pastedeploy
