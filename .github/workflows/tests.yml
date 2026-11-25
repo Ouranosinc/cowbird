@@ -53,56 +53,78 @@ jobs:
             allow-failure: false
             test-case: coverage
     steps:
+      - name: Evaluate matrix execution guard
+        id: execution_guard
+        shell: bash
+        run: |
+          if [[ "${{ github.actor }}" == "dependabot[bot]" && "${{ matrix.test-case }}" == "coverage" ]]; then
+            echo "Skipping Dependabot coverage test..."
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/checkout@v2
+        if: ${{ steps.execution_guard.outputs.should_run == 'true' }}
         with:
           fetch-depth: "0"
       - name: Setup Python
+        if: ${{ steps.execution_guard.outputs.should_run == 'true' }}
         uses: actions/setup-python@v2
         with:
           python-version: "${{ matrix.python-version }}"
         # Prepare workspace dir for tests that require access permissions
       - name: Prepare Test Environment
+        if: ${{ steps.execution_guard.outputs.should_run == 'true' }}
         uses: falti/dotenv-action@v1.0.4
         id: dotenv
         with:
           path: ./docker/.env.example
           keys-case: bypass
       - name: Prepare Workspace
+        if: ${{ steps.execution_guard.outputs.should_run == 'true' }}
         run: |
           sudo mkdir -p "${{ steps.dotenv.outputs.WORKSPACE_DIR }}"
           sudo chown -R runner:docker "${{ steps.dotenv.outputs.WORKSPACE_DIR }}"
       # skip docker containers startup to avoid pull/up delay if not required by tests
-      - if: ${{ matrix.test-case == 'coverage' ||  matrix.test-case == 'test-only' }}
+      - if: ${{ steps.execution_guard.outputs.should_run == 'true' && (matrix.test-case == 'coverage' ||  matrix.test-case == 'test-only') }}
         name: Start containers
         run: make docker-up-dev-detached docker-config-dev
       # preinstall system to ensure latest are available for following dependency resolution
       - name: Install System Dependencies
+        if: ${{ steps.execution_guard.outputs.should_run == 'true' }}
         run: make install-sys
       - name: Display System Installation Options
+        if: ${{ steps.execution_guard.outputs.should_run == 'true' }}
         run: make install-xargs
       - name: Install Package and Test Dependencies
+        if: ${{ steps.execution_guard.outputs.should_run == 'true' }}
         run: make install-pkg install-dev
-      - if: ${{ matrix.test-case == 'check-only' }}
+      - if: ${{ steps.execution_guard.outputs.should_run == 'true' && matrix.test-case == 'check-only' }}
         name: Install Extra Test Dependencies
         run: make install-dev
       - name: Display Packages
+        if: ${{ steps.execution_guard.outputs.should_run == 'true' }}
         run: pip freeze
       - name: Display Version
+        if: ${{ steps.execution_guard.outputs.should_run == 'true' }}
         run: make version
       - name: Setup Environment Variables
+        if: ${{ steps.execution_guard.outputs.should_run == 'true' }}
         uses: c-py/action-dotenv-to-setenv@v2
         with:
           env-file: ./tests/ci/test.env
       - name: Display Environment Variables
+        if: ${{ steps.execution_guard.outputs.should_run == 'true' }}
         run: |
           hash -r
           env | sort
       - name: Run Tests
+        if: ${{ steps.execution_guard.outputs.should_run == 'true' }}
         run: make stop ${{ matrix.test-case }}
         continue-on-error: false
       - name: Upload coverage report
         uses: codecov/codecov-action@v2
-        if: ${{ success() && matrix.test-case == 'coverage' }}
+        if: ${{ steps.execution_guard.outputs.should_run == 'true' && (success() && matrix.test-case == 'coverage') }}
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./reports/coverage.xml
