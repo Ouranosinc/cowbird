@@ -1,34 +1,45 @@
 # label rules used by .github/workflows/label.yml
 
 api:
-  - cowbird/api/**/*
+  - changed-files:
+      - any-glob-to-any-file: 'cowbird/api/**/*'
 
 cli:
-  - cowbird/cli/**/*
+  - changed-files:
+      - any-glob-to-any-file: 'cowbird/cli/**/*'
 
 handler:
-  - cowbird/handlers/**/*
-  - cowbird/monitoring/**/*
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'cowbird/handlers/**/*'
+          - 'cowbird/monitoring/**/*'
 
 permissions:
-  - cowbird/permissions_synchronizer.py
+  - changed-files:
+      - any-glob-to-any-file: 'cowbird/permissions_synchronizer.py'
 
 # label 'ci' all automation-related steps and files
 ci:
-  - .*  # all '.<>' files
-  - .github/**/*
-  - ci/**/*
-  - hooks/**/*
-  - Makefile
-  - Dockerfile*
-  - setup.cfg
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.*'  # all '.<>' files
+          - '.github/**/*'
+          - 'ci/**/*'
+          - 'hooks/**/*'
+          - 'Makefile'
+          - 'Dockerfile*'
+          - 'setup.cfg'
 
 doc:
-  - "*.rst"
-  - "*.example"
-  - doc/**/*
-  - requirements-doc.txt
+  - changed-files:
+      - any-glob-to-any-file:
+          - '*.rst'
+          - '*.example'
+          - 'doc/**/*'
+          - 'requirements-doc.txt'
 
 tests:
-  - tests/**/*
-  - requirements-dev.txt
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'tests/**/*'
+          - 'requirements-dev.txt'
