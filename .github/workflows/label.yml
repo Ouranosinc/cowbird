@@ -10,6 +10,8 @@ on: [pull_request]
 
 jobs:
   label:
+    # Skip for Dependabot - labels are already applied via dependabot.yml config
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/labeler@v4.3.0
