@@ -9,7 +9,7 @@ gunicorn>=20
 magpie @ git+https://github.com/Ouranosinc/Magpie@5.2.0
 paste
 pastedeploy
-pymongo[srv]>=4.4,<5  # required to work with pinned celery
+pymongo[srv]>=4.20.0,<5  # required to work with pinned celery
 # FIXME: setuptools/pkg_resources deprecated dependency
 #   (https://github.com/Pylons/pyramid/issues/3731, https://github.com/pypa/setuptools/pull/5007)
 # below setuptools pin is placed here purposely instead of 'requirements-sys.txt' in order to keep it
