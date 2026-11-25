@@ -63,19 +63,19 @@ jobs:
           else
             echo "should_run=true" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v7
         if: ${{ steps.execution_guard.outputs.should_run == 'true' }}
         with:
           fetch-depth: "0"
       - name: Setup Python
         if: ${{ steps.execution_guard.outputs.should_run == 'true' }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v7
         with:
           python-version: "${{ matrix.python-version }}"
         # Prepare workspace dir for tests that require access permissions
       - name: Prepare Test Environment
         if: ${{ steps.execution_guard.outputs.should_run == 'true' }}
-        uses: falti/dotenv-action@v1.0.4
+        uses: falti/dotenv-action@v1.2.1
         id: dotenv
         with:
           path: ./docker/.env.example
@@ -110,7 +110,7 @@ jobs:
         run: make version
       - name: Setup Environment Variables
         if: ${{ steps.execution_guard.outputs.should_run == 'true' }}
-        uses: c-py/action-dotenv-to-setenv@v2
+        uses: c-py/action-dotenv-to-setenv@v5
         with:
           env-file: ./tests/ci/test.env
       - name: Display Environment Variables
@@ -123,7 +123,7 @@ jobs:
         run: make stop ${{ matrix.test-case }}
         continue-on-error: false
       - name: Upload coverage report
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v7
         if: ${{ steps.execution_guard.outputs.should_run == 'true' && (success() && matrix.test-case == 'coverage') }}
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
